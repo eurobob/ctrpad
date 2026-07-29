@@ -40,7 +40,7 @@ docker run --rm \
             gcc --version | head -1
             cmake --version | head -1
             ninja --version
-            dpkg-query -W -f="${Package}=${Version}\n" \
+            dpkg-query -W -f="\${Package}=\${Version}\n" \
                 gcc gcc-multilib libc6-dev-i386 cmake ninja-build \
                 libx11-dev:i386 libxcursor-dev:i386 libxext-dev:i386 \
                 libxfixes-dev:i386 libxi-dev:i386 libxrandr-dev:i386 \
