@@ -445,6 +445,7 @@ u32 main(void)
 			}
 #if defined(CTR_NATIVE) && defined(CTR_INTERNAL)
 			{
+				NativeReplayScheduler_ObserveGameplayState(gGT);
 				if (NativeReplayScheduler_TestPerturbGameplayState(gGT) != 0)
 				{
 					return 0;

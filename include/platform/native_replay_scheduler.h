@@ -37,6 +37,7 @@ int NativeReplayScheduler_RequestStop(void);
 int NativeReplayScheduler_BeginFrame(const struct NativeReplaySchedulerFrameInfo *info);
 int NativeReplayScheduler_ConsumeVSyncPacket(int requestedVBlanks, int *emittedVBlanks);
 int NativeReplayScheduler_ConsumeFrameElapsedTimeMS(int *elapsedTimeMS);
+void NativeReplayScheduler_ObserveGameplayState(const struct GameTracker *gGT);
 int NativeReplayScheduler_TestPerturbGameplayState(struct GameTracker *gGT);
 int NativeReplayScheduler_EndFrame(const struct NativeReplaySchedulerFrameInfo *info);
 int NativeReplayScheduler_GetExitStatus(void);

@@ -34,8 +34,11 @@ RUN dpkg --add-architecture i386 \
 # client.
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
+        novnc \
+        websockify \
         xauth \
         xdotool \
+        x11vnc \
         xvfb \
     && rm -rf /var/lib/apt/lists/*
 

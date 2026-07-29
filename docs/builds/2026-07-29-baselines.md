@@ -4,7 +4,8 @@
 
 This record establishes the unmodified 32-bit Linux build boundary, the
 unmodified Apple ARM64 failure boundary, and the identity of the retail media
-currently present in `ref/CTR/`. It does **not** claim an NTSC-U golden run.
+present in `ref/CTR/`. It records NTSC-U structural validation and visual boot,
+but does **not** yet claim the complete gameplay golden run.
 
 ## Reproducible Linux i686 build
 
@@ -46,6 +47,14 @@ The optional JACK, PipeWire, PulseAudio, Wayland, libusb, FriBidi, libthai,
 KMSDRM, and liburing backends are absent. None is required by CTR Native's
 X11/OpenGL baseline.
 
+The same pinned image includes Xvfb, xdotool, x11vnc, noVNC, and websockify
+solely to make the i686 golden run interactively reachable from the ARM64
+macOS host. Docker publishes noVNC only on loopback. These tools do not link
+into the game executable or alter its input/replay format. Mesa's software
+renderer cache persists at `build-linux-i686-baseline/mesa-cache/`; this avoids
+recompiling the same shaders under nested i386 emulation for every recording
+and playback process.
+
 The clean build at downstream commit `a76ac25a493d` completed with:
 
 ```text
@@ -61,6 +70,21 @@ written to ignored build output
 `build-linux-i686-baseline/toolchain-packages.txt`; its primary versions are
 GCC 13.3.0, CMake 3.28.3, Ninja 1.11.1, and glibc i386 development package
 2.39-0ubuntu8.8.
+
+After the state-digest and replay gates landed, clean commit `cc9c06f2af53`
+completed the same build with all three tests:
+
+```text
+Test #1: ctr_native_version ... Passed
+Test #2: ctr_native_state_digest ... Passed
+Test #3: ctr_native_replay_gate ... Passed
+100% tests passed, 0 tests failed out of 3
+ELF 32-bit LSB pie executable, Intel 80386
+CTR Native 0.1.0-beta.7.1 (cc9c06f2af53)
+```
+
+That binary's ELF GNU build ID was
+`09133476a186e75f24bb1675f97af4bbe22e255a`.
 
 ## Unmodified Apple ARM64 configure
 
@@ -83,7 +107,8 @@ M2–M6 starting boundary.
 
 ## Retail-media identity
 
-The local CloneCD set has these SHA-256 hashes:
+The original CloneCD set, now retained under `ref/CTR/old/`, has these SHA-256
+hashes:
 
 ```text
 19f4ed5097951e72d2f302ea0a803bb2690e20569a7e50ca812213c15b6c339f  CTR.ccd
@@ -119,7 +144,25 @@ Direct inspection confirms PAL entry `0x1fd` begins with unrelated data and an
 impossible rectangle. This is an input/build-region mismatch, not evidence of
 a valid NTSC-U loader failure.
 
-The runtime now extracts the boot disc ID from `SYSTEM.CNF`, rejects anything
+The replacement BIN/CUE set supplied under `ref/CTR/` has:
+
+```text
+f780bf2331476aabfc00772fa758b12dd95ebfbc907968132cbd3cdd4e2c07c0  CTR - Crash Team Racing (USA).bin
+5bac7f02de7b8fb081e1049f4a277be1062c83fcb7ac6c98308ba7985280e4c3  CTR - Crash Team Racing (USA).cue
+```
+
+The BIN is 605,698,800 bytes: exactly 257,525 2352-byte sectors. The CUE
+declares one `MODE2/2352` track at `INDEX 01 00:00:00`. Direct sector-16
+inspection finds an ISO 9660 primary volume descriptor with volume ID
+`SCUS-94426`, while `SYSTEM.CNF` contains boot ID `SCUS_944.26`.
+
+The runtime identity gate accepts this image, loads the retail startup data,
+initializes the PSX renderer, and visibly reaches the Sony Computer
+Entertainment America and Naughty Dog boot sequences through the loopback
+noVNC session. Cross (`C`) input advances the splash sequence, confirming the
+game window and keyboard-to-pad path are live.
+
+The runtime extracts the boot disc ID from `SYSTEM.CNF`, rejects anything
 other than `SCUS_944.26` before game initialization, and bounds-checks every
-VRAM copy as defense in depth. A true M1 golden run remains pending a
-user-supplied NTSC-U raw MODE2/2352 image.
+VRAM copy as defense in depth. The remaining M1 work is the full recorded
+gameplay/save coverage and two-process replay/mutation proof.

@@ -78,3 +78,6 @@ Unmodified playback exits with status 0 after all recorded frames match.
 
 This option changes only the playback process and never rewrites the replay,
 checkpoint, seed memcard, or retail image.
+
+For the full two-process ASLR, raw-checkpoint, and automatic mutation proof,
+follow `docs/parity/NTSC-U-GOLDEN-RUN.md`.

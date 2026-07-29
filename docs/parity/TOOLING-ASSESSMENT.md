@@ -102,7 +102,11 @@ Completed:
   statuses, and the media-free replay-gate CTest identifies a synthetic driver
   mutation as `drivers`;
 - internal playback can perturb the real `driver[0].posCurr.x` field at an
-  exact requested frame without altering the source replay.
+  exact requested frame without altering the source replay;
+- recording/playback log excluded host-address samples and playback recaptures
+  the restored raw checkpoint for pointer-sensitive checksum comparison;
+- a loopback-only noVNC launcher and automated two-process verifier implement
+  the full pending procedure (`docs/parity/NTSC-U-GOLDEN-RUN.md`).
 
 Still required before M1 can close:
 
@@ -113,8 +117,9 @@ Still required before M1 can close:
 - repeat the unchanged run under address randomization and demonstrate that the
   canonical digest remains stable even when raw checkpoint checksums differ.
 
-The current local image cannot supply the remaining golden proof: its boot ID
-is PAL Europe `SCES_021.05`, while this source baseline is NTSC-U
-`SCUS_944.26`/`BUILD=926` (`docs/builds/2026-07-29-baselines.md`). The runtime
-now rejects that mismatch before game initialization. A user-owned NTSC-U
-image is required to finish the run/replay evidence.
+The archived original image cannot supply the golden proof: its boot ID is PAL
+Europe `SCES_021.05`, while this source baseline is NTSC-U
+`SCUS_944.26`/`BUILD=926`. The replacement raw image is the required
+`SCUS_944.26`, passes the runtime identity gate, and visibly boots with live
+input (`docs/builds/2026-07-29-baselines.md`). The remaining work is now the
+full run/replay/mutation evidence, not media acquisition.

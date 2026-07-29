@@ -152,10 +152,13 @@ Result so far:
   `drivers` divergence, and distinct exit statuses for harness failure (1) and
   parity failure (2). Playback has an exact-frame real-state mutation option
   for the pending golden-run proof.
-- The local retail image has now been identified as PAL Europe
-  `SCES_021.05`, not NTSC-U `SCUS_944.26`. It cannot be used for the required
-  `BUILD=926` golden run. The runtime rejects the mismatch before loading
-  indexed game data.
+- The pinned container now exposes a loopback-only noVNC recording session and
+  an automated two-process replay/mutation verifier. The exact coverage and
+  evidence procedure is `docs/parity/NTSC-U-GOLDEN-RUN.md`.
+- The original local image was identified as PAL Europe `SCES_021.05` and is
+  rejected before indexed game data loads. A replacement MODE2/2352 image now
+  identifies as NTSC-U `SCUS_944.26`, passes the runtime gate, and visibly
+  reaches the retail boot sequence with live keyboard-to-pad input.
 
 Work:
 
@@ -459,11 +462,11 @@ timestamps are explicitly excluded from game-visible deterministic state.
 |---|---|---|
 | Guest-reference design expands into a full arena rewrite | Asset relocation writes host bases into 32-bit file slots; about 75 pinned pointer-bearing structs were estimated | M2 prototype on real assets before broad edits; preserve guest layout and centralize translation |
 | Existing replay/checkpoint tooling is not a sufficient parity oracle | Prior report found infrastructure but did not run or assess coverage (`docs/ctr-native-viability.md:471-474`) | Prove mutation sensitivity in M1 or build a state-hash harness |
-| Current retail image is not the required NTSC-U revision | Container format is proven MODE2/2352, game identity is not | Validate through loader and disc metadata before relying on it |
+| Supplied NTSC-U image has not completed the full parity trace | MODE2/2352 geometry, `SCUS_944.26` identity, retail boot, and live input are proven | Finish gameplay/save coverage and the two-process replay/mutation verifier |
 | Upstream has moved since `2df55dc5a` | Viability report is commit-specific | Freeze a reproducible baseline, inspect current head, then rebase intentionally |
 | Reference documentation is stale | `ref/README.md` claims four clones that are absent | Derive documentation from actual remote/commit checks |
 | Retail assets can be committed accidentally | M0 ignore and tracked-file probes pass | Keep the M0 checks in release verification |
-| Local retail image does not match the NTSC-U build | `SYSTEM.CNF` identifies PAL Europe `SCES_021.05` | Reject it at import; obtain a user-owned `SCUS_944.26` image before the M1 golden run |
+| Wrong-region retail media can corrupt indexed loads | The archived PAL image identifies as `SCES_021.05`; the replacement identifies as `SCUS_944.26` | Keep the import/runtime identity gate and exercise both accept/reject cases |
 | Apple lifecycle/pacing changes perturb timing | Current code blocks and spin-waits around synthetic VBlank | Compare game-state timing and measured cadence before/after display integration |
 | Touch boost chains are ergonomically poor despite correct input injection | Three boosts require steering + drift hold + repeated taps | Device prototypes and repeated triple-boost usability criterion |
 | Signing/publishing depends on credentials and external accounts | Not yet inventoried | Keep configuration credential-free; verify available team/device before release milestone |

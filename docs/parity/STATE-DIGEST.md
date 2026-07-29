@@ -103,7 +103,15 @@ invariants without retail data.
 It does not replace the pending M1 proof: record and replay a full NTSC-U run
 in separate processes, then use
 `--replay-test-perturb-driver-x <frame>` while driver slot 0 is active and
-observe status 2 at that exact frame.
+observe status 2 at that exact frame. Recording and playback also log
+host-address samples excluded from the digest. After restoring the bootstrap
+checkpoint, playback recaptures its raw pointer-bearing payload and logs the
+recorded/restored-process checksums as diagnostic evidence; those raw hashes
+are expected to differ under ASLR and are never used as the parity decision.
+
+`docs/parity/NTSC-U-GOLDEN-RUN.md` and
+`tools/verify-linux-i686-golden-replay.sh` turn those signals into the final M1
+acceptance run.
 
 ## Known scope
 

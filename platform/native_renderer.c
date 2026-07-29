@@ -1060,10 +1060,15 @@ internal void NativeRenderer_CompilePSXShader(GTEShader *sh, const char *source)
 
 internal void NativeRenderer_InitialisePSXShaders(void)
 {
+	NATIVE_RENDERER_LOG("%s", "*Compiling 4-bit PSX shader\n");
 	NativeRenderer_CompilePSXShader(&s_gteShader4, gte_shader_4);
+	NATIVE_RENDERER_LOG("%s", "*Compiling 8-bit PSX shader\n");
 	NativeRenderer_CompilePSXShader(&s_gteShader8, gte_shader_8);
+	NATIVE_RENDERER_LOG("%s", "*Compiling 16-bit PSX shader\n");
 	NativeRenderer_CompilePSXShader(&s_gteShader16, gte_shader_16);
+	NATIVE_RENDERER_LOG("%s", "*Compiling RGBA PSX shader\n");
 	NativeRenderer_CompilePSXShader(&s_gteShader32Rgba, gte_shader_32_rgba);
+	NATIVE_RENDERER_LOG("%s", "*PSX shaders ready\n");
 }
 
 // NOTE(aalhendi): GPU VRAM pack. Samples an RGBA render texture and writes PS1
@@ -1169,7 +1174,9 @@ int NativeRenderer_InitialisePSX(void)
 	NativeRenderer_InitRG8LUT();
 	NativeRenderer_GenerateCommonTextures();
 	NativeRenderer_InitialisePSXShaders();
+	NATIVE_RENDERER_LOG("%s", "*Compiling VRAM pipelines\n");
 	NativeRenderer_InitVRAMPipelines();
+	NATIVE_RENDERER_LOG("%s", "*VRAM pipelines ready\n");
 
 #if defined(CTR_INTERNAL)
 	GLint glMajor = 0;

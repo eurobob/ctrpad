@@ -12,6 +12,8 @@
 #include "platform/native_path.h"
 #include "platform/native_state.h"
 
+#include <platform.h>
+
 #include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -136,6 +138,7 @@ global_variable s32 s_exitStatus;
 global_variable s32 s_testPerturbEnabled;
 global_variable s32 s_testPerturbApplied;
 global_variable u32 s_testPerturbFrame;
+global_variable s32 s_driver0ActiveState;
 
 internal void NativeReplayScheduler_SetFailure(void)
 {
@@ -178,6 +181,7 @@ internal void NativeReplayScheduler_ResetSessionState(void)
 	s_recordStartDeferredLogged = 0;
 	s_exitStatus = 0;
 	s_testPerturbApplied = 0;
+	s_driver0ActiveState = -1;
 	NativeReplayScheduler_ResetVSyncPackets();
 }
 
@@ -221,6 +225,17 @@ internal u32 NativeReplayScheduler_RecordChecksum(const struct NativeReplayFrame
 
 	checksumRecord.recordChecksum = 0;
 	return NativeReplayScheduler_Fnv1a(&checksumRecord, sizeof(checksumRecord));
+}
+
+internal void NativeReplayScheduler_LogHostAddressSample(const char *phase)
+{
+	const struct PlatformMempackArena *arena = Platform_GetMempackArena();
+	const struct GameTracker *gGT = (sdata != NULL) ? sdata->gGT : NULL;
+	const struct Driver *driver0 = (gGT != NULL) ? gGT->drivers[0] : NULL;
+
+	Platform_Log("[CTR Replay] %s host-address sample (excluded from canonical digest): sdata=%p gGT=%p driver0=%p mempack=%p\n",
+	             phase != NULL ? phase : "unknown", (void *)sdata, (const void *)gGT, (const void *)driver0,
+	             (arena != NULL) ? arena->base : NULL);
 }
 
 internal const char *NativeReplayScheduler_CheckpointPolicyName(enum NativeReplayCheckpointPolicy policy)
@@ -1131,6 +1146,10 @@ internal s32 NativeReplayScheduler_WriteCheckpointIfDue(void)
 	}
 
 	Platform_Log("[CTR State] checkpoint #%u replayFrame=%u checksum=0x%08x\n", info.checkpointIndex, info.replayFrame, info.checksum);
+	if (info.checkpointIndex == 0)
+	{
+		NativeReplayScheduler_LogHostAddressSample("record");
+	}
 	s_checkpointIndex++;
 	s_header.checkpointCount = s_checkpointIndex;
 	if (!NativeReplayScheduler_WriteHeader())
@@ -1191,6 +1210,8 @@ internal s32 NativeReplayScheduler_RestoreBootstrapCheckpoint(void)
 {
 	struct NativeCheckpointFileRecordInfo info;
 	u8 *payload;
+	u32 recordedChecksum;
+	u32 recapturedChecksum;
 	int payloadSize;
 	s32 ok = 0;
 
@@ -1223,13 +1244,29 @@ internal s32 NativeReplayScheduler_RestoreBootstrapCheckpoint(void)
 		Platform_Log("[CTR State] bootstrap checkpoint maps to replay frame %u\n", info.replayFrame);
 		goto cleanup;
 	}
+	recordedChecksum = NativeReplayScheduler_Fnv1a(payload, (u32)payloadSize);
+	if (recordedChecksum != info.checksum)
+	{
+		Platform_Log("[CTR State] bootstrap checkpoint checksum changed after validation: file=0x%08x memory=0x%08x\n", info.checksum,
+		             recordedChecksum);
+		goto cleanup;
+	}
 	if (!NativeCheckpoint_Restore(payload, payloadSize))
 	{
 		Platform_Log("[CTR State] failed to restore bootstrap checkpoint\n");
 		goto cleanup;
 	}
+	if (!NativeCheckpoint_Capture(payload, payloadSize))
+	{
+		Platform_Log("[CTR State] failed to recapture restored bootstrap checkpoint\n");
+		goto cleanup;
+	}
+	recapturedChecksum = NativeReplayScheduler_Fnv1a(payload, (u32)payloadSize);
 
 	Platform_Log("[CTR State] restored bootstrap checkpoint #%u replayFrame=%u checksum=0x%08x\n", info.checkpointIndex, info.replayFrame, info.checksum);
+	Platform_Log("[CTR State] raw checkpoint comparison (diagnostic only): recorded=0x%08x restored-process=0x%08x equal=%s\n", recordedChecksum,
+	             recapturedChecksum, recordedChecksum == recapturedChecksum ? "yes" : "no");
+	NativeReplayScheduler_LogHostAddressSample("playback");
 	s_restoreBootstrapCheckpoint = 0;
 	ok = 1;
 
@@ -1814,6 +1851,23 @@ void NativeReplayScheduler_RecordVSyncPacket(int emittedVBlanks)
 
 	s_pendingRecord.vblankPackets[s_frameVBlankPacketCount] = (u16)emittedVBlanks;
 	s_frameVBlankPacketCount++;
+}
+
+void NativeReplayScheduler_ObserveGameplayState(const struct GameTracker *gGT)
+{
+	const s32 active = (gGT != NULL) && (gGT->drivers[0] != NULL);
+
+	if ((s_mode != NATIVE_REPLAY_MODE_RECORD) && (s_mode != NATIVE_REPLAY_MODE_PLAYBACK))
+	{
+		return;
+	}
+	if (active == s_driver0ActiveState)
+	{
+		return;
+	}
+
+	Platform_Log("[CTR Replay] driver[0] became %s at replay frame %u\n", active != 0 ? "active" : "inactive", s_replayFrame);
+	s_driver0ActiveState = active;
 }
 
 int NativeReplayScheduler_TestPerturbGameplayState(struct GameTracker *gGT)
