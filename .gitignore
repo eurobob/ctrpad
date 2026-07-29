@@ -1,0 +1,8 @@
+# Reference clones: read-only, full upstream git histories.
+# Not tracked here. ref/README.md documents what they are and how to re-clone.
+ref/ctr-native/
+ref/CTR-ModSDK/
+ref/CTR-in-C/
+ref/CTR-PC-Port/
+
+.DS_Store
