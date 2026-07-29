@@ -892,6 +892,13 @@ int NativeAssets_Validate(void)
 {
 	int ok = 1;
 
+	if (NativeDiscImage_IsAvailable() && !NativeDiscImage_IsExpectedNTSCU())
+	{
+		fprintf(stderr, "[CTR Native] unsupported disc identity: found %s, expected NTSC-U %s\n", NativeDiscImage_GetDiscID(),
+		        NativeDiscImage_GetExpectedDiscID());
+		return 0;
+	}
+
 	ok &= NativeAssets_CheckRequiredFile(NATIVE_ASSETS_BIGFILE_PATH);
 	ok &= NativeAssets_CheckRequiredFile(NATIVE_ASSETS_KART_HWL_PATH);
 	ok &= NativeAssets_CheckRequiredFile(NATIVE_ASSETS_TEST_STR_PATH);

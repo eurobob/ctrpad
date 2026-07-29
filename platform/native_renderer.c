@@ -1999,6 +1999,13 @@ void NativeRenderer_CopyVRAM(u16 *src, int x, int y, int w, int h, int dst_x, in
 {
 	int stride = w;
 
+	if ((w <= 0) || (h <= 0) || (dst_x < 0) || (dst_y < 0) || (dst_x > VRAM_WIDTH - w) || (dst_y > VRAM_HEIGHT - h) ||
+	    ((src == NULL) && ((x < 0) || (y < 0) || (x > VRAM_WIDTH - w) || (y > VRAM_HEIGHT - h))))
+	{
+		NATIVE_RENDERER_ERROR("invalid VRAM copy src=%p rect=(%d,%d %dx%d) dst=(%d,%d)\n", (void *)src, x, y, w, h, dst_x, dst_y);
+		return;
+	}
+
 	if (!src)
 	{
 		// NOTE(aalhendi): MoveImage reads exactly its PS1 VRAM source rectangle. Resolve only that

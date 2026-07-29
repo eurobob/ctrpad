@@ -20,6 +20,9 @@
 #define NATIVE_DISC_IMAGE_PVD_LBA           16u
 #define NATIVE_DISC_IMAGE_PVD_ROOT_RECORD   156u
 #define NATIVE_DISC_IMAGE_DIRECTORY_FLAG    0x02u
+#define NATIVE_DISC_IMAGE_SYSTEM_CNF_PATH   "SYSTEM.CNF"
+#define NATIVE_DISC_IMAGE_EXPECTED_DISC_ID  "SCUS_944.26"
+#define NATIVE_DISC_IMAGE_DISC_ID_SIZE       12u
 
 // NOTE(aalhendi): This hardcodes only the common NTSC-U raw BIN layout:
 // one MODE2/2352 data track at byte zero. The user still supplies all disc
@@ -38,6 +41,9 @@ global_variable char s_nativeDiscImagePath[NATIVE_DISC_IMAGE_PATH_MAX];
 global_variable FILE *s_nativeDiscImageFile;
 global_variable struct NativeDiscImageFile s_nativeDiscImageRoot;
 global_variable int s_nativeDiscImageAvailable;
+global_variable char s_nativeDiscImageDiscID[NATIVE_DISC_IMAGE_DISC_ID_SIZE];
+
+internal void NativeDiscImage_DetectDiscID(void);
 
 internal int NativeDiscImage_FindHostImagePath(char *dst, size_t dstSize, NativeStr8 assetsDir)
 {
@@ -370,6 +376,7 @@ int NativeDiscImage_Init(const char *assetsDir)
 
 	s_nativeDiscImageAvailable = 0;
 	s_nativeDiscImagePath[0] = '\0';
+	s_nativeDiscImageDiscID[0] = '\0';
 
 	if (s_nativeDiscImageFile != NULL)
 	{
@@ -403,7 +410,28 @@ int NativeDiscImage_Init(const char *assetsDir)
 	}
 
 	s_nativeDiscImageAvailable = 1;
+	NativeDiscImage_DetectDiscID();
 	return 1;
+}
+
+int NativeDiscImage_IsAvailable(void)
+{
+	return s_nativeDiscImageAvailable;
+}
+
+int NativeDiscImage_IsExpectedNTSCU(void)
+{
+	return s_nativeDiscImageAvailable && (strcmp(s_nativeDiscImageDiscID, NATIVE_DISC_IMAGE_EXPECTED_DISC_ID) == 0);
+}
+
+const char *NativeDiscImage_GetDiscID(void)
+{
+	return s_nativeDiscImageDiscID[0] != '\0' ? s_nativeDiscImageDiscID : "unknown";
+}
+
+const char *NativeDiscImage_GetExpectedDiscID(void)
+{
+	return NATIVE_DISC_IMAGE_EXPECTED_DISC_ID;
 }
 
 int NativeDiscImage_FindFile(const char *path, struct NativeDiscImageFile *fileOut)
@@ -479,6 +507,51 @@ internal int NativeDiscImage_ReadDataBytes(const struct NativeDiscImageFile *fil
 	}
 
 	return 1;
+}
+
+internal void NativeDiscImage_DetectDiscID(void)
+{
+	struct NativeDiscImageFile systemCnf;
+	u8 bytes[256];
+	size_t size;
+
+	if (!NativeDiscImage_FindFile(NATIVE_DISC_IMAGE_SYSTEM_CNF_PATH, &systemCnf))
+	{
+		return;
+	}
+
+	size = systemCnf.size;
+	if (size > sizeof(bytes))
+	{
+		size = sizeof(bytes);
+	}
+	if ((size < NATIVE_DISC_IMAGE_DISC_ID_SIZE - 1u) || !NativeDiscImage_ReadDataBytes(&systemCnf, 0, bytes, size))
+	{
+		return;
+	}
+
+	for (size_t i = 0; i + (NATIVE_DISC_IMAGE_DISC_ID_SIZE - 1u) <= size; i++)
+	{
+		const u8 *candidate = &bytes[i];
+
+		if ((NativeStr8_ToUpperAscii(candidate[0]) != 'S') || (NativeStr8_ToUpperAscii(candidate[1]) < 'A') ||
+		    (NativeStr8_ToUpperAscii(candidate[1]) > 'Z') || (NativeStr8_ToUpperAscii(candidate[2]) < 'A') ||
+		    (NativeStr8_ToUpperAscii(candidate[2]) > 'Z') || (NativeStr8_ToUpperAscii(candidate[3]) < 'A') ||
+		    (NativeStr8_ToUpperAscii(candidate[3]) > 'Z') || (candidate[4] != '_') || (candidate[8] != '.') ||
+		    (candidate[5] < '0') || (candidate[5] > '9') || (candidate[6] < '0') || (candidate[6] > '9') ||
+		    (candidate[7] < '0') || (candidate[7] > '9') || (candidate[9] < '0') || (candidate[9] > '9') ||
+		    (candidate[10] < '0') || (candidate[10] > '9'))
+		{
+			continue;
+		}
+
+		for (size_t j = 0; j < NATIVE_DISC_IMAGE_DISC_ID_SIZE - 1u; j++)
+		{
+			s_nativeDiscImageDiscID[j] = (char)NativeStr8_ToUpperAscii(candidate[j]);
+		}
+		s_nativeDiscImageDiscID[NATIVE_DISC_IMAGE_DISC_ID_SIZE - 1u] = '\0';
+		return;
+	}
 }
 
 int NativeDiscImage_ReadDataSectors(const struct NativeDiscImageFile *file, u32 sector, u32 sectorCount, void *dst)
