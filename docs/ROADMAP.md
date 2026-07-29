@@ -7,7 +7,7 @@ timing.
 
 **Roadmap status:** active
 
-**Current milestone:** M0 — repository and evidence foundation
+**Current milestone:** M1 — reproducible upstream baseline and parity gate
 
 **Last updated:** 2026-07-29
 
@@ -86,7 +86,22 @@ runs on an iPad with a physical controller.
 
 ### M0 — Repository and evidence foundation
 
-**Status:** in progress
+**Status:** completed 2026-07-29
+
+Result:
+
+- Retail and reference paths are protected by `.gitignore:1-35`; the upstream
+  `assets/` exclusion remains at `.gitignore:40`.
+- Clean reference clones are recorded in `ref/README.md` at `2df55dc5a` for
+  upstream and `34648097d` for the Android GLES branch.
+- Commit `268ff6977` joins the CTRPad documentation ancestry with the unchanged
+  upstream source ancestry. `git diff upstream/master` reports no difference
+  in `CMakeLists.txt`, `CMakePresets.json`, `main.c`, `game/`, `include/`,
+  `platform/`, or `externals/`.
+- The implementation branch is `codex/arm64-apple`; `upstream` points to
+  `https://github.com/CTR-tools/ctr-native.git`.
+- `git ls-files` finds no retail-media extension, and representative
+  `git check-ignore -v` probes pass for the raw image and extracted formats.
 
 Work:
 
@@ -119,7 +134,7 @@ Acceptance:
 
 ### M1 — Reproducible upstream baseline and parity gate
 
-**Status:** pending; depends on M0
+**Status:** in progress; M0 completed
 
 Work:
 
