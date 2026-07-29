@@ -7,6 +7,7 @@ ctrpad_image="ctrpad-linux-i686:ubuntu-24.04"
 ctrpad_build_dir="${ctrpad_root_dir}/build-linux-i686-baseline"
 ctrpad_host_uid=$(id -u)
 ctrpad_host_gid=$(id -g)
+ctrpad_build_jobs=${CTRPAD_BUILD_JOBS:-8}
 
 docker build \
     --platform linux/amd64 \
@@ -20,6 +21,7 @@ docker run --rm \
     --platform linux/amd64 \
     --env "CTRPAD_HOST_UID=${ctrpad_host_uid}" \
     --env "CTRPAD_HOST_GID=${ctrpad_host_gid}" \
+    --env "CTRPAD_BUILD_JOBS=${ctrpad_build_jobs}" \
     --volume "${ctrpad_root_dir}:/src:ro" \
     --volume "${ctrpad_build_dir}:/out" \
     "${ctrpad_image}" \
@@ -30,7 +32,7 @@ docker run --rm \
             -DBUILD_TESTING=ON \
             -DCMAKE_C_FLAGS=-m32 \
             -DCMAKE_EXE_LINKER_FLAGS=-m32
-        cmake --build /out --parallel 2
+        cmake --build /out --parallel "${CTRPAD_BUILD_JOBS}"
         ctest --test-dir /out --output-on-failure
         file /out/ctr_native
         /out/ctr_native --version
