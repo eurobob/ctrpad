@@ -144,4 +144,8 @@ if(BUILD_TESTING)
     set_tests_properties(ctr_native_state_digest PROPERTIES PASS_REGULAR_EXPRESSION
         "^\\[CTR StateDigest\\] self-test passed: .* mutation component=drivers"
     )
+    add_test(NAME ctr_native_replay_gate COMMAND $<TARGET_FILE:ctr_native> --self-test-replay-gate)
+    set_tests_properties(ctr_native_replay_gate PROPERTIES PASS_REGULAR_EXPRESSION
+        "\\[CTR Replay\\] self-test passed: runtime-error=1 divergence=2 mutation-frame=17 component=drivers"
+    )
 endif()

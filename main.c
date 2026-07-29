@@ -141,6 +141,11 @@ static int NativeArg_IsStateDigestSelfTest(const char *arg)
 	return (arg != NULL) && (strcmp(arg, "--self-test-state-digest") == 0);
 }
 
+static int NativeArg_IsReplayGateSelfTest(const char *arg)
+{
+	return (arg != NULL) && (strcmp(arg, "--self-test-replay-gate") == 0);
+}
+
 int main(int argc, char *argv[])
 {
 	for (int argIndex = 1; argIndex < argc; argIndex++)
@@ -153,6 +158,10 @@ int main(int argc, char *argv[])
 		if (NativeArg_IsStateDigestSelfTest(argv[argIndex]))
 		{
 			return NativeStateDigest_RunSelfTest();
+		}
+		if (NativeArg_IsReplayGateSelfTest(argv[argIndex]))
+		{
+			return NativeReplayScheduler_RunSelfTest();
 		}
 	}
 
@@ -227,14 +236,12 @@ int main(int argc, char *argv[])
 
 	const int result = CTR_Main();
 
-#if defined(CTR_INTERNAL)
-	const int replayDiverged = NativeReplayScheduler_HasDiverged();
-#endif
 	Platform_Shutdown();
 #if defined(CTR_INTERNAL)
-	if (replayDiverged != 0)
+	const int replayExitStatus = NativeReplayScheduler_GetExitStatus();
+	if (replayExitStatus != 0)
 	{
-		return NativeConsole_Return(2);
+		return NativeConsole_Return((u32)replayExitStatus);
 	}
 #endif
 	return NativeConsole_Return(result);

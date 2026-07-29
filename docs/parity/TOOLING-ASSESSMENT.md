@@ -97,14 +97,19 @@ Completed:
 - an address-independent synthetic fixture passes with different host pointers,
   excluded padding, and wall-clock values;
 - changing `Driver.posCurr.x` by one changes exactly the `drivers` component
-  and the root.
+  and the root;
+- replay runtime errors and canonical divergence have distinct nonzero process
+  statuses, and the media-free replay-gate CTest identifies a synthetic driver
+  mutation as `drivers`;
+- internal playback can perturb the real `driver[0].posCurr.x` field at an
+  exact requested frame without altering the source replay.
 
 Still required before M1 can close:
 
 - record a deterministic, detailed 32-bit run using the retail image;
 - replay it in a second process and demonstrate no digest divergence;
-- inject a covered gameplay mutation during replay and demonstrate process
-  failure at the exact frame and named component;
+- run the implemented gameplay mutation injection against the golden replay
+  and demonstrate status 2 at the exact frame with `drivers` named;
 - repeat the unchanged run under address randomization and demonstrate that the
   canonical digest remains stable even when raw checkpoint checksums differ.
 

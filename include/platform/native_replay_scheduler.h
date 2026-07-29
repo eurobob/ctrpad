@@ -5,6 +5,8 @@
 #include "platform/native_state_digest.h"
 
 #if defined(CTR_INTERNAL)
+struct GameTracker;
+
 struct NativeReplaySchedulerFrameInfo
 {
 	s32 frameTimer;
@@ -28,14 +30,16 @@ struct NativeReplaySchedulerFrameInfo
 
 int NativeReplayScheduler_PrepareReportFromArgs(int argc, char **argv);
 int NativeReplayScheduler_ConfigureFromArgs(int argc, char **argv);
+int NativeReplayScheduler_RunSelfTest(void);
 void NativeReplayScheduler_Shutdown(void);
 int NativeReplayScheduler_RequestStart(void);
 int NativeReplayScheduler_RequestStop(void);
 int NativeReplayScheduler_BeginFrame(const struct NativeReplaySchedulerFrameInfo *info);
 int NativeReplayScheduler_ConsumeVSyncPacket(int requestedVBlanks, int *emittedVBlanks);
 int NativeReplayScheduler_ConsumeFrameElapsedTimeMS(int *elapsedTimeMS);
+int NativeReplayScheduler_TestPerturbGameplayState(struct GameTracker *gGT);
 int NativeReplayScheduler_EndFrame(const struct NativeReplaySchedulerFrameInfo *info);
-int NativeReplayScheduler_HasDiverged(void);
+int NativeReplayScheduler_GetExitStatus(void);
 void NativeReplayScheduler_RecordVSyncPacket(int emittedVBlanks);
 #endif
 

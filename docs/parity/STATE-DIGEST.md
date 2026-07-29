@@ -69,7 +69,8 @@ named component and the root at frame end. A mismatch logs the first named
 component and both expected/live component values alongside the existing pad,
 timer, RNG, and VBlank evidence. Playback stops on that exact frame and the
 process exits with status 2, so CI cannot mistake a logged divergence for a
-passing gate.
+passing gate. Other replay runtime and finalization failures exit with status
+1; an unchanged replay that reaches its recorded end exits with status 0.
 
 Version 1 replay files are intentionally rejected by the format check. They do
 not contain a trustworthy physics-parity signal.
@@ -80,6 +81,7 @@ CTest invokes:
 
 ```sh
 ctr_native --self-test-state-digest
+ctr_native --self-test-replay-gate
 ```
 
 The fixture creates equivalent game/driver state at different native
@@ -90,12 +92,18 @@ component and root to change:
 
 ```text
 [CTR StateDigest] self-test passed: address-independent root=69d9c7bf8ca4aaf8 mutation component=drivers
+[CTR Replay] self-test passed: runtime-error=1 divergence=2 mutation-frame=17 component=drivers
 ```
 
-This proves the gate's basic invariants without retail data. It does not
-replace the pending M1 proof: record and replay a full NTSC-U run in separate
-processes, then deliberately perturb a covered field at a known frame and
-observe replay divergence there.
+The replay-gate fixture also verifies frame parsing, identical-frame matching,
+an isolated `drivers` component mismatch, and the distinct process statuses
+for harness failure and canonical divergence. This proves the gate's basic
+invariants without retail data.
+
+It does not replace the pending M1 proof: record and replay a full NTSC-U run
+in separate processes, then use
+`--replay-test-perturb-driver-x <frame>` while driver slot 0 is active and
+observe status 2 at that exact frame.
 
 ## Known scope
 

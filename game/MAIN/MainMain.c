@@ -445,6 +445,10 @@ u32 main(void)
 			}
 #if defined(CTR_NATIVE) && defined(CTR_INTERNAL)
 			{
+				if (NativeReplayScheduler_TestPerturbGameplayState(gGT) != 0)
+				{
+					return 0;
+				}
 				struct NativeReplaySchedulerFrameInfo replayFrameInfo = MainReplayScheduler_FrameInfo(gGT);
 
 				if (NativeReplayScheduler_EndFrame(&replayFrameInfo) != 0)

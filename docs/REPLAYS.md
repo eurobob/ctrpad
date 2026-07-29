@@ -57,3 +57,24 @@ If a developer asks you to bypass header identity checks:
 ```sh
 build/ctr_native --replay "debug/reports/20260605/ctr-123456/input.ctrreplay" --replay-bypass-header
 ```
+
+## Parity-gate proof
+
+Internal builds expose one deliberately destructive playback-only test option:
+
+```sh
+build/ctr_native \
+  --replay "debug/reports/20260605/ctr-123456/input.ctrreplay" \
+  --replay-test-perturb-driver-x 1234
+```
+
+At replay frame `1234`, this flips bit 0 of the live
+`driver[0].posCurr.x` gameplay field before the end-of-frame digest is
+captured. Choose a frame where driver slot 0 is active. A working parity gate
+must report that exact frame, name `drivers` as the first canonical component,
+and exit with status 2. An invalid frame, missing driver, corrupt replay,
+checkpoint failure, or replay I/O/finalization failure exits with status 1.
+Unmodified playback exits with status 0 after all recorded frames match.
+
+This option changes only the playback process and never rewrites the replay,
+checkpoint, seed memcard, or retail image.

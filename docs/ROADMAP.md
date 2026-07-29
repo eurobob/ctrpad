@@ -148,6 +148,10 @@ Result so far:
 - Canonical state-digest schema 1 is integrated into replay format version 2.
   Its CTest proves host-address independence and detects a one-unit vehicle
   position mutation as `drivers` (`docs/parity/STATE-DIGEST.md`).
+- A second media-free CTest proves identical replay-frame matching, named
+  `drivers` divergence, and distinct exit statuses for harness failure (1) and
+  parity failure (2). Playback has an exact-frame real-state mutation option
+  for the pending golden-run proof.
 - The local retail image has now been identified as PAL Europe
   `SCES_021.05`, not NTSC-U `SCUS_944.26`. It cannot be used for the required
   `BUILD=926` golden run. The runtime rejects the mismatch before loading
