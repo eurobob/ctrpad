@@ -62,12 +62,35 @@ case "${ctrpad_report_dir}/" in
         ;;
 esac
 
-for ctrpad_required_file in input.ctrreplay state.ctrstates memcard.seed metadata.txt coverage.txt; do
+for ctrpad_required_file in input.ctrreplay state.ctrstates metadata.txt coverage.txt ctr-native.log; do
     if [ ! -f "${ctrpad_report_dir}/${ctrpad_required_file}" ]; then
         echo "Incomplete replay report: missing ${ctrpad_report_dir}/${ctrpad_required_file}" >&2
         exit 1
     fi
 done
+for ctrpad_required_dir in memcard.seed memcard.recording; do
+    if [ ! -d "${ctrpad_report_dir}/${ctrpad_required_dir}" ]; then
+        echo "Incomplete replay report: missing ${ctrpad_report_dir}/${ctrpad_required_dir}/" >&2
+        exit 1
+    fi
+done
+
+for ctrpad_coverage_key in \
+    startup_and_title \
+    menu_and_race_load \
+    steering_and_acceleration \
+    powerslide_and_boost \
+    item_acquired_and_used \
+    lap_advanced \
+    save_action \
+    persisted_result_loaded
+do
+    if ! grep -q "^${ctrpad_coverage_key}=pass$" "${ctrpad_report_dir}/coverage.txt"; then
+        echo "Golden coverage is incomplete: ${ctrpad_coverage_key} is not pass." >&2
+        exit 1
+    fi
+done
+grep -q "\\[CTR Gameplay\\] player powerslide boost:" "${ctrpad_report_dir}/ctr-native.log"
 
 ctrpad_replay_path="/out/${ctrpad_report_relative}/input.ctrreplay"
 ctrpad_container_report_dir="/out/${ctrpad_report_relative}"
@@ -148,11 +171,11 @@ docker run --rm \
         ctrpad_mutation_frame=${CTRPAD_MUTATION_FRAME}
         if [ "${ctrpad_mutation_frame}" = auto ]; then
             ctrpad_mutation_frame=$(
-                sed -n "s/^\\[CTR Replay\\] driver\\[0\\] became active at replay frame \\([0-9][0-9]*\\)$/\\1/p" \
+                sed -n "s/^\\[CTR Replay\\] race driver\\[0\\] became active at replay frame \\([0-9][0-9]*\\)$/\\1/p" \
                     "${CTRPAD_REPORT_DIR}/playback-1.log" | head -n 1
             )
             if [ -z "${ctrpad_mutation_frame}" ]; then
-                echo "No active driver[0] frame was found in unchanged playback." >&2
+                echo "No active race driver[0] frame was found in unchanged playback." >&2
                 exit 1
             fi
         fi
@@ -193,17 +216,31 @@ fi
     sed 's/^/toolchain=/' "${ctrpad_build_dir}/toolchain-packages.txt"
 } > "${ctrpad_report_dir}/environment.txt"
 
+(
+    cd "${ctrpad_report_dir}/memcard.seed"
+    find . -type f -print | LC_ALL=C sort | while IFS= read -r ctrpad_memcard_file; do
+        shasum -a 256 "${ctrpad_memcard_file}"
+    done
+) > "${ctrpad_report_dir}/memcard-seed.sha256"
+
+(
+    cd "${ctrpad_report_dir}/memcard.recording"
+    find . -type f -print | LC_ALL=C sort | while IFS= read -r ctrpad_memcard_file; do
+        shasum -a 256 "${ctrpad_memcard_file}"
+    done
+) > "${ctrpad_report_dir}/memcard-recording.sha256"
+
 if command -v sha256sum >/dev/null 2>&1; then
     (
         cd "${ctrpad_report_dir}"
-        sha256sum input.ctrreplay state.ctrstates memcard.seed metadata.txt coverage.txt disc.sha256 environment.txt mutation-frame.txt \
-            playback-1.log playback-2.log playback-mutated.log
+        sha256sum input.ctrreplay state.ctrstates metadata.txt coverage.txt ctr-native.log disc.sha256 environment.txt mutation-frame.txt \
+            memcard-seed.sha256 memcard-recording.sha256 playback-1.log playback-2.log playback-mutated.log
     ) > "${ctrpad_report_dir}/evidence.sha256"
 else
     (
         cd "${ctrpad_report_dir}"
-        shasum -a 256 input.ctrreplay state.ctrstates memcard.seed metadata.txt coverage.txt disc.sha256 environment.txt mutation-frame.txt \
-            playback-1.log playback-2.log playback-mutated.log
+        shasum -a 256 input.ctrreplay state.ctrstates metadata.txt coverage.txt ctr-native.log disc.sha256 environment.txt mutation-frame.txt \
+            memcard-seed.sha256 memcard-recording.sha256 playback-1.log playback-2.log playback-mutated.log
     ) > "${ctrpad_report_dir}/evidence.sha256"
 fi
 

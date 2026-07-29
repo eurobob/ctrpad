@@ -139,6 +139,7 @@ global_variable s32 s_testPerturbEnabled;
 global_variable s32 s_testPerturbApplied;
 global_variable u32 s_testPerturbFrame;
 global_variable s32 s_driver0ActiveState;
+global_variable s32 s_raceDriver0ActiveState;
 
 internal void NativeReplayScheduler_SetFailure(void)
 {
@@ -182,6 +183,7 @@ internal void NativeReplayScheduler_ResetSessionState(void)
 	s_exitStatus = 0;
 	s_testPerturbApplied = 0;
 	s_driver0ActiveState = -1;
+	s_raceDriver0ActiveState = -1;
 	NativeReplayScheduler_ResetVSyncPackets();
 }
 
@@ -1856,18 +1858,26 @@ void NativeReplayScheduler_RecordVSyncPacket(int emittedVBlanks)
 void NativeReplayScheduler_ObserveGameplayState(const struct GameTracker *gGT)
 {
 	const s32 active = (gGT != NULL) && (gGT->drivers[0] != NULL);
+	const s32 raceActive =
+	    active && ((gGT->gameMode1 & (ARCADE_MODE | TIME_TRIAL | ADVENTURE_MODE)) != 0) &&
+	    ((gGT->gameMode1 & (MAIN_MENU | GAME_CUTSCENE | LOADING | ADVENTURE_ARENA | END_OF_RACE)) == 0);
 
 	if ((s_mode != NATIVE_REPLAY_MODE_RECORD) && (s_mode != NATIVE_REPLAY_MODE_PLAYBACK))
 	{
 		return;
 	}
-	if (active == s_driver0ActiveState)
+
+	if (active != s_driver0ActiveState)
 	{
-		return;
+		Platform_Log("[CTR Replay] driver[0] became %s at replay frame %u\n", active != 0 ? "active" : "inactive", s_replayFrame);
+		s_driver0ActiveState = active;
 	}
 
-	Platform_Log("[CTR Replay] driver[0] became %s at replay frame %u\n", active != 0 ? "active" : "inactive", s_replayFrame);
-	s_driver0ActiveState = active;
+	if (raceActive != s_raceDriver0ActiveState)
+	{
+		Platform_Log("[CTR Replay] race driver[0] became %s at replay frame %u\n", raceActive != 0 ? "active" : "inactive", s_replayFrame);
+		s_raceDriver0ActiveState = raceActive;
+	}
 }
 
 int NativeReplayScheduler_TestPerturbGameplayState(struct GameTracker *gGT)

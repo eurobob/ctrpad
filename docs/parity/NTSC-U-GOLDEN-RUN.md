@@ -91,8 +91,12 @@ The accepted trace must visibly cover all of the following:
 Press `F10` only after all eight items have occurred. Wait for:
 
 ```text
+[CTR Gameplay] player powerslide boost:
 [CTR Replay] report finalized by hotkey
 ```
+
+The first line is emitted only by the retail successful-boost branch; a
+shoulder-button press while the meter is still green does not count.
 
 Then close the game window. The report appears under:
 
@@ -123,7 +127,9 @@ notes=
 
 `metadata.txt` must say `finalized=1`, use replay version 2, and report a
 nonzero frame and checkpoint count. `ctr-native.log` must contain a record
-host-address sample and driver activity transitions.
+host-address sample, race-driver activity transitions, and the successful
+powerslide-boost line. The verifier requires all eight coverage keys to be
+`pass`.
 
 ## 4. Verify unchanged and mutated playback
 
@@ -143,11 +149,12 @@ The verifier:
 - requires different logged host-address samples across those processes;
 - requires the pointer-sensitive restored raw-checkpoint checksum to differ
   from the recorded payload in each process;
-- derives the first frame where `driver[0]` becomes active;
+- derives the first frame where `driver[0]` becomes active in an actual race;
 - flips bit 0 of the real `driver[0].posCurr.x` field at that exact frame;
 - requires exit status 2 and `drivers` as the first canonical difference;
-- hashes the disc identity, replay, checkpoint, memcard seed, metadata,
-  coverage note, environment, and all three playback logs.
+- hashes the disc identity, replay, checkpoint, deterministic manifests for
+  the seed and recording memory-card directories, metadata, coverage note,
+  environment, and all three playback logs.
 
 Successful verification writes:
 
@@ -157,6 +164,8 @@ playback-2.log
 playback-mutated.log
 mutation-frame.txt
 disc.sha256
+memcard-seed.sha256
+memcard-recording.sha256
 environment.txt
 evidence.sha256
 ```
