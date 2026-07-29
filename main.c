@@ -24,6 +24,7 @@
 #include "platform/native_perf.h"
 #include "platform/native_replay_scheduler.h"
 #include "platform/native_savestate.h"
+#include "platform/native_state_digest.h"
 
 #include <platform.h>
 
@@ -63,6 +64,7 @@
 #include "platform/native_renderer.c"
 #include "platform/native_savestate.c"
 #include "platform/native_state.c"
+#include "platform/native_state_digest.c"
 #include "platform/native_str.c"
 
 #ifndef CC
@@ -134,6 +136,10 @@ static int NativeArg_IsVersion(const char *arg)
 	return (arg != NULL) && ((strcmp(arg, "--version") == 0) || (strcmp(arg, "-v") == 0));
 }
 
+static int NativeArg_IsStateDigestSelfTest(const char *arg)
+{
+	return (arg != NULL) && (strcmp(arg, "--self-test-state-digest") == 0);
+}
 
 int main(int argc, char *argv[])
 {
@@ -143,6 +149,10 @@ int main(int argc, char *argv[])
 		{
 			printf("CTR Native %s (%s)\n", CTR_NATIVE_VERSION, CTR_NATIVE_BUILD_ID);
 			return 0;
+		}
+		if (NativeArg_IsStateDigestSelfTest(argv[argIndex]))
+		{
+			return NativeStateDigest_RunSelfTest();
 		}
 	}
 
@@ -217,6 +227,15 @@ int main(int argc, char *argv[])
 
 	const int result = CTR_Main();
 
+#if defined(CTR_INTERNAL)
+	const int replayDiverged = NativeReplayScheduler_HasDiverged();
+#endif
 	Platform_Shutdown();
+#if defined(CTR_INTERNAL)
+	if (replayDiverged != 0)
+	{
+		return NativeConsole_Return(2);
+	}
+#endif
 	return NativeConsole_Return(result);
 }

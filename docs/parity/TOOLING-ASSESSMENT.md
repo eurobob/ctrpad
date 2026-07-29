@@ -88,15 +88,28 @@ records before structural 64-bit work is accepted. Its schema must:
 The existing checkpoint region and pointer-slot inventories are inputs to this
 schema, not the schema itself.
 
-## Required proof
+## Proof status
 
-Before M1 can close:
+Completed:
+
+- schema 1 explicitly serializes fixed-width gameplay fields and named
+  components (`docs/parity/STATE-DIGEST.md`);
+- an address-independent synthetic fixture passes with different host pointers,
+  excluded padding, and wall-clock values;
+- changing `Driver.posCurr.x` by one changes exactly the `drivers` component
+  and the root.
+
+Still required before M1 can close:
 
 - record a deterministic, detailed 32-bit run using the retail image;
 - replay it in a second process and demonstrate no digest divergence;
-- change one covered gameplay field in a test build or synthetic fixture and
-  demonstrate a failure at the exact frame and named component;
+- inject a covered gameplay mutation during replay and demonstrate process
+  failure at the exact frame and named component;
 - repeat the unchanged run under address randomization and demonstrate that the
   canonical digest remains stable even when raw checkpoint checksums differ.
 
-No such proof has passed yet.
+The current local image cannot supply the remaining golden proof: its boot ID
+is PAL Europe `SCES_021.05`, while this source baseline is NTSC-U
+`SCUS_944.26`/`BUILD=926` (`docs/builds/2026-07-29-baselines.md`). The runtime
+now rejects that mismatch before game initialization. A user-owned NTSC-U
+image is required to finish the run/replay evidence.

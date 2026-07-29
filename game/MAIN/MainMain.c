@@ -4,6 +4,7 @@
 #include <platform/native_perf.h>
 #include <platform/native_replay_scheduler.h>
 #include <platform/native_savestate.h>
+#include <platform/native_state_digest.h>
 #endif
 
 #if defined(CTR_NATIVE) && defined(CTR_INTERNAL)
@@ -46,6 +47,7 @@ static struct NativeReplaySchedulerFrameInfo MainReplayScheduler_FrameInfo(struc
 	info.deadcoed1 = (u32)gGT->deadcoed_struct.state1;
 	info.advRng0 = (u32)sdata->const_0x30215400;
 	info.advRng1 = (u32)sdata->const_0x493583fe;
+	NativeStateDigest_Capture(gGT, &info.stateDigest);
 
 	return info;
 }

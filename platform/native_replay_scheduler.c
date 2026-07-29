@@ -29,7 +29,7 @@
 // NOTE(aalhendi): Little-endian tags `CTRR`/`RFRM` = CTR native Replay.
 #define NATIVE_REPLAY_FILE_MAGIC                 0x52525443u
 #define NATIVE_REPLAY_FRAME_MAGIC                0x4d524652u
-#define NATIVE_REPLAY_FILE_VERSION               1u
+#define NATIVE_REPLAY_FILE_VERSION               2u
 #define NATIVE_REPLAY_FNV_OFFSET                 2166136261u
 #define NATIVE_REPLAY_FNV_PRIME                  16777619u
 #define NATIVE_REPLAY_CHECKPOINT_INTERVAL_FRAMES 300u
@@ -89,6 +89,10 @@ struct NativeReplayFrameRecord
 	u32 padChecksum;
 	u32 recordChecksum;
 };
+
+CTR_STATIC_ASSERT(sizeof(struct NativeReplaySchedulerFrameInfo) == 120);
+CTR_STATIC_ASSERT(sizeof(struct NativeReplayFileHeader) == 148);
+CTR_STATIC_ASSERT(sizeof(struct NativeReplayFrameRecord) == 440);
 
 global_variable enum NativeReplaySchedulerMode s_mode;
 global_variable u32 s_replayFrame;
@@ -1304,6 +1308,11 @@ internal void NativeReplayScheduler_LogFrameInfo(const char *prefix, const struc
 	             prefix, info->frameTimer, info->frameCounter, info->timer, info->framesInThisLEV, info->elapsedTimeMS, info->msInThisLEV,
 	             info->elapsedEventTime, info->mainGameState, info->loadingStage, info->levelID, info->mixRandomNumber, info->audioRNG, info->deadcoed0,
 	             info->deadcoed1, info->advRng0, info->advRng1);
+	Platform_Log("[CTR Replay] %s digest root=%08x%08x timing=%08x%08x rng=%08x%08x drivers=%08x%08x world=%08x%08x allocation=%08x%08x\n",
+	             prefix, (u32)(info->stateDigest.root >> 32), (u32)info->stateDigest.root, (u32)(info->stateDigest.timing >> 32),
+	             (u32)info->stateDigest.timing, (u32)(info->stateDigest.rng >> 32), (u32)info->stateDigest.rng,
+	             (u32)(info->stateDigest.drivers >> 32), (u32)info->stateDigest.drivers, (u32)(info->stateDigest.world >> 32),
+	             (u32)info->stateDigest.world, (u32)(info->stateDigest.allocation >> 32), (u32)info->stateDigest.allocation);
 }
 
 internal s32 NativeReplayScheduler_FrameInfoMatches(const struct NativeReplaySchedulerFrameInfo *expected, const struct NativeReplaySchedulerFrameInfo *live)
@@ -1313,7 +1322,9 @@ internal s32 NativeReplayScheduler_FrameInfoMatches(const struct NativeReplaySch
 	       (expected->msInThisLEV == live->msInThisLEV) && (expected->elapsedEventTime == live->elapsedEventTime) &&
 	       (expected->mainGameState == live->mainGameState) && (expected->loadingStage == live->loadingStage) && (expected->levelID == live->levelID) &&
 	       (expected->mixRandomNumber == live->mixRandomNumber) && (expected->audioRNG == live->audioRNG) && (expected->deadcoed0 == live->deadcoed0) &&
-	       (expected->deadcoed1 == live->deadcoed1) && (expected->advRng0 == live->advRng0) && (expected->advRng1 == live->advRng1);
+	       (expected->deadcoed1 == live->deadcoed1) && (expected->advRng0 == live->advRng0) && (expected->advRng1 == live->advRng1) &&
+	       (NativeStateDigest_DifferenceMask(&expected->stateDigest, &live->stateDigest) == 0) &&
+	       (expected->stateDigest.root == live->stateDigest.root);
 }
 
 internal s32 NativeReplayScheduler_VSyncInfoMatches(const struct NativeReplayFrameRecord *expected)
@@ -1324,6 +1335,8 @@ internal s32 NativeReplayScheduler_VSyncInfoMatches(const struct NativeReplayFra
 internal void NativeReplayScheduler_ReportDivergence(const struct NativeReplayFrameRecord *expected, const struct NativeReplaySchedulerFrameInfo *live,
                                                      u32 livePadChecksum)
 {
+	u32 stateDifference;
+
 	if (s_divergenceLogged != 0)
 	{
 		return;
@@ -1333,6 +1346,12 @@ internal void NativeReplayScheduler_ReportDivergence(const struct NativeReplayFr
 	Platform_Log("[CTR Replay] divergence at replay frame %u\n", expected->replayFrame);
 	NativeReplayScheduler_LogFrameInfo("expected", &expected->endInfo);
 	NativeReplayScheduler_LogFrameInfo("live    ", live);
+	stateDifference = NativeStateDigest_DifferenceMask(&expected->endInfo.stateDigest, &live->stateDigest);
+	if ((stateDifference != 0) || (expected->endInfo.stateDigest.root != live->stateDigest.root))
+	{
+		Platform_Log("[CTR Replay] first canonical state difference: %s mask=0x%08x\n",
+		             NativeStateDigest_FirstDifferenceName(stateDifference), stateDifference);
+	}
 	Platform_Log("[CTR Replay] expected padChecksum=0x%08x live padChecksum=0x%08x\n", expected->padChecksum, livePadChecksum);
 	Platform_Log("[CTR Replay] expected vblankPackets=%u vblankSteps=%u live vblankPackets=%u vblankSteps=%u\n", expected->vblankPacketCount,
 	             expected->vblankTotal, s_frameVBlankPacketCount, s_frameVBlankTotal);
@@ -1690,6 +1709,7 @@ int NativeReplayScheduler_EndFrame(const struct NativeReplaySchedulerFrameInfo *
 		    (s_pendingRecord.padChecksum != livePadChecksum))
 		{
 			NativeReplayScheduler_ReportDivergence(&s_pendingRecord, info, livePadChecksum);
+			return 1;
 		}
 
 		s_replayFrame++;
@@ -1699,5 +1719,10 @@ int NativeReplayScheduler_EndFrame(const struct NativeReplaySchedulerFrameInfo *
 	}
 
 	return 0;
+}
+
+int NativeReplayScheduler_HasDiverged(void)
+{
+	return s_divergenceLogged;
 }
 #endif

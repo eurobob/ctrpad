@@ -140,4 +140,8 @@ include(CTest)
 if(BUILD_TESTING)
     add_test(NAME ctr_native_version COMMAND $<TARGET_FILE:ctr_native> --version)
     set_tests_properties(ctr_native_version PROPERTIES PASS_REGULAR_EXPRESSION "^CTR Native ")
+    add_test(NAME ctr_native_state_digest COMMAND $<TARGET_FILE:ctr_native> --self-test-state-digest)
+    set_tests_properties(ctr_native_state_digest PROPERTIES PASS_REGULAR_EXPRESSION
+        "^\\[CTR StateDigest\\] self-test passed: .* mutation component=drivers"
+    )
 endif()

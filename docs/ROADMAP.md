@@ -136,6 +136,23 @@ Acceptance:
 
 **Status:** in progress; M0 completed
 
+Result so far:
+
+- The pinned amd64-container/i686 build completes, passes its version CTest,
+  and produces an ELF 32-bit Intel 80386 executable. Exact evidence and
+  dependency versions are in `docs/builds/2026-07-29-baselines.md`.
+- The unchanged Apple ARM64 configure reproduces the explicit 32-bit gate at
+  `CMakeLists.txt:8`.
+- Existing replay/checkpoint tooling is formally rejected as a sufficient
+  parity oracle in `docs/parity/TOOLING-ASSESSMENT.md`.
+- Canonical state-digest schema 1 is integrated into replay format version 2.
+  Its CTest proves host-address independence and detects a one-unit vehicle
+  position mutation as `drivers` (`docs/parity/STATE-DIGEST.md`).
+- The local retail image has now been identified as PAL Europe
+  `SCES_021.05`, not NTSC-U `SCUS_944.26`. It cannot be used for the required
+  `BUILD=926` golden run. The runtime rejects the mismatch before loading
+  indexed game data.
+
 Work:
 
 1. Reproduce upstream's supported 32-bit Linux build in a pinned container or
@@ -441,7 +458,8 @@ timestamps are explicitly excluded from game-visible deterministic state.
 | Current retail image is not the required NTSC-U revision | Container format is proven MODE2/2352, game identity is not | Validate through loader and disc metadata before relying on it |
 | Upstream has moved since `2df55dc5a` | Viability report is commit-specific | Freeze a reproducible baseline, inspect current head, then rebase intentionally |
 | Reference documentation is stale | `ref/README.md` claims four clones that are absent | Derive documentation from actual remote/commit checks |
-| Retail assets can be committed accidentally | Current `.gitignore` does not cover them | Complete M0 ignore checks before any source import commit |
+| Retail assets can be committed accidentally | M0 ignore and tracked-file probes pass | Keep the M0 checks in release verification |
+| Local retail image does not match the NTSC-U build | `SYSTEM.CNF` identifies PAL Europe `SCES_021.05` | Reject it at import; obtain a user-owned `SCUS_944.26` image before the M1 golden run |
 | Apple lifecycle/pacing changes perturb timing | Current code blocks and spin-waits around synthetic VBlank | Compare game-state timing and measured cadence before/after display integration |
 | Touch boost chains are ergonomically poor despite correct input injection | Three boosts require steering + drift hold + repeated taps | Device prototypes and repeated triple-boost usability criterion |
 | Signing/publishing depends on credentials and external accounts | Not yet inventoried | Keep configuration credential-free; verify available team/device before release milestone |

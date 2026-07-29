@@ -2,6 +2,7 @@
 #define PLATFORM_NATIVE_REPLAY_SCHEDULER_H
 
 #include <macros.h>
+#include "platform/native_state_digest.h"
 
 #if defined(CTR_INTERNAL)
 struct NativeReplaySchedulerFrameInfo
@@ -22,6 +23,7 @@ struct NativeReplaySchedulerFrameInfo
 	u32 deadcoed1;
 	u32 advRng0;
 	u32 advRng1;
+	struct NativeStateDigest stateDigest;
 };
 
 int NativeReplayScheduler_PrepareReportFromArgs(int argc, char **argv);
@@ -33,6 +35,7 @@ int NativeReplayScheduler_BeginFrame(const struct NativeReplaySchedulerFrameInfo
 int NativeReplayScheduler_ConsumeVSyncPacket(int requestedVBlanks, int *emittedVBlanks);
 int NativeReplayScheduler_ConsumeFrameElapsedTimeMS(int *elapsedTimeMS);
 int NativeReplayScheduler_EndFrame(const struct NativeReplaySchedulerFrameInfo *info);
+int NativeReplayScheduler_HasDiverged(void);
 void NativeReplayScheduler_RecordVSyncPacket(int emittedVBlanks);
 #endif
 
