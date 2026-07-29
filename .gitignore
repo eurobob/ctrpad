@@ -4,5 +4,31 @@ ref/ctr-native/
 ref/CTR-ModSDK/
 ref/CTR-in-C/
 ref/CTR-PC-Port/
+ref/ctr-native-android/
+ref/CTR/
 
 .DS_Store
+
+# User-supplied retail media and extracted game data. These must never be
+# committed or distributed with CTRPad.
+**/ctr-u.bin
+**/*.bin
+**/*.BIN
+**/*.img
+**/*.IMG
+**/*.iso
+**/*.ISO
+**/*.cue
+**/*.CUE
+**/*.ccd
+**/*.CCD
+**/*.sub
+**/*.SUB
+**/*.big
+**/*.BIG
+**/*.hwl
+**/*.HWL
+**/*.xa
+**/*.XA
+**/*.str
+**/*.STR
