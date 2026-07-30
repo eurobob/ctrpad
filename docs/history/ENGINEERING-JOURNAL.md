@@ -5413,3 +5413,133 @@ Combined with the HUD captures, this rejects `lap_advanced=pass` for the
 current input. A later coverage recording must visibly and structurally
 reach `lapIndex >= 1`; this requirement is now explicit rather than silently
 inherited.
+
+## 2026-07-30 — macOS application bundle and direct screen inspection
+
+**Starting branch checkpoint:** `codex/arm64-apple` at `270fd7e2b1b6`
+
+### Why the bare executable was not enough
+
+The exact parity producer is intentionally a bare Mach-O. It launches and
+renders, but macOS application control did not list it as a controllable
+application, so that route could not provide a repeatable window-inspection
+workflow. An idle diagnostic from the bare executable was stopped with
+SIGTERM only after this limitation was established; SDL finalized
+`build-macos-arm64/debug/reports/20260730/ctr-181359` at 6,390 frames. That
+report is not gameplay or parity evidence.
+
+The parity producer remains unchanged. A separate bundle build was added so
+GUI lifecycle work cannot silently change the exact producer used by the
+cross-width gate.
+
+### Bundle implementation
+
+The implementation added:
+
+- opt-in `CTR_NATIVE_MACOS_BUNDLE` CMake handling, leaving the default and
+  `macos-arm64` parity target unchanged;
+- a `macos-arm64-app` configure/build/test preset with a distinct
+  `build-macos-arm64-app` directory and macOS 11.0 deployment floor;
+- `platform/apple/Info.plist.in`, including
+  `io.github.chrissotraidis.ctrpad` and SDL's parent base-directory policy;
+- a post-link ad-hoc signature over the complete bundle; and
+- `tools/run-macos-arm64-app.sh`, which validates the external raw-sector
+  image and creates only the ignored
+  `build-macos-arm64-app/assets/ctr-u.bin` symlink.
+
+The retail image is not copied into the bundle or Git. The bundle file census
+contains only:
+
+```text
+CTRPad.app/Contents/Info.plist
+CTRPad.app/Contents/MacOS/CTRPad
+CTRPad.app/Contents/_CodeSignature/CodeResources
+```
+
+### Rejected first bundle and correction
+
+The first bundle linked successfully but retained the host SDK's accidental
+`minos 26.0` floor. Its linker-applied executable signature also identified
+the code as `CTRPad` and did not bind the finished `Info.plist`. That build
+was rejected.
+
+The app preset now sets `CMAKE_OSX_DEPLOYMENT_TARGET=11.0`, and CMake signs
+the finished bundle in a post-build command. The replacement validation
+reported:
+
+```text
+Mach-O 64-bit executable arm64
+LC_BUILD_VERSION minos 11.0
+CFBundleIdentifier io.github.chrissotraidis.ctrpad
+LSMinimumSystemVersion 11.0
+CodeDirectory flags=adhoc
+Info.plist entries=15
+codesign --verify --deep --strict: valid
+CTest: 14/14 passed
+```
+
+`plutil -lint`, JSON preset parsing, launcher shell syntax, and
+`git diff --check` also passed.
+
+### Direct launch, rendering, and lifecycle evidence
+
+The launcher found the user-supplied NTSC-U raw image outside the bundle.
+Runtime diagnostics identified:
+
+```text
+Video adapter: Apple M2 by Apple
+OpenGL version: 4.1 Metal - 90.5
+GLSL version: 4.10
+4-bit, 8-bit, 16-bit, and RGBA PSX shaders ready
+VRAM pipelines ready
+```
+
+macOS application control then listed a running `CTRPad` application with
+identifier `io.github.chrissotraidis.ctrpad` and captured its presented
+window directly. The observed sequence included the Naughty Dog splash,
+multiple textured 3D track scenes, karts, item crates, UI text, and the main
+mode-selection menu. Geometry, HUD, and textures were coherent under the
+native Apple GPU path. The retail-derived screenshots remain ignored local
+evidence and were not added to Git.
+
+Synthetic Computer Use key taps are shorter than the retail input snapshot
+interval and were not reliable enough to accept gameplay keyboard mapping. A
+burst reached the main menu, but individual Cross/D-pad pulses were not
+repeatable. F10 is handled on key-up and did reliably request a clean report
+stop. The report finalized at the current frame before Command-Q closed the
+app:
+
+```text
+build-macos-arm64-app/debug/reports/20260730/ctr-184802
+build_id=270fd7e2b1b6-dirty
+frame_count=15803
+checkpoint_count=53
+finalized=1
+input.ctrreplay:
+  7ba4b80889f5001ca77ca0b63ae7c2887bb2db3d9f4c65b6ac2ed8c2b4bad97c
+state.ctrstates:
+  7c4a5dadac16e969d6e4170d0cd96cb4569b3526382ad78f1e17c31b271fdd54
+metadata.txt:
+  c460d9110d661bc2a2275124e3f4f969f9d6fcb3e8547f3ea0fc8a74bfa6a421
+```
+
+The `-dirty` label is explicit: this was structural/visual validation of the
+uncommitted bundle change, not a clean-producer parity artifact. A clean
+post-commit rebuild is required before this workflow is called reproducible
+from the published source.
+
+### Parallel parity status and decision
+
+The corrected i686 report continued independently during bundle work. At
+13,469 complete candidate frames, all eight required components still matched
+the corrected ARM64 reference with zero mismatches:
+
+```text
+timing, rng, drivers, world, allocation, root, pads, vsync
+```
+
+The development bundle workflow is accepted for publication after a clean
+rebuild. M6 itself remains open: the i686 run must finish all 24,232 frames,
+the full two-process/mutation gate remains, real lap advancement is not
+covered by the inherited input, and manual keyboard/controller play plus
+save-across-relaunch still need direct acceptance.

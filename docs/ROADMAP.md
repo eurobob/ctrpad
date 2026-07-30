@@ -365,10 +365,11 @@ Acceptance:
 
 ### M6 — Correct macOS ARM64 desktop build
 
-**Status:** in progress; native configure/build/CTest, exact 2,200-frame
-gameplay/render parity, a corrected race capture pass, and a guarded native
-restart-node boundary. Full 24,232-frame parity, complete play, save, and broad
-visual acceptance remain open
+**Status:** in progress; native configure/build/CTest, a launchable signed
+development app bundle, direct Metal-backed visual inspection, corrected
+24,232-frame ARM64 playback, and a guarded native restart-node boundary are
+complete. Final optimized-i686 cross-width acceptance, a real lap advance,
+complete manual play, and persistent-save relaunch acceptance remain open
 
 Result so far:
 
@@ -386,6 +387,12 @@ Result so far:
   twice. The fourteenth rejects invalid restart-node indices, including the
   AI `0xff` sentinel that exposed pointer-representation-dependent progress in
   the full cross-width trace.
+- `macos-arm64-app` builds a distinct thin-ARM64 `CTRPad.app`, targets the
+  macOS 11.0 deployment floor, binds bundle identifier
+  `io.github.chrissotraidis.ctrpad`, and applies a strict-verifiable ad-hoc
+  development signature after linking. The launcher keeps the user-supplied
+  raw image external and creates only an ignored symlink beside the bundle;
+  the bundle itself contains no retail byte.
 - The first retail launch exposed and sanitizer-localized three LP64 runtime
   defects: a HOWL pool stride, a four-byte MPK reference read as a host
   pointer, and unaligned/undersized render-bucket storage. Their complete
@@ -399,9 +406,13 @@ Result so far:
   an ELF32 Intel 80386 executable (Build ID
   `155f5086a4f576fc2b65367915dfa4b59d3832c2`); the immutable historical
   baseline executable remains untouched.
-- Screen capture was unavailable from the shell, so no visible-screen claim
-  is made. Input play, persistent saves, XA/STR correctness, and exact golden
-  replay equality remain unverified.
+- Direct macOS application control now sees the bundled process and its real
+  window. A 15,803-frame diagnostic launch rendered the Naughty Dog splash,
+  textured 3D tracks, karts, item crates, UI text, and the main menu through
+  the Apple M2 / OpenGL 4.1 Metal path. F10 finalized the recording and
+  Command-Q closed the app cleanly. Rapid synthetic one-tap gameplay keys were
+  not sampled reliably, so this is visual/lifecycle evidence, not acceptance
+  of keyboard play, persistent saves, or XA/STR correctness.
 - Checkpoint v3 now stores host addresses at native width. After correcting
   nested gamepad, HOWL, resident-data, process-stack, and transient
   render-bucket ownership, a frame-zero checkpoint captured at one ARM64 ASLR
@@ -520,7 +531,8 @@ Result so far:
   deliberate frame-1,711 driver-position mutation failed on the `drivers`
   component as required. Corrected optimized-i686 report `ctr-223323` is the
   active cross-width acceptance gate and matches all eight components through
-  frame 6,812, beyond the old frame-6,780 failure. Typed checkpoint and HUD
+  frame 13,469 at the documented comparison checkpoint, beyond the old
+  frame-6,780 failure. Typed checkpoint and HUD
   evidence also proves the inherited input changes track checkpoints but
   never advances beyond lap index zero; a new/supplemental actual-lap
   recording remains required. Exact hashes and the GitHub branch audit are in
@@ -533,7 +545,6 @@ Result so far:
 
 Work:
 
-- Add a documented macOS ARM64 CMake preset and bundle/run workflow.
 - Validate audio, desktop renderer, keyboard, MFi/Bluetooth controller,
   memcards, replays, savestates, XA audio, and STR video.
 - Run sanitizers and the full parity gate under Apple Clang.

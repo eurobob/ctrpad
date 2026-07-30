@@ -60,6 +60,13 @@ sudo apt install gcc-multilib
 sudo apt install libx11-dev libxext-dev libgl1-mesa-dev libasound2-dev libudev-dev libdbus-1-dev
 ```
 
+### macOS (Apple Silicon)
+
+Install Xcode or the Xcode Command Line Tools, CMake 3.20 or newer, and Ninja.
+The `macos-arm64` preset produces the exact bare Mach-O used by parity work.
+The separate `macos-arm64-app` preset produces a launchable application
+bundle without embedding retail game data.
+
 ## Building
 
 ```
@@ -77,6 +84,14 @@ cmake --build --preset windows-msvc-x86-debug
 ctest --preset windows-msvc-x86-debug
 ```
 
+On Apple Silicon:
+
+```sh
+cmake --preset macos-arm64-app
+cmake --build --preset macos-arm64-app
+ctest --preset macos-arm64-app
+```
+
 First build compiles SDL3 from source. This is cached as a static library in the selected build directory.
 
 Output:
@@ -84,6 +99,8 @@ Output:
 - MSVC: `build-msvc-x86/Release/ctr_native.exe`
 - MinGW: `build/ctr_native.exe`
 - Linux: `build/ctr_native`
+- macOS bare parity build: `build-macos-arm64/ctr_native`
+- macOS application build: `build-macos-arm64-app/CTRPad.app`
 
 ### Clean build
 
@@ -122,6 +139,25 @@ CTR-Native/
 Then run `ctr_native.exe`.
 
 The disc image must be the common single-track raw PSX BIN layout: MODE2/2352 sectors, with the data track starting at byte 0. A cooked 2048-byte `.iso` does not preserve the XA/STR sector data needed for audio and video playback.
+
+For the macOS app build, keep the retail image outside the application bundle
+and launch with:
+
+```sh
+CTRPAD_DISC_IMAGE="/absolute/path/to/CTR - Crash Team Racing (USA).bin" \
+  tools/run-macos-arm64-app.sh
+```
+
+The launcher validates the raw-sector byte size and creates only an ignored
+development symlink at `build-macos-arm64-app/assets/ctr-u.bin`. It never
+copies the disc image into `CTRPad.app` or Git. Internal recording arguments
+can be passed through, for example
+`tools/run-macos-arm64-app.sh --record --detailed`.
+
+The app preset targets the macOS 11.0 ARM64 floor and applies an ad-hoc local
+signature that binds the bundle metadata. Distribution signing and
+notarization are separate release steps and are not implied by this
+development signature.
 
 For development builds run from `build/`, put the same `assets/ctr-u.bin` next to the source tree:
 

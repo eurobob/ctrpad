@@ -3,6 +3,11 @@ project(CTR-Native C)
 include(CheckCCompilerFlag)
 
 set(CTR_NATIVE_VERSION "0.1.0-beta.7.1")
+option(CTR_NATIVE_MACOS_BUNDLE "Build CTR Native as a macOS application bundle" OFF)
+
+if(CTR_NATIVE_MACOS_BUNDLE AND NOT APPLE)
+    message(FATAL_ERROR "CTR_NATIVE_MACOS_BUNDLE is supported only on Apple platforms.")
+endif()
 
 if(NOT CMAKE_SIZEOF_VOID_P EQUAL 4 AND NOT CMAKE_SIZEOF_VOID_P EQUAL 8)
     message(FATAL_ERROR
@@ -92,13 +97,41 @@ set(SDL_X11_XTEST OFF CACHE BOOL "" FORCE)
 add_subdirectory(externals/SDL)
 
 # CTR Native
-add_executable(ctr_native main.c)
+set(CTR_NATIVE_EXECUTABLE_OPTIONS)
+if(CTR_NATIVE_MACOS_BUNDLE)
+    list(APPEND CTR_NATIVE_EXECUTABLE_OPTIONS MACOSX_BUNDLE)
+endif()
+
+add_executable(ctr_native ${CTR_NATIVE_EXECUTABLE_OPTIONS} main.c)
 set_target_properties(ctr_native PROPERTIES
     C_STANDARD 17
     C_STANDARD_REQUIRED ON
     C_EXTENSIONS OFF
     RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}"
 )
+if(CTR_NATIVE_MACOS_BUNDLE)
+    find_program(CTR_NATIVE_CODESIGN_EXECUTABLE codesign REQUIRED)
+    set_target_properties(ctr_native PROPERTIES
+        OUTPUT_NAME "CTRPad"
+        MACOSX_BUNDLE_BUNDLE_NAME "CTRPad"
+        MACOSX_BUNDLE_GUI_IDENTIFIER "io.github.chrissotraidis.ctrpad"
+        MACOSX_BUNDLE_INFO_STRING "Touch-first native Crash Team Racing runtime"
+        MACOSX_BUNDLE_LONG_VERSION_STRING "${CTR_NATIVE_VERSION}"
+        MACOSX_BUNDLE_SHORT_VERSION_STRING "0.1.0"
+        MACOSX_BUNDLE_BUNDLE_VERSION "1"
+        MACOSX_BUNDLE_COPYRIGHT "GPL-3.0; retail game data is user-supplied"
+        MACOSX_BUNDLE_INFO_PLIST "${CMAKE_SOURCE_DIR}/platform/apple/Info.plist.in"
+    )
+    add_custom_command(TARGET ctr_native POST_BUILD
+        COMMAND "${CTR_NATIVE_CODESIGN_EXECUTABLE}"
+            --force
+            --sign -
+            --identifier "io.github.chrissotraidis.ctrpad"
+            "$<TARGET_BUNDLE_DIR:ctr_native>"
+        COMMENT "Ad-hoc signing CTRPad.app for local macOS execution"
+        VERBATIM
+    )
+endif()
 target_include_directories(ctr_native PRIVATE ${CMAKE_SOURCE_DIR}/include)
 target_compile_definitions(ctr_native PRIVATE
     CTR_NATIVE
