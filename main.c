@@ -201,6 +201,11 @@ static int NativeArg_IsCheckpointPointerValidationSelfTest(const char *arg)
 	return (arg != NULL) && (strcmp(arg, "--self-test-checkpoint-pointer-validation") == 0);
 }
 
+static int NativeArg_IsVehicleLapCheckpointBoundsSelfTest(const char *arg)
+{
+	return (arg != NULL) && (strcmp(arg, "--self-test-vehicle-lap-checkpoint-bounds") == 0);
+}
+
 int main(int argc, char *argv[])
 {
 	for (int argIndex = 1; argIndex < argc; argIndex++)
@@ -257,6 +262,10 @@ int main(int argc, char *argv[])
 		if (NativeArg_IsCheckpointPointerValidationSelfTest(argv[argIndex]))
 		{
 			return NativeCheckpoint_RunPointerValidationSelfTest();
+		}
+		if (NativeArg_IsVehicleLapCheckpointBoundsSelfTest(argv[argIndex]))
+		{
+			return VehLap_RunCheckpointBoundsSelfTest();
 		}
 	}
 

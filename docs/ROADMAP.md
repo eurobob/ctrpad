@@ -181,6 +181,23 @@ Result so far:
   memcard seed to automate a fresh recording with its own timing/checkpoint.
   M1 is not accepted until coverage is re-observed and that report passes both
   unchanged processes and the deliberate driver mutation.
+- The first full current-source optimized-i686 version-4 regeneration is a
+  rejected parity candidate. It matched all eight components through frame
+  6,779, then diverged in `drivers` and `root` at frame 6,780 while timing,
+  input, VSync, RNG, world, and allocation remained exact. Raw driver dumps,
+  instruction-level LLDB/GDB captures, and checkpoint asset bytes traced the
+  first mismatch to `VehLap_UpdateProgress`: two bots carried the `0xff`
+  checkpoint sentinel, so the native ports indexed beyond the real restart
+  array and consumed relocated pointer words. ILP32 stored process-specific
+  host pointers there while LP64 stored guest references. The resulting
+  progress value therefore depended on pointer representation and ASLR.
+- Native `VehLap_UpdateProgress` now ignores an index outside the level's
+  restart-node count before resolving or reading the array. The ASM-verified
+  PS1 instruction path is unchanged. A fourteenth media-free test covers the
+  first and last valid indices and rejects one-past-end, `0xff`, empty, and
+  null cases on ARM64, ARM64 ASan/UBSan, and i686. New full ARM64 and i686
+  reports are still required; the rejected in-flight report cannot satisfy
+  M1.
 
 Work:
 
@@ -349,13 +366,14 @@ Acceptance:
 ### M6 — Correct macOS ARM64 desktop build
 
 **Status:** in progress; native configure/build/CTest, exact 2,200-frame
-gameplay/render parity, and a corrected race capture pass. Full 24,232-frame
-parity, complete play, save, and broad visual acceptance remain open
+gameplay/render parity, a corrected race capture pass, and a guarded native
+restart-node boundary. Full 24,232-frame parity, complete play, save, and broad
+visual acceptance remain open
 
 Result so far:
 
 - `macos-arm64` configures and builds a thin ARM64 Mach-O with Apple Clang;
-  all thirteen media-free tests pass. The newest tests verify all 65
+  all fourteen media-free tests pass. The newest tests verify all 65
   translated retail physics constants across all four engine classes and
   resolve all 46 generic reads across the 51 real VS/battle quip metadata
   records, every native render-list head, and all four red-beaker cloud draw
@@ -365,7 +383,9 @@ Result so far:
   pointer that later reverted, enumerates pool allocations through the
   free-list complement, covers the camera collision pointer, and proves that
   overlapping recorded/live address ranges cannot relocate one typed slot
-  twice.
+  twice. The fourteenth rejects invalid restart-node indices, including the
+  AI `0xff` sentinel that exposed pointer-representation-dependent progress in
+  the full cross-width trace.
 - The first retail launch exposed and sanitizer-localized three LP64 runtime
   defects: a HOWL pool stride, a four-byte MPK reference read as a host
   pointer, and unaligned/undersized render-bucket storage. Their complete
@@ -485,11 +505,13 @@ Result so far:
   splits, and zero 16-bit splits. The corrected ARM64 capture has coherent
   Crash Cove road, dirt, grid, kart, sky, and HUD textures. Exact evidence is
   in `docs/parity/2026-07-30-arm64-full-regeneration.md`.
-- A current-source optimized i686 full regeneration from the accepted ARM64
-  version-4 seed is running as report `ctr-190458`. Its first 3,211 frames
-  match timing, RNG, drivers, world, allocation, root, pads, and VSync
-  exactly. This is an in-flight prefix, not full-run acceptance; build,
-  rejection, screenshot, and verifier details are recorded in
+- Current-source optimized-i686 report `ctr-190458` is retained as a rejected
+  diagnostic run. It matched all eight components through frame 6,779 before
+  an AI `0xff` checkpoint triggered an out-of-bounds restart-node read.
+  Presented-window captures through frame 11,400 show coherent Crash Cove
+  geometry, kart, HUD, minimap, portraits, and textures under the known
+  llvmpipe color skew, so the process was not a black-screen stall. The full
+  byte-, field-, debugger-, failure-, and visual-evidence chain is recorded in
   `docs/history/ENGINEERING-JOURNAL.md`.
 - Red-beaker rain no longer reads per-player MVP translations out of widened
   instance function/thread pointers. Named draw-record fields preserve the
@@ -503,6 +525,9 @@ Work:
 - Validate audio, desktop renderer, keyboard, MFi/Bluetooth controller,
   memcards, replays, savestates, XA audio, and STR video.
 - Run sanitizers and the full parity gate under Apple Clang.
+- Regenerate the full ARM64 and optimized-i686 version-4 reports after the
+  restart-node bounds correction; the old reports are diagnostic inputs, not
+  acceptance artifacts.
 - Measure frame cadence against the retail 30 Hz logic / approximately
   59.817 Hz VBlank model.
 

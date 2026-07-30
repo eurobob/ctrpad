@@ -3,9 +3,11 @@
 **Source state:** `2f341999be63250d8cc58d48f585c1fbc3413bff` plus the
 documented language-table correction
 
-**Status:** accepted as a 24,232-frame ARM64 allocator/coverage regeneration.
-The later 2,200-frame exact oracle also resolved the ARM64 race-texture defect;
-the 24,232-frame optimized-i686 cross-width regeneration remains open.
+**Status:** accepted as a historical 24,232-frame ARM64 allocator/coverage
+regeneration. It is superseded as a cross-width parity candidate: the first
+optimized-i686 comparison exposed a native out-of-bounds restart-node read at
+frame 6,780. Both architectures must be regenerated after the documented
+native bounds correction.
 
 ## Why this run exists
 
@@ -190,12 +192,83 @@ The retail-derived captures remain ignored and are not committed:
 /tmp/ctrpad-arm64-race-frame1802-fixed.png
 ```
 
+## Rejected full i686 comparison and native restart-node boundary
+
+The current-source i686 producer at source commit `53ab70e966b2` recorded
+report:
+
+```text
+/tmp/ctrpad-i686-full-v4-current-cbRPWn/debug/reports/20260730/ctr-190458
+producer SHA-256:
+42df6c21f43539248212c9614e2c2fb3f5223d9cc2cfd4af876cbdd6d2f193a3
+```
+
+The first 6,780 frames established a much stronger prefix than the earlier
+2,200-frame oracle: timing, RNG, drivers, world, allocation, root, pads, and
+VSync all matched. At end-of-frame 6,780, only `drivers` and the aggregate
+`root` changed:
+
+```text
+ARM64 drivers: 7d42e48e3ebba032
+i686 drivers:  48f0799f58d94ac9
+timing/RNG/world/allocation/pads/VSync: exact
+```
+
+Canonical field dumps for all eight drivers reduced the difference to two
+values:
+
+```text
+driver 4 distanceToFinish_curr: ARM64 -4673, i686 31
+driver 7 distanceToFinish_curr: ARM64 -4683, i686 12
+```
+
+Both drivers had `botData.ai_quadblock_checkpointIndex == 0xff`.
+`VehLap_UpdateProgress` accepted that sentinel because the retail routine
+checks only that the level's count fits in eight bits and that the signed
+index is nonnegative. It then evaluated `nodes[0xff]` beyond the actual
+restart array and followed another out-of-range `nextIndex_forward`.
+
+This is not a floating-point or GTE difference. Instruction-level LLDB and
+GDB captures proved that both ports produced the correct projection,
+wrong-way dot product, track-length scale, and signed remainder for the bytes
+they were given. The selected fake node bytes differed because adjacent level
+asset slots had already been relocated:
+
+- i686 stored direct, process-specific 32-bit host pointers;
+- ARM64 stored checked fixed-width guest references; and
+- a second i686 process could receive different direct-pointer values under
+  ASLR.
+
+Native code now requires `0 <= checkpointIndex < cnt_restart_points` before
+resolving or indexing the restart array. Invalid state performs no progress
+update, matching the function's existing no-valid-checkpoint behavior and
+removing address representation from game state. The ASM-verified PS1 path
+remains byte-for-byte unchanged.
+
+CTest `ctr_native_vehicle_lap_checkpoint_bounds` exercises first, last,
+one-past-end, `0xff`, empty, and null cases. Post-correction gates are:
+
+```text
+macOS ARM64 Release:       14/14
+macOS ARM64 ASan/UBSan:    14/14
+Linux i686 Release -m32:   14/14
+i686 binary:               ELF 32-bit Intel 80386
+protected baseline SHA-256:
+afe7b3d264bd2674192e71485037842ab329d1eca9c0c34ca50da5d4487c76a7
+git diff --check:          clean
+```
+
+The rejected report continues only to preserve its complete failure and
+coverage map. It cannot pass the unchanged-process or mutation verifier, and
+no result from it is acceptance evidence.
+
 ## Remaining acceptance work
 
-1. Run optimized i686 regeneration from this exact version-4 ARM64 input.
-2. Require timing, RNG, drivers, world, allocation, root, pads, and VSync to
+1. Generate a new full ARM64 version-4 report with the restart-node correction.
+2. Run optimized i686 regeneration from that corrected ARM64 input.
+3. Require timing, RNG, drivers, world, allocation, root, pads, and VSync to
    match for all 24,232 frames.
-3. Replay the accepted reports unchanged in separate processes and run the
+4. Replay the accepted reports unchanged in separate processes and run the
    deliberate mutation gate.
-4. Re-observe and record all eight golden-run coverage checks rather than
+5. Re-observe and record all eight golden-run coverage checks rather than
    inferring them solely from the inherited pad script.

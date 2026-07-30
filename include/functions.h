@@ -874,6 +874,7 @@ void MainGameEnd_SoloRaceSaveHighScore(void);
 void MainGameEnd_Initialize(void);
 void Podium_InitModels(struct GameTracker *gGT);
 void VehLap_UpdateProgress(struct Driver *driver);
+int VehLap_RunCheckpointBoundsSelfTest(void);
 
 void VehStuckProc_RevEngine_Update(struct Thread *t, struct Driver *d);
 void VehStuckProc_RevEngine_PhysLinear(struct Thread *t, struct Driver *d);

@@ -212,4 +212,8 @@ if(BUILD_TESTING)
     set_tests_properties(ctr_native_checkpoint_pointer_validation PROPERTIES PASS_REGULAR_EXPRESSION
         "^\\[CTR State\\] pointer-validation self-test passed: scalar=ignored relocated=reversion-checked overlap-idempotence=checked pool-allocation=free-list-complement camera-quad=checked"
     )
+    add_test(NAME ctr_native_vehicle_lap_checkpoint_bounds COMMAND $<TARGET_FILE:ctr_native> --self-test-vehicle-lap-checkpoint-bounds)
+    set_tests_properties(ctr_native_vehicle_lap_checkpoint_bounds PROPERTIES PASS_REGULAR_EXPRESSION
+        "^\\[CTR VehLap\\] self-test passed: count=4 first=valid last=valid one-past=rejected sentinel=0xff-rejected empty=rejected"
+    )
 endif()

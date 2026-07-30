@@ -4632,3 +4632,353 @@ renderer. The 363 MiB disposable clone and its path marker were moved to the
 macOS Trash after the failure; they are recoverable until the Trash is
 emptied. The live report, protected baseline, source tree, and retail image
 were not modified by the probe.
+
+## 2026-07-30 — Full cross-width divergence: invalid AI restart index
+
+**Status:** the first current-source full optimized-i686 candidate is formally
+rejected. It matched all eight replay components through frame 6,779, then
+used relocated words beyond the level's restart-node array as a fake node at
+frame 6,780. A native-only bounds correction and a dedicated regression test
+pass ARM64 Release, ARM64 ASan/UBSan, and i686 Release. New full ARM64 and
+i686 reports are required before parity can be accepted.
+
+This section preserves the complete causal path, including visual evidence,
+rejected debugger routes, raw memory evidence, instruction-level results, and
+the exact limit of the correction. The protected historical i686 baseline was
+never rebuilt or used as an output directory.
+
+### Presented-window capture replaced the black F12 captures
+
+The live report remained:
+
+```text
+/tmp/ctrpad-i686-full-v4-current-cbRPWn/debug/reports/20260730/ctr-190458
+producer:
+/tmp/ctrpad-i686-full-v4-current-cbRPWn/ctr_native-full-v4-producer
+producer SHA-256:
+42df6c21f43539248212c9614e2c2fb3f5223d9cc2cfd4af876cbdd6d2f193a3
+source commit:
+53ab70e966b262b42c3f0c00b0c5748405622ad9
+```
+
+Several internal F12 screenshots were all black with the same hash. The
+process was CPU-active and continued appending frames, so these did not prove
+a game stall. Inspection of the renderer and screenshot timing showed that
+the internal path reads the default back buffer after swap, where the content
+is undefined.
+
+An external X11 helper, `/tmp/ctrpad-x11-capture`, instead captured the
+visible Xvfb window. This is the authoritative Linux presented-frame boundary.
+Captures at frames 7,200, 7,800, 8,400, 9,000, 9,600, 10,200, 10,800, and
+11,400 showed live changes. The inspected frame-11,400 image is:
+
+```text
+/tmp/ctrpad-i686-full-v4-current-cbRPWn/visual-evidence/frame-11400-presented.png
+800 x 600
+size 172,364
+SHA-256 70fb97770f0ca0b55ba34182949ef08f24340a65abb94bcfbc4f7644e4c9a34a
+```
+
+It shows a coherent Crash Cove race view: kart, canyon and waterfall
+textures, HUD, racer portraits, and minimap. The established llvmpipe
+cyan/yellow color skew remains, so this is a geometry/texture-presence oracle,
+not a color oracle. This directly answers the reported “stuck” concern: the
+presented window and textures are visible and changing, even though the
+canonical parity result later fails.
+
+### Comparator located the first game-state mismatch
+
+The required prefix command remained:
+
+```text
+node tools/compare-replay-state-components.mjs \
+  --prefix \
+  --require timing,rng,drivers,world,allocation,root,pads,vsync \
+  build-macos-arm64/debug/reports/20260730/ctr-115352/input.ctrreplay \
+  /tmp/ctrpad-i686-full-v4-current-cbRPWn/debug/reports/20260730/ctr-190458/input.ctrreplay
+```
+
+All eight components matched through end-of-frame 6,779. At frame 6,780,
+only `drivers` and the aggregate `root` changed. Timing, RNG, world,
+allocation, pads, and VSync remained exact. The driver digests at that frame
+were:
+
+```text
+ARM64 expected: 7d42e48e3ebba032
+i686 actual:    48f0799f58d94ac9
+```
+
+This ordering matters. It rejects timing, input, VSync, allocator order,
+world-state, and initial RNG drift as causes of the first mismatch.
+
+The report was not stopped after the failure. It was retained to collect a
+complete failure and coverage map. At the documentation checkpoint, it held
+16,758 complete frames and 56 durably written rolling checkpoints while
+`finalized=0`. The comparator then reported:
+
+```text
+timing:     equal=16758 mismatched=0
+rng:        equal=16240 mismatched=518
+drivers:    equal=12573 mismatched=4185
+             ranges=6780-6793,6854-7011,9825-13837
+world:      equal=16643 mismatched=115
+allocation: equal=15988 mismatched=770
+root:       equal=12376 mismatched=4382
+             ranges=6780-6793,6854-7011,9825-13837,16561-16757
+pads:       equal=16758 mismatched=0
+VSync:      equal=16758 mismatched=0
+```
+
+This later cascade is diagnostic only. The report is already a failed parity
+candidate at frame 6,780 and cannot be passed to the unchanged-process or
+mutation acceptance verifier.
+
+### Raw driver snapshots reduced the mismatch to two scalars
+
+Exact checkpoint-22 restores were advanced from replay frame 6,600 to 6,780.
+The two isolated evidence trees are:
+
+```text
+/tmp/ctrpad-arm64-divergence-6780
+/tmp/ctrpad-i686-divergence-6780
+```
+
+They contain producer copies, replay/checkpoint inputs, `GameTracker` dumps,
+all eight raw `Driver` objects, normalized canonical-field dumps, and
+debugger logs. Producer identities are:
+
+```text
+ARM64 copied producer SHA-256:
+588786e7eaaee5c845dc2c1e6c101178cc93be3a62e94857aea338338cba769e
+
+i686 copied producer SHA-256:
+42df6c21f43539248212c9614e2c2fb3f5223d9cc2cfd4af876cbdd6d2f193a3
+```
+
+A temporary parser, `/tmp/ctrpad-driver-dump.c`, was compiled at both pointer
+widths. Its source SHA-256 is
+`f7cfef1e596cb4e46f5161c0ebb1b7f57224c4bea50e1d5227592fb04e95526f`.
+It emitted every scalar used by the canonical driver digest and normalized
+away only representation fields intentionally excluded from that digest.
+
+Comparing all eight drivers found exactly two unequal canonical fields:
+
+```text
+driver 4:
+  ARM64 distanceToFinish_curr = 4294962623 (-4673 signed)
+  i686  distanceToFinish_curr = 31
+
+driver 7:
+  ARM64 distanceToFinish_curr = 4294962613 (-4683 signed)
+  i686  distanceToFinish_curr = 12
+```
+
+Every other canonical driver scalar was equal. Both affected drivers had:
+
+```text
+bot.ai_quadblock_checkpointIndex = 255 (0xff)
+```
+
+### Rejected debugger routes before the accepted captures
+
+The debugger setup retained several failures rather than erasing them:
+
+1. The first diagnostic container had GDB but no callable `qemu-i386`, so it
+   could not run the ELF32 target explicitly.
+2. Explicit `qemu-i386` loaded the PIE near `0x00400000`, while Docker's
+   binfmt path loaded it near `0x40000000`. The restored checkpoint then
+   correctly rejected a callback identity mismatch:
+   `old=0x40a92720 expected=0xe92720`. This was an invalid address-layout
+   experiment, not game evidence.
+3. A later container run omitted the retail asset mount and failed before the
+   replay boundary. The next had assets but no X display and failed SDL
+   initialization. The accepted route used the normal binfmt loader,
+   `QEMU_GDB`, Xvfb, and the ignored user-owned asset.
+4. The first ARM64 LLDB script used `0x10287c60` as the SDATA address. The
+   correct address for the copied producer was `0x100287c60`.
+5. A symbolic breakpoint intended to perturb a digest helper did not fire
+   because the optimized unity build inlined it. The accepted raw dump used
+   the end-frame boundary with an exact ignore count.
+6. The first ARM64 instruction capture stopped before the relevant `ldp`, at
+   `0x100079d64`, so `w8/w9` were stale. Moving the stop to
+   `0x100079d68` captured the consumed projection and wrong-way values.
+7. The GDB convenience expression printed both selected targets as
+   `driver=0` because typed pointer arithmetic applied the diagnostic offset
+   twice. The breakpoint conditions themselves selected
+   `driverID == 4` and `driverID == 7`; the stopped driver addresses and raw
+   dumps prove the targets.
+
+The accepted GDB image is:
+
+```text
+ctrpad-linux-i686-gdb:ubuntu-24.04
+sha256:200e3129c0695b730965ae5c957e6d126fa1f9bf2761aa10c5c50d10869b63e2
+```
+
+### Instruction-level captures rejected arithmetic and GTE drift
+
+The accepted logs are:
+
+```text
+/tmp/ctrpad-arm64-divergence-6780/arm64-vehlap-6780.log
+SHA-256 1636492385b452ac34d281d9c065a6976b14c98f2192f94f1d364a6ed2be5e7e
+
+/tmp/ctrpad-i686-divergence-6780/i686-vehlap-6780.log
+SHA-256 d4e3c57d1b1130faa82c28cea4f1b6882e13fa50b64287edfd5588482665c4b3
+```
+
+At the exact progress/remainder calculation:
+
+```text
+                         ARM64 driver 4    i686 driver 4
+projection                 -28,478,767      -50,662,030
+wrong-way dot                  491,646          508,404
+track length                    60,016           60,016
+selected node distance           2,280          132,432
+progress / remainder            -4,673               31
+normalized V0 x,y,z       386,1997,3555     221,1145,3926
+
+                         ARM64 driver 7    i686 driver 7
+projection                 -28,520,405      -50,740,686
+wrong-way dot                  487,017          515,197
+track length                    60,016           60,016
+selected node distance           2,280          132,432
+progress / remainder            -4,683               12
+```
+
+Each port's projection, fixed-point shifts, signed division/remainder, and
+stored result agree with its own selected node bytes. The failure is therefore
+upstream of the MIPS/GTE arithmetic: the ports were given different node
+inputs.
+
+### Checkpoint bytes proved an out-of-bounds relocated-word dependency
+
+Checkpoint parsing located the level's MPAK region and restart-node base in
+both pointer-width records:
+
+```text
+ARM64:
+  checkpoint MPAK payload offset 135752
+  MPAK runtime base              0x1004118b8
+  restart-node MPAK offset       0x1306a0
+
+i686:
+  checkpoint MPAK payload offset 118844
+  MPAK runtime base              0x408c7bc0
+  restart-node MPAK offset       0x13a55c
+```
+
+The declared restart nodes align logically and begin with equal serialized
+bytes. Index `0xff`, however, is far outside the declared array. The fake
+node's `nextIndex_forward` was `239`, which led to another out-of-bounds fake
+node. Comparing the extended 256-node window found relocated pointer slots
+among the consumed bytes:
+
+```text
+ARM64 example relocated word: 0x011c5684 (guest reference)
+i686 example relocated word:  0x40a97100 (direct host pointer)
+
+fake node 239 first eight bytes:
+ARM64 1c00ff12100a1d01
+i686  1c00ff128c24aa40
+```
+
+The checkpoint at frame 1,800 already contains these representation
+differences, as expected for relocated asset pointers. They first become
+game-visible at frame 6,780 when the two bots pass the `0xff` sentinel into
+`VehLap_UpdateProgress`.
+
+This also means copying the observed i686 garbage result into ARM64 would not
+be a valid correction: a second i686 process can relocate those host pointers
+to different addresses under ASLR. Game state must not depend on bytes beyond
+the owned restart array.
+
+### Accepted native boundary and regression test
+
+The ASM-verified retail routine is left unchanged for `!CTR_NATIVE`.
+`VehLap_UpdateProgress` now applies the native ownership rule before resolving
+or indexing the restart array:
+
+```text
+0 <= checkpointIndex < level->cnt_restart_points
+```
+
+An invalid index performs no progress update, consistent with the function's
+existing early returns when a driver, checkpoint, or restart array is not
+available. No physics constant, GTE operation, track distance, timing rule,
+input packet, asset byte, or PS1 instruction path was changed.
+
+The new media-free entry point
+`--self-test-vehicle-lap-checkpoint-bounds` verifies:
+
+```text
+first index:       valid
+last index:        valid
+one-past-end:      rejected
+0xff sentinel:     rejected
+negative index:    rejected
+empty level:       rejected
+null level:        rejected
+```
+
+Accepted post-correction gates:
+
+```text
+macOS ARM64 Release:
+  build-macos-arm64/ctr_native
+  Mach-O 64-bit executable arm64
+  14/14 CTests
+
+macOS ARM64 ASan/UBSan:
+  /tmp/ctrpad-macos-arm64-asan-vehlap-OTDxVr
+  -fsanitize=address,undefined -fno-omit-frame-pointer
+  ASAN_OPTIONS=symbolize=0:abort_on_error=1
+  UBSAN_OPTIONS=halt_on_error=1:print_stacktrace=1
+  14/14 CTests
+
+Linux i686 Release:
+  /tmp/ctrpad-i686-vehlap-8IzCKm/ctr_native
+  ELF 32-bit LSB PIE, Intel 80386
+  Build ID bc70ff1a6c3c42921fbfdf199d1d22102251d314
+  14/14 CTests
+
+git diff --check:
+  passed
+```
+
+The i686 compiler repeated only the established two format-security and two
+optimized maybe-uninitialized warnings. The ARM64 builds repeated the
+established upstream/native warning set. No new warning names the checkpoint
+boundary or its test.
+
+The protected historical executable is still byte-identical:
+
+```text
+build-linux-i686-baseline/ctr_native
+SHA-256 afe7b3d264bd2674192e71485037842ab329d1eca9c0c34ca50da5d4487c76a7
+```
+
+### Publication and acceptance boundary
+
+Before this correction, local `HEAD`, `origin/codex/arm64-apple`, and the
+draft pull request head were all commit
+`f1c63bf5a6a2048485f65c993c0978f108d40222`. GitHub `main` remained
+`95417c723518407d6bfe3c81a37606294963efe2`; this is why the implementation
+was not visible in the default branch even though it was backed up in the
+draft PR. No merge was attempted.
+
+The next publication checkpoint will commit the native guard, fourteenth
+CTest, roadmap update, parity-result update, and this chronological record to
+`codex/arm64-apple`, then push that branch. It will not merge the draft pull
+request.
+
+The correction is structurally and sanitizer tested but is not yet full-run
+accepted. The required next sequence is:
+
+1. let the rejected i686 report finish only for its failure/coverage map;
+2. generate a new 24,232-frame ARM64 version-4 report from corrected source;
+3. generate a new optimized-i686 report from that corrected input;
+4. require all eight components to match for every frame;
+5. replay the accepted report unchanged in two separate processes; and
+6. require the deliberate game-state mutation to fail at the named frame and
+   component.
