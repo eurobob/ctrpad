@@ -5175,3 +5175,167 @@ Therefore:
 - `main` intentionally remains unchanged;
 - nothing was merged or pushed to upstream; and
 - any future PR command must name `--repo chrissotraidis/ctrpad` explicitly.
+
+### Rejected i686 report completed
+
+The source-`53ab70e966b2` diagnostic container subsequently exited normally.
+Its report is finalized, not hung:
+
+```text
+/tmp/ctrpad-i686-full-v4-current-cbRPWn/debug/reports/20260730/ctr-190458
+finalized=1
+recording_status=finalized
+replay_version=4
+frame_count=24232
+checkpoint_count=81
+
+input.ctrreplay
+  size 10662228
+  SHA-256 6dd0217f04fe26d19f6aafd6bfde91121486708f63f725218482a0faaf0c8a8c
+state.ctrstates
+  size 357831140
+  SHA-256 db6f8d0b6f20189b5b2f63c11e4e42f5a8d0cdc6d8f04a202edc55dfacbadc5b
+metadata.txt
+  size 958
+  SHA-256 085acfaf3431f1e856eec4682091e1e63b10b845451eaf7d847293bf7cd9b6cf
+ctr-native.log
+  size 8771
+  SHA-256 d93214e1d3d1b275aef26a89eae09e54911e7530602bafa241baa28d874c909d
+memcard.recording/slot0/BASCUS-94426-SLOTS
+  size 6016
+  SHA-256 6a01b0f5562ed7a279d8f8e51e3b1874ac39a6120f55db4fe3873288950619a3
+```
+
+The complete comparison against its matching pre-guard ARM64 reference
+confirms that timing, pad snapshots, and VSync transport never changed. The
+invalid AI restart-node result propagated through gameplay state:
+
+```text
+timing:      equal 24232, mismatch 0
+rng:         equal 19066, mismatch 5166
+drivers:     equal 19845, mismatch 4387
+world:       equal 23618, mismatch 614
+allocation:  equal 22929, mismatch 1303
+root:        equal 14703, mismatch 9529
+pads:        equal 24232, mismatch 0
+vsync:       equal 24232, mismatch 0
+
+drivers mismatch ranges:
+  6780-6793
+  6854-7011
+  9825-13837
+  17213-17414
+
+root mismatch ranges:
+  6780-6793
+  6854-7011
+  9825-13837
+  16561-21405
+  22158-22656
+```
+
+This finished map is preserved as negative evidence. It is not promoted into
+the unchanged-playback verifier and does not weaken the frame-6,780 root
+cause: the first mismatch remains only `drivers`/`root`, while timing, RNG,
+world, allocation, pads, and VSync are still exact at that point.
+
+### Late visual coverage review
+
+The final targeted X11 captures also completed. Direct visual inspection
+established:
+
+```text
+frame 10880: Aku mask held in the item HUD
+frame 10910: Aku mask still held immediately before Circle input
+frame 10930: mask-use visual effect active around the kart
+frame 11020: mask-use visual effect remains active
+frame 11040: mask-use visual effect remains active
+frame 11060: mask-use visual effect remains active
+
+frame 21320: paused active race with complete HUD and minimap
+frame 21920: mode-selection menu and trophy model
+frame 22220: Crash character/kart selection
+frame 22380: name-entry keyboard and Save control
+frame 22520: explicit SAVE COMPLETED message
+frame 22820: later active race/item-effect scene
+frame 23120: N. Sanity Beach track-selection menu
+frame 23720: title/mode-selection menu
+frame 24220: later active race with mask effect
+```
+
+The replay pad records independently contain Circle at frames
+`10913-10918` and `11030-11035`, sustained Cross acceleration, both steering
+directions, and L1/R1 powerslide ranges. The corrected ARM64 report logs the
+retail successful-boost branch. This re-observes item acquisition/use,
+steering/acceleration, powerslide/boost, save action, menu return, and later
+gameplay; it is not merely inherited coverage text.
+
+One historical coverage claim is not yet re-accepted. Crops of every
+available 600-frame race capture from 7,200 through 21,000 all show
+`LAP 1/3`, including the final paused race at 21,320. The old report's
+`lap_advanced=pass` is therefore not copied to the corrected report without
+new proof. Deterministic parity for this input can pass independently, but
+full golden gameplay coverage still requires either an extracted state
+transition that satisfies the documented lap-line requirement or a new
+recording that visibly advances to lap 2.
+
+### Corrected ARM64 two-process and mutation results
+
+Both unchanged playback attempts against corrected report `ctr-170507`
+finished all 24,232 frames with exit status 0 and no canonical divergence:
+
+```text
+attempt 1:
+  raw checkpoint recorded 0x253d5e82
+  restored-process checksum 0xb197ac13
+  host sdata 0x1028ca318
+  host gGT 0x1028d4930
+  SHA-256 2d04482e1529e06d265d9eace98cc9d0e65688571a5263631a2a1009b2f874cf
+
+attempt 2:
+  raw checkpoint recorded 0x253d5e82
+  restored-process checksum 0x31f2c4a1
+  host sdata 0x1042fa318
+  host gGT 0x104304930
+  SHA-256 94a7f80cdae6e402cec6aa8aa1d30d10746b447fb28b189c3e65790ca3b77828
+```
+
+The different host addresses and raw restored bytes demonstrate independent
+ASLR layouts. Their equal canonical trace demonstrates that process-local
+pointer representation is excluded correctly.
+
+The deliberate mutation process changed
+`driver[0].posCurr.x` from `-165632` to `-165631` at the automatically
+selected first active-race frame 1,711. It exited 2 at that exact frame and
+reported `drivers mask=0x00000004` as the first canonical difference:
+
+```text
+/tmp/ctrpad-arm64-corrected-playback-mutated.log
+SHA-256 0b0b0e6de80557c4f7112ac965f60c39555304154e84cc8a2ee151f4bef31df0
+```
+
+The corrected ARM64 report therefore passes the full two-process
+determinism/mutation proof for this scenario.
+
+### Corrected i686 full regeneration started
+
+After the rejected container finalized, the pinned corrected i686 producer
+started:
+
+```text
+/tmp/ctrpad-i686-vehlap-8IzCKm/debug/reports/20260730/ctr-223323
+build_id=55d3b71c6da5
+producer SHA-256:
+e07be52d72e6a2f323587d9302467be366401485cecd29d86ae54846f973528c
+seed:
+build-macos-arm64/debug/reports/20260730/ctr-170507/input.ctrreplay
+```
+
+The disposable build now also carries a freshly queried package manifest,
+`toolchain-packages.txt`, with SHA-256
+`7533bb723143fa947795ded64dbde4c82ffb7bb902b246929a11ac725ec22cd6`.
+At the latest comparison checkpoint its first 4,875 complete frames match
+corrected ARM64 on timing, RNG, drivers, world, allocation, root, pad
+snapshots, and VSync. The report remains in flight; full acceptance is not
+claimed before all 24,232 frames and the i686 two-process/mutation verifier
+finish.

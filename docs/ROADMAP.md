@@ -516,9 +516,11 @@ Result so far:
 - Clean committed ARM64 producer `55d3b71c6da5` finalized corrected report
   `ctr-170507` with all 24,232 frame records, 81 checkpoints, the scripted
   powerslide, and persisted 6,016-byte save. Two independent unchanged ARM64
-  playback processes and the new full optimized-i686 recording are the active
-  acceptance gates. The exact producer/report hashes and GitHub branch audit
-  are recorded in `docs/history/ENGINEERING-JOURNAL.md`.
+  playback processes passed all frames under different ASLR layouts, and the
+  deliberate frame-1,711 driver-position mutation failed on the `drivers`
+  component as required. Corrected optimized-i686 report `ctr-223323` is the
+  active cross-width acceptance gate. The exact producer/report hashes and
+  GitHub branch audit are recorded in `docs/history/ENGINEERING-JOURNAL.md`.
 - Red-beaker rain no longer reads per-player MVP translations out of widened
   instance function/thread pointers. Named draw-record fields preserve the
   retail depth/LOD byte alias, and a four-player cross-width test covers the

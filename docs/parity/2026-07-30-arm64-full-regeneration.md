@@ -258,9 +258,12 @@ afe7b3d264bd2674192e71485037842ab329d1eca9c0c34ca50da5d4487c76a7
 git diff --check:          clean
 ```
 
-The rejected report continues only to preserve its complete failure and
-coverage map. It cannot pass the unchanged-process or mutation verifier, and
-no result from it is acceptance evidence.
+The rejected report subsequently finalized all 24,232 frames and 81
+checkpoints. Its complete map retains exact timing, pad snapshots, and VSync,
+but has 4,387 driver mismatches and 9,529 aggregate-root mismatches. Exact
+file hashes and ranges are in `docs/history/ENGINEERING-JOURNAL.md`. It cannot
+pass the unchanged-process or mutation verifier, and no result from it is
+acceptance evidence.
 
 ## Remaining acceptance work
 
@@ -272,7 +275,8 @@ frames and 81 checkpoints. Its producer and report hashes are recorded in
 1. Run optimized i686 regeneration from corrected ARM64 input `ctr-170507`.
 2. Require timing, RNG, drivers, world, allocation, root, pads, and VSync to
    match for all 24,232 frames.
-3. Replay the accepted reports unchanged in separate processes and run the
-   deliberate mutation gate.
+3. Replay the accepted i686 report unchanged in separate processes and run
+   its deliberate mutation gate. Corrected ARM64 already passes both
+   unchanged processes and the mutation check.
 4. Re-observe and record all eight golden-run coverage checks rather than
    inferring them solely from the inherited pad script.
