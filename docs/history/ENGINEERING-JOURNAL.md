@@ -4982,3 +4982,35 @@ accepted. The required next sequence is:
 5. replay the accepted report unchanged in two separate processes; and
 6. require the deliberate game-state mutation to fail at the named frame and
    component.
+
+### First checkpoint publication result
+
+The correction and its complete evidence set were committed and pushed:
+
+```text
+commit:
+b6aff593968f8257f4c819f1492370821714f0d4
+subject:
+fix native AI checkpoint bounds
+
+origin/codex/arm64-apple:
+b6aff593968f8257f4c819f1492370821714f0d4
+
+draft PR:
+https://github.com/chrissotraidis/ctrpad/pull/1
+state: OPEN
+draft: true
+head: codex/arm64-apple
+head OID: b6aff593968f8257f4c819f1492370821714f0d4
+base: main
+
+origin/main:
+95417c723518407d6bfe3c81a37606294963efe2
+```
+
+The PR body was updated to report the 14/14 gates, frame-6,780 diagnosis,
+presented-window result, invalid-sentinel correction, and corrected full-run
+acceptance sequence. It remains draft and unmerged. This preserves the
+distinction the user called out: the implementation is backed up on GitHub,
+but GitHub's default `main` branch still shows only the earlier merged
+foundation/viability work.
