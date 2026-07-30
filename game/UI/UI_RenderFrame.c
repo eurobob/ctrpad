@@ -101,15 +101,10 @@ void UI_RenderFrame_Racing()
 		sdata->HudAndDebugFlags = 8;
 	}
 
-#ifdef CTR_NATIVE
-	// NOTE(aalhendi): Native can load levels before ST1 map metadata is present.
-	if ((gGT->level1->ptrSpawnType1 != 0) && (gGT->level1->ptrSpawnType1->count != 0))
-#else
-	if (gGT->level1->ptrSpawnType1->count != 0)
-#endif
+	struct SpawnType1 *spawn = Level_GetSpawnType1(gGT->level1, "UI_RenderFrame spawn table");
+	if ((spawn != NULL) && (spawn->count != 0))
 	{
-		void **pointers = ST1_GETPOINTERS(gGT->level1->ptrSpawnType1);
-		levPtrMap = pointers[ST1_MAP];
+		levPtrMap = SpawnType1_GetPointer(spawn, ST1_MAP, sizeof(*levPtrMap), _Alignof(struct UIMap), "UI_RenderFrame map metadata");
 	}
 
 	// If you are not in Relic Race, and not in battle mode,
@@ -260,10 +255,9 @@ void UI_RenderFrame_Racing()
 						playerStruct->PickupWumpaHUD.cooldown = partTimeVariable1;
 					}
 
-					struct Icon **iconPtrArray = ICONGROUP_GETICONS(gGT->iconGroup[0xB]);
-
 					// "wumpaposter" icon group
-					DecalHUD_DrawPolyFT4(iconPtrArray[0], (int)wumpaModelPos.x, (int)wumpaModelPos.y,
+					DecalHUD_DrawPolyFT4(IconGroup_GetIcon(gGT->iconGroup[0xB], 0, "wumpa poster icon"), (int)wumpaModelPos.x,
+							     (int)wumpaModelPos.y,
 
 					                     // pointer to PrimMem struct
 					                     &gGT->backBuffer->primMem,
@@ -702,7 +696,7 @@ void UI_RenderFrame_Racing()
 				primMemCurr = backBuffer->primMem.cursor;
 				TurboCounterBar = 0;
 
-				if ((int)primMemCurr <= (int)backBuffer->primMem.guardEnd)
+				if ((u8 *)primMemCurr <= (u8 *)backBuffer->primMem.guardEnd)
 				{
 					backBuffer->primMem.cursor = primMemCurr + 9;
 					TurboCounterBar = (POLY_G4 *)primMemCurr;
@@ -1099,7 +1093,7 @@ void UI_RenderFrame_Wumpa3D_2P3P4P(struct GameTracker *gGT)
 
 	// NOTE(aalhendi): Retail reads the gp slot populated by UI_INSTANCE_InitAll
 	// with ptrPushBufferUI, not the adjacent ptrFruitDisp instance slot.
-	wumpaPushBuffer = (struct PushBuffer *)(uintptr_t)sdata->ptrPushBufferUI;
+	wumpaPushBuffer = sdata->ptrPushBufferUI;
 
 	if (wumpaPushBuffer != NULL)
 	{

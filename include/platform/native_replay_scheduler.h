@@ -31,6 +31,7 @@ struct NativeReplaySchedulerFrameInfo
 int NativeReplayScheduler_PrepareReportFromArgs(int argc, char **argv);
 int NativeReplayScheduler_ConfigureFromArgs(int argc, char **argv);
 int NativeReplayScheduler_RunSelfTest(void);
+int NativeReplayScheduler_SetExecutableIdentity(const char *argv0, const char *executableBasePath);
 void NativeReplayScheduler_Shutdown(void);
 int NativeReplayScheduler_RequestStart(void);
 int NativeReplayScheduler_RequestStop(void);

@@ -16,7 +16,7 @@
 // and retail globals are defined, so they can snapshot the same process-local
 // regions the game mutates.
 #define NATIVE_CHECKPOINT_MAGIC              NATIVE_CHECKPOINT_FOURCC('C', 'T', 'R', 'C')
-#define NATIVE_CHECKPOINT_VERSION            2u
+#define NATIVE_CHECKPOINT_VERSION            3u
 #define NATIVE_CHECKPOINT_ADDRESS_RANGE_CAP  16u
 #define NATIVE_CHECKPOINT_POINTER_SLOT_CAP   65536u
 #define NATIVE_CHECKPOINT_CREDITS_STRING_CAP 4096u
@@ -54,8 +54,8 @@ struct NativeCheckpointRegion
 struct NativeCheckpointAddressRange
 {
 	u32 kind;
-	u32 start;
 	u32 size;
+	u64 start;
 };
 
 struct NativeCheckpointPointerSlotRecord
@@ -70,6 +70,15 @@ struct NativeCheckpointPointerSlotState
 	u32 reserved[3];
 	struct NativeCheckpointPointerSlotRecord records[NATIVE_CHECKPOINT_POINTER_SLOT_CAP];
 };
+
+struct NativeCheckpointAppliedRelocation
+{
+	void *slot;
+	uintptr_t oldAddress;
+	uintptr_t relocatedAddress;
+};
+
+#define NATIVE_CHECKPOINT_RELOCATION_SLOT_HASH_CAP (NATIVE_CHECKPOINT_POINTER_SLOT_CAP * 2u)
 
 enum NativeCheckpointFieldRelocationKind
 {
@@ -94,17 +103,24 @@ struct NativeCheckpointHeader
 	u32 version;
 	u32 size;
 	u32 regionCount;
+	u32 pointerSize;
+	u32 reserved;
 	struct PlatformMempackArena mempackArena;
 	u32 psxRandSeed;
 	s32 activeMempackIndex;
 	u32 addressRangeCount;
-	u32 codeAnchor;
+	u32 reserved2;
+	u64 codeAnchor;
 	struct NativeCheckpointAddressRange addressRanges[NATIVE_CHECKPOINT_ADDRESS_RANGE_CAP];
 	struct NativeCheckpointRegion regions[14];
 };
 
 global_variable void *s_nativeCheckpointPointerSlots[NATIVE_CHECKPOINT_POINTER_SLOT_CAP];
 global_variable u32 s_nativeCheckpointPointerSlotCount;
+global_variable struct NativeCheckpointAppliedRelocation s_nativeCheckpointAppliedRelocations[NATIVE_CHECKPOINT_POINTER_SLOT_CAP];
+global_variable u32 s_nativeCheckpointAppliedRelocationSlotHash[NATIVE_CHECKPOINT_RELOCATION_SLOT_HASH_CAP];
+global_variable u32 s_nativeCheckpointAppliedRelocationCount;
+global_variable s32 s_nativeCheckpointAppliedRelocationOverflow;
 
 internal int NativeCheckpoint_InitHeader(struct NativeCheckpointHeader *header);
 
@@ -113,20 +129,20 @@ internal u32 NativeCheckpoint_Align4(u32 value)
 	return (value + 3u) & ~3u;
 }
 
-internal b32 NativeCheckpoint_PtrToU32(const void *ptr, u32 *out)
+internal b32 NativeCheckpoint_PtrToAddress(const void *ptr, u64 *out)
 {
 	uintptr_t value = (uintptr_t)ptr;
 
-	if ((ptr == NULL) || (out == NULL) || (value > 0xffffffffu))
+	if ((ptr == NULL) || (out == NULL))
 	{
 		return 0;
 	}
 
-	*out = (u32)value;
+	*out = (u64)value;
 	return 1;
 }
 
-internal b32 NativeCheckpoint_ReadU32Slot(const void *slot, u32 *out)
+internal b32 NativeCheckpoint_ReadPointerSlot(const void *slot, uintptr_t *out)
 {
 	if ((slot == NULL) || (out == NULL))
 	{
@@ -137,12 +153,114 @@ internal b32 NativeCheckpoint_ReadU32Slot(const void *slot, u32 *out)
 	return 1;
 }
 
-internal void NativeCheckpoint_WriteU32Slot(void *slot, u32 value)
+internal void NativeCheckpoint_WritePointerSlot(void *slot, uintptr_t value)
 {
 	if (slot != NULL)
 	{
 		memcpy(slot, &value, sizeof(value));
 	}
+}
+
+internal u32 NativeCheckpoint_AppliedRelocationSlotHash(const void *slot)
+{
+	uintptr_t value = (uintptr_t)slot;
+
+#if UINTPTR_MAX > UINT32_MAX
+	value ^= value >> 33;
+	value *= UINT64_C(0xff51afd7ed558ccd);
+	value ^= value >> 33;
+#else
+	value ^= value >> 16;
+	value *= UINT32_C(0x7feb352d);
+	value ^= value >> 15;
+#endif
+
+	return (u32)value & (NATIVE_CHECKPOINT_RELOCATION_SLOT_HASH_CAP - 1u);
+}
+
+internal b32 NativeCheckpoint_AppliedRelocationSlotTracked(const void *slot)
+{
+	u32 hash;
+
+	if (slot == NULL)
+	{
+		return 0;
+	}
+
+	hash = NativeCheckpoint_AppliedRelocationSlotHash(slot);
+	for (u32 probe = 0; probe < NATIVE_CHECKPOINT_RELOCATION_SLOT_HASH_CAP; probe++)
+	{
+		u32 recordIndexPlusOne = s_nativeCheckpointAppliedRelocationSlotHash[hash];
+
+		if (recordIndexPlusOne == 0)
+		{
+			return 0;
+		}
+		if (s_nativeCheckpointAppliedRelocations[recordIndexPlusOne - 1u].slot == slot)
+		{
+			return 1;
+		}
+		hash = (hash + 1u) & (NATIVE_CHECKPOINT_RELOCATION_SLOT_HASH_CAP - 1u);
+	}
+
+	return 0;
+}
+
+internal void NativeCheckpoint_ResetAppliedRelocations(void)
+{
+	memset(s_nativeCheckpointAppliedRelocationSlotHash, 0, sizeof(s_nativeCheckpointAppliedRelocationSlotHash));
+	s_nativeCheckpointAppliedRelocationCount = 0;
+	s_nativeCheckpointAppliedRelocationOverflow = 0;
+}
+
+internal void NativeCheckpoint_TrackAppliedRelocation(void *slot, uintptr_t oldAddress, uintptr_t relocatedAddress)
+{
+	struct NativeCheckpointAppliedRelocation *record;
+	u32 hash;
+
+	if ((slot == NULL) || (oldAddress == relocatedAddress))
+	{
+		return;
+	}
+	if (NativeCheckpoint_AppliedRelocationSlotTracked(slot))
+	{
+		return;
+	}
+	if (s_nativeCheckpointAppliedRelocationCount >= NATIVE_CHECKPOINT_POINTER_SLOT_CAP)
+	{
+		s_nativeCheckpointAppliedRelocationOverflow = 1;
+		return;
+	}
+
+	hash = NativeCheckpoint_AppliedRelocationSlotHash(slot);
+	while (s_nativeCheckpointAppliedRelocationSlotHash[hash] != 0)
+	{
+		hash = (hash + 1u) & (NATIVE_CHECKPOINT_RELOCATION_SLOT_HASH_CAP - 1u);
+	}
+
+	record = &s_nativeCheckpointAppliedRelocations[s_nativeCheckpointAppliedRelocationCount++];
+	record->slot = slot;
+	record->oldAddress = oldAddress;
+	record->relocatedAddress = relocatedAddress;
+	s_nativeCheckpointAppliedRelocationSlotHash[hash] = s_nativeCheckpointAppliedRelocationCount;
+}
+
+internal u32 NativeCheckpoint_CountRevertedAppliedRelocations(void)
+{
+	u32 revertedCount = 0;
+
+	for (u32 i = 0; i < s_nativeCheckpointAppliedRelocationCount; i++)
+	{
+		const struct NativeCheckpointAppliedRelocation *record = &s_nativeCheckpointAppliedRelocations[i];
+		uintptr_t currentAddress;
+
+		if (NativeCheckpoint_ReadPointerSlot(record->slot, &currentAddress) && (currentAddress == record->oldAddress))
+		{
+			revertedCount++;
+		}
+	}
+
+	return revertedCount;
 }
 
 void NativeCheckpoint_OnMempackArenaReset(void)
@@ -311,7 +429,7 @@ internal int NativeCheckpoint_AddAddressRange(struct NativeCheckpointHeader *hea
 {
 	void *ptr = NativeCheckpoint_GetRegionPtr(kind);
 	int size = NativeCheckpoint_GetRegionSize(kind);
-	u32 start;
+	u64 start;
 	struct NativeCheckpointAddressRange *range;
 
 	if ((header == NULL) || (ptr == NULL) || (size <= 0))
@@ -322,11 +440,11 @@ internal int NativeCheckpoint_AddAddressRange(struct NativeCheckpointHeader *hea
 	{
 		return 0;
 	}
-	if (!NativeCheckpoint_PtrToU32(ptr, &start))
+	if (!NativeCheckpoint_PtrToAddress(ptr, &start))
 	{
 		return 0;
 	}
-	if (start + (u32)size < start)
+	if (start > UINT64_MAX - (u32)size)
 	{
 		return 0;
 	}
@@ -391,11 +509,14 @@ internal b32 NativeCheckpoint_IsAddressRangeValid(const struct NativeCheckpointA
 		return false;
 	}
 
-	return range->start + range->size >= range->start;
+	return range->start <= UINT64_MAX - range->size;
 }
 
-internal const struct NativeCheckpointAddressRange *NativeCheckpoint_FindAddressOwner(const struct NativeCheckpointHeader *header, u32 address, u32 *offsetOut)
+internal const struct NativeCheckpointAddressRange *NativeCheckpoint_FindAddressOwner(const struct NativeCheckpointHeader *header, uintptr_t address,
+                                                                                      u32 *offsetOut)
 {
+	const u64 candidate = (u64)address;
+
 	if (header == NULL)
 	{
 		return NULL;
@@ -404,13 +525,13 @@ internal const struct NativeCheckpointAddressRange *NativeCheckpoint_FindAddress
 	for (u32 i = 0; i < header->addressRangeCount; i++)
 	{
 		const struct NativeCheckpointAddressRange *range = &header->addressRanges[i];
-		const u32 end = range->start + range->size;
+		const u64 end = range->start + range->size;
 
-		if (NativeCheckpoint_IsAddressRangeValid(range) && (address >= range->start) && (address < end))
+		if (NativeCheckpoint_IsAddressRangeValid(range) && (candidate >= range->start) && (candidate < end))
 		{
 			if (offsetOut != NULL)
 			{
-				*offsetOut = address - range->start;
+				*offsetOut = (u32)(candidate - range->start);
 			}
 			return range;
 		}
@@ -427,12 +548,16 @@ internal void *NativeCheckpoint_GetAddressFromRangeOffset(const struct NativeChe
 	{
 		return NULL;
 	}
+	if (range->start > (u64)UINTPTR_MAX - offset)
+	{
+		return NULL;
+	}
 
 	return (void *)(uintptr_t)(range->start + offset);
 }
 
-internal int NativeCheckpoint_RelocateAddress(const struct NativeCheckpointHeader *oldHeader, const struct NativeCheckpointHeader *liveHeader, u32 oldAddress,
-                                              u32 *newAddressOut)
+internal int NativeCheckpoint_RelocateAddress(const struct NativeCheckpointHeader *oldHeader, const struct NativeCheckpointHeader *liveHeader,
+                                              uintptr_t oldAddress, uintptr_t *newAddressOut)
 {
 	u32 offset;
 	const struct NativeCheckpointAddressRange *oldRange;
@@ -454,72 +579,110 @@ internal int NativeCheckpoint_RelocateAddress(const struct NativeCheckpointHeade
 	{
 		return 0;
 	}
+	if (liveRange->start > (u64)UINTPTR_MAX - offset)
+	{
+		return 0;
+	}
 
-	*newAddressOut = liveRange->start + offset;
+	*newAddressOut = (uintptr_t)(liveRange->start + offset);
 	return 1;
 }
 
 internal int NativeCheckpoint_IsLivePointer(const struct NativeCheckpointHeader *liveHeader, const void *ptr)
 {
-	u32 address;
+	u64 address;
 
-	if (!NativeCheckpoint_PtrToU32(ptr, &address))
+	if (!NativeCheckpoint_PtrToAddress(ptr, &address) || (address > UINTPTR_MAX))
 	{
 		return 0;
 	}
 
-	return NativeCheckpoint_FindAddressOwner(liveHeader, address, NULL) != NULL;
+	return NativeCheckpoint_FindAddressOwner(liveHeader, (uintptr_t)address, NULL) != NULL;
 }
 
 internal void NativeCheckpoint_RelocatePointerSlot(const struct NativeCheckpointHeader *oldHeader, const struct NativeCheckpointHeader *liveHeader, void *slot)
 {
-	u32 oldAddress;
-	u32 newAddress;
+	uintptr_t oldAddress;
+	uintptr_t newAddress;
 
-	if (!NativeCheckpoint_ReadU32Slot(slot, &oldAddress))
+	if (NativeCheckpoint_AppliedRelocationSlotTracked(slot))
+	{
+		return;
+	}
+	if (!NativeCheckpoint_ReadPointerSlot(slot, &oldAddress))
 	{
 		return;
 	}
 
 	if (NativeCheckpoint_RelocateAddress(oldHeader, liveHeader, oldAddress, &newAddress))
 	{
-		NativeCheckpoint_WriteU32Slot(slot, newAddress);
+		NativeCheckpoint_WritePointerSlot(slot, newAddress);
+		NativeCheckpoint_TrackAppliedRelocation(slot, oldAddress, newAddress);
 	}
 }
 
 internal void NativeCheckpoint_RelocateImagePointerSlot(const struct NativeCheckpointHeader *oldHeader, const struct NativeCheckpointHeader *liveHeader,
                                                         void *slot)
 {
-	u32 oldAddress;
-	u32 newAddress;
+	uintptr_t oldAddress;
+	uintptr_t newAddress;
+	u64 imageOffset;
 
+	if (NativeCheckpoint_AppliedRelocationSlotTracked(slot))
+	{
+		return;
+	}
 	if ((oldHeader == NULL) || (liveHeader == NULL) || (oldHeader->codeAnchor == 0) || (liveHeader->codeAnchor == 0))
 	{
 		return;
 	}
-	if (!NativeCheckpoint_ReadU32Slot(slot, &oldAddress) || (oldAddress == 0) || (oldAddress == 0xffffffffu) || (oldAddress == 0xfffffffeu))
+	if (!NativeCheckpoint_ReadPointerSlot(slot, &oldAddress) || (oldAddress == 0) || (oldAddress == UINTPTR_MAX) ||
+	    (oldAddress == UINTPTR_MAX - 1u))
 	{
 		return;
 	}
 
-	newAddress = oldAddress + (liveHeader->codeAnchor - oldHeader->codeAnchor);
-	NativeCheckpoint_WriteU32Slot(slot, newAddress);
+	if ((u64)oldAddress >= oldHeader->codeAnchor)
+	{
+		imageOffset = (u64)oldAddress - oldHeader->codeAnchor;
+		if (liveHeader->codeAnchor > (u64)UINTPTR_MAX - imageOffset)
+		{
+			return;
+		}
+		newAddress = (uintptr_t)(liveHeader->codeAnchor + imageOffset);
+	}
+	else
+	{
+		imageOffset = oldHeader->codeAnchor - (u64)oldAddress;
+		if (liveHeader->codeAnchor < imageOffset)
+		{
+			return;
+		}
+		newAddress = (uintptr_t)(liveHeader->codeAnchor - imageOffset);
+	}
+	NativeCheckpoint_WritePointerSlot(slot, newAddress);
+	NativeCheckpoint_TrackAppliedRelocation(slot, oldAddress, newAddress);
 }
 
 internal void NativeCheckpoint_RelocatePointerOrImageSlot(const struct NativeCheckpointHeader *oldHeader, const struct NativeCheckpointHeader *liveHeader,
                                                           void *slot)
 {
-	u32 oldAddress;
-	u32 newAddress;
+	uintptr_t oldAddress;
+	uintptr_t newAddress;
 
-	if (!NativeCheckpoint_ReadU32Slot(slot, &oldAddress))
+	if (NativeCheckpoint_AppliedRelocationSlotTracked(slot))
+	{
+		return;
+	}
+	if (!NativeCheckpoint_ReadPointerSlot(slot, &oldAddress))
 	{
 		return;
 	}
 
 	if (NativeCheckpoint_RelocateAddress(oldHeader, liveHeader, oldAddress, &newAddress))
 	{
-		NativeCheckpoint_WriteU32Slot(slot, newAddress);
+		NativeCheckpoint_WritePointerSlot(slot, newAddress);
+		NativeCheckpoint_TrackAppliedRelocation(slot, oldAddress, newAddress);
 	}
 	else
 	{
@@ -671,6 +834,31 @@ internal void NativeCheckpoint_RelocateJitPool(const struct NativeCheckpointHead
 	}
 }
 
+internal void NativeCheckpoint_RelocateProcessStackObjectSlots(const struct NativeCheckpointHeader *oldHeader,
+                                                               const struct NativeCheckpointHeader *liveHeader, struct JitPool *pool)
+{
+	uintptr_t currSlot;
+	u32 itemStep;
+
+	if ((pool == NULL) || (pool->ptrPoolData == NULL) || (pool->maxItems <= 0) || (pool->itemSize < sizeof(struct Item) + sizeof(void *)))
+	{
+		return;
+	}
+
+	itemStep = ((u32)pool->itemSize >> 2) << 2;
+	if (itemStep == 0)
+	{
+		return;
+	}
+
+	currSlot = (uintptr_t)pool->ptrPoolData;
+	for (int itemIndex = 0; itemIndex < pool->maxItems; itemIndex++)
+	{
+		NativeCheckpoint_RelocatePointerSlot(oldHeader, liveHeader, (void *)(currSlot + sizeof(struct Item)));
+		currSlot += itemStep;
+	}
+}
+
 internal void NativeCheckpoint_RelocatePrimMem(const struct NativeCheckpointHeader *oldHeader, const struct NativeCheckpointHeader *liveHeader,
                                                struct PrimMem *primMem)
 {
@@ -722,10 +910,12 @@ internal void NativeCheckpoint_RelocateCameraDC(const struct NativeCheckpointHea
                                                 struct CameraDC *camera)
 {
 	local_persist const struct NativeCheckpointFieldRelocation fields[] = {
-	    NATIVE_CHECKPOINT_FIELD_PTR(struct CameraDC, visLeafSrc),   NATIVE_CHECKPOINT_FIELD_PTR(struct CameraDC, visFaceSrc),
-	    NATIVE_CHECKPOINT_FIELD_PTR(struct CameraDC, visInstSrc),   NATIVE_CHECKPOINT_FIELD_PTR(struct CameraDC, visOVertSrc),
-	    NATIVE_CHECKPOINT_FIELD_PTR(struct CameraDC, visSCVertSrc), NATIVE_CHECKPOINT_FIELD_PTR(struct CameraDC, driverToFollow),
-	    NATIVE_CHECKPOINT_FIELD_PTR(struct CameraDC, pushBuffer),   NATIVE_CHECKPOINT_FIELD_PTR(struct CameraDC, trackPathNode),
+	    NATIVE_CHECKPOINT_FIELD_PTR(struct CameraDC, ptrQuadBlock), NATIVE_CHECKPOINT_FIELD_PTR(struct CameraDC, visLeafSrc),
+	    NATIVE_CHECKPOINT_FIELD_PTR(struct CameraDC, visFaceSrc),   NATIVE_CHECKPOINT_FIELD_PTR(struct CameraDC, visInstSrc),
+	    NATIVE_CHECKPOINT_FIELD_PTR(struct CameraDC, visOVertSrc),  NATIVE_CHECKPOINT_FIELD_PTR(struct CameraDC, visSCVertSrc),
+	    NATIVE_CHECKPOINT_FIELD_PTR(struct CameraDC, driverToFollow),
+	    NATIVE_CHECKPOINT_FIELD_PTR(struct CameraDC, pushBuffer),
+	    NATIVE_CHECKPOINT_FIELD_PTR(struct CameraDC, trackPathNode),
 	    NATIVE_CHECKPOINT_FIELD_PTR(struct CameraDC, currEOR),
 	};
 
@@ -1186,63 +1376,127 @@ internal void NativeCheckpoint_RelocateThreadObject(const struct NativeCheckpoin
 	}
 }
 
+internal b32 NativeCheckpoint_PoolContainsItem(const struct JitPool *pool, const struct Item *item)
+{
+	uintptr_t base;
+	uintptr_t address;
+	uintptr_t offset;
+	u32 itemStep;
+
+	if ((pool == NULL) || (item == NULL) || (pool->ptrPoolData == NULL) || (pool->maxItems <= 0) || (pool->itemSize == 0))
+	{
+		return 0;
+	}
+
+	itemStep = pool->itemSize;
+	base = (uintptr_t)pool->ptrPoolData;
+	address = (uintptr_t)item;
+	if (address < base)
+	{
+		return 0;
+	}
+
+	offset = address - base;
+	return ((offset % itemStep) == 0) && ((offset / itemStep) < (u32)pool->maxItems);
+}
+
+internal b32 NativeCheckpoint_PoolItemIsFree(const struct JitPool *pool, const struct Item *item)
+{
+	const struct Item *freeItem;
+	s32 guard = 0;
+
+	if (!NativeCheckpoint_PoolContainsItem(pool, item))
+	{
+		return 0;
+	}
+
+	freeItem = pool->free.first;
+	while ((freeItem != NULL) && (guard++ < pool->maxItems))
+	{
+		if (!NativeCheckpoint_PoolContainsItem(pool, freeItem))
+		{
+			return 0;
+		}
+		if (freeItem == item)
+		{
+			return 1;
+		}
+		freeItem = freeItem->next;
+	}
+
+	return 0;
+}
+
 internal void NativeCheckpoint_RelocateThreadsInPool(const struct NativeCheckpointHeader *oldHeader, const struct NativeCheckpointHeader *liveHeader,
                                                      struct JitPool *pool)
 {
-	struct Item *item;
-	s32 guard = 0;
+	uintptr_t currSlot;
 
-	if (pool == NULL)
+	if ((pool == NULL) || (pool->ptrPoolData == NULL) || (pool->maxItems <= 0) || (pool->itemSize < sizeof(struct Thread)))
 	{
 		return;
 	}
 
-	item = pool->taken.first;
-	while ((item != NULL) && (guard++ < pool->maxItems))
+	// PROC_BirthWithObject removes live threads from `free`, but unlike the
+	// generic JitPool_Add path it never adds them to `taken`. Therefore the
+	// allocator's authoritative live-thread invariant is "pool slot not on
+	// the free list", not membership in the usually-empty taken list.
+	currSlot = (uintptr_t)pool->ptrPoolData;
+	for (s32 itemIndex = 0; itemIndex < pool->maxItems; itemIndex++)
 	{
-		struct Item *next = item->next;
-		NativeCheckpoint_RelocateThread(oldHeader, liveHeader, (struct Thread *)item);
-		item = next;
+		struct Item *item = (struct Item *)currSlot;
+		if (!NativeCheckpoint_PoolItemIsFree(pool, item))
+		{
+			NativeCheckpoint_RelocateThread(oldHeader, liveHeader, (struct Thread *)item);
+		}
+		currSlot += pool->itemSize;
 	}
 }
 
 internal void NativeCheckpoint_RelocateThreadObjectsInPool(const struct NativeCheckpointHeader *oldHeader, const struct NativeCheckpointHeader *liveHeader,
                                                            struct JitPool *pool)
 {
-	struct Item *item;
-	s32 guard = 0;
+	uintptr_t currSlot;
 
-	if (pool == NULL)
+	if ((pool == NULL) || (pool->ptrPoolData == NULL) || (pool->maxItems <= 0) || (pool->itemSize < sizeof(struct Thread)))
 	{
 		return;
 	}
 
-	item = pool->taken.first;
-	while ((item != NULL) && (guard++ < pool->maxItems))
+	currSlot = (uintptr_t)pool->ptrPoolData;
+	for (s32 itemIndex = 0; itemIndex < pool->maxItems; itemIndex++)
 	{
-		struct Item *next = item->next;
-		NativeCheckpoint_RelocateThreadObject(oldHeader, liveHeader, (struct Thread *)item);
-		item = next;
+		struct Item *item = (struct Item *)currSlot;
+		if (!NativeCheckpoint_PoolItemIsFree(pool, item))
+		{
+			NativeCheckpoint_RelocateThreadObject(oldHeader, liveHeader, (struct Thread *)item);
+		}
+		currSlot += pool->itemSize;
 	}
 }
 
 internal void NativeCheckpoint_RelocateInstancesInPool(const struct NativeCheckpointHeader *oldHeader, const struct NativeCheckpointHeader *liveHeader,
                                                        struct JitPool *pool, s32 numPlayers)
 {
-	struct Item *item;
-	s32 guard = 0;
+	uintptr_t currSlot;
 
-	if (pool == NULL)
+	if ((pool == NULL) || (pool->ptrPoolData == NULL) || (pool->maxItems <= 0) || (pool->itemSize < sizeof(struct Instance)))
 	{
 		return;
 	}
 
-	item = pool->taken.first;
-	while ((item != NULL) && (guard++ < pool->maxItems))
+	// INSTANCE_LevInitAll mirrors the retail allocator and removes level
+	// instances directly from `free` without adding them to `taken`. Dynamic
+	// instances do use `taken`; the free-list complement covers both paths.
+	currSlot = (uintptr_t)pool->ptrPoolData;
+	for (s32 itemIndex = 0; itemIndex < pool->maxItems; itemIndex++)
 	{
-		struct Item *next = item->next;
-		NativeCheckpoint_RelocateInstance(oldHeader, liveHeader, (struct Instance *)item, numPlayers);
-		item = next;
+		struct Item *item = (struct Item *)currSlot;
+		if (!NativeCheckpoint_PoolItemIsFree(pool, item))
+		{
+			NativeCheckpoint_RelocateInstance(oldHeader, liveHeader, (struct Instance *)item, numPlayers);
+		}
+		currSlot += pool->itemSize;
 	}
 }
 
@@ -1358,6 +1612,10 @@ internal void NativeCheckpoint_RelocateDataPointers(const struct NativeCheckpoin
 	{
 		NativeCheckpoint_RelocatePointerSlot(oldHeader, liveHeader, &data.xaLanguagePtrs[i]);
 	}
+	for (u32 i = 0; i < len(data.audioMeta); i++)
+	{
+		NativeCheckpoint_RelocatePointerSlot(oldHeader, liveHeader, &data.audioMeta[i].name);
+	}
 	for (u32 i = 0; i < len(data.MetaDataModels); i++)
 	{
 		NativeCheckpoint_RelocateMetaDataModel(oldHeader, liveHeader, &data.MetaDataModels[i]);
@@ -1424,6 +1682,19 @@ internal void NativeCheckpoint_RelocateDataPointers(const struct NativeCheckpoin
 	{
 		NativeCheckpoint_RelocatePointerSlot(oldHeader, liveHeader, &data.hudStructPtr[i]);
 	}
+	for (u32 i = 0; i < len(data.MetaDataCharacters); i++)
+	{
+		NativeCheckpoint_RelocatePointerSlot(oldHeader, liveHeader, &data.MetaDataCharacters[i].name_Debug);
+	}
+	for (u32 i = 0; i < len(data.bakedGteMath); i++)
+	{
+		NativeCheckpoint_RelocatePointerSlot(oldHeader, liveHeader, &data.bakedGteMath[i].physEntry);
+	}
+	for (u32 i = 0; i < len(data.MetaDataTerrain); i++)
+	{
+		NativeCheckpoint_RelocatePointerSlot(oldHeader, liveHeader, &data.MetaDataTerrain[i].em_OddFrame);
+		NativeCheckpoint_RelocatePointerSlot(oldHeader, liveHeader, &data.MetaDataTerrain[i].em_EvenFrame);
+	}
 }
 
 internal void NativeCheckpoint_RelocateLanguagePointers(const struct NativeCheckpointHeader *oldHeader, const struct NativeCheckpointHeader *liveHeader)
@@ -1466,6 +1737,23 @@ internal void NativeCheckpoint_RelocateHowlLists(const struct NativeCheckpointHe
 	}
 }
 
+internal void NativeCheckpoint_RelocateHowlSongPointers(const struct NativeCheckpointHeader *oldHeader, const struct NativeCheckpointHeader *liveHeader)
+{
+	for (u32 i = 0; i < len(sdata_static.songSeq); i++)
+	{
+		NativeCheckpoint_RelocatePointerSlot(oldHeader, liveHeader, &sdata_static.songSeq[i].firstNote);
+		NativeCheckpoint_RelocatePointerSlot(oldHeader, liveHeader, &sdata_static.songSeq[i].currNote);
+	}
+
+	for (u32 songIndex = 0; songIndex < len(sdata_static.songPool); songIndex++)
+	{
+		for (u32 sequenceIndex = 0; sequenceIndex < len(sdata_static.songPool[songIndex].CseqSequences); sequenceIndex++)
+		{
+			NativeCheckpoint_RelocatePointerSlot(oldHeader, liveHeader, &sdata_static.songPool[songIndex].CseqSequences[sequenceIndex]);
+		}
+	}
+}
+
 internal void NativeCheckpoint_RelocateSDataPointers(const struct NativeCheckpointHeader *oldHeader, const struct NativeCheckpointHeader *liveHeader)
 {
 	NativeCheckpoint_RelocatePointerSlot(oldHeader, liveHeader, &sdata_static.arcade_difficultyParams);
@@ -1482,6 +1770,11 @@ internal void NativeCheckpoint_RelocateSDataPointers(const struct NativeCheckpoi
 	NativeCheckpoint_RelocatePointerSlot(oldHeader, liveHeader, &sdata_static.modelMaskHints3D);
 	NativeCheckpoint_RelocatePointerSlot(oldHeader, liveHeader, &sdata_static.gGT);
 	NativeCheckpoint_RelocatePointerSlot(oldHeader, liveHeader, &sdata_static.gGamepads);
+	for (u32 i = 0; i < len(sdata_static.gamepadSystem.gamepad); i++)
+	{
+		NativeCheckpoint_RelocatePointerSlot(oldHeader, liveHeader, &sdata_static.gamepadSystem.gamepad[i].ptrControllerPacket);
+		NativeCheckpoint_RelocatePointerSlot(oldHeader, liveHeader, &sdata_static.gamepadSystem.gamepad[i].rwd);
+	}
 	NativeCheckpoint_RelocateImagePointerSlot(oldHeader, liveHeader, &sdata_static.MainDrawCb_DrawSyncPtr);
 	NativeCheckpoint_RelocatePointerSlot(oldHeader, liveHeader, &sdata_static.ptrVlcTable);
 	NativeCheckpoint_RelocatePointerSlot(oldHeader, liveHeader, &sdata_static.memcard_ptrStart);
@@ -1520,12 +1813,15 @@ internal void NativeCheckpoint_RelocateSDataPointers(const struct NativeCheckpoi
 	NativeCheckpoint_RelocatePointerSlot(oldHeader, liveHeader, &sdata_static.howl_songOffsets);
 	NativeCheckpoint_RelocatePointerSlot(oldHeader, liveHeader, &sdata_static.howl_bankOffsets);
 	NativeCheckpoint_RelocatePointerSlot(oldHeader, liveHeader, &sdata_static.ptrCseqLongSamples);
-	NativeCheckpoint_RelocatePointerSlot(oldHeader, liveHeader, &sdata_static.howlChainParams[0]);
-	NativeCheckpoint_RelocatePointerSlot(oldHeader, liveHeader, &sdata_static.howlChainParams[1]);
+	NativeCheckpoint_RelocatePointerSlot(oldHeader, liveHeader, &sdata_static.howl_endOfHowl);
+	NativeCheckpoint_RelocatePointerSlot(oldHeader, liveHeader, &sdata_static.howlChainParams.cdlFile);
+	NativeCheckpoint_RelocatePointerSlot(oldHeader, liveHeader, &sdata_static.howlChainParams.destination);
 	NativeCheckpoint_RelocatePointerSlot(oldHeader, liveHeader, &sdata_static.ptrHubAlloc);
+	NativeCheckpoint_RelocatePointerSlot(oldHeader, liveHeader, &sdata_static.advHubSongSet.ptrSongSetBits);
 	NativeCheckpoint_RelocateLanguagePointers(oldHeader, liveHeader);
 	NativeCheckpoint_RelocateGhostRecording(oldHeader, liveHeader);
 	NativeCheckpoint_RelocateHowlLists(oldHeader, liveHeader);
+	NativeCheckpoint_RelocateHowlSongPointers(oldHeader, liveHeader);
 	NativeCheckpoint_RelocateImagePointerSlot(oldHeader, liveHeader, &sdata_static.callbackCdReadSuccess);
 	NativeCheckpoint_RelocatePointerSlot(oldHeader, liveHeader, &sdata_static.instMaskHints3D);
 	NativeCheckpoint_RelocatePointerSlot(oldHeader, liveHeader, &sdata_static.ptrBigfile1);
@@ -1730,6 +2026,7 @@ internal void NativeCheckpoint_RelocateCreditsPointers(const struct NativeCheckp
 	}
 
 	NativeCheckpoint_RelocateCreditsObjPointers(oldHeader, liveHeader, &creditsBSS.creditsObj);
+	OVR233_RebuildCreditsModelHeaders();
 }
 
 internal void NativeCheckpoint_RelocateGameTrackerPointers(const struct NativeCheckpointHeader *oldHeader, const struct NativeCheckpointHeader *liveHeader)
@@ -1782,6 +2079,9 @@ internal void NativeCheckpoint_RelocateGameTrackerPointers(const struct NativeCh
 	NativeCheckpoint_RelocateJitPool(oldHeader, liveHeader, &gGT->JitPools.smallStack);
 	NativeCheckpoint_RelocateJitPool(oldHeader, liveHeader, &gGT->JitPools.mediumStack);
 	NativeCheckpoint_RelocateJitPool(oldHeader, liveHeader, &gGT->JitPools.largeStack);
+	NativeCheckpoint_RelocateProcessStackObjectSlots(oldHeader, liveHeader, &gGT->JitPools.smallStack);
+	NativeCheckpoint_RelocateProcessStackObjectSlots(oldHeader, liveHeader, &gGT->JitPools.mediumStack);
+	NativeCheckpoint_RelocateProcessStackObjectSlots(oldHeader, liveHeader, &gGT->JitPools.largeStack);
 	NativeCheckpoint_RelocateJitPool(oldHeader, liveHeader, &gGT->JitPools.particle);
 	NativeCheckpoint_RelocateJitPool(oldHeader, liveHeader, &gGT->JitPools.oscillator);
 	NativeCheckpoint_RelocateJitPool(oldHeader, liveHeader, &gGT->JitPools.rain);
@@ -1857,6 +2157,227 @@ internal void NativeCheckpoint_RelocateRuntimePointers(const struct NativeCheckp
 	NativeCheckpoint_RelocateGameTrackerPointers(oldHeader, liveHeader);
 }
 
+internal void NativeCheckpoint_RebuildLevelRuntimeVisMem(void)
+{
+	struct GameTracker *gGT = &sdata_static.gameTracker;
+
+	// LP64 model-header and visibility tables are host-width sidecars derived
+	// from fixed-width asset references. Their addresses and heap-owned data
+	// are process-local, so a checkpoint must rebuild them rather than retain
+	// caches from either the recording process or the restore bootstrap.
+	Model_ClearAllRuntimeHeaders();
+	LevelRuntime_InvalidateAll();
+	gGT->visMem1 = (gGT->level1 != NULL) ? Level_GetVisMem(gGT->level1, "checkpoint primary visibility memory") : NULL;
+	gGT->visMem2 = (gGT->level2 != NULL) ? Level_GetVisMem(gGT->level2, "checkpoint secondary visibility memory") : NULL;
+}
+
+internal u32 NativeCheckpoint_ReportStaleRuntimePointers(const struct NativeCheckpointHeader *oldHeader, const struct NativeCheckpointHeader *liveHeader)
+{
+	u32 staleCount = 0;
+
+	if (s_nativeCheckpointAppliedRelocationOverflow != 0)
+	{
+		Platform_Log("[CTR State] rejected restore because the applied-relocation ledger exceeded %u slots\n",
+		             (unsigned int)NATIVE_CHECKPOINT_POINTER_SLOT_CAP);
+		return 1;
+	}
+
+	for (u32 i = 0; i < s_nativeCheckpointAppliedRelocationCount; i++)
+	{
+		const struct NativeCheckpointAppliedRelocation *record = &s_nativeCheckpointAppliedRelocations[i];
+		const struct NativeCheckpointAddressRange *slotRange;
+		uintptr_t currentAddress;
+		u32 slotOffset = 0;
+
+		if (!NativeCheckpoint_ReadPointerSlot(record->slot, &currentAddress) || (currentAddress != record->oldAddress))
+		{
+			continue;
+		}
+
+		slotRange = NativeCheckpoint_FindAddressOwner(liveHeader, (uintptr_t)record->slot, &slotOffset);
+		if (staleCount < 256)
+		{
+			Platform_Log("[CTR State] reverted relocated pointer: region=0x%08x offset=0x%08x old=0x%llx expected=0x%llx\n",
+			             slotRange != NULL ? slotRange->kind : 0u, slotOffset, (unsigned long long)record->oldAddress,
+			             (unsigned long long)record->relocatedAddress);
+		}
+		staleCount++;
+	}
+
+	if (staleCount != 0)
+	{
+		Platform_Log("[CTR State] rejected restore with %u reverted relocated pointer%s\n", staleCount, staleCount == 1 ? "" : "s");
+	}
+
+	(void)oldHeader;
+	return staleCount;
+}
+
+int NativeCheckpoint_RunPointerValidationSelfTest(void)
+{
+	struct Thread threadPool[3];
+	struct
+	{
+		struct Instance instance;
+		struct InstDrawPerPlayer draw[1];
+	} instancePool[3];
+	struct JitPool pool;
+	struct CameraDC camera;
+	struct NativeCheckpointHeader oldHeader;
+	struct NativeCheckpointHeader liveHeader;
+	uintptr_t liveBase;
+	uintptr_t oldBase;
+	uintptr_t activeObjectOffset;
+	uintptr_t freeObjectOffset;
+	uintptr_t overlappingPointer;
+#if UINTPTR_MAX > UINT32_MAX
+	uintptr_t addressShapedScalar = UINT64_C(0x00000001012c1388);
+	uintptr_t relocatedPointer = UINT64_C(0x000000010471d8b8);
+#else
+	uintptr_t addressShapedScalar = UINT32_C(0x012c1388);
+	uintptr_t relocatedPointer = UINT32_C(0x0471d8b8);
+#endif
+
+	NativeCheckpoint_ResetAppliedRelocations();
+	NativeCheckpoint_TrackAppliedRelocation(&relocatedPointer, addressShapedScalar, relocatedPointer);
+	if (NativeCheckpoint_CountRevertedAppliedRelocations() != 0)
+	{
+		fprintf(stderr, "[CTR State] pointer-validation self-test failed: address-shaped scalar was classified as a pointer\n");
+		NativeCheckpoint_ResetAppliedRelocations();
+		return 1;
+	}
+
+	relocatedPointer = addressShapedScalar;
+	if (NativeCheckpoint_CountRevertedAppliedRelocations() != 1)
+	{
+		fprintf(stderr, "[CTR State] pointer-validation self-test failed: reverted relocated pointer was not detected\n");
+		NativeCheckpoint_ResetAppliedRelocations();
+		return 1;
+	}
+
+	memset(&oldHeader, 0, sizeof(oldHeader));
+	memset(&liveHeader, 0, sizeof(liveHeader));
+	oldHeader.addressRangeCount = 1;
+	oldHeader.addressRanges[0].kind = NATIVE_CHECKPOINT_REGION_MPAK;
+	oldHeader.addressRanges[0].start = UINT32_C(0x1000);
+	oldHeader.addressRanges[0].size = UINT32_C(0x200);
+	liveHeader.addressRangeCount = 1;
+	liveHeader.addressRanges[0].kind = NATIVE_CHECKPOINT_REGION_MPAK;
+	liveHeader.addressRanges[0].start = UINT32_C(0x1080);
+	liveHeader.addressRanges[0].size = UINT32_C(0x200);
+	overlappingPointer = UINT32_C(0x1100);
+	NativeCheckpoint_RelocatePointerSlot(&oldHeader, &liveHeader, &overlappingPointer);
+	NativeCheckpoint_RelocatePointerSlot(&oldHeader, &liveHeader, &overlappingPointer);
+	if ((overlappingPointer != UINT32_C(0x1180)) || (s_nativeCheckpointAppliedRelocationCount != 2))
+	{
+		fprintf(stderr, "[CTR State] pointer-validation self-test failed: overlapping address ranges relocated one slot more than once\n");
+		NativeCheckpoint_ResetAppliedRelocations();
+		return 1;
+	}
+
+	memset(threadPool, 0, sizeof(threadPool));
+	memset(&pool, 0, sizeof(pool));
+	memset(&oldHeader, 0, sizeof(oldHeader));
+	memset(&liveHeader, 0, sizeof(liveHeader));
+
+	pool.ptrPoolData = threadPool;
+	pool.maxItems = (s32)len(threadPool);
+	pool.itemSize = sizeof(threadPool[0]);
+	pool.free.first = (struct Item *)&threadPool[0];
+	pool.free.last = (struct Item *)&threadPool[2];
+	pool.free.count = 2;
+	threadPool[0].next = &threadPool[2];
+	threadPool[2].prev = &threadPool[0];
+
+	liveBase = (uintptr_t)threadPool;
+	oldBase = liveBase > UINT32_C(0x100000) ? liveBase - UINT32_C(0x100000) : liveBase + UINT32_C(0x100000);
+	activeObjectOffset = OFFSETOF(struct Thread, object);
+	freeObjectOffset = OFFSETOF(struct Thread, inst);
+	oldHeader.addressRangeCount = 1;
+	oldHeader.addressRanges[0].kind = NATIVE_CHECKPOINT_REGION_MPAK;
+	oldHeader.addressRanges[0].start = oldBase;
+	oldHeader.addressRanges[0].size = sizeof(threadPool);
+	liveHeader.addressRangeCount = 1;
+	liveHeader.addressRanges[0].kind = NATIVE_CHECKPOINT_REGION_MPAK;
+	liveHeader.addressRanges[0].start = liveBase;
+	liveHeader.addressRanges[0].size = sizeof(threadPool);
+	threadPool[1].object = (void *)(oldBase + activeObjectOffset);
+	threadPool[0].object = (void *)(oldBase + freeObjectOffset);
+
+	NativeCheckpoint_RelocateThreadsInPool(&oldHeader, &liveHeader, &pool);
+	if ((threadPool[1].object != (void *)(liveBase + activeObjectOffset)) ||
+	    (threadPool[0].object != (void *)(oldBase + freeObjectOffset)))
+	{
+		fprintf(stderr, "[CTR State] pointer-validation self-test failed: free-list complement did not select exactly the allocated thread\n");
+		NativeCheckpoint_ResetAppliedRelocations();
+		return 1;
+	}
+
+	memset(instancePool, 0, sizeof(instancePool));
+	memset(&pool, 0, sizeof(pool));
+	memset(&oldHeader, 0, sizeof(oldHeader));
+	memset(&liveHeader, 0, sizeof(liveHeader));
+
+	pool.ptrPoolData = instancePool;
+	pool.maxItems = (s32)len(instancePool);
+	pool.itemSize = sizeof(instancePool[0]);
+	pool.free.first = (struct Item *)&instancePool[0].instance;
+	pool.free.last = (struct Item *)&instancePool[2].instance;
+	pool.free.count = 2;
+	instancePool[0].instance.next = &instancePool[2].instance;
+	instancePool[2].instance.prev = &instancePool[0].instance;
+
+	liveBase = (uintptr_t)instancePool;
+	oldBase = liveBase > UINT32_C(0x100000) ? liveBase - UINT32_C(0x100000) : liveBase + UINT32_C(0x100000);
+	activeObjectOffset = OFFSETOF(struct Instance, model);
+	freeObjectOffset = OFFSETOF(struct Instance, instDef);
+	oldHeader.addressRangeCount = 1;
+	oldHeader.addressRanges[0].kind = NATIVE_CHECKPOINT_REGION_MPAK;
+	oldHeader.addressRanges[0].start = oldBase;
+	oldHeader.addressRanges[0].size = sizeof(instancePool);
+	liveHeader.addressRangeCount = 1;
+	liveHeader.addressRanges[0].kind = NATIVE_CHECKPOINT_REGION_MPAK;
+	liveHeader.addressRanges[0].start = liveBase;
+	liveHeader.addressRanges[0].size = sizeof(instancePool);
+	instancePool[1].instance.model = (struct Model *)(oldBase + activeObjectOffset);
+	instancePool[0].instance.model = (struct Model *)(oldBase + freeObjectOffset);
+
+	NativeCheckpoint_RelocateInstancesInPool(&oldHeader, &liveHeader, &pool, 1);
+	if ((instancePool[1].instance.model != (struct Model *)(liveBase + activeObjectOffset)) ||
+	    (instancePool[0].instance.model != (struct Model *)(oldBase + freeObjectOffset)))
+	{
+		fprintf(stderr, "[CTR State] pointer-validation self-test failed: free-list complement did not select exactly the allocated instance\n");
+		NativeCheckpoint_ResetAppliedRelocations();
+		return 1;
+	}
+
+	memset(&camera, 0, sizeof(camera));
+	memset(&oldHeader, 0, sizeof(oldHeader));
+	memset(&liveHeader, 0, sizeof(liveHeader));
+	liveBase = (uintptr_t)threadPool;
+	oldBase = liveBase > UINT32_C(0x100000) ? liveBase - UINT32_C(0x100000) : liveBase + UINT32_C(0x100000);
+	oldHeader.addressRangeCount = 1;
+	oldHeader.addressRanges[0].kind = NATIVE_CHECKPOINT_REGION_MPAK;
+	oldHeader.addressRanges[0].start = oldBase;
+	oldHeader.addressRanges[0].size = sizeof(threadPool);
+	liveHeader.addressRangeCount = 1;
+	liveHeader.addressRanges[0].kind = NATIVE_CHECKPOINT_REGION_MPAK;
+	liveHeader.addressRanges[0].start = liveBase;
+	liveHeader.addressRanges[0].size = sizeof(threadPool);
+	camera.ptrQuadBlock = (struct QuadBlock *)oldBase;
+	NativeCheckpoint_RelocateCameraDC(&oldHeader, &liveHeader, &camera);
+	if (camera.ptrQuadBlock != (struct QuadBlock *)liveBase)
+	{
+		fprintf(stderr, "[CTR State] pointer-validation self-test failed: CameraDC.ptrQuadBlock was not relocated\n");
+		NativeCheckpoint_ResetAppliedRelocations();
+		return 1;
+	}
+
+	NativeCheckpoint_ResetAppliedRelocations();
+	printf("[CTR State] pointer-validation self-test passed: scalar=ignored relocated=reversion-checked overlap-idempotence=checked pool-allocation=free-list-complement camera-quad=checked\n");
+	return 0;
+}
+
 internal int NativeCheckpoint_CapturePointerSlotState(void *dst, int dstSize)
 {
 	struct NativeCheckpointHeader liveHeader;
@@ -1876,7 +2397,7 @@ internal int NativeCheckpoint_CapturePointerSlotState(void *dst, int dstSize)
 
 	for (u32 i = 0; i < s_nativeCheckpointPointerSlotCount; i++)
 	{
-		u32 slotAddress;
+		u64 slotAddress;
 		u32 slotOffset;
 		const struct NativeCheckpointAddressRange *slotRange;
 
@@ -1884,12 +2405,12 @@ internal int NativeCheckpoint_CapturePointerSlotState(void *dst, int dstSize)
 		{
 			return 0;
 		}
-		if (!NativeCheckpoint_PtrToU32(s_nativeCheckpointPointerSlots[i], &slotAddress))
+		if (!NativeCheckpoint_PtrToAddress(s_nativeCheckpointPointerSlots[i], &slotAddress) || (slotAddress > UINTPTR_MAX))
 		{
 			continue;
 		}
 
-		slotRange = NativeCheckpoint_FindAddressOwner(&liveHeader, slotAddress, &slotOffset);
+		slotRange = NativeCheckpoint_FindAddressOwner(&liveHeader, (uintptr_t)slotAddress, &slotOffset);
 		if (slotRange == NULL)
 		{
 			continue;
@@ -1930,7 +2451,12 @@ internal int NativeCheckpoint_ApplyPointerSlotState(const struct NativeCheckpoin
 			return 0;
 		}
 
+#if UINTPTR_MAX == UINT32_MAX
+		// ILP32 relocation writes real host pointers into serialized slots.
 		NativeCheckpoint_RelocatePointerSlot(oldHeader, liveHeader, slot);
+#endif
+		// LP64 slots contain stable CtrAssetRef32 guest references. Their
+		// containing region is already rebound, so retain the four-byte value.
 		NativeCheckpoint_RegisterPointerSlot(slot);
 	}
 
@@ -1939,6 +2465,8 @@ internal int NativeCheckpoint_ApplyPointerSlotState(const struct NativeCheckpoin
 
 internal void NativeCheckpoint_RelocateMempackPointers(const struct NativeCheckpointHeader *oldHeader, const struct NativeCheckpointHeader *liveHeader)
 {
+	const struct PlatformMempackArena *liveArena = Platform_GetMempackArena();
+
 	for (u32 i = 0; i < len(sdata_static.mempack); i++)
 	{
 		struct Mempack *mempack = &sdata_static.mempack[i];
@@ -1946,7 +2474,18 @@ internal void NativeCheckpoint_RelocateMempackPointers(const struct NativeCheckp
 		NativeCheckpoint_RelocatePointerSlot(oldHeader, liveHeader, &mempack->start);
 		NativeCheckpoint_RelocatePointerSlot(oldHeader, liveHeader, &mempack->lastFreeByte);
 		NativeCheckpoint_RelocatePointerSlot(oldHeader, liveHeader, &mempack->endOfAllocator);
-		NativeCheckpoint_RelocatePointerSlot(oldHeader, liveHeader, &mempack->endOfMemory);
+
+		// endOfMemory is the legal one-past pointer for the backing arena, so it
+		// cannot be resolved by the generic address-owner lookup.
+		if (mempack->endOfMemory == oldHeader->mempackArena.endOfMemory)
+		{
+			mempack->endOfMemory = liveArena->endOfMemory;
+		}
+		else
+		{
+			NativeCheckpoint_RelocatePointerSlot(oldHeader, liveHeader, &mempack->endOfMemory);
+		}
+
 		NativeCheckpoint_RelocatePointerSlot(oldHeader, liveHeader, &mempack->firstFreeByte);
 
 		for (u32 bookmarkIndex = 0; bookmarkIndex < len(mempack->bookmarks); bookmarkIndex++)
@@ -2017,7 +2556,8 @@ internal int NativeCheckpoint_InitHeader(struct NativeCheckpointHeader *header)
 	header->magic = NATIVE_CHECKPOINT_MAGIC;
 	header->version = NATIVE_CHECKPOINT_VERSION;
 	header->regionCount = (u32)len(regionKinds);
-	if (!NativeCheckpoint_PtrToU32((const void *)(uintptr_t)&NativeCheckpoint_GetSize, &header->codeAnchor))
+	header->pointerSize = (u32)sizeof(void *);
+	if (!NativeCheckpoint_PtrToAddress((const void *)(uintptr_t)&NativeCheckpoint_GetSize, &header->codeAnchor))
 	{
 		return 0;
 	}
@@ -2060,6 +2600,10 @@ internal int NativeCheckpoint_ValidateHeader(const struct NativeCheckpointHeader
 		return 0;
 	}
 	if ((header->magic != NATIVE_CHECKPOINT_MAGIC) || (header->version != NATIVE_CHECKPOINT_VERSION))
+	{
+		return 0;
+	}
+	if (header->pointerSize != sizeof(void *))
 	{
 		return 0;
 	}
@@ -2178,6 +2722,7 @@ int NativeCheckpoint_Restore(const void *src, int srcSize)
 	{
 		return 0;
 	}
+	NativeCheckpoint_ResetAppliedRelocations();
 
 	// NOTE(aalhendi): 233 checkpoints store only mutable overlay state. Restore
 	// the source-owned static image first, then overlay the captured runtime
@@ -2209,6 +2754,8 @@ int NativeCheckpoint_Restore(const void *src, int srcSize)
 	Platform_ConfigureMempackArena();
 	NativeCheckpoint_RelocateMempackPointers(header, &liveHeader);
 	NativeCheckpoint_RelocateRuntimePointers(header, &liveHeader);
+	NativeCheckpoint_RebuildLevelRuntimeVisMem();
+	MainInit_RebindNativeRuntimeStorage(&sdata_static.gameTracker);
 	if (pointerMapRegion == NULL)
 	{
 		return 0;
@@ -2218,6 +2765,10 @@ int NativeCheckpoint_Restore(const void *src, int srcSize)
 		return 0;
 	}
 	Platform_RepairResidentPointers(header->activeMempackIndex);
+	if (NativeCheckpoint_ReportStaleRuntimePointers(header, &liveHeader) != 0)
+	{
+		return 0;
+	}
 
 	if (nativeStateRegion == NULL)
 	{

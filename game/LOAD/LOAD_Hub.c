@@ -47,7 +47,7 @@ void LOAD_Hub_SwapNow()
 	// ptrintf("gGT->level2 = 0x%08x\n",gGT->level2);
 	// ptrintf("SWAPPING 1...\n");
 
-	LevInstDef_RePack(gGT->level1->ptr_mesh_info, 1);
+	LevInstDef_RePack(Level_GetMeshInfo(gGT->level1, "LOAD_Hub_SwapNow old mesh"), 1);
 
 	// Aug 5
 	// ptrintf("SWAPPING 2...\n");
@@ -92,13 +92,15 @@ void LOAD_Hub_SwapNow()
 
 	if (level1 != 0)
 	{
-		LibraryOfModels_Store(gGT, level1->numModels, level1->ptrModelsPtrArray);
+		struct mesh_info *mesh = Level_GetMeshInfo(level1, "LOAD_Hub_SwapNow mesh");
 
-		INSTANCE_LevInitAll(level1->ptrInstDefs, level1->numInstances);
+		LibraryOfModels_Store(gGT, level1->numModels, Level_GetModelRefs(level1, "LOAD_Hub_SwapNow model references"));
 
-		LevInstDef_UnPack(level1->ptr_mesh_info);
+		INSTANCE_LevInitAll(Level_GetInstDefs(level1, "LOAD_Hub_SwapNow instance definitions"), level1->numInstances);
 
-		DecalGlobal_Store(gGT, level1->levTexLookup);
+		LevInstDef_UnPack(mesh);
+
+		DecalGlobal_Store(gGT, Level_GetTexLookup(level1, "LOAD_Hub_SwapNow texture lookup"));
 	}
 
 	MEMPACK_SwapPacks(gGT->activeMempackIndex);

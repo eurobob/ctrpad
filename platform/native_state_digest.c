@@ -15,7 +15,6 @@ enum NativeStateDigestGuestRegion
 	NATIVE_STATE_DIGEST_GUEST_EXTERNAL = NATIVE_STATE_DIGEST_FOURCC('E', 'X', 'T', 'N'),
 	NATIVE_STATE_DIGEST_GUEST_DRIVER = NATIVE_STATE_DIGEST_FOURCC('D', 'R', 'V', 'R'),
 	NATIVE_STATE_DIGEST_GUEST_QUADBLOCK = NATIVE_STATE_DIGEST_FOURCC('Q', 'U', 'A', 'D'),
-	NATIVE_STATE_DIGEST_GUEST_MEMPACK = NATIVE_STATE_DIGEST_FOURCC('M', 'P', 'A', 'K'),
 };
 
 struct NativeStateDigestHasher
@@ -101,6 +100,70 @@ internal void NativeStateDigest_PutGuestRef(struct NativeStateDigestHasher *hash
 	NativeStateDigest_PutU32(hasher, offset);
 }
 
+internal b32 NativeStateDigest_DriverIsLive(const struct GameTracker *gGT, const struct Driver *driver)
+{
+	const struct JitPool *pool;
+	const struct Item *slot;
+	const struct Item *freeItem;
+	uintptr_t base;
+	uintptr_t address;
+	uintptr_t offset;
+	s32 visited = 0;
+
+	if ((gGT == NULL) || (driver == NULL))
+	{
+		return 0;
+	}
+
+	pool = &gGT->JitPools.largeStack;
+	if ((pool->ptrPoolData == NULL) || (pool->maxItems <= 0) ||
+	    (pool->itemSize < sizeof(struct Item) + sizeof(struct Driver)) ||
+	    (pool->free.count < 0) || (pool->free.count > pool->maxItems))
+	{
+		return 0;
+	}
+
+	base = (uintptr_t)pool->ptrPoolData;
+	address = (uintptr_t)driver;
+	if (address < base + sizeof(struct Item))
+	{
+		return 0;
+	}
+
+	offset = address - base - sizeof(struct Item);
+	if (((offset % pool->itemSize) != 0) || ((offset / pool->itemSize) >= (u32)pool->maxItems))
+	{
+		return 0;
+	}
+
+	slot = (const struct Item *)(address - sizeof(struct Item));
+	freeItem = pool->free.first;
+	while ((freeItem != NULL) && (visited < pool->maxItems))
+	{
+		uintptr_t freeAddress = (uintptr_t)freeItem;
+		uintptr_t freeOffset;
+
+		if (freeAddress < base)
+		{
+			return 0;
+		}
+		freeOffset = freeAddress - base;
+		if (((freeOffset % pool->itemSize) != 0) || ((freeOffset / pool->itemSize) >= (u32)pool->maxItems))
+		{
+			return 0;
+		}
+		if (freeItem == slot)
+		{
+			return 0;
+		}
+
+		freeItem = freeItem->next;
+		visited++;
+	}
+
+	return (freeItem == NULL) && (visited == pool->free.count);
+}
+
 internal void NativeStateDigest_PutDriverRef(struct NativeStateDigestHasher *hasher, const struct GameTracker *gGT, const struct Driver *driver)
 {
 	if (driver == NULL)
@@ -111,7 +174,7 @@ internal void NativeStateDigest_PutDriverRef(struct NativeStateDigestHasher *has
 
 	for (u32 i = 0; i < len(gGT->drivers); i++)
 	{
-		if (gGT->drivers[i] == driver)
+		if ((gGT->drivers[i] == driver) && NativeStateDigest_DriverIsLive(gGT, driver))
 		{
 			NativeStateDigest_PutGuestRef(hasher, NATIVE_STATE_DIGEST_GUEST_DRIVER, i);
 			return;
@@ -124,6 +187,7 @@ internal void NativeStateDigest_PutDriverRef(struct NativeStateDigestHasher *has
 internal void NativeStateDigest_PutQuadBlockRef(struct NativeStateDigestHasher *hasher, const struct GameTracker *gGT, const struct QuadBlock *quad)
 {
 	const struct mesh_info *mesh;
+	const struct QuadBlock *quadBlocks;
 	uintptr_t base;
 	uintptr_t address;
 	uintptr_t byteSize;
@@ -134,21 +198,22 @@ internal void NativeStateDigest_PutQuadBlockRef(struct NativeStateDigestHasher *
 		NativeStateDigest_PutGuestRef(hasher, NATIVE_STATE_DIGEST_GUEST_NONE, 0);
 		return;
 	}
-	if ((gGT->level1 == NULL) || (gGT->level1->ptr_mesh_info == NULL))
+	if ((gGT->level1 == NULL) ||
+	    ((mesh = Level_GetMeshInfo(gGT->level1, "native state digest mesh")) == NULL))
 	{
 		NativeStateDigest_PutGuestRef(hasher, NATIVE_STATE_DIGEST_GUEST_EXTERNAL, 0);
 		return;
 	}
 
-	mesh = gGT->level1->ptr_mesh_info;
-	if ((mesh->ptrQuadBlockArray == NULL) || (mesh->numQuadBlock <= 0) ||
+	quadBlocks = MeshInfo_GetQuadBlocks(mesh, "native state digest quad blocks");
+	if ((quadBlocks == NULL) || (mesh->numQuadBlock <= 0) ||
 	    ((u32)mesh->numQuadBlock > UINT32_MAX / (u32)sizeof(struct QuadBlock)))
 	{
 		NativeStateDigest_PutGuestRef(hasher, NATIVE_STATE_DIGEST_GUEST_EXTERNAL, 0);
 		return;
 	}
 
-	base = (uintptr_t)mesh->ptrQuadBlockArray;
+	base = (uintptr_t)quadBlocks;
 	address = (uintptr_t)quad;
 	byteSize = (uintptr_t)(u32)mesh->numQuadBlock * sizeof(struct QuadBlock);
 	if ((address < base) || ((address - base) >= byteSize))
@@ -165,34 +230,6 @@ internal void NativeStateDigest_PutQuadBlockRef(struct NativeStateDigestHasher *
 	}
 
 	NativeStateDigest_PutGuestRef(hasher, NATIVE_STATE_DIGEST_GUEST_QUADBLOCK, (u32)byteOffset);
-}
-
-internal void NativeStateDigest_PutMempackRef(struct NativeStateDigestHasher *hasher, const void *ptr)
-{
-	const struct PlatformMempackArena *arena = Platform_GetMempackArena();
-	uintptr_t base;
-	uintptr_t address;
-
-	if (ptr == NULL)
-	{
-		NativeStateDigest_PutGuestRef(hasher, NATIVE_STATE_DIGEST_GUEST_NONE, 0);
-		return;
-	}
-	if ((arena == NULL) || (arena->base == NULL) || (arena->backingSize < 0))
-	{
-		NativeStateDigest_PutGuestRef(hasher, NATIVE_STATE_DIGEST_GUEST_EXTERNAL, 0);
-		return;
-	}
-
-	base = (uintptr_t)arena->base;
-	address = (uintptr_t)ptr;
-	if ((address < base) || ((address - base) > (uintptr_t)(u32)arena->backingSize))
-	{
-		NativeStateDigest_PutGuestRef(hasher, NATIVE_STATE_DIGEST_GUEST_EXTERNAL, 0);
-		return;
-	}
-
-	NativeStateDigest_PutGuestRef(hasher, NATIVE_STATE_DIGEST_GUEST_MEMPACK, (u32)(address - base));
 }
 
 internal u64 NativeStateDigest_HashTiming(const struct GameTracker *gGT)
@@ -445,10 +482,11 @@ internal u64 NativeStateDigest_HashDrivers(const struct GameTracker *gGT)
 	for (u32 i = 0; i < len(gGT->drivers); i++)
 	{
 		const struct Driver *driver = gGT->drivers[i];
+		const b32 live = NativeStateDigest_DriverIsLive(gGT, driver);
 
 		NativeStateDigest_PutU8(&hasher, (u8)i);
-		NativeStateDigest_PutU8(&hasher, driver != NULL);
-		if (driver != NULL)
+		NativeStateDigest_PutU8(&hasher, live);
+		if (live)
 		{
 			NativeStateDigest_PutDriver(&hasher, gGT, driver);
 		}
@@ -520,27 +558,30 @@ internal u64 NativeStateDigest_HashWorld(const struct GameTracker *gGT)
 
 internal void NativeStateDigest_PutJitPool(struct NativeStateDigestHasher *hasher, const struct JitPool *pool)
 {
+	// Slot width and total byte size are host storage geometry. The free/taken
+	// populations and retail item capacity are the canonical allocator state.
 	NativeStateDigest_PutS32(hasher, pool->free.count);
 	NativeStateDigest_PutS32(hasher, pool->taken.count);
 	NativeStateDigest_PutS32(hasher, pool->maxItems);
-	NativeStateDigest_PutU32(hasher, pool->itemSize);
-	NativeStateDigest_PutS32(hasher, pool->poolSize);
 }
 
 internal void NativeStateDigest_PutMempack(struct NativeStateDigestHasher *hasher, const struct Mempack *mempack)
 {
-	NativeStateDigest_PutS32(hasher, mempack->packSize);
-	NativeStateDigest_PutMempackRef(hasher, mempack->start);
-	NativeStateDigest_PutMempackRef(hasher, mempack->lastFreeByte);
-	NativeStateDigest_PutMempackRef(hasher, mempack->endOfAllocator);
-	NativeStateDigest_PutMempackRef(hasher, mempack->endOfMemory);
-	NativeStateDigest_PutMempackRef(hasher, mempack->firstFreeByte);
-	NativeStateDigest_PutS32(hasher, mempack->sizeOfPrevAllocation);
+	// Physical byte coordinates are host storage geometry: widened objects
+	// shift LP64 low-memory cursors and active bookmarks even when the retail
+	// allocation lifecycle is the same. Hash pointer topology and stack depth
+	// here; pool occupancy above carries the comparable allocation population.
+	NativeStateDigest_PutU8(hasher, mempack->start != NULL);
+	NativeStateDigest_PutU8(hasher, mempack->lastFreeByte != NULL);
+	NativeStateDigest_PutU8(hasher, mempack->endOfAllocator != NULL);
+	NativeStateDigest_PutU8(hasher, mempack->endOfMemory != NULL);
+	NativeStateDigest_PutU8(hasher, mempack->firstFreeByte != NULL);
+	NativeStateDigest_PutU8(hasher, mempack->lastFreeByte == mempack->endOfAllocator);
+	NativeStateDigest_PutU8(hasher, mempack->endOfAllocator == mempack->endOfMemory);
+	NativeStateDigest_PutU8(hasher, mempack->firstFreeByte == mempack->start);
+	NativeStateDigest_PutU8(hasher, mempack->firstFreeByte == mempack->lastFreeByte);
+	NativeStateDigest_PutU8(hasher, mempack->sizeOfPrevAllocation != 0);
 	NativeStateDigest_PutS32(hasher, mempack->numBookmarks);
-	for (u32 i = 0; i < len(mempack->bookmarks); i++)
-	{
-		NativeStateDigest_PutMempackRef(hasher, mempack->bookmarks[i]);
-	}
 }
 
 internal u64 NativeStateDigest_HashAllocation(const struct GameTracker *gGT)
@@ -672,20 +713,45 @@ int NativeStateDigest_RunSelfTest(void)
 {
 	struct GameTracker trackerA;
 	struct GameTracker trackerB;
-	struct Driver driverA;
-	struct Driver driverB;
+	enum
+	{
+		testDriverStride = JITPOOL_ALIGN_ITEM_STRIDE(sizeof(struct Item) + sizeof(struct Driver)),
+	};
+	union
+	{
+		void *alignment;
+		u8 bytes[testDriverStride];
+	} slotA, slotB;
+	struct Item *itemA = (struct Item *)(void *)slotA.bytes;
+	struct Item *itemB = (struct Item *)(void *)slotB.bytes;
+	struct Driver *driverA = (struct Driver *)(void *)(slotA.bytes + sizeof(struct Item));
+	struct Driver *driverB = (struct Driver *)(void *)(slotB.bytes + sizeof(struct Item));
 	struct NativeStateDigest digestA;
 	struct NativeStateDigest digestB;
 	struct NativeStateDigest mutated;
+	struct NativeStateDigestHasher allocationA;
+	struct NativeStateDigestHasher allocationB;
+	struct JitPool poolA;
+	struct JitPool poolB;
+	struct Mempack mempackA;
+	struct Mempack mempackB;
 	u32 difference;
 
 	memset(&trackerA, 0, sizeof(trackerA));
 	memset(&trackerB, 0, sizeof(trackerB));
-	memset(&driverA, 0, sizeof(driverA));
-	memset(&driverB, 0, sizeof(driverB));
+	memset(&slotA, 0, sizeof(slotA));
+	memset(&slotB, 0, sizeof(slotB));
 
-	trackerA.drivers[0] = &driverA;
-	trackerB.drivers[0] = &driverB;
+	trackerA.drivers[0] = driverA;
+	trackerB.drivers[0] = driverB;
+	trackerA.JitPools.largeStack.maxItems = 1;
+	trackerB.JitPools.largeStack.maxItems = 1;
+	trackerA.JitPools.largeStack.itemSize = testDriverStride;
+	trackerB.JitPools.largeStack.itemSize = testDriverStride;
+	trackerA.JitPools.largeStack.poolSize = testDriverStride;
+	trackerB.JitPools.largeStack.poolSize = testDriverStride;
+	trackerA.JitPools.largeStack.ptrPoolData = slotA.bytes;
+	trackerB.JitPools.largeStack.ptrPoolData = slotB.bytes;
 	trackerA.backBuffer = &trackerA.db[0];
 	trackerB.backBuffer = &trackerB.db[1];
 	trackerA.frontBuffer = &trackerA.db[1];
@@ -695,22 +761,22 @@ int NativeStateDigest_RunSelfTest(void)
 	trackerA.final_filler_mostly_null[0] = 0x11;
 	trackerB.final_filler_mostly_null[0] = 0x77;
 
-	driverA.driverID = 3;
-	driverB.driverID = 3;
-	driverA.posCurr.x = 0x123456;
-	driverB.posCurr.x = 0x123456;
-	driverA.posCurr.y = -0x2345;
-	driverB.posCurr.y = -0x2345;
-	driverA.velocity.z = 0x34567;
-	driverB.velocity.z = 0x34567;
-	driverA.reserves = 0x456;
-	driverB.reserves = 0x456;
-	driverA.lapIndex = 1;
-	driverB.lapIndex = 1;
-	driverA.heldItemID = HELD_ITEM_MISSILE_1X;
-	driverB.heldItemID = HELD_ITEM_MISSILE_1X;
-	driverA.pendingDamageAttacker = &driverA;
-	driverB.pendingDamageAttacker = &driverB;
+	driverA->driverID = 3;
+	driverB->driverID = 3;
+	driverA->posCurr.x = 0x123456;
+	driverB->posCurr.x = 0x123456;
+	driverA->posCurr.y = -0x2345;
+	driverB->posCurr.y = -0x2345;
+	driverA->velocity.z = 0x34567;
+	driverB->velocity.z = 0x34567;
+	driverA->reserves = 0x456;
+	driverB->reserves = 0x456;
+	driverA->lapIndex = 1;
+	driverB->lapIndex = 1;
+	driverA->heldItemID = HELD_ITEM_MISSILE_1X;
+	driverB->heldItemID = HELD_ITEM_MISSILE_1X;
+	driverA->pendingDamageAttacker = driverA;
+	driverB->pendingDamageAttacker = driverB;
 
 	NativeStateDigest_Capture(&trackerA, &digestA);
 	NativeStateDigest_Capture(&trackerB, &digestB);
@@ -722,7 +788,7 @@ int NativeStateDigest_RunSelfTest(void)
 		return 1;
 	}
 
-	driverB.posCurr.x++;
+	driverB->posCurr.x++;
 	NativeStateDigest_Capture(&trackerB, &mutated);
 	difference = NativeStateDigest_DifferenceMask(&digestA, &mutated);
 	if ((difference != NATIVE_STATE_DIGEST_COMPONENT_DRIVERS) || (digestA.root == mutated.root))
@@ -732,7 +798,59 @@ int NativeStateDigest_RunSelfTest(void)
 		return 1;
 	}
 
-	printf("[CTR StateDigest] self-test passed: address-independent root=%08x%08x mutation component=%s\n", (u32)(digestA.root >> 32),
-	       (u32)digestA.root, NativeStateDigest_FirstDifferenceName(difference));
+	itemA->next = NULL;
+	itemA->prev = NULL;
+	itemB->next = NULL;
+	itemB->prev = NULL;
+	trackerA.JitPools.largeStack.free.first = itemA;
+	trackerA.JitPools.largeStack.free.last = itemA;
+	trackerA.JitPools.largeStack.free.count = 1;
+	trackerB.JitPools.largeStack.free.first = itemB;
+	trackerB.JitPools.largeStack.free.last = itemB;
+	trackerB.JitPools.largeStack.free.count = 1;
+	driverA->posCurr.x = 1;
+	driverB->posCurr.x = 2;
+	NativeStateDigest_Capture(&trackerA, &digestA);
+	NativeStateDigest_Capture(&trackerB, &digestB);
+	difference = NativeStateDigest_DifferenceMask(&digestA, &digestB);
+	if ((difference != 0) || (digestA.root != digestB.root))
+	{
+		fprintf(stderr, "[CTR StateDigest] self-test failed: free driver slot changed component=%s\n",
+		        NativeStateDigest_FirstDifferenceName(difference));
+		return 1;
+	}
+
+	memset(&poolA, 0, sizeof(poolA));
+	memset(&poolB, 0, sizeof(poolB));
+	memset(&mempackA, 0, sizeof(mempackA));
+	memset(&mempackB, 0, sizeof(mempackB));
+	poolA.free.count = 3;
+	poolB.free.count = 3;
+	poolA.taken.count = 1;
+	poolB.taken.count = 1;
+	poolA.maxItems = 4;
+	poolB.maxItems = 4;
+	poolA.itemSize = 0x670;
+	poolB.itemSize = 0x728;
+	poolA.poolSize = 4 * 0x670;
+	poolB.poolSize = 4 * 0x728;
+	mempackA.bookmarks[0] = (void *)(uintptr_t)0x1000;
+	mempackB.bookmarks[0] = (void *)(uintptr_t)0x2000;
+
+	allocationA = NativeStateDigest_Begin(NATIVE_STATE_DIGEST_FOURCC('T', 'A', 'L', 'C'));
+	allocationB = NativeStateDigest_Begin(NATIVE_STATE_DIGEST_FOURCC('T', 'A', 'L', 'C'));
+	NativeStateDigest_PutJitPool(&allocationA, &poolA);
+	NativeStateDigest_PutJitPool(&allocationB, &poolB);
+	NativeStateDigest_PutMempack(&allocationA, &mempackA);
+	NativeStateDigest_PutMempack(&allocationB, &mempackB);
+	if (allocationA.value != allocationB.value)
+	{
+		fprintf(stderr, "[CTR StateDigest] self-test failed: host pool geometry or inactive bookmark changed allocation\n");
+		return 1;
+	}
+
+	printf("[CTR StateDigest] self-test passed: address-independent root=%08x%08x mutation component=drivers "
+	       "free-driver=ignored allocation-host-geometry=ignored mempack-coordinate=ignored\n",
+	       (u32)(digestA.root >> 32), (u32)digestA.root);
 	return 0;
 }

@@ -1,5 +1,6 @@
 #include <platform.h>
 #include "ctr_scratchpad.h"
+#include "platform/native_guest_ref.h"
 #include "platform/native_memory.h"
 #if defined(CTR_INTERNAL)
 #include "platform/native_checkpoint.h"
@@ -20,10 +21,12 @@
 // callbacks, hub swapping, MEMPACK size arithmetic + PSX shaped ptr storage before removing the expanded arena escape hatch
 #if CTR_NATIVE_MEMPACK_RETAIL_PRESSURE
 // NOTE(aalhendi): Retail pressure mode exposes the NTSC-U 926 mempack window
-// inside a 2 MiB backing store.
+// inside a 2 MiB backing store. LP64 opens an equal-sized prefix for widened
+// JitPool records; MainInit reserves the unused part per configuration so the
+// remaining gameplay allocation pressure still matches retail.
 #define CTR_NATIVE_MEMPACK_BUFFER_SIZE  0x200000u
-#define CTR_NATIVE_MEMPACK_START_OFFSET 0xba9f0u
-#define CTR_NATIVE_MEMPACK_SIZE         0x144e10u
+#define CTR_NATIVE_MEMPACK_START_OFFSET (0xba9f0u - CTR_NATIVE_MEMPACK_LP64_POOL_OVERHEAD_MAX)
+#define CTR_NATIVE_MEMPACK_SIZE         (0x144e10u + CTR_NATIVE_MEMPACK_LP64_POOL_OVERHEAD_MAX)
 #else
 #define CTR_NATIVE_MEMPACK_BUFFER_SIZE  (8u * 1024u * 1024u)
 #define CTR_NATIVE_MEMPACK_START_OFFSET 0u
@@ -62,8 +65,16 @@ void Platform_ConfigureMempackArena(void)
 
 const struct PlatformMempackArena *Platform_InitMempackArena(void)
 {
+	struct NativeGuestRefError guestError;
+
 	memset(s_mempackMemory, 0, sizeof(s_mempackMemory));
 	Platform_ConfigureMempackArena();
+	NativeGuestRef_UnregisterRegion(CTR_NATIVE_GUEST_REGION_MEMPACK);
+	if (!NativeGuestRef_RegisterRegion(CTR_NATIVE_GUEST_REGION_MEMPACK, s_mempackMemory, sizeof(s_mempackMemory), "native MPAK", &guestError))
+	{
+		fprintf(stderr, "[CTR GuestRef] unable to register MPAK owner: %s\n", NativeGuestRef_StatusName(guestError.status));
+		abort();
+	}
 #if defined(CTR_INTERNAL)
 	NativeCheckpoint_OnMempackArenaReset();
 #endif

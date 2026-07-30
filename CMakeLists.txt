@@ -4,18 +4,27 @@ include(CheckCCompilerFlag)
 
 set(CTR_NATIVE_VERSION "0.1.0-beta.7.1")
 
-if(NOT CMAKE_SIZEOF_VOID_P EQUAL 4)
+if(NOT CMAKE_SIZEOF_VOID_P EQUAL 4 AND NOT CMAKE_SIZEOF_VOID_P EQUAL 8)
     message(FATAL_ERROR
-        "CTR Native currently requires a 32-bit target. "
-        "Select Win32 for MSVC, an i686 MinGW compiler on Windows, or pass -m32 "
-        "in the initial compiler and linker flags on Linux."
+        "CTR Native requires a target with 32-bit or 64-bit pointers; "
+        "CMAKE_SIZEOF_VOID_P=${CMAKE_SIZEOF_VOID_P} is unsupported."
     )
+endif()
+if(CMAKE_SIZEOF_VOID_P EQUAL 8)
+    message(STATUS "CTR Native: enabling the checked 64-bit memory model")
 endif()
 
 set(CTR_NATIVE_MSVC_FRONTEND OFF)
 if(CMAKE_C_COMPILER_ID STREQUAL "MSVC" OR CMAKE_C_SIMULATE_ID STREQUAL "MSVC")
     set(CTR_NATIVE_MSVC_FRONTEND ON)
     set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
+endif()
+
+string(TOLOWER "${CMAKE_SYSTEM_PROCESSOR}" CTR_NATIVE_SYSTEM_PROCESSOR_LOWER)
+set(CTR_NATIVE_X86_TARGET OFF)
+if(CTR_NATIVE_SYSTEM_PROCESSOR_LOWER MATCHES "^(x86|i[3-6]86|amd64|x86_64)$"
+   OR CMAKE_GENERATOR_PLATFORM MATCHES "^(Win32|x64)$")
+    set(CTR_NATIVE_X86_TARGET ON)
 endif()
 
 set(CMAKE_FIND_ROOT_PATH_MODE_PACKAGE NEVER)
@@ -102,16 +111,17 @@ if(CTR_NATIVE_MSVC_FRONTEND)
     target_compile_options(ctr_native PRIVATE
         /W4 #TODO(aalhendi): fix warnings
         /bigobj
-        /arch:SSE2
         /wd4152
         /wd4244
         /wd4245
         /wd4310
         /wd5287
     )
+    if(CTR_NATIVE_X86_TARGET)
+        target_compile_options(ctr_native PRIVATE /arch:SSE2)
+    endif()
 else()
     target_compile_options(ctr_native PRIVATE
-        -msse
         -Wenum-conversion
         -Wenum-compare
         -Wswitch-enum
@@ -121,8 +131,22 @@ else()
         $<$<CONFIG:Release>:-g>
     )
 
+    if(CTR_NATIVE_X86_TARGET)
+        target_compile_options(ctr_native PRIVATE -msse)
+    endif()
+
+    check_c_compiler_flag("-fno-strict-aliasing" CTR_HAS_FNO_STRICT_ALIASING)
+    if(CTR_HAS_FNO_STRICT_ALIASING)
+        target_compile_options(ctr_native PRIVATE -fno-strict-aliasing)
+    endif()
+
+    check_c_compiler_flag("-fwrapv" CTR_HAS_FWRAPV)
+    if(CTR_HAS_FWRAPV)
+        target_compile_options(ctr_native PRIVATE -fwrapv)
+    endif()
+
     if(CMAKE_C_COMPILER_ID STREQUAL "GNU")
-        target_compile_options(ctr_native PRIVATE -Wall -Wextra -Wstrict-aliasing=2)
+        target_compile_options(ctr_native PRIVATE -Wall -Wextra)
         ctr_native_add_label_warning_if_supported(ctr_native -Wfree-labels CTR_HAS_WFREE_LABELS)
     elseif(CMAKE_C_COMPILER_ID MATCHES "Clang")
         ctr_native_add_label_warning_if_supported(ctr_native -Wc23-extensions CTR_HAS_WC23_EXTENSIONS)
@@ -146,6 +170,46 @@ if(BUILD_TESTING)
     )
     add_test(NAME ctr_native_replay_gate COMMAND $<TARGET_FILE:ctr_native> --self-test-replay-gate)
     set_tests_properties(ctr_native_replay_gate PROPERTIES PASS_REGULAR_EXPRESSION
-        "\\[CTR Replay\\] self-test passed: runtime-error=1 divergence=2 mutation-frame=17 component=drivers"
+        "\\[CTR Replay\\] self-test passed: runtime-error=1 divergence=2 mutation-frame=17 component=drivers binary-identity=checked checkpoint-start=checked complete-vsync=checked"
+    )
+    add_test(NAME ctr_native_guest_ref COMMAND $<TARGET_FILE:ctr_native> --self-test-guest-ref)
+    set_tests_properties(ctr_native_guest_ref PROPERTIES PASS_REGULAR_EXPRESSION
+        "^\\[CTR GuestRef\\] self-test passed: reference=0x03000014 overflow=out-of-range stale=unregistered-region"
+    )
+    add_test(NAME ctr_native_asset_relocation COMMAND $<TARGET_FILE:ctr_native> --self-test-asset-relocation)
+    set_tests_properties(ctr_native_asset_relocation PROPERTIES PASS_REGULAR_EXPRESSION
+        "^\\[CTR AssetRelocation\\] self-test passed: first=0x07000014 duplicate=duplicate-patch target=target-out-of-range atomic=yes model=checked override=checked"
+    )
+    add_test(NAME ctr_native_input COMMAND $<TARGET_FILE:ctr_native> --self-test-input)
+    set_tests_properties(ctr_native_input PROPERTIES PASS_REGULAR_EXPRESSION
+        "^\\[CTR Input\\] self-test passed: metadata-key=4 legacy-enter=40 migration-enter=40 live-start=retail"
+    )
+    add_test(NAME ctr_native_collision_scratch COMMAND $<TARGET_FILE:ctr_native> --self-test-collision-scratch)
+    set_tests_properties(ctr_native_collision_scratch PROPERTIES PASS_REGULAR_EXPRESSION
+        "^\\[CTR CollScratch\\] self-test passed: guest-size=0x20c extended=0x2f8 pointer-word=(raw32|zero64) owners=isolated"
+    )
+    add_test(NAME ctr_native_vehicle_constants COMMAND $<TARGET_FILE:ctr_native> --self-test-vehicle-constants)
+    set_tests_properties(ctr_native_vehicle_constants PROPERTIES PASS_REGULAR_EXPRESSION
+        "^\\[CTR VehBirth\\] self-test passed: constants=65 classes=4 retail-offsets=translated"
+    )
+    add_test(NAME ctr_native_vs_quip_offsets COMMAND $<TARGET_FILE:ctr_native> --self-test-vs-quip-offsets)
+    set_tests_properties(ctr_native_vs_quip_offsets PROPERTIES PASS_REGULAR_EXPRESSION
+        "^\\[CTR VsQuip\\] self-test passed: metas=51 readers=46 retail-ranges=translated"
+    )
+    add_test(NAME ctr_native_render_lists COMMAND $<TARGET_FILE:ctr_native> --self-test-render-lists)
+    set_tests_properties(ctr_native_render_lists PROPERTIES PASS_REGULAR_EXPRESSION
+        "^\\[CTR RenderLists\\] self-test passed: pointer-size=(4|8) slot-size=(8|16) full-dynamic=0x(28|50) named-heads=6 dispatch=canonical-index host-cursors=4 clip-ot=rebased"
+    )
+    add_test(NAME ctr_native_red_beaker_layout COMMAND $<TARGET_FILE:ctr_native> --self-test-red-beaker-layout)
+    set_tests_properties(ctr_native_red_beaker_layout PROPERTIES PASS_REGULAR_EXPRESSION
+        "^\\[CTR RedBeaker\\] self-test passed: pointer-size=(4|8) instance=0x(74|a0) idpp=0x(88|b0) players=4 retail-alias=named"
+    )
+    add_test(NAME ctr_native_audio_state_alignment COMMAND $<TARGET_FILE:ctr_native> --self-test-audio-state-alignment)
+    set_tests_properties(ctr_native_audio_state_alignment PROPERTIES PASS_REGULAR_EXPRESSION
+        "^\\[CTR AudioState\\] self-test passed: snapshot-align=(4|8) blob-mod8=4 boundary=memcpy"
+    )
+    add_test(NAME ctr_native_checkpoint_pointer_validation COMMAND $<TARGET_FILE:ctr_native> --self-test-checkpoint-pointer-validation)
+    set_tests_properties(ctr_native_checkpoint_pointer_validation PROPERTIES PASS_REGULAR_EXPRESSION
+        "^\\[CTR State\\] pointer-validation self-test passed: scalar=ignored relocated=reversion-checked overlap-idempotence=checked pool-allocation=free-list-complement camera-quad=checked"
     )
 endif()

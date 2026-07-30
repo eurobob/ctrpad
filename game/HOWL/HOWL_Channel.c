@@ -527,13 +527,13 @@ void Channel_UpdateChannels()
 		// start address needs to change
 		if ((updateFlags & HOWL_CHANNEL_UPDATE_SPU_ADDR) != 0)
 		{
-			void *startAddr = new->spuStartAddr;
+				u32 startAddr = new->spuStartAddr;
 
 			if (startAddr != cur->spuStartAddr)
 			{
 				cur->spuStartAddr = startAddr;
 
-				SpuSetVoiceStartAddr(vNum, (int)startAddr);
+					SpuSetVoiceStartAddr(vNum, (int)startAddr);
 			}
 		}
 

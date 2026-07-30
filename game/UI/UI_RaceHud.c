@@ -183,7 +183,7 @@ void UI_BattleDrawHeadArrows(struct Driver *player)
 		struct PrimMem *primMem = &gGT->backBuffer->primMem;
 
 		arrow = primMem->cursor;
-		if ((int)arrow > (int)primMem->guardEnd)
+		if ((u8 *)arrow > (u8 *)primMem->guardEnd)
 		{
 			return;
 		}
@@ -403,7 +403,11 @@ UpdateTrackerState:
 
 		if (d->thTrackingMe->inst->model->id == DYNAMIC_WARPBALL)
 		{
-			struct CheckpointNode *firstNode = &gGT->level1->ptr_restart_points[0];
+			struct CheckpointNode *firstNode = Level_GetRestartPoints(gGT->level1, "UI tracker checkpoint nodes");
+			if (firstNode == NULL)
+			{
+				return;
+			}
 
 			warpballDist = ((tw->ptrNodeCurr->distToFinish - firstNode[d->checkpoint.currentIndex].distToFinish) * UI_TRACKER_WARPBALL_DISTANCE_SCALE);
 

@@ -112,6 +112,23 @@
         "CMAKE_C_FLAGS": "-m32",
         "CMAKE_EXE_LINKER_FLAGS": "-m32"
       }
+    },
+    {
+      "name": "macos-arm64",
+      "displayName": "macOS Apple Silicon",
+      "description": "Native ARM64 macOS build using Apple Clang and Ninja",
+      "inherits": "common",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build-macos-arm64",
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Darwin"
+      },
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "RelWithDebInfo",
+        "CMAKE_OSX_ARCHITECTURES": "arm64"
+      }
     }
   ],
   "buildPresets": [
@@ -140,6 +157,10 @@
     {
       "name": "linux-gcc-i686-release",
       "configurePreset": "linux-gcc-i686-release"
+    },
+    {
+      "name": "macos-arm64",
+      "configurePreset": "macos-arm64"
     }
   ],
   "testPresets": [
@@ -183,6 +204,13 @@
     {
       "name": "linux-gcc-i686-release",
       "configurePreset": "linux-gcc-i686-release",
+      "output": {
+        "outputOnFailure": true
+      }
+    },
+    {
+      "name": "macos-arm64",
+      "configurePreset": "macos-arm64",
       "output": {
         "outputOnFailure": true
       }

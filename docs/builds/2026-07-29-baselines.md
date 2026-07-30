@@ -4,8 +4,10 @@
 
 This record establishes the unmodified 32-bit Linux build boundary, the
 unmodified Apple ARM64 failure boundary, and the identity of the retail media
-present in `ref/CTR/`. It records NTSC-U structural validation and visual boot,
-but does **not** yet claim the complete gameplay golden run.
+present in `ref/CTR/`. The complete gameplay trace now exists, but its first
+strict playback exposed a missing host-keyboard semantic and is not yet an
+accepted parity result; see
+`docs/parity/2026-07-29-golden-run-result.md`.
 
 ## Reproducible Linux i686 build
 
@@ -164,5 +166,7 @@ game window and keyboard-to-pad path are live.
 
 The runtime extracts the boot disc ID from `SYSTEM.CNF`, rejects anything
 other than `SCUS_944.26` before game initialization, and bounds-checks every
-VRAM copy as defense in depth. The remaining M1 work is the full recorded
-gameplay/save coverage and two-process replay/mutation proof.
+VRAM copy as defense in depth. The 24,232-frame gameplay/save recording is
+complete. The remaining M1 work is a fresh recording seeded by its validated
+pad trace with the omitted native Enter shortcut restored, followed by the
+two-process replay/mutation proof.

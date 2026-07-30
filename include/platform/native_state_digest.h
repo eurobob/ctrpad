@@ -3,7 +3,7 @@
 
 #include <macros.h>
 
-#define NATIVE_STATE_DIGEST_SCHEMA_VERSION 1u
+#define NATIVE_STATE_DIGEST_SCHEMA_VERSION 2u
 
 enum NativeStateDigestComponent
 {

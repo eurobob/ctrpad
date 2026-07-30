@@ -19,6 +19,8 @@
 #define ExitCriticalSection()
 
 #include "platform/native_assets.h"
+#include "platform/native_asset_relocation.h"
+#include "platform/native_guest_ref.h"
 #include "platform/native_log.h"
 #include "platform/native_memory.h"
 #include "platform/native_perf.h"
@@ -38,11 +40,14 @@
 
 #include "platform/native_disc_image.c"
 #include "platform/native_assets.c"
+#include "platform/native_asset_ref.c"
+#include "platform/native_asset_relocation.c"
 #include "platform/native_audio.c"
 #include "platform/native_memory.c"
 #include "platform/native_checkpoint.c"
 #include "platform/native_checkpoint_file.c"
 #include "platform/native_cd.c"
+#include "platform/native_guest_ref.c"
 #include "platform/native_gpu_links.c"
 #include "platform/native_gpu.c"
 #include "platform/native_gte_core.c"
@@ -146,6 +151,56 @@ static int NativeArg_IsReplayGateSelfTest(const char *arg)
 	return (arg != NULL) && (strcmp(arg, "--self-test-replay-gate") == 0);
 }
 
+static int NativeArg_IsGuestRefSelfTest(const char *arg)
+{
+	return (arg != NULL) && (strcmp(arg, "--self-test-guest-ref") == 0);
+}
+
+static int NativeArg_IsAssetRelocationSelfTest(const char *arg)
+{
+	return (arg != NULL) && (strcmp(arg, "--self-test-asset-relocation") == 0);
+}
+
+static int NativeArg_IsInputSelfTest(const char *arg)
+{
+	return (arg != NULL) && (strcmp(arg, "--self-test-input") == 0);
+}
+
+static int NativeArg_IsCollisionScratchSelfTest(const char *arg)
+{
+	return (arg != NULL) && (strcmp(arg, "--self-test-collision-scratch") == 0);
+}
+
+static int NativeArg_IsVehicleConstantsSelfTest(const char *arg)
+{
+	return (arg != NULL) && (strcmp(arg, "--self-test-vehicle-constants") == 0);
+}
+
+static int NativeArg_IsVsQuipOffsetsSelfTest(const char *arg)
+{
+	return (arg != NULL) && (strcmp(arg, "--self-test-vs-quip-offsets") == 0);
+}
+
+static int NativeArg_IsRenderListsSelfTest(const char *arg)
+{
+	return (arg != NULL) && (strcmp(arg, "--self-test-render-lists") == 0);
+}
+
+static int NativeArg_IsRedBeakerLayoutSelfTest(const char *arg)
+{
+	return (arg != NULL) && (strcmp(arg, "--self-test-red-beaker-layout") == 0);
+}
+
+static int NativeArg_IsAudioStateAlignmentSelfTest(const char *arg)
+{
+	return (arg != NULL) && (strcmp(arg, "--self-test-audio-state-alignment") == 0);
+}
+
+static int NativeArg_IsCheckpointPointerValidationSelfTest(const char *arg)
+{
+	return (arg != NULL) && (strcmp(arg, "--self-test-checkpoint-pointer-validation") == 0);
+}
+
 int main(int argc, char *argv[])
 {
 	for (int argIndex = 1; argIndex < argc; argIndex++)
@@ -163,6 +218,46 @@ int main(int argc, char *argv[])
 		{
 			return NativeReplayScheduler_RunSelfTest();
 		}
+		if (NativeArg_IsGuestRefSelfTest(argv[argIndex]))
+		{
+			return NativeGuestRef_RunSelfTest();
+		}
+		if (NativeArg_IsAssetRelocationSelfTest(argv[argIndex]))
+		{
+			return NativeAssetRelocation_RunSelfTest();
+		}
+		if (NativeArg_IsInputSelfTest(argv[argIndex]))
+		{
+			return Platform_InputRunSelfTest();
+		}
+		if (NativeArg_IsCollisionScratchSelfTest(argv[argIndex]))
+		{
+			return COLL_Scratch_RunSelfTest();
+		}
+		if (NativeArg_IsVehicleConstantsSelfTest(argv[argIndex]))
+		{
+			return VehBirth_RunConstOffsetSelfTest();
+		}
+		if (NativeArg_IsVsQuipOffsetsSelfTest(argv[argIndex]))
+		{
+			return UI_VsQuipRunOffsetSelfTest();
+		}
+		if (NativeArg_IsRenderListsSelfTest(argv[argIndex]))
+		{
+			return RenderLists_RunHostLayoutSelfTest();
+		}
+		if (NativeArg_IsRedBeakerLayoutSelfTest(argv[argIndex]))
+		{
+			return RedBeaker_RunHostLayoutSelfTest();
+		}
+		if (NativeArg_IsAudioStateAlignmentSelfTest(argv[argIndex]))
+		{
+			return NativeAudio_RunStateAlignmentSelfTest();
+		}
+		if (NativeArg_IsCheckpointPointerValidationSelfTest(argv[argIndex]))
+		{
+			return NativeCheckpoint_RunPointerValidationSelfTest();
+		}
 	}
 
 	printf("[CTR Native] Starting...\n");
@@ -171,6 +266,10 @@ int main(int argc, char *argv[])
 	const char *sdlBasePath = SDL_GetBasePath();
 	printf("[CTR Native] SDL base path: %s\n", sdlBasePath ? sdlBasePath : "(null)");
 	fflush(stdout);
+
+#if defined(CTR_INTERNAL)
+	NativeReplayScheduler_SetExecutableIdentity(argv[0], sdlBasePath);
+#endif
 
 	if (!NativeAssets_Init(sdlBasePath))
 	{

@@ -1,7 +1,8 @@
 # NTSC-U Golden Run
 
-**Status:** procedure and verifier implemented; supplied NTSC-U image accepted
-and visually booted; full gameplay recording pending
+**Status:** the historical full gameplay recording exposed input and timing
+boundary omissions; replay version 4 closes both in current builds, but a fresh
+full-coverage version-4 report is still pending
 
 **Required boot ID:** `SCUS_944.26`
 
@@ -12,6 +13,11 @@ This is the acceptance procedure for M1. It records a real 32-bit run, replays
 it twice in separate ASLR processes, and deliberately changes a live vehicle
 position field at an automatically selected active-driver frame. Retail data
 stays local and ignored by Git.
+
+The first complete report and its unresolved verification result are recorded
+in `docs/parity/2026-07-29-golden-run-result.md`. Observed coverage is not M1
+acceptance until both unchanged playbacks and the deliberate mutation run
+pass.
 
 ## 1. Supply and build
 
@@ -125,7 +131,7 @@ save_or_ghost_observed=
 notes=
 ```
 
-`metadata.txt` must say `finalized=1`, use replay version 2, and report a
+`metadata.txt` must say `finalized=1`, use replay version 4, and report a
 nonzero frame and checkpoint count. `ctr-native.log` must contain a record
 host-address sample, race-driver activity transitions, and the successful
 powerslide-boost line. The verifier requires all eight coverage keys to be

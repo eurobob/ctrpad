@@ -525,8 +525,7 @@ int Platform_PollInput(void)
 
 int NikoGetEnterKey(void)
 {
-	const bool *kb = SDL_GetKeyboardState(NULL);
-	return (kb && kb[SDL_SCANCODE_RETURN]) ? 1 : 0;
+	return Platform_InputGetSubmitNameKey() == SDL_SCANCODE_RETURN;
 }
 
 // NOTE(aalhendi): VSyncCallback uses the PSX facade, but native owns the VBlank

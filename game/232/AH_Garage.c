@@ -44,7 +44,7 @@ void AH_Garage_Open(struct ScratchpadStruct *sps, void *hitObject)
 		return;
 	}
 
-	struct Thread *garageThread = sps->Union.ThBuckColl.thread;
+	struct Thread *garageThread = COLL_Scratch_GetHost(sps)->thread;
 	struct BossGarageDoor *garage = garageThread->object;
 	struct Instance *garageInst = garageThread->inst;
 
@@ -309,8 +309,8 @@ LAB_800aede8:
 	sps->Input1.hitRadiusSquared = AH_GARAGE_BOSS_COLLIDE_RADIUS_SQ;
 	sps->Input1.modelID = STATIC_PINGARAGE;
 
-	sps->Union.ThBuckColl.thread = t;
-	sps->Union.ThBuckColl.funcCallback = AH_Garage_Open;
+	COLL_Scratch_SetThread(sps, t);
+	COLL_Scratch_SetCallback(sps, AH_Garage_Open);
 
 	// Open garage door when player gets within radius of door
 	PROC_CollideHitboxWithBucket(gGT->threadBuckets[PLAYER].thread, sps, 0);

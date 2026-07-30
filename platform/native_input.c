@@ -20,6 +20,7 @@
 #define NATIVE_INPUT_MAP_FLAG_AXIS         0x4000
 #define NATIVE_INPUT_MAP_FLAG_INVERSE      0x8000
 #define NATIVE_INPUT_DEFAULT_KEYBOARD_SLOT 0
+#define NATIVE_INPUT_SUBMIT_NAME_KEY_MARKER 0x53
 // NOTE(aalhendi): Little-endian tag `CTRI` = CTR native Input snapshot.
 #define NATIVE_INPUT_STATE_MAGIC           0x49525443
 #define NATIVE_INPUT_STATE_VERSION         1
@@ -100,6 +101,7 @@ global_variable s32 s_inputInitialized;
 global_variable s32 s_installedSnapshotsActive;
 global_variable s32 s_keyboardControllerSlot = NATIVE_INPUT_DEFAULT_KEYBOARD_SLOT;
 global_variable s32 s_lastActiveControllerSlot = -1;
+global_variable s32 s_submitNameKey;
 
 extern s32 g_padCommEnable;
 
@@ -112,6 +114,28 @@ internal void NativeInput_SetSnapshotButtons(struct PlatformInputPadSnapshot *sn
 {
 	snapshot->buttons[0] = (u8)(buttons & 0xff);
 	snapshot->buttons[1] = (u8)(buttons >> 8);
+}
+
+internal void NativeInput_SetSnapshotSubmitNameKey(struct PlatformInputPadSnapshot *snapshot, s32 key)
+{
+	if (snapshot == NULL)
+	{
+		return;
+	}
+
+	snapshot->reserved[0] = NATIVE_INPUT_SUBMIT_NAME_KEY_MARKER;
+	snapshot->reserved[1] = (u8)(key & 0xff);
+	snapshot->reserved[2] = (u8)((u32)key >> 8);
+}
+
+internal s32 NativeInput_GetSnapshotSubmitNameKey(const struct PlatformInputPadSnapshot *snapshot)
+{
+	if ((snapshot == NULL) || (snapshot->reserved[0] != NATIVE_INPUT_SUBMIT_NAME_KEY_MARKER))
+	{
+		return 0;
+	}
+
+	return (s32)(snapshot->reserved[1] | ((u32)snapshot->reserved[2] << 8));
 }
 
 internal void NativeInput_ResetSnapshot(s32 slot)
@@ -755,6 +779,7 @@ int Platform_InputInit(void)
 	s_lastActiveControllerSlot = -1;
 	s_installedSnapshotsActive = 0;
 	s_keyboardState = SDL_GetKeyboardState(NULL);
+	s_submitNameKey = 0;
 
 	if (SDL_InitSubSystem(SDL_INIT_GAMEPAD | SDL_INIT_HAPTIC) == 0)
 	{
@@ -787,6 +812,7 @@ void Platform_InputShutdown(void)
 	s_installedSnapshotsActive = 0;
 	s_keyboardControllerSlot = NATIVE_INPUT_DEFAULT_KEYBOARD_SLOT;
 	s_lastActiveControllerSlot = -1;
+	s_submitNameKey = 0;
 	memset(s_padSlotData, 0, sizeof(s_padSlotData));
 	s_keyboardState = NULL;
 }
@@ -822,6 +848,10 @@ void Platform_InputUpdate(void)
 		NativeInput_ResetSnapshot(slot);
 		NativeInput_ApplyController(slot);
 		NativeInput_ApplyKeyboard(slot, keyboardButtons);
+		if (slot == s_keyboardControllerSlot)
+		{
+			NativeInput_SetSnapshotSubmitNameKey(&s_controllers[slot].snapshot, s_submitNameKey);
+		}
 	}
 	NativeInput_WritePadBus();
 }
@@ -961,6 +991,145 @@ void Platform_InputClearInstalledPadSnapshots(void)
 	s_installedSnapshotsActive = 0;
 }
 
+int Platform_InputUpgradeLegacySubmitNameSnapshots(struct PlatformInputPadSnapshot *snapshots, int count)
+{
+	if ((snapshots == NULL) || (count != NATIVE_INPUT_MAX_CONTROLLERS))
+	{
+		return 0;
+	}
+
+	for (s32 slot = 0; slot < count; slot++)
+	{
+		struct PlatformInputPadSnapshot *snapshot = &snapshots[slot];
+		s32 submitNameKey = 0;
+
+		if (snapshot->reserved[0] == NATIVE_INPUT_SUBMIT_NAME_KEY_MARKER)
+		{
+			continue;
+		}
+
+		// Legacy version-2 reports did not serialize host-only name-entry
+		// shortcuts. Their keyboard Enter mapping is recoverable from the raw
+		// Start bit; other keyboard scancodes are not.
+		if ((snapshot->connected != 0) && ((NativeInput_GetSnapshotButtons(snapshot) & 0x8) == 0))
+		{
+			submitNameKey = SDL_SCANCODE_RETURN;
+		}
+		NativeInput_SetSnapshotSubmitNameKey(snapshot, submitNameKey);
+	}
+
+	return 1;
+}
+
+void Platform_InputSetSubmitNameKey(int key, int down)
+{
+	s_submitNameKey = (down != 0) ? key : 0;
+}
+
+int Platform_InputGetSubmitNameKey(void)
+{
+	s32 slot;
+	s32 hasSubmitNameKeyMetadata = 0;
+
+	for (slot = 0; slot < NATIVE_INPUT_MAX_CONTROLLERS; slot++)
+	{
+		const struct PlatformInputPadSnapshot *snapshot = &s_controllers[slot].snapshot;
+		s32 key;
+
+		if (snapshot->reserved[0] != NATIVE_INPUT_SUBMIT_NAME_KEY_MARKER)
+		{
+			continue;
+		}
+		hasSubmitNameKeyMetadata = 1;
+		key = NativeInput_GetSnapshotSubmitNameKey(snapshot);
+
+		if (key != 0)
+		{
+			return key;
+		}
+	}
+
+	// Version-2 replay records predate native shortcut metadata. Enter was
+	// already mapped to raw Start, so recover that one legacy shortcut only
+	// while replay/state snapshots are installed. Live gamepad Start remains
+	// retail input and is not treated as a host keyboard shortcut.
+	if ((s_installedSnapshotsActive != 0) && (hasSubmitNameKeyMetadata == 0))
+	{
+		for (slot = 0; slot < NATIVE_INPUT_MAX_CONTROLLERS; slot++)
+		{
+			const struct PlatformInputPadSnapshot *snapshot = &s_controllers[slot].snapshot;
+
+			if ((snapshot->connected != 0) && ((NativeInput_GetSnapshotButtons(snapshot) & 0x8) == 0))
+			{
+				return SDL_SCANCODE_RETURN;
+			}
+		}
+	}
+
+	return 0;
+}
+
+int Platform_InputRunSelfTest(void)
+{
+	struct PlatformInputPadSnapshot migrationSnapshots[NATIVE_INPUT_MAX_CONTROLLERS];
+	struct PlatformInputPadSnapshot *snapshot;
+	s32 slot;
+
+	memset(s_controllers, 0, sizeof(s_controllers));
+	s_keyboardControllerSlot = NATIVE_INPUT_DEFAULT_KEYBOARD_SLOT;
+	s_installedSnapshotsActive = 0;
+	for (slot = 0; slot < NATIVE_INPUT_MAX_CONTROLLERS; slot++)
+	{
+		NativeInput_ResetSnapshot(slot);
+	}
+
+	snapshot = &s_controllers[NATIVE_INPUT_DEFAULT_KEYBOARD_SLOT].snapshot;
+	NativeInput_SetSnapshotSubmitNameKey(snapshot, SDL_SCANCODE_A);
+	if (Platform_InputGetSubmitNameKey() != SDL_SCANCODE_A)
+	{
+		fprintf(stderr, "[CTR Input] self-test failed: snapshot metadata key\n");
+		return 1;
+	}
+
+	NativeInput_SetSnapshotSubmitNameKey(snapshot, 0);
+	NativeInput_SetSnapshotButtons(snapshot, 0xfff7);
+	s_installedSnapshotsActive = 1;
+	if (Platform_InputGetSubmitNameKey() != 0)
+	{
+		fprintf(stderr, "[CTR Input] self-test failed: metadata did not preserve retail Start\n");
+		return 1;
+	}
+
+	memset(snapshot->reserved, 0, sizeof(snapshot->reserved));
+	if (Platform_InputGetSubmitNameKey() != SDL_SCANCODE_RETURN)
+	{
+		fprintf(stderr, "[CTR Input] self-test failed: legacy replay Enter fallback\n");
+		return 1;
+	}
+	for (slot = 0; slot < NATIVE_INPUT_MAX_CONTROLLERS; slot++)
+	{
+		migrationSnapshots[slot] = s_controllers[slot].snapshot;
+	}
+	if (!Platform_InputUpgradeLegacySubmitNameSnapshots(migrationSnapshots, NATIVE_INPUT_MAX_CONTROLLERS) ||
+	    (NativeInput_GetSnapshotSubmitNameKey(&migrationSnapshots[0]) != SDL_SCANCODE_RETURN))
+	{
+		fprintf(stderr, "[CTR Input] self-test failed: legacy replay metadata migration\n");
+		return 1;
+	}
+
+	NativeInput_SetSnapshotSubmitNameKey(snapshot, 0);
+	s_installedSnapshotsActive = 0;
+	if (Platform_InputGetSubmitNameKey() != 0)
+	{
+		fprintf(stderr, "[CTR Input] self-test failed: live gamepad Start became keyboard Enter\n");
+		return 1;
+	}
+
+	printf("[CTR Input] self-test passed: metadata-key=%d legacy-enter=%d migration-enter=%d live-start=retail\n", SDL_SCANCODE_A,
+	       SDL_SCANCODE_RETURN, SDL_SCANCODE_RETURN);
+	return 0;
+}
+
 int Platform_InputGetStateSize(void)
 {
 	return (int)sizeof(struct NativeInputStateSnapshot);
@@ -1049,6 +1218,7 @@ int Platform_InputRestoreState(const void *src, int srcSize)
 		s_controllers[slot].switchingAnalog = snapshot->controllers[slot].switchingAnalog;
 		s_controllerToSlotMapping[slot] = snapshot->controllers[slot].controllerToSlotMapping;
 	}
+	s_submitNameKey = NativeInput_GetSnapshotSubmitNameKey(&s_controllers[s_keyboardControllerSlot].snapshot);
 	NativeInput_WritePadBus();
 
 	return 1;

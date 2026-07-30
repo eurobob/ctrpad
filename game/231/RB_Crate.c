@@ -1,5 +1,10 @@
 #include <common.h>
 
+static int RB_CrateAny_IsNoDriver(const struct Driver *driver)
+{
+	return (uintptr_t)driver == 1;
+}
+
 // add to buildList, overwrite original
 // RB_CrateAny_ThTick_Explode at 800b3d04,
 // and add new LinCs to zGlobalMetaModels.c
@@ -236,7 +241,7 @@ int RB_CrateWeapon_ThCollide(struct Thread *crateThread, struct Thread *collidin
 			RB_CrateAny_ExplodeInit(crateInst, 0xfafafa0, true);
 
 			driver = RB_CrateAny_GetDriver(collidingTh, sps);
-			if ((int)driver == 1)
+			if (RB_CrateAny_IsNoDriver(driver))
 			{
 				return 1;
 			}
@@ -363,7 +368,7 @@ int RB_CrateFruit_ThCollide(struct Thread *crateThread, struct Thread *colliding
 			RB_CrateAny_ExplodeInit(crateInst, 0xf2953a0, false);
 
 			driver = RB_CrateAny_GetDriver(collidingTh, sps);
-			if ((int)driver == 1)
+			if (RB_CrateAny_IsNoDriver(driver))
 			{
 				return 1;
 			}
@@ -452,7 +457,7 @@ int RB_CrateTime_ThCollide(struct Thread *crateThread, struct Thread *driverTh, 
 
 			gGT = sdata->gGT;
 			driver = RB_CrateAny_GetDriver(driverTh, sps);
-			if ((int)driver == 1)
+			if (RB_CrateAny_IsNoDriver(driver))
 			{
 				return 1;
 			}

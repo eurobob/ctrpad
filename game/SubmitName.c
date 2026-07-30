@@ -1,5 +1,9 @@
 #include <common.h>
 
+#ifdef CTR_NATIVE
+#include <platform/native_input.h>
+#endif
+
 enum
 {
 	SUBMIT_NAME_MODE_ADVENTURE = 0,
@@ -76,7 +80,7 @@ int kbCurr = 0;
 int kbPrev = 0;
 void SubmitName_UseKeyboard(int key)
 {
-	kbCurr = key;
+	Platform_InputSetSubmitNameKey(key, key != 0);
 }
 #endif
 
@@ -211,6 +215,7 @@ s16 SubmitName_DrawMenu(u16 string)
 
 #ifdef CTR_NATIVE
 	// NOTE(aalhendi): native keyboard shortcut; retail input remains gamepad-driven.
+	kbCurr = Platform_InputGetSubmitNameKey();
 
 	if (kbCurr != kbPrev)
 	{

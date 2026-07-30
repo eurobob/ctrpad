@@ -122,9 +122,29 @@ void LOAD_DramFileCallback(struct LoadQueueSlot *lqs)
 
 		if (ptrMapOffset >= 0)
 		{
-			struct DramPointerMap *dpm = (struct DramPointerMap *)&realFileBuf[ptrMapOffset];
+			size_t realFileSize = (lqs->size_UNUSED >= sizeof(u32)) ? (size_t)lqs->size_UNUSED - sizeof(u32) : 0;
 
-			LOAD_RunPtrMap(realFileBuf, (int *)DRAM_GETOFFSETS(dpm), dpm->numBytes >> 2);
+			if (((size_t)ptrMapOffset > realFileSize) || ((realFileSize - (size_t)ptrMapOffset) < sizeof(struct DramPointerMap)))
+			{
+#if defined(CTR_NATIVE)
+				fprintf(stderr, "[CTR LOAD] rejected embedded pointer-map header for file %u\n", lqs->subfileIndex);
+#endif
+				lqs->ptrDestination = NULL;
+				sdata->queueReady = 1;
+				return;
+			}
+
+			struct DramPointerMap *dpm = (struct DramPointerMap *)&realFileBuf[ptrMapOffset];
+			if ((dpm->numBytes < 0) || ((size_t)dpm->numBytes > realFileSize - (size_t)ptrMapOffset - sizeof(*dpm)) ||
+			    !LOAD_RunPtrMap(realFileBuf, (size_t)ptrMapOffset, (const u32 *)DRAM_GETOFFSETS(dpm), (size_t)dpm->numBytes))
+			{
+#if defined(CTR_NATIVE)
+				fprintf(stderr, "[CTR LOAD] rejected embedded pointer map for file %u\n", lqs->subfileIndex);
+#endif
+				lqs->ptrDestination = NULL;
+				sdata->queueReady = 1;
+				return;
+			}
 
 #if defined(CTR_NATIVE)
 			if ((lqs->flags & LT_MEMPACK) != 0)

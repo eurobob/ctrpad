@@ -67,12 +67,12 @@ void MainFreeze_ConfigDrawArrows(s16 offsetX, s16 offsetY, char *str)
 	// get color data
 	colorPtr = data.ptrColor[color];
 
-	struct Icon **iconPtrArray = ICONGROUP_GETICONS(gGT->iconGroup[4]);
+	struct Icon *arrowIcon = IconGroup_GetIcon(gGT->iconGroup[4], 0x38, "MainFreeze arrow icon");
 
 	// Draw left arrow
 	DecalHUD_Arrow2D(
 	    // largeFont
-	    iconPtrArray[0x38],
+	    arrowIcon,
 
 	    (offsetX - lineWidth) - 0x14, (int)offsetY + 7,
 
@@ -90,7 +90,7 @@ void MainFreeze_ConfigDrawArrows(s16 offsetX, s16 offsetY, char *str)
 	// Draw right arrow
 	DecalHUD_Arrow2D(
 	    // largeFont
-	    iconPtrArray[0x38],
+	    arrowIcon,
 
 	    (offsetX + lineWidth) + 0x12, (int)offsetY + 7,
 

@@ -7,13 +7,19 @@ timing.
 
 **Roadmap status:** active
 
-**Current milestone:** M1 — reproducible upstream baseline and parity gate
+**Current milestone:** M6 — macOS ARM64 runtime stabilization, while the M1
+cross-architecture parity trace remains open
 
-**Last updated:** 2026-07-29
+**Last updated:** 2026-07-30
 
 This is the working source of truth for the port. Milestone status changes only
 after its acceptance evidence has been recorded. A successful compile is
 evidence, not completion.
+
+The complete chronological implementation record is maintained in
+`docs/history/ENGINEERING-JOURNAL.md`. It records commands, evidence, failures,
+decisions, validation, and remaining limitations so the project can be
+reconstructed historically rather than only understood from its final state.
 
 ## Non-negotiable constraints
 
@@ -159,6 +165,22 @@ Result so far:
   rejected before indexed game data loads. A replacement MODE2/2352 image now
   identifies as NTSC-U `SCUS_944.26`, passes the runtime gate, and visibly
   reaches the retail boot sequence with live keyboard-to-pad input.
+- The finalized report at
+  `build-linux-i686-baseline/debug/reports/20260729/ctr-225420` contains
+  24,232 frames, 81 checkpoints, and observed pass evidence for all eight
+  required gameplay/save behaviors.
+- Strict unchanged playback matched through frame 22,391, then exposed an
+  omitted host-only Enter shortcut at frame 22,392. Timing, RNG, drivers,
+  world, pads, and VBlank packets still matched; only the save-transition
+  allocation batch was one frame late. The diagnosis and exact evidence are
+  in `docs/parity/2026-07-29-golden-run-result.md`.
+- Native name-entry scancodes now travel through the fixed-size pad snapshot.
+  A state-preserving migration attempt stopped at frame 367 because version 2
+  does not record VBlanks emitted between tracked frames during loading.
+  `--record-from-replay` now uses only the validated old pad snapshots and
+  memcard seed to automate a fresh recording with its own timing/checkpoint.
+  M1 is not accepted until coverage is re-observed and that report passes both
+  unchanged processes and the deliberate driver mutation.
 
 Work:
 
@@ -187,7 +209,18 @@ Acceptance:
 
 ### M2 — 64-bit memory-model design and layout census
 
-**Status:** pending; depends on M1
+**Status:** census, prototype, and ADR accepted; downstream parity acceptance
+still depends on M1
+
+Result:
+
+- The DWARF-backed census assigns all 939 pointer-bearing field contexts to
+  serialized-file, scratchpad-guest, resident-map, or runtime-host ownership.
+- `ADR-0001-guest-references.md` selects checked eight-bit-tag/24-bit-offset
+  guest references and rejects low host-address allocation as a correctness
+  dependency.
+- The ARM64-host prototype traverses the real frame-1800 Roo's Tubes MPAK
+  above `UINT32_MAX` and rejects four corrupt-reference cases.
 
 Work:
 
@@ -219,7 +252,24 @@ Acceptance:
 
 ### M3 — Mechanical pointer-width and runtime-layout conversion
 
-**Status:** pending; depends on M2
+**Status:** mechanical compile and i686 regression gates accepted; runtime
+acceptance still depends on M1, M4, and M5
+
+Result so far:
+
+- Pointer-to-integer and integer-to-pointer warning coordinates are both zero,
+  down from 162 and 121. All 203 unique narrowing source lines are removed.
+- Forced-LP64 layout failures are down from 673 to zero. All assertions now
+  have explicit ownership-aware contracts. Serialized model and level
+  references retain their four-byte retail layout behind checked accessors;
+  resident executable/data maps retain ILP32 retail anchors and have separate
+  measured LP64 runtime offsets.
+- The current Level/Nav consumer batch passes all seven media-free i686 tests,
+  including its synthetic serialized-graph and LP64 visibility-sidecar
+  checks. The zero-error resident-map batch also passes all seven tests with
+  the historical warning baseline unchanged. Detailed measured and rejected
+  batches are recorded in
+  `docs/architecture/64-bit-conversion-log.md`.
 
 Work:
 
@@ -247,7 +297,10 @@ split; gate replacement.
 
 ### M4 — Serialized asset relocation
 
-**Status:** pending; depends on M2 and M3
+**Status:** atomic relocation boundary, malformed-input tests, and serialized
+model and Level/Nav consumer migration pass the media-free i686 gate; the
+retail ARM64 boot now crosses 2,000 frames, while full asset/play/replay
+acceptance remains pending and still depends on M3
 
 Work:
 
@@ -269,7 +322,11 @@ Acceptance:
 
 ### M5 — Scratchpad and remaining pinned layouts
 
-**Status:** pending; depends on M3 and M4
+**Status:** implementation in progress; checkpoint v3 captures above 4 GiB,
+and exact-binary playback now restores every rolling checkpoint in the
+2,200-frame intro-to-race segment across different and overlapping ARM64 ASLR
+layouts. Broader renderer/gameplay coverage remains open; final acceptance
+depends on M3 and M4
 
 Work:
 
@@ -291,7 +348,133 @@ Acceptance:
 
 ### M6 — Correct macOS ARM64 desktop build
 
-**Status:** pending; depends on M1–M5
+**Status:** in progress; native configure/build/CTest and a 2,200-frame
+intro-to-race coverage segment pass, but parity, complete play, save, and
+visual acceptance remain open
+
+Result so far:
+
+- `macos-arm64` configures and builds a thin ARM64 Mach-O with Apple Clang;
+  all thirteen media-free tests pass. The newest tests verify all 65
+  translated retail physics constants across all four engine classes and
+  resolve all 46 generic reads across the 51 real VS/battle quip metadata
+  records, every native render-list head, and all four red-beaker cloud draw
+  records on both pointer widths. The twelfth test exercises audio snapshot
+  capture/restore through a deliberately four-byte-aligned byte stream; the
+  thirteenth distinguishes an address-shaped scalar word from a relocated
+  pointer that later reverted, enumerates pool allocations through the
+  free-list complement, covers the camera collision pointer, and proves that
+  overlapping recorded/live address ranges cannot relocate one typed slot
+  twice.
+- The first retail launch exposed and sanitizer-localized three LP64 runtime
+  defects: a HOWL pool stride, a four-byte MPK reference read as a host
+  pointer, and unaligned/undersized render-bucket storage. Their complete
+  failure/correction sequence is recorded in
+  `docs/history/ENGINEERING-JOURNAL.md`.
+- After correction, both the ASan/UBSan build and the normal build completed
+  2,000 retail frames without a reported fault. The normal run reported
+  31.25 FPS and was deliberately stopped.
+- The forced-LP64 audit remains at zero errors, assertions, and narrowing
+  coordinates. The finalized isolated i686 regression build passes 13/13 as
+  an ELF32 Intel 80386 executable (Build ID
+  `155f5086a4f576fc2b65367915dfa4b59d3832c2`); the immutable historical
+  baseline executable remains untouched.
+- Screen capture was unavailable from the shell, so no visible-screen claim
+  is made. Input play, persistent saves, XA/STR correctness, and exact golden
+  replay equality remain unverified.
+- Checkpoint v3 now stores host addresses at native width. After correcting
+  nested gamepad, HOWL, resident-data, process-stack, and transient
+  render-bucket ownership, a frame-zero checkpoint captured at one ARM64 ASLR
+  layout restored and replayed 178/178 frames at another layout with zero
+  stale-pointer findings and exit status 0.
+- A 1,900-frame replay-seeded ARM64 attempt was visibly stuck and is rejected.
+  Its timing/allocation/root state differed at frame zero because replay
+  version 2 omits VBlanks emitted between tracked frames during asynchronous
+  loading.
+- The visible frame-307 stall was traced to retail small/medium process-stack
+  strides that could not hold widened LP64 objects. Host strides now fit every
+  supported object while preserving retail item counts.
+- Normalizing the maximum `0x9ec0` widened-pool overhead keeps the physical
+  backing and remaining gameplay allocation pressure retail-equivalent. This
+  clears the former frame-1709 particle-pool allocation loop.
+- A one-player LEV legitimately leaves inactive visibility slots null. The
+  LP64 sidecar now preserves those optional slots and validates only populated
+  references plus active-player requirements, clearing the first-race-frame
+  null dereference.
+- The retail `MetaPhys` table's byte offsets are translated relative to the
+  native `Driver` constant block instead of being applied to the widened
+  struct base. This restores gravity/speed/handling/collision values and
+  clears the subsequent race collision divide trap without changing any
+  physics formula.
+- The broad ARM64 coverage report
+  `/tmp/ctrpad-arm64-current-normal-HiaVBo/debug/reports/20260730/ctr-062951`
+  completed 2,200 frames, activated the race at frame 1,711, captured eight
+  rolling checkpoints, and exited 0. Relative to pre-sanitizer `ctr-060443`,
+  RNG, drivers, world, and allocation match all 2,200 frames; timing/root
+  differ from frame 1,756 after corrected race-render dispatch begins.
+- A fresh combined ASan/UBSan campaign retained four rejected reports and
+  corrected, in order: an unaligned audio snapshot cast, native render-list
+  offsets used as retail table indices, four scratch `Ptr32` values used as
+  host cursors, and a clipped OT pointer reconstructed from a packed word.
+  Final sanitizer report
+  `/tmp/ctrpad-arm64-asan-clipot-XvhS0n/debug/reports/20260730/ctr-062801`
+  finalized all 2,200 frames with eight checkpoints and exit 0. The complete
+  failure/correction chain is in `docs/history/ENGINEERING-JOURNAL.md`.
+- Replay format version 3 fingerprints the exact executable bytes in addition
+  to the commit/build label. A different dirty binary with the same
+  `a40a7584c576-dirty` label is now rejected before checkpoint restore, while
+  an exact copied binary restored frame-zero state at a different ASLR/mempack
+  layout and completed 2,200/2,200 frames with race activation at frame 1,711.
+- The old whole-region stale-pointer scan was rejected after four adjacent
+  16-bit race-flag scalars at SDATA offset `0x538` happened to form an aligned
+  address inside the recorded mempack. Restore now keeps a bounded ledger of
+  pointer relocations actually applied and fails only if one of those slots
+  reverts to its old-process value. Ledger overflow is itself a hard failure.
+- Rolling-checkpoint playback can select any zero-based record with
+  `--replay-start-checkpoint`. Exact-binary playback of checkpoints 0 through
+  7 (frames 0 through 2,100) reaches frame 2,200 for every record. The review
+  exposed four restore boundaries hidden by frame-zero coverage: live thread
+  and level-instance pools are the complement of their free lists, LP64
+  visibility/model caches must be rebuilt per process, and
+  `CameraDC.ptrQuadBlock` is a relocatable runtime pointer.
+- A later repeated sanitizer launch rejected the first rolling-checkpoint
+  acceptance: old and live mempack ranges partially overlapped, so duplicated
+  semantic walkers could relocate one already-live slot a second time. The
+  typed relocation ledger now has a fixed open-addressed slot index and makes
+  every relocation idempotent. Five exact checkpoint-6 sanitizer replays pass;
+  one used live mempack base `0x106c3b3a0` against recorded
+  `0x106ddb3a0`, exercising real range overlap.
+- Final ordinary report `ctr-081618`, produced by binary SHA-256
+  `7282aa566ca1237ca63f539553cc33be4ae8027de2b8c8d8c299d18bdda6c740`,
+  restored checkpoints 0 through 7 with the exact producing binary and no
+  header bypass; every run reached frame 2,200 and exited 0. Final sanitizer
+  report `ctr-081155` and the full failure/correction chronology are recorded
+  in `docs/history/ENGINEERING-JOURNAL.md`.
+- Replay version 4 now owns VSync packets emitted before the next tracked
+  frame and run-length-encodes repeated calls. Correcting the widened decoded
+  cutscene record, filtering freed driver slots, and defining schema-2
+  allocator lifecycle semantics closes the remaining cross-width prefix
+  defects. Final ordinary ARM64 report `ctr-103032` and disposable i686 report
+  `ctr-153116` match timing, RNG, drivers, world, allocation, and root for all
+  2,200 frames, including race activation at frame 1,710. Final combined
+  ASan/UBSan report `ctr-103044` also completes and matches all six components.
+  Exact identities, hashes, rejected probes, and the later native
+  instance-name sanitizer correction are recorded in
+  `docs/parity/2026-07-30-arm64-prefix-parity.md`. A fresh automated
+  24,232-frame version-4 golden run remains pending.
+- The raw retail `Driver` offsets in `UI_VsQuipReadDriver` are now translated
+  at three named native scalar ranges with width and bounds checks. A
+  media-free test walks all 51 real NTSC-U metadata records on ARM64 and
+  i686. Actual multiplayer end-of-race/VS execution remains unverified.
+- The level render-list walkers no longer write pointer heads through retail
+  `slot * 8 + 4` / `0x28` offsets. They select named host-width fields, and a
+  media-free test covers all six heads on i686 and ARM64. This removes
+  untracked renderer-pointer corruption; visual capture remains required.
+- Red-beaker rain no longer reads per-player MVP translations out of widened
+  instance function/thread pointers. Named draw-record fields preserve the
+  retail depth/LOD byte alias, and a four-player cross-width test covers the
+  unexercised item-effect layout. Live item-effect rendering remains
+  unverified.
 
 Work:
 

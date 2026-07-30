@@ -364,6 +364,10 @@ struct NativeAudioSnapshot
 };
 
 global_variable struct NativeAudioState s_audio;
+// Native-state bundles are byte streams whose region offsets are guaranteed
+// only four-byte alignment. Keep the typed view naturally aligned and copy at
+// the serialization boundary instead of casting the byte-stream address.
+global_variable struct NativeAudioSnapshot s_audioSnapshotScratch;
 
 internal b32 NativeAudio_OutputOpen(void)
 {
@@ -2540,7 +2544,7 @@ int NativeAudio_GetStateSize(void)
 
 int NativeAudio_CaptureState(void *dst, int dstSize)
 {
-	struct NativeAudioSnapshot *snapshot = (struct NativeAudioSnapshot *)dst;
+	struct NativeAudioSnapshot *snapshot = &s_audioSnapshotScratch;
 	int i;
 
 	if ((dst == NULL) || (dstSize < (int)sizeof(*snapshot)))
@@ -2574,6 +2578,7 @@ int NativeAudio_CaptureState(void *dst, int dstSize)
 	}
 	NativeAudio_CopyXAToState(&snapshot->xa, &s_audio.xa);
 	memcpy(snapshot->spuSampleMem, s_audio.spu.memory, sizeof(snapshot->spuSampleMem));
+	memcpy(dst, snapshot, sizeof(*snapshot));
 
 	NativeAudio_UnlockOutput();
 
@@ -2582,7 +2587,7 @@ int NativeAudio_CaptureState(void *dst, int dstSize)
 
 int NativeAudio_RestoreState(const void *src, int srcSize)
 {
-	const struct NativeAudioSnapshot *snapshot = (const struct NativeAudioSnapshot *)src;
+	const struct NativeAudioSnapshot *snapshot = &s_audioSnapshotScratch;
 	struct NativeAudioXaSource xaSource;
 	struct NativeAudioXaPreparedStream xaPrepared;
 	struct NativeAudioXaTrackInfo xaInfo;
@@ -2597,6 +2602,7 @@ int NativeAudio_RestoreState(const void *src, int srcSize)
 	{
 		return 0;
 	}
+	memcpy(&s_audioSnapshotScratch, src, sizeof(s_audioSnapshotScratch));
 	if ((snapshot->magic != NATIVE_AUDIO_STATE_MAGIC) || (snapshot->version != NATIVE_AUDIO_STATE_VERSION) || (snapshot->size != sizeof(*snapshot)))
 	{
 		return 0;
@@ -2708,6 +2714,36 @@ int NativeAudio_RestoreState(const void *src, int srcSize)
 	NativeAudio_XaPreparedStreamClose(&xaPrepared);
 
 	return 1;
+}
+
+int NativeAudio_RunStateAlignmentSelfTest(void)
+{
+	u8 storage[sizeof(struct NativeAudioSnapshot) + 16];
+	uintptr_t alignedAddress = ((uintptr_t)storage + 7u) & ~(uintptr_t)7u;
+	void *fourByteAlignedBlob = (void *)(alignedAddress + 4u);
+	u32 magic;
+
+	if (((uintptr_t)fourByteAlignedBlob & 7u) != 4u)
+	{
+		fprintf(stderr, "[CTR AudioState] self-test failed: blob alignment setup\n");
+		return 1;
+	}
+	if (!NativeAudio_CaptureState(fourByteAlignedBlob, (int)sizeof(struct NativeAudioSnapshot)))
+	{
+		fprintf(stderr, "[CTR AudioState] self-test failed: capture\n");
+		return 1;
+	}
+	memcpy(&magic, fourByteAlignedBlob, sizeof(magic));
+	if ((magic != NATIVE_AUDIO_STATE_MAGIC) ||
+	    !NativeAudio_RestoreState(fourByteAlignedBlob, (int)sizeof(struct NativeAudioSnapshot)))
+	{
+		fprintf(stderr, "[CTR AudioState] self-test failed: byte-stream round trip\n");
+		return 1;
+	}
+
+	printf("[CTR AudioState] self-test passed: snapshot-align=%zu blob-mod8=4 boundary=memcpy\n",
+	       _Alignof(struct NativeAudioSnapshot));
+	return 0;
 }
 
 internal void NativeAudio_MixFrame(s16 *outLeft, s16 *outRight)

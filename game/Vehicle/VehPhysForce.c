@@ -728,7 +728,7 @@ static Vec3 VehPhysForce_TranslateMatrix_RotateVector(const MATRIX *m, s16 vx, s
 
 static struct MatrixND *VehPhysForce_TranslateMatrix_GetBakedEntry(u8 matrixArray, u8 matrixIndex)
 {
-	return &((struct MatrixND *)data.bakedGteMath[matrixArray].physEntry)[matrixIndex];
+	return &data.bakedGteMath[matrixArray].physEntry[matrixIndex];
 }
 
 static u8 VehPhysForce_TranslateMatrix_RemapIndex(u8 matrixIndex, int fromArray, int toArray)

@@ -326,7 +326,7 @@ int LOAD_TenStages(struct GameTracker *gGT, int loadingStage, struct BigHeader *
 		// clear and reset
 		LibraryOfModels_Clear(gGT);
 
-		sdata->PLYROBJECTLIST = (int **)((u32)sdata->ptrMPK + 4);
+		sdata->PLYROBJECTLIST = (struct CtrAssetRef32 *)(sdata->ptrMPK + sizeof(u32));
 		if (sdata->ptrMPK == 0)
 		{
 			sdata->PLYROBJECTLIST = 0;
@@ -338,11 +338,16 @@ int LOAD_TenStages(struct GameTracker *gGT, int loadingStage, struct BigHeader *
 		gGT->mpkIcons = 0;
 		if (sdata->ptrMPK != 0)
 		{
-			gGT->mpkIcons = *(int *)sdata->ptrMPK;
+			const struct CtrAssetRef32 mpkIconReference =
+			    *(const struct CtrAssetRef32 *)sdata->ptrMPK;
+			CtrAssetRef_ResolveOptional(mpkIconReference, sizeof(*gGT->mpkIcons),
+			                            _Alignof(struct LevTexLookup),
+			                            (void **)&gGT->mpkIcons,
+			                            "LOAD_TenStages MPK icon lookup");
 
 			if (gGT->mpkIcons != 0)
 			{
-				DecalGlobal_Store(gGT, (struct LevTexLookup *)gGT->mpkIcons);
+				DecalGlobal_Store(gGT, gGT->mpkIcons);
 			}
 		}
 
@@ -473,11 +478,11 @@ int LOAD_TenStages(struct GameTracker *gGT, int loadingStage, struct BigHeader *
 		struct Level *lev = sdata->ptrLevelFile;
 
 		gGT->level1 = lev;
-		gGT->visMem1 = lev->visMem;
+		gGT->visMem1 = Level_GetVisMem(lev, "LOAD_TenStages level visibility memory");
 
 		if (lev != 0)
 		{
-			DecalGlobal_Store(gGT, lev->levTexLookup);
+			DecalGlobal_Store(gGT, Level_GetTexLookup(lev, "LOAD_TenStages texture lookup"));
 		}
 
 		DebugFont_Init(gGT);
@@ -485,24 +490,24 @@ int LOAD_TenStages(struct GameTracker *gGT, int loadingStage, struct BigHeader *
 		// if level is not nullptr
 		if (lev != 0)
 		{
-			LibraryOfModels_Store(gGT, lev->numModels, lev->ptrModelsPtrArray);
+			LibraryOfModels_Store(gGT, lev->numModels, Level_GetModelRefs(lev, "LOAD_TenStages model references"));
 
-			gGT->ptrCircle = (u32)DecalGlobal_FindInLEV(lev, rdata.s_circle);
-			gGT->ptrClod = (u32)DecalGlobal_FindInLEV(lev, rdata.s_clod);
-			gGT->ptrDustpuff = (u32)DecalGlobal_FindInLEV(lev, rdata.s_dustpuff);
-			gGT->ptrSmoking = (u32)DecalGlobal_FindInLEV(lev, rdata.s_smokering); // "Smoke Ring"
-			gGT->ptrSparkle = (u32)DecalGlobal_FindInLEV(lev, rdata.s_sparkle);
+			gGT->ptrCircle = DecalGlobal_FindInLEV(lev, rdata.s_circle);
+			gGT->ptrClod = DecalGlobal_FindInLEV(lev, rdata.s_clod);
+			gGT->ptrDustpuff = DecalGlobal_FindInLEV(lev, rdata.s_dustpuff);
+			gGT->ptrSmoking = DecalGlobal_FindInLEV(lev, rdata.s_smokering); // "Smoke Ring"
+			gGT->ptrSparkle = DecalGlobal_FindInLEV(lev, rdata.s_sparkle);
 		}
 
 		// if linked list of icons exists
 		if (gGT->mpkIcons != 0)
 		{
-			u32 *mpkIconList = (u32 *)*(u32 *)(gGT->mpkIcons + 4);
+			struct Icon *mpkIconList = LevTexLookup_GetIcons(gGT->mpkIcons, "LOAD_TenStages MPK icons");
 
-			gGT->trafficLightIcon[0] = (struct Icon *)DecalGlobal_FindInMPK(mpkIconList, rdata.s_lightredoff);
-			gGT->trafficLightIcon[1] = (struct Icon *)DecalGlobal_FindInMPK(mpkIconList, rdata.s_lightredon);
-			gGT->trafficLightIcon[2] = (struct Icon *)DecalGlobal_FindInMPK(mpkIconList, rdata.s_lightgreenoff);
-			gGT->trafficLightIcon[3] = (struct Icon *)DecalGlobal_FindInMPK(mpkIconList, rdata.s_lightgreenon);
+			gGT->trafficLightIcon[0] = DecalGlobal_FindInMPK(mpkIconList, rdata.s_lightredoff);
+			gGT->trafficLightIcon[1] = DecalGlobal_FindInMPK(mpkIconList, rdata.s_lightredon);
+			gGT->trafficLightIcon[2] = DecalGlobal_FindInMPK(mpkIconList, rdata.s_lightgreenoff);
+			gGT->trafficLightIcon[3] = DecalGlobal_FindInMPK(mpkIconList, rdata.s_lightgreenon);
 		}
 
 		gGT->gameMode1_prevFrame = 1;

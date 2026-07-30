@@ -15,7 +15,15 @@ struct DecalMPEntry
 	struct PushBuffer pb;
 };
 
+CTR_STATIC_ASSERT(offsetof(struct DecalMPEntry, inst) == 0x8);
+#if UINTPTR_MAX == UINT32_MAX
+CTR_STATIC_ASSERT(offsetof(struct DecalMPEntry, pb) == 0x18);
 CTR_STATIC_ASSERT(sizeof(struct DecalMPEntry) == 0x128);
+#else
+CTR_STATIC_ASSERT(sizeof(void *) == 0x8);
+CTR_STATIC_ASSERT(offsetof(struct DecalMPEntry, pb) == 0x20);
+CTR_STATIC_ASSERT(sizeof(struct DecalMPEntry) == 0x140);
+#endif
 
 static inline struct DecalMPEntry *DecalMP_GetEntry(struct GameTracker *gGT, int index)
 {

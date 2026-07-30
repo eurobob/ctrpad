@@ -48,7 +48,11 @@ void VehLap_UpdateProgress(struct Driver *driver)
 		return;
 	}
 
-	struct CheckpointNode *nodes = level->ptr_restart_points;
+	struct CheckpointNode *nodes = Level_GetRestartPoints(level, "VehLap checkpoint nodes");
+	if (nodes == NULL)
+	{
+		return;
+	}
 	struct CheckpointNode *checkpointNode = &nodes[checkpointIndex];
 	struct CheckpointNode *progressNode = &nodes[checkpointNode->nextIndex_forward];
 	struct CheckpointNode *nextNode = &nodes[progressNode->nextIndex_forward];

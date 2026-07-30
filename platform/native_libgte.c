@@ -209,7 +209,7 @@ void NormalColorCol3(SVECTOR *v0, SVECTOR *v1, SVECTOR *v2, CVECTOR *v3, CVECTOR
 
 void DpqColor(CVECTOR *v0, int p, CVECTOR *v1)
 {
-	gte_DpqColor(v0, &p, v1);
+	gte_DpqColor(v0, p, v1);
 }
 
 void ColorDpq(VECTOR *v0, CVECTOR *v1, int p, CVECTOR *v2)

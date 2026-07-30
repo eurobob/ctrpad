@@ -363,6 +363,15 @@ struct LoadQueueSlot
 
 #define LOAD_QUEUE_CALLBACK_SET_POINTER ((void (*)(struct LoadQueueSlot *)) - 2)
 
+#if UINTPTR_MAX == UINT32_MAX
+CTR_STATIC_ASSERT(offsetof(struct LoadQueueSlot, ptrDestination) == 0xc);
+CTR_STATIC_ASSERT(offsetof(struct LoadQueueSlot, callbackFuncPtr) == 0x14);
 CTR_STATIC_ASSERT(sizeof(struct LoadQueueSlot) == 0x18);
+#else
+CTR_STATIC_ASSERT(sizeof(void *) == 0x8);
+CTR_STATIC_ASSERT(offsetof(struct LoadQueueSlot, ptrDestination) == 0x10);
+CTR_STATIC_ASSERT(offsetof(struct LoadQueueSlot, callbackFuncPtr) == 0x20);
+CTR_STATIC_ASSERT(sizeof(struct LoadQueueSlot) == 0x28);
+#endif
 
 #endif

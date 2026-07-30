@@ -176,7 +176,7 @@ void GhostReplay_ThTick(struct Thread *t)
 			}
 		}
 
-		tape->numPacketsInArray = ((u32)packet - (u32)&tape->packets[0]) >> 4;
+		tape->numPacketsInArray = (int)(packet - &tape->packets[0]);
 
 		tape->numPacketsInArray -= 1;
 
@@ -357,9 +357,10 @@ void GhostReplay_Init1(void)
 		else
 		{
 			s32 timeTrialFlags = sdata->gameProgress.highScoreTracks[gGT->levelID].timeTrialFlags;
-			void **pointers = ST1_GETPOINTERS(gGT->level1->ptrSpawnType1);
+			struct SpawnType1 *spawn = Level_GetSpawnType1(gGT->level1, "GhostReplay spawn table");
+			size_t ghostIndex = ((timeTrialFlags & TT_NTROPY_BEATEN) != 0) ? ST1_NOXIDE : ST1_NTROPY;
 
-			gh = ((timeTrialFlags & TT_NTROPY_BEATEN) != 0) ? pointers[ST1_NOXIDE] : pointers[ST1_NTROPY];
+			gh = SpawnType1_GetPointer(spawn, ghostIndex, sizeof(*gh), _Alignof(struct GhostHeader), "GhostReplay target ghost");
 		}
 
 		recordBuffer = GHOSTHEADER_GETRECORDBUFFER(gh);
@@ -378,13 +379,14 @@ void GhostReplay_Init1(void)
 
 	for (s32 i = 0; i < 2; i++)
 	{
-		struct Thread *t = PROC_BirthWithObject(SIZE_RELATIVE_POOL_BUCKET(4, NONE, LARGE, GHOST), GhostReplay_ThTick, sdata->s_ghost, 0);
+		struct Thread *t =
+		    PROC_BirthWithObject(SIZE_RELATIVE_POOL_BUCKET(DRIVER_GHOST_REQUEST_SIZE, NONE, LARGE, GHOST), GhostReplay_ThTick, sdata->s_ghost, 0);
 
 		t->modelIndex = DYNAMIC_GHOST;
 		t->flags |= THREAD_FLAG_DISABLE_COLLISION;
 
 		struct Driver *ghostDriver = t->object;
-		memset(ghostDriver, 0, 0x638);
+		memset(ghostDriver, 0, DRIVER_GHOST_OBJECT_SIZE);
 		ghostDriver->ghostID = i;
 		ghostDriver->driverID = i + 1;
 		ghostDriver->ghostBoolInit = 0;

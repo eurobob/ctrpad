@@ -1,11 +1,12 @@
 # Canonical Game-State Digest
 
-**Schema:** 1
+**Schema:** 2
 
-**Replay file version:** 2
+**Replay file version:** 4
 
-**Status:** implemented and synthetic mutation proof passed; NTSC-U golden run
-pending
+**Status:** implemented, synthetic mutation proof passed, and the current
+2,200-frame startup-to-race prefix matches across i686 and ARM64; the full
+24,232-frame NTSC-U golden scenario remains pending
 
 ## Purpose
 
@@ -38,7 +39,9 @@ struct bytes are never hashed.
   traffic-light timing, event timing, and frozen-time state. The host wall
   clock `clockFrameStart` is deliberately excluded.
 - `rng`: mix, audio, adventure, and per-race RNG state.
-- `drivers`: all eight canonical driver slots; fixed-point current/previous
+- `drivers`: all eight driver-table slots, but a non-null entry is live only
+  when it is an aligned object in the current large-stack pool and absent from
+  that pool's free list. Live records include fixed-point current/previous
   position and velocity; rotations and surface normals; collision/action
   flags; acceleration, speed, steering, jump, wall, powerslide, turbo and
   reserve state; lap/rank/checkpoint progress; held-item and damage state;
@@ -47,15 +50,17 @@ struct bytes are never hashed.
 - `world`: game modes, level IDs, player/bot counts, laps, particles, time
   crates, adventure progress, cup points, battle state, loading stage, and
   menu state.
-- `allocation`: free/taken counts and dimensions for all eight JIT pools plus
-  each MEMPACK allocator's sizes, bookmark count, and stable offsets.
+- `allocation`: free/taken counts and retail item capacity for all eight JIT
+  pools, the active MEMPACK index, and each allocator's initialized-pointer
+  topology, empty/full relationships, previous-allocation existence, and
+  bookmark depth. Host slot widths, pool byte sizes, main-pack sizes, physical
+  cursors, allocation byte counts, and bookmark addresses are excluded.
 - `root`: schema, mask, and the five named component hashes.
 
 Native pointers are either excluded or encoded as stable guest references:
 
 - driver references become `(DRVR, slot)`;
 - quadblock references become `(QUAD, byte offset from the level array)`;
-- MEMPACK pointers and bookmarks become `(MPAK, byte offset from arena base)`;
 - null and out-of-domain references use fixed sentinels.
 
 Window/renderer handles, OpenGL names, file paths, host pointers, audio device
@@ -64,13 +69,15 @@ handles, padding, and wall-clock readings are excluded.
 ## Replay integration
 
 `NativeReplaySchedulerFrameInfo` carries a digest at frame begin and end.
-Replay format version 2 records it in every frame. Playback compares every
-named component and the root at frame end. A mismatch logs the first named
-component and both expected/live component values alongside the existing pad,
-timer, RNG, and VBlank evidence. Playback stops on that exact frame and the
-process exits with status 2, so CI cannot mistake a logged divergence for a
-passing gate. Other replay runtime and finalization failures exit with status
-1; an unchanged replay that reaches its recorded end exits with status 0.
+Replay format version 2 introduced it; current version 4 keeps the fixed frame
+layout and also captures the complete inter-frame VSync timing boundary.
+Playback compares every named component and the root at frame end. A mismatch
+logs the first named component and both expected/live component values
+alongside the existing pad, timer, RNG, and VBlank evidence. Playback stops on
+that exact frame and the process exits with status 2, so CI cannot mistake a
+logged divergence for a passing gate. Other replay runtime and finalization
+failures exit with status 1; an unchanged replay that reaches its recorded end
+exits with status 0.
 
 Version 1 replay files are intentionally rejected by the format check. They do
 not contain a trustworthy physics-parity signal.
@@ -91,14 +98,28 @@ then increments `Driver.posCurr.x` by one and requires exactly the `drivers`
 component and root to change:
 
 ```text
-[CTR StateDigest] self-test passed: address-independent root=69d9c7bf8ca4aaf8 mutation component=drivers
-[CTR Replay] self-test passed: runtime-error=1 divergence=2 mutation-frame=17 component=drivers
+[CTR StateDigest] self-test passed: address-independent root=947c0430f66c667d mutation component=drivers free-driver=ignored allocation-host-geometry=ignored mempack-coordinate=ignored
+[CTR Replay] self-test passed: runtime-error=1 divergence=2 mutation-frame=17 component=drivers binary-identity=checked checkpoint-start=checked complete-vsync=checked
 ```
 
 The replay-gate fixture also verifies frame parsing, identical-frame matching,
 an isolated `drivers` component mismatch, and the distinct process statuses
 for harness failure and canonical divergence. This proves the gate's basic
 invariants without retail data.
+
+`tools/compare-replay-state-components.mjs` separately compares the transport
+that drives those states. In addition to the six digest values it can require
+`pads` (all 48 snapshot bytes) and `vsync` (VBlank total, packet count,
+pre-frame packet count, and every used run-length-encoded packet). Each input's
+pad checksum, complete-record checksum, and decoded VSync total are validated
+before equality is reported.
+
+The schema-2 fixture additionally places a driver slot on the pool free list,
+changes its reused bytes independently in two trackers, and requires the roots
+to remain equal. Separate allocator fixtures require different host pool
+strides and MEMPACK coordinates to remain equal while retaining the logical
+population and lifecycle signals above. This addresses the exact false
+mismatches found during the ARM64/i686 prefix investigation.
 
 It does not replace the pending M1 proof: record and replay a full NTSC-U run
 in separate processes, then use
@@ -115,8 +136,8 @@ acceptance run.
 
 ## Known scope
 
-Schema 1 hashes held-item state, AI state, and allocation counts, but it does
+Schema 2 hashes held-item state, AI state, and allocation lifecycle, but it does
 not yet serialize every field of every live dynamic weapon or particle
 instance. Golden-run coverage must exercise item use; if a mutation can alter
 a gameplay-relevant dynamic object without changing any current component,
-schema 2 must add a canonical live-object component before M1 closes.
+schema 3 must add a canonical live-object component before M1 closes.

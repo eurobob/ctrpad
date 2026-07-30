@@ -250,9 +250,10 @@ u16 RB_Hazard_CollLevInst(struct ScratchpadStruct *sps, struct Thread *th)
 	struct InstDef *instdef;
 
 	// Check if the hitbox flag has the collision bit set and if InstDef is not NULL
-	if ((sps->bspHitbox->flag & 0x80) && (instdef = sps->bspHitbox->data.hitbox.instDef) != NULL)
+	struct BSP *bspHitbox = COLL_Scratch_GetHost(sps)->bspHitbox;
+	if ((bspHitbox->flag & 0x80) && (instdef = BSP_GetInstDef(bspHitbox, "RB_Hazard hitbox InstDef")) != NULL)
 	{
-		struct Instance *inst = instdef->ptrInstance;
+		struct Instance *inst = InstDef_GetInstance(instdef);
 		if (inst == NULL)
 		{
 			return 1;

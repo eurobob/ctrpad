@@ -134,9 +134,8 @@ void MM_CupSelect_MenuProc(struct RectMenu *menu)
 			{
 				u32 *starColor = data.ptrColor[D230.cupSelectStars.colorIndex[starIndex]];
 
-				struct Icon **iconPtrArray = ICONGROUP_GETICONS(gGT->iconGroup[MM_CUP_SELECT_STAR_ICON_GROUP]);
-
-				DecalHUD_DrawPolyGT4(iconPtrArray[MM_CUP_SELECT_STAR_ICON_ID],
+				DecalHUD_DrawPolyGT4(
+				    IconGroup_GetIcon(gGT->iconGroup[MM_CUP_SELECT_STAR_ICON_GROUP], MM_CUP_SELECT_STAR_ICON_ID, "cup-select star icon"),
 				                     startX + (cupIndex & 1) * MM_CUP_SELECT_STAR_COLUMN_BIAS + MM_CUP_SELECT_STAR_X_OFFSET,
 				                     startY + starIndex * MM_CUP_SELECT_STAR_Y_STEP + MM_CUP_SELECT_STAR_Y_OFFSET, &gGT->backBuffer->primMem,
 				                     gGT->pushBuffer_UI.ptrOT, starColor[0], starColor[1], starColor[2], starColor[3], 0, FP(1.0));
