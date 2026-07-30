@@ -5339,3 +5339,77 @@ corrected ARM64 on timing, RNG, drivers, world, allocation, root, pad
 snapshots, and VSync. The report remains in flight; full acceptance is not
 claimed before all 24,232 frames and the i686 two-process/mutation verifier
 finish.
+
+### Former frame-6,780 boundary passed
+
+The in-flight corrected i686 report crossed the exact first-failure boundary
+from the rejected run. At 6,812 complete frames, the strict prefix comparer
+reported:
+
+```text
+timing:      equal 6812, mismatch 0
+rng:         equal 6812, mismatch 0
+drivers:     equal 6812, mismatch 0
+world:       equal 6812, mismatch 0
+allocation:  equal 6812, mismatch 0
+root:        equal 6812, mismatch 0
+pads:        equal 6812, mismatch 0
+vsync:       equal 6812, mismatch 0
+```
+
+This is the real optimized-i686 execution using the same `55d3b71c6da5`
+source identity as the corrected ARM64 producer. It establishes that the
+native restart-node ownership fix removes the former cross-width divergence
+at frame 6,780. It does not substitute for the required final all-frame
+comparison.
+
+### Typed lap-coverage audit
+
+The lap coverage concern was also checked against exact checkpoint state,
+not only pixels. The exact corrected ARM64 producer restored representative
+rolling checkpoints under LLDB and broke at
+`NativeReplayScheduler_ObserveGameplayState`. Typed expressions read
+`s_replayFrame`, `gGT->numLaps`, `driver[0]->lapIndex`, and
+`driver[0]->checkpoint.currentIndex`.
+
+```text
+replay frame  lapIndex  checkpoint.currentIndex
+1800          0         71
+3000          0          3
+3900          0          6
+4500          0          6
+6000          0          9
+6900          0         16
+8100          0         10
+9000          0         18
+12000         0         61
+13500         0         40
+15000         0         12
+18000         0         45
+21000         0         57
+21300         0         57
+24000         0          0
+```
+
+Every sample has `numLaps=3` and a live player driver. The checkpoint index
+changes across real track progress and resets across the scripted
+race/restart transitions, while `lapIndex` never leaves zero. Samples near
+the end of every active-race segment were included specifically to avoid
+mistaking an early-race sample for the complete trace.
+
+The 14 retained LLDB logs are under:
+
+```text
+/tmp/ctrpad-lap-checkpoint-evidence-55d3
+```
+
+The SHA-256 of their sorted `shasum -a 256` manifest is:
+
+```text
+af6bcdc11bc6785823bc579e12eb40a56a5d3852dde925567b135070f869e1e2
+```
+
+Combined with the HUD captures, this rejects `lap_advanced=pass` for the
+current input. A later coverage recording must visibly and structurally
+reach `lapIndex >= 1`; this requirement is now explicit rather than silently
+inherited.

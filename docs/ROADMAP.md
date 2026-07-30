@@ -519,8 +519,12 @@ Result so far:
   playback processes passed all frames under different ASLR layouts, and the
   deliberate frame-1,711 driver-position mutation failed on the `drivers`
   component as required. Corrected optimized-i686 report `ctr-223323` is the
-  active cross-width acceptance gate. The exact producer/report hashes and
-  GitHub branch audit are recorded in `docs/history/ENGINEERING-JOURNAL.md`.
+  active cross-width acceptance gate and matches all eight components through
+  frame 6,812, beyond the old frame-6,780 failure. Typed checkpoint and HUD
+  evidence also proves the inherited input changes track checkpoints but
+  never advances beyond lap index zero; a new/supplemental actual-lap
+  recording remains required. Exact hashes and the GitHub branch audit are in
+  `docs/history/ENGINEERING-JOURNAL.md`.
 - Red-beaker rain no longer reads per-player MVP translations out of widened
   instance function/thread pointers. Named draw-record fields preserve the
   retail depth/LOD byte alias, and a four-player cross-width test covers the

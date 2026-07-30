@@ -273,10 +273,15 @@ frames and 81 checkpoints. Its producer and report hashes are recorded in
 `docs/history/ENGINEERING-JOURNAL.md`.
 
 1. Run optimized i686 regeneration from corrected ARM64 input `ctr-170507`.
+   In-flight report `ctr-223323` matches all eight components through frame
+   6,812, passing the rejected run's former frame-6,780 failure boundary.
 2. Require timing, RNG, drivers, world, allocation, root, pads, and VSync to
    match for all 24,232 frames.
 3. Replay the accepted i686 report unchanged in separate processes and run
    its deliberate mutation gate. Corrected ARM64 already passes both
    unchanged processes and the mutation check.
 4. Re-observe and record all eight golden-run coverage checks rather than
-   inferring them solely from the inherited pad script.
+   inferring them solely from the inherited pad script. Typed checkpoint and
+   HUD evidence shows the current input progresses through track checkpoints
+   but never advances beyond `lapIndex=0`, so a supplemental/new lap-coverage
+   recording is required.
