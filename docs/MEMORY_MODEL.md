@@ -112,6 +112,14 @@ The split is intentional:
 The pressure mode is useful for finding native paths that silently rely on more dynamic memory than retail had.
 The PS1 path does not call the platform arena hook; it computes the allocator window from retail overlay symbols.
 
+Host-width data derived from retail assets does not belong in that pressure
+window. For example, the language file remains a retail-sized `0x3f04` MPAK
+allocation containing serialized `u32` string offsets. LP64 builds materialize
+the corresponding `char *` table in fixed native storage and rebuild it from
+those offsets after checkpoint restore. Putting that 32,264-byte host table
+after the language file would reduce gameplay memory even though the table did
+not exist in the retail allocator.
+
 ## Native VRAM
 
 Native keeps the PS1-visible VRAM contract at `1024x512x16`, but the platform layer owns the host backing and presentation path.

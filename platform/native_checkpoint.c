@@ -1700,6 +1700,10 @@ internal void NativeCheckpoint_RelocateDataPointers(const struct NativeCheckpoin
 internal void NativeCheckpoint_RelocateLanguagePointers(const struct NativeCheckpointHeader *oldHeader, const struct NativeCheckpointHeader *liveHeader)
 {
 	NativeCheckpoint_RelocatePointerSlot(oldHeader, liveHeader, &sdata_static.lngFile);
+#if UINTPTR_MAX > UINT32_MAX
+	// The LP64 table is derived host storage outside serialized regions.
+	// Rebuild it from lngFile after all captured pointers have been relocated.
+#else
 	NativeCheckpoint_RelocatePointerSlot(oldHeader, liveHeader, &sdata_static.lngStrings);
 
 	if ((sdata_static.numLngStrings > 0) && ((u32)sdata_static.numLngStrings <= NATIVE_CHECKPOINT_LNG_STRING_CAP) &&
@@ -1710,6 +1714,7 @@ internal void NativeCheckpoint_RelocateLanguagePointers(const struct NativeCheck
 			NativeCheckpoint_RelocatePointerSlot(oldHeader, liveHeader, &sdata_static.lngStrings[i]);
 		}
 	}
+#endif
 }
 
 internal void NativeCheckpoint_RelocateGhostRecording(const struct NativeCheckpointHeader *oldHeader, const struct NativeCheckpointHeader *liveHeader)
@@ -2754,6 +2759,12 @@ int NativeCheckpoint_Restore(const void *src, int srcSize)
 	Platform_ConfigureMempackArena();
 	NativeCheckpoint_RelocateMempackPointers(header, &liveHeader);
 	NativeCheckpoint_RelocateRuntimePointers(header, &liveHeader);
+#if UINTPTR_MAX > UINT32_MAX
+	if (!LOAD_RebuildNativeLanguagePointers())
+	{
+		return 0;
+	}
+#endif
 	NativeCheckpoint_RebuildLevelRuntimeVisMem();
 	MainInit_RebindNativeRuntimeStorage(&sdata_static.gameTracker);
 	if (pointerMapRegion == NULL)

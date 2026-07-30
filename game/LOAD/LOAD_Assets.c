@@ -239,6 +239,51 @@ struct LngFile
 	char strings[1];
 };
 
+#if defined(CTR_NATIVE) && UINTPTR_MAX > UINT32_MAX
+// Retail stores the relocated string-pointer table in the language file's
+// serialized u32 table. LP64 cannot widen that table in place, and its
+// host-width replacement must not consume the retail-pressure MEMPACK arena.
+// It is derived entirely from lngFile, so checkpoint restore rebuilds it.
+static char *s_nativeLanguageStrings[0x1000];
+
+int LOAD_RebuildNativeLanguagePointers(void)
+{
+	struct LngFile *lngFile = sdata->lngFile;
+	u32 size = (sdata->langBufferSize > 0) ? (u32)sdata->langBufferSize : 0;
+	u32 *serializedOffsets;
+	int numStrings;
+
+	if (lngFile == NULL)
+	{
+		sdata->numLngStrings = 0;
+		sdata->lngStrings = NULL;
+		return 1;
+	}
+
+	numStrings = lngFile->numStrings;
+	if ((numStrings < 0) || ((u32)numStrings > len(s_nativeLanguageStrings)) || (lngFile->offsetToPtrArr < 0) ||
+	    ((u64)(u32)lngFile->offsetToPtrArr + (u64)(u32)numStrings * sizeof(u32) > size))
+	{
+		return 0;
+	}
+
+	serializedOffsets = (u32 *)((u8 *)lngFile + lngFile->offsetToPtrArr);
+	for (int i = 0; i < numStrings; i++)
+	{
+		const u32 stringOffset = CTR_ReadU32LE(&serializedOffsets[i]);
+		if (stringOffset >= size)
+		{
+			return 0;
+		}
+		s_nativeLanguageStrings[i] = (char *)((u8 *)lngFile + stringOffset);
+	}
+
+	sdata->numLngStrings = numStrings;
+	sdata->lngStrings = s_nativeLanguageStrings;
+	return 1;
+}
+#endif
+
 // param_1 - Pointer to "cd position of bigfile"
 // param_2 - language index - 0 ja, 1 en, 2 en2, 3 fr, 4 de, 5 it, 6 es, 7 ne
 // NOTE(aalhendi): ASM-verified NTSC-U 926 0x80032b50-0x80032c24
@@ -260,18 +305,7 @@ void LOAD_LangFile(struct BigHeader *bigfile, int lang)
 
 	if (sdata->lngFile == 0)
 	{
-		int allocationSize = sdata->langBufferSize;
-
-#if UINTPTR_MAX > UINT32_MAX
-		// The retail buffer contains a packed u32 offset table. Reserve a
-		// host-width sidecar in the same MPAK allocation so LP64 does not
-		// widen or overwrite those serialized entries.
-		size_t hostTableOffset = ((size_t)sdata->langBufferSize + sizeof(void *) - 1) & ~(sizeof(void *) - 1);
-		size_t maxStringCount = (size_t)sdata->langBufferSize / sizeof(u32);
-		allocationSize = (int)(hostTableOffset + maxStringCount * sizeof(char *));
-#endif
-
-		sdata->lngFile = MEMPACK_AllocMem(allocationSize /* "lang buffer" */);
+		sdata->lngFile = MEMPACK_AllocMem(sdata->langBufferSize /* "lang buffer" */);
 	}
 
 	lngFile = sdata->lngFile;
@@ -300,8 +334,11 @@ void LOAD_LangFile(struct BigHeader *bigfile, int lang)
 	}
 
 #if UINTPTR_MAX > UINT32_MAX
-	size_t hostTableOffset = ((size_t)sdata->langBufferSize + sizeof(void *) - 1) & ~(sizeof(void *) - 1);
-	strArray = (char **)((u8 *)lngFile + hostTableOffset);
+	if ((u32)numStrings > len(s_nativeLanguageStrings))
+	{
+		return;
+	}
+	strArray = s_nativeLanguageStrings;
 #else
 	strArray = (char **)(void *)serializedOffsets;
 #endif

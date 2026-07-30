@@ -3729,3 +3729,310 @@ and one changed frame 1's VSync call encoding from two repeated one-VBlank
 calls to one two-VBlank call while preserving its total. Requiring `pads` and
 `vsync` respectively isolated the intended one-frame ranges and returned
 status 2. The temporary retail-derived fixture copies were then deleted.
+
+## 2026-07-30 — GitHub checkpoint, visual-capture limit, and late-load OOM
+
+The complete working tree was reviewed before publication. Retail media and
+runtime reports remained ignored; 192 source and documentation files were in
+scope. The ordinary ARM64 build passed all 13 CTests, the replay-component
+tool passed `node --check`, and `git diff --check` was clean.
+
+Commit `2f341999be63250d8cc58d48f585c1fbc3413bff` (`port runtime to ARM64
+with parity gates`) was created on `codex/arm64-apple`. The first HTTPS push
+returned GitHub HTTP 400 and did not create the remote ref. A retry using Git
+HTTP/1.1 and a larger post buffer succeeded; the remote branch hash was
+verified equal to the local commit. The repository is private, so connector
+PR creation returned 404. Authenticated `gh` fallback created draft pull
+request `https://github.com/chrissotraidis/ctrpad/pull/1` against `main`.
+
+### Screen and texture inspection was not claimed
+
+macOS window enumeration identified the running `ctr_native` window, but both
+the system screen-capture command and CoreGraphics capture failed under the
+Codex app's current Screen Recording permissions. Sending the internal F12
+shortcut also produced no `SCREENSHOT.BMP`. Runtime logs prove Apple M2,
+OpenGL 4.1/Metal context, shader compilation, and continued rendered-frame
+execution, but those are not visual texture evidence. No texture-correctness
+claim was made; an in-engine capture or granted screen recording remains
+required.
+
+### The first full ARM64 regeneration stopped at frame 22,156
+
+The fresh version-4 producer was:
+
+```text
+source:
+build-linux-i686-baseline/debug/reports/20260729/ctr-225420/input.ctrreplay
+
+destination:
+build-macos-arm64/debug/reports/20260730/ctr-112652
+```
+
+It advanced at approximately 29.9 FPS, reproduced the successful boost near
+frame 9,300, and followed the historical race/load transitions through its
+last rolling checkpoint at frame 21,900. The input file reached 22,156 frame
+records, but no file changed afterward and one CPU core remained saturated.
+The report retained `finalized=0` and is rejected as parity evidence.
+
+`sample` recorded the live stack in `/tmp/ctrpad-arm64-stall-22156.sample.txt`:
+
+```text
+CTR_Main
+LOAD_TenStages (loading stage 7)
+MainInit_JitPoolsNew
+MEMPACK_AllocMem (intentional infinite allocation-error loop)
+```
+
+LLDB confirmed level `0x28`, one player, and
+`MainDB_GetClipSize(...) == 24000`; the call requested `24000 << 2`, or
+96,000 bytes. The allocator had 86,264 bytes free:
+
+```text
+firstFreeByte: 0x10140ffc0
+lastFreeByte:  0x1014250b8
+shortfall:     9,736 bytes
+```
+
+The failed process ignored normal termination while spinning in the original
+error loop, so it was killed after the sample and LLDB values were safely
+captured.
+
+### Same-frame checkpoints isolated the 32,268-byte cause
+
+Checkpoint 73 at frame 21,900 was read from both the failed ARM64 report and
+the historical i686 report. Their main packs were:
+
+```text
+                         ARM64       i686       difference
+arena size             1,371,344  1,330,704       40,640
+low bytes used         1,196,704  1,123,796       72,908
+free bytes               174,640    206,908      -32,268
+bookmark 0 offset          53,272     21,004       32,268
+bookmark 1 offset          57,856     25,588       32,268
+bookmark 2 offset       1,049,032  1,016,764       32,268
+bookmark 3 offset       1,196,704  1,123,796       72,908
+```
+
+The first three bookmark differences were exactly constant at frames 0, 300,
+1,500, 2,100, 3,000, 9,000, 15,000, 21,000, and 21,900. The additional
+40,640 bytes after bookmark 2 exactly matched the already documented maximum
+LP64 JIT-pool overhead. This ruled out a cumulative leak.
+
+`sdata->langBufferSize` is `0x3f04`, or 16,132 bytes. The previous LP64
+allocation appended a maximum host pointer table:
+
+```text
+aligned language bytes:       16,136
+4,033 host pointers x 8:      32,264
+LP64 allocation:              48,400
+i686 retail allocation:       16,132
+exact displacement:           32,268
+```
+
+That derived pointer table—not game data—was the entire persistent
+cross-width loss. `LOAD_LangFile` now leaves the retail-sized language buffer
+in MEMPACK and writes the derived table to fixed native storage.
+`NativeCheckpoint_Restore` relocates `lngFile`, validates the captured count,
+table extent, and every serialized offset, then reconstructs `lngStrings`.
+The rebuilt ARM64 binary passed all 13 CTests, `node --check`, and
+`git diff --check`; the protected i686 baseline remained byte-identical at
+SHA-256
+`afe7b3d264bd2674192e71485037842ab329d1eca9c0c34ca50da5d4487c76a7`.
+
+A replacement full ARM64 run started as report `ctr-115352`. Its outcome is
+intentionally not recorded here until it passes the former frame-22,156
+failure point and finalizes.
+
+### Later correction: in-engine VRAM export exposed visual corruption
+
+The OS-level screen-capture limitation above remains true, but it no longer
+prevents visual inspection. While `ctr-115352` was running, LLDB invoked the
+game's exported `NativeRenderer_SaveVRAM` on the stopped main thread and
+detached immediately afterward. The run resumed normally. The local,
+retail-derived evidence is intentionally ignored:
+
+```text
+/tmp/ctrpad-vram-115352.tga
+format: 1024 x 512 x 16-bit TGA
+size: 1,048,594 bytes
+SHA-256: 03d799f9baa9362f5cd9f36fe85f5b60ab92e4bf195649997768a93d63a6cfa8
+
+/tmp/ctrpad-framebuffer-top-115352.png
+format: 512 x 240 RGB PNG crop
+SHA-256: 0525f8feb4f7de7e1d669e5cbc1a132ab1549645b3081a8077b0090271480a5d
+```
+
+The export proves that the two display buffers, HUD, kart, minimap, and loaded
+texture pages exist. It also visibly shows incorrect colors and high-frequency
+corruption across large track surfaces and parts of the framebuffer. An older
+local window capture from the earlier i686-seeded ARM64 run exhibits the same
+class of corruption, so this is not caused by the language-sidecar change.
+Texture presence is observed; texture correctness is rejected and remains a
+separate renderer/asset investigation. No screenshot is committed.
+
+### Correction: raw PS1 VRAM is not the presented-window oracle
+
+The preceding corruption conclusion was rejected minutes later. The full
+VRAM atlas mixes 4-bit and 8-bit indexed texture pages, CLUT data, both PS1
+display buffers, and 16-bit direct-color regions. Interpreting every word as a
+standalone RGB555 image makes indexed data look like high-frequency noise and
+does not reproduce the renderer's shader/CLUT presentation.
+
+To capture the real screen without macOS Screen Recording permission, LLDB
+stopped the main thread, allocated a temporary 800×600 RGBA buffer, called
+the already-loaded `glad_glReadPixels` on the default framebuffer, wrote the
+bytes out, freed the buffer, and detached. The run resumed normally:
+
+```text
+/tmp/ctrpad-window-115352.rgba
+size: 1,920,000 bytes
+SHA-256: 74a7235e0aa8e9e785d037dbfc1547308cf291bab4cef17257603a6edf06b9d3
+
+/tmp/ctrpad-window-115352.png
+format: 800 x 600 RGBA PNG, vertically corrected
+SHA-256: 8678bcb0c3cc02b312b346e1685c5072a2e27c5fcdf06b0174c4fc41d4cd5db0
+```
+
+The actual presented frame cleanly shows the track-select menu, readable
+fonts, layered panels, highlight state, and a coherent textured Roo's Tubes
+preview. The raw-VRAM corruption claim is withdrawn. This is positive visual
+evidence for that screen, not yet a claim covering every race surface,
+effect, video, transparency mode, or multiplayer layout. The retail-derived
+PNG remains ignored and is not committed.
+
+### Presented race capture bounds a real level-rendering defect
+
+A second default-framebuffer capture was taken after replay frame 14,291 made
+the race driver active again:
+
+```text
+/tmp/ctrpad-window-race-115352.rgba
+size: 1,920,000 bytes
+SHA-256: 91184d86e4fc49eac0e99b02b51b5e871c0368cb2579e9482dfd4582519ac029
+
+/tmp/ctrpad-window-race-115352.png
+format: 800 x 600 RGBA PNG, vertically corrected
+SHA-256: 299df578488161fa59481ab378637370ea350ff0a63b17a5496a61a97d37b551
+```
+
+Unlike the clean menu capture, the race frame shows severe corruption in
+track geometry and/or texture coordinates. HUD sprites, rank, lap, crate and
+fruit icons, kart, exhaust, and minimap remain recognizable, which narrows the
+failure away from general OpenGL presentation and toward the 1-player level
+rendering path. Visual acceptance remains open. The next oracle is an i686
+capture at a comparable replay checkpoint; no speculative source fix is made
+while the allocator regression run is active.
+
+### Replacement ARM64 run crossed the failure and finalized
+
+Report `build-macos-arm64/debug/reports/20260730/ctr-115352` crossed the old
+frame-22,156 failure, wrote checkpoints at frames 22,200, 22,500, 22,800,
+23,100, 23,400, 23,700, and 24,000, then finalized normally:
+
+```text
+replay_version=4
+frame_count=24232
+checkpoint_count=81
+finalized=1
+recording_status=finalized
+```
+
+The log reproduced the successful powerslide boost near frame 9,300 and ended
+with `replay-seeded recording finished after 24232 frames`. The final
+artifacts were:
+
+```text
+producer copy:
+build-macos-arm64/ctr_native-115352-producer
+SHA-256 588786e7eaaee5c845dc2c1e6c101178cc93be3a62e94857aea338338cba769e
+
+input.ctrreplay:
+10,662,228 bytes
+SHA-256 bf022938a8580e91fa06045f0cabb6b58a67fb7cc16bbd4909601b7e1ce93b86
+
+state.ctrstates:
+359,201,012 bytes
+SHA-256 8fdf6999fd8796228cd9e801f49be1525cd750cf17dda09c395a1fcfeaee0842
+
+metadata.txt:
+SHA-256 29b992e1a12a73a825307f7f531daea0fc3f2c71ba42dded5048c0393734305d
+
+ctr-native.log:
+SHA-256 24de8fd1f9d395a7aa7599a0158ca6fa04c4714d70e83280c0d713754c16aa22
+
+memcard.recording/slot0/BASCUS-94426-SLOTS:
+6,016 bytes
+SHA-256 6a01b0f5562ed7a279d8f8e51e3b1874ac39a6120f55db4fe3873288950619a3
+```
+
+This accepts the language-table allocator correction. It is not yet the
+cross-width full-run acceptance because the historical version-2 input does
+not contain complete VSync boundaries. The optimized i686 producer must
+consume this new version-4 input before all eight comparator signals can be
+required.
+
+The current post-run ARM64 source was rebuilt after preserving the producer
+copy. The rebuilt executable has SHA-256
+`938ce1b4d2148aa32e25fc4d56d07ad9ac95c5a39f5489e1dac5fba4b15825cf`,
+passes all 13 CTests, and leaves the exact producer copy unchanged. The
+comparator passes `node --check`, `git diff --check` is clean, and the
+protected i686 baseline remains byte-identical at
+`afe7b3d264bd2674192e71485037842ab329d1eca9c0c34ca50da5d4487c76a7`.
+
+### Frame-matched i686/ARM64 visual oracle changed the diagnosis
+
+The first i686 Xvfb attempt sent F12 while the emulated producer was still
+compiling shaders. It created no screenshot and was rejected. The retry
+waited for exact checkpoint 6 to restore. It used the accepted optimized
+producer without changing its bytes:
+
+```text
+producer:
+/tmp/ctrpad-i686-release-v4-QkBKSJ/ctr_native
+SHA-256 686393e84a289220186984b9efe19ceece54bfc4e0978cc1903e7f527b0c45a2
+
+report:
+/tmp/ctrpad-i686-release-v4-QkBKSJ/debug/reports/20260730/ctr-161136
+
+log boundary:
+restored checkpoint 6 / race driver active at frame 1800
+F12 screenshot at frame 1802
+```
+
+The raw F12 BMP is bottom-up because `Platform_TakeScreenshot` reads the OpenGL
+framebuffer directly (`platform/native_platform.c:154-167`). It was flipped
+vertically for inspection:
+
+```text
+/tmp/ctrpad-i686-visual-3Kt3e9/SCREENSHOT.BMP
+size 1,920,138
+SHA-256 5a59ff5182ad69e80120509e773395b23a3958e6be4c588f8ccfb442f35bc145
+
+/tmp/ctrpad-i686-race-frame1802-upright.png
+SHA-256 c7919b7807d77e0b67a2bb6a0106b7a07a4002068b09901988fac19358e111c7
+```
+
+An initial ARM64 attach completed after the short checkpoint playback had
+cleared the framebuffer and produced an all-black image. It was rejected. The
+retry launched the exact ARM64 producer under LLDB, set a conditional
+breakpoint in `NativeReplayScheduler_EndFrame` for replay frame 1,802, called
+the loaded `glad_glReadPixels`, and wrote the frame before killing only that
+diagnostic playback:
+
+```text
+/tmp/ctrpad-arm64-race-frame1802.rgba
+size 1,920,000
+SHA-256 3f306a2e5b1c6eb4a1da3786e1ff5d07cdc4e92cedd0597ae873de57fb3d92c2
+
+/tmp/ctrpad-arm64-race-frame1802.png
+SHA-256 9d13a57ad9076944916059e67742a198110f68fdb1778eba692441401fd275a1
+```
+
+The matched images have the same camera, kart placement, and track polygon
+boundaries. ARM64 shows high-frequency stripes on a right-side track surface
+where i686 shows a flat-colored surface. The i686 llvmpipe image itself has
+incorrect cyan/blue coloration, so it is not a retail-correct color oracle.
+The evidence rejects the broad geometry-corruption diagnosis and narrows the
+open defect toward texture sampling/state, CLUT handling, or UV presentation.
+Textureless and wireframe isolation remain the next visual probes. No
+speculative renderer change was made from this comparison.

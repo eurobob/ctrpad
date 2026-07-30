@@ -460,16 +460,28 @@ Result so far:
   ASan/UBSan report `ctr-103044` also completes and matches all six components.
   Exact identities, hashes, rejected probes, and the later native
   instance-name sanitizer correction are recorded in
-  `docs/parity/2026-07-30-arm64-prefix-parity.md`. A fresh automated
-  24,232-frame version-4 golden run remains pending.
+  `docs/parity/2026-07-30-arm64-prefix-parity.md`.
+- The first 24,232-frame ARM64 version-4 regeneration was rejected after it
+  entered the MEMPACK allocation-error loop at frame 22,156. Same-frame
+  checkpoints proved that a derived LP64 language-pointer table had consumed
+  32,268 bytes of the retail-pressure arena. Keeping that table in fixed
+  native storage allowed replacement report `ctr-115352` to finalize all
+  24,232 frames and 81 checkpoints. Exact hashes and the failure/correction
+  chain are in
+  `docs/parity/2026-07-30-arm64-full-regeneration.md`. Full optimized-i686
+  regeneration and eight-component comparison remain pending.
 - The raw retail `Driver` offsets in `UI_VsQuipReadDriver` are now translated
   at three named native scalar ranges with width and bounds checks. A
   media-free test walks all 51 real NTSC-U metadata records on ARM64 and
   i686. Actual multiplayer end-of-race/VS execution remains unverified.
 - The level render-list walkers no longer write pointer heads through retail
   `slot * 8 + 4` / `0x28` offsets. They select named host-width fields, and a
-  media-free test covers all six heads on i686 and ARM64. This removes
-  untracked renderer-pointer corruption; visual capture remains required.
+  media-free test covers all six heads on i686 and ARM64. Frame-matched
+  ARM64/i686 captures at replay frame 1,802 now show matching camera, kart,
+  and polygon placement, but differing surface presentation. ARM64 has
+  high-frequency texture stripes while i686/llvmpipe is flat and
+  incorrectly colorized. Geometry relocation is no longer the leading
+  visual hypothesis; texture/CLUT/UV presentation remains open.
 - Red-beaker rain no longer reads per-player MVP translations out of widened
   instance function/thread pointers. Named draw-record fields preserve the
   retail depth/LOD byte alias, and a four-player cross-width test covers the

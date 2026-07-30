@@ -192,3 +192,25 @@ position mutation changes only `drivers`, while different bytes in matched
 free driver slots do not change any component. It also proves different host
 pool strides and mempack coordinates do not change the canonical allocation
 record.
+
+## 2026-07-30 — Keep derived language pointers outside retail MEMPACK
+
+**Decision:** LP64 keeps the language file's retail-sized `0x3f04` allocation
+in MEMPACK, but materializes its host-width string-pointer table in fixed
+native storage. Checkpoint restore rebuilds the table from the captured
+language file's serialized `u32` offsets instead of persisting native table
+bytes.
+
+**Why:** appending the maximum `char *` table to the MPAK allocation consumed
+32,268 more bytes than i686, including alignment. Every allocator bookmark
+after language initialization carried that exact displacement. The first
+24,232-frame ARM64 regeneration consequently reached a later level load with
+86,264 bytes free, failed a 96,000-byte clip-buffer request by 9,736 bytes,
+and entered the retail allocation-error loop at replay frame 22,156. The table
+is a derived LP64 representation, not retail gameplay data, so charging it to
+the retail-pressure arena was incorrect.
+
+**Checkpoint rule:** `lngFile` remains serialized and relocated normally.
+`lngStrings` is not relocated as captured LP64 storage; restore validates the
+count, table extent, and every string offset before rebuilding the native
+table.

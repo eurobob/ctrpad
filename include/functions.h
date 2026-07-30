@@ -448,6 +448,9 @@ void LOAD_InitCD(void);
 int LOAD_InitCDvol(void);
 int LOAD_RunPtrMap(void *assetBase, size_t assetSize, const u32 *patchEntries, size_t patchMapByteSize);
 void LOAD_LangFile(struct BigHeader *bigfile, int lang);
+#if defined(CTR_NATIVE) && UINTPTR_MAX > UINT32_MAX
+int LOAD_RebuildNativeLanguagePointers(void);
+#endif
 
 void LOAD_NextQueuedFile(void);
 
