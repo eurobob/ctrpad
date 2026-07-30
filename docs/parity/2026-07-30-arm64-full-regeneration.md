@@ -3,8 +3,9 @@
 **Source state:** `2f341999be63250d8cc58d48f585c1fbc3413bff` plus the
 documented language-table correction
 
-**Status:** accepted as a 24,232-frame ARM64 allocator/coverage regeneration;
-not yet accepted as the full cross-width parity oracle
+**Status:** accepted as a 24,232-frame ARM64 allocator/coverage regeneration.
+The later 2,200-frame exact oracle also resolved the ARM64 race-texture defect;
+the 24,232-frame optimized-i686 cross-width regeneration remains open.
 
 ## Why this run exists
 
@@ -119,12 +120,62 @@ corruption where i686 presents a flat surface. The i686 image itself has
 incorrect cyan/blue coloration under llvmpipe, so it is a structural oracle,
 not a retail-correct color oracle.
 
-This evidence narrows the open visual defect toward texture sampling, texture
-state, or texture-coordinate presentation. It does not support the earlier
-geometry-corruption hypothesis. The internal screenshot path is implemented
-at `platform/native_platform.c:154-167,215-218`; the renderer's textureless
-isolation switch substitutes a white texture at
-`platform/native_renderer.c:1406-1409`.
+The preserved ARM64 ASan report and the optimized i686 Release report were
+then compared directly. All eight canonical components match for all 2,200
+frames, yet a second ARM64 capture at exact frame 1,802 retains the stripes.
+The mismatch therefore exists with equal replay input and canonical game
+state.
+
+A textureless capture at exact frame 1,802 removes the stripes while retaining
+coherent road, kart, camera, and track polygons. Textured sprites and fonts
+become white blocks, as expected from the one-pixel white substitution. This
+rejects geometry as the leading cause and isolates the defect to indexed
+texture sampling/state, CLUT handling, UV presentation, or the still-unhashed
+render primitive stream. The internal screenshot path is implemented at
+`platform/native_platform.c:154-167,215-218`; the renderer's textureless
+switch is at `platform/native_renderer.c:1406-1409`.
+
+The next diagnostic added a canonical packed-vertex/draw-split trace. At frame
+1,802, pre-fix ARM64 emitted 5,991 vertices through nine flushes and 524
+splits, including 25 16-bit framebuffer-feedback splits. Exact i686 emitted
+the same 5,991 vertices in one flush and 352 splits with no 16-bit splits.
+This located the mismatch in the CPU primitive stream, before OpenGL.
+
+A conditional trap found the first invalid ARM64 page in a DrawLevel
+`POLY_GT4`: `tpage=0x67f0`. DrawLevel's native texture-word classifier cast a
+fixed-width relocated word as a host pointer. That representation is a direct
+32-bit pointer on i686 but an ADR-0001 guest reference on LP64. ARM64 therefore
+misclassified a valid mosaic reference as an inline sentinel, selected the
+wrong texture-layout bytes, and generated false 16-bit feedback pages.
+
+`game/226/226_00_DrawLevelOvr1P.c` now resolves those words through
+`CtrAssetRef_ResolveRequired`, validates their MEMPACK span, and resolves all
+three deepest mosaic source reads before access. No renderer, shader, retail
+asset, or geometry change was required.
+
+The fixed report
+`build-macos-arm64/debug/reports/20260730/ctr-133039` finalized all 2,200
+frames. All eight gameplay components still match the pre-fix report. Its
+frame-1,802 trace exactly equals i686:
+
+```text
+flush hash 4d1cbba5c0098b5c
+aggregate  76303b9b4c2ee4c2
+flushes=1 vertices=5991 splits=352
+formats=4:327,8:25,16:0,rgba:0
+```
+
+The new default-framebuffer capture shows coherent Crash Cove textures and no
+striped surface:
+
+```text
+/tmp/ctrpad-arm64-race-frame1802-fixed.png
+SHA-256 03ce067255e843fbb010687bf2390930110a8e3201d99a085f519784dae08cc4
+```
+
+ARM64, ARM64 ASan, and i686 each pass all 13 CTests after the fix. Complete
+accepted and rejected probe details are in
+`docs/history/ENGINEERING-JOURNAL.md`.
 
 The retail-derived captures remain ignored and are not committed:
 
@@ -133,6 +184,10 @@ The retail-derived captures remain ignored and are not committed:
 /tmp/ctrpad-window-race-115352.png
 /tmp/ctrpad-i686-race-frame1802-upright.png
 /tmp/ctrpad-arm64-race-frame1802.png
+/tmp/ctrpad-arm64-asan-parity-frame1802.png
+/tmp/ctrpad-arm64-race-frame1802-textureless-v3.png
+/tmp/ctrpad-arm64-rg32f-frame1801-fast.png
+/tmp/ctrpad-arm64-race-frame1802-fixed.png
 ```
 
 ## Remaining acceptance work
@@ -142,7 +197,5 @@ The retail-derived captures remain ignored and are not committed:
    match for all 24,232 frames.
 3. Replay the accepted reports unchanged in separate processes and run the
    deliberate mutation gate.
-4. Isolate the surface defect with textureless/wireframe captures and inspect
-   the shared renderer's texture-format, CLUT, and UV paths.
-5. Re-observe and record all eight golden-run coverage checks rather than
+4. Re-observe and record all eight golden-run coverage checks rather than
    inferring them solely from the inherited pad script.

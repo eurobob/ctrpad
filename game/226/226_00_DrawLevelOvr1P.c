@@ -453,22 +453,59 @@ static int DrawLevelOvr1P_IsNativeLevelSpan(uintptr_t ptr, uintptr_t size)
 
 #endif
 
-static int DrawLevelOvr1P_IsNativeLevelTexturePointer(u32 value)
+static int DrawLevelOvr1P_ResolveNativeLevelWord(u32 value, size_t accessSize, const u8 **hostPointerOut)
 {
 #ifdef CTR_NATIVE
-	// NOTE(aalhendi): Native classifies host-rebased level texture pointers at
-	// the data boundary; renderer control flow still follows retail sign tests.
-	uintptr_t ptr = (uintptr_t)value;
+	struct CtrAssetRef32 reference = {value};
+	void *hostPointer = NULL;
 
-	if (!DrawLevelOvr1P_IsNativeLevelSpan(ptr, sizeof(struct TextureLayout)))
+	if ((hostPointerOut == NULL) || (accessSize == 0) ||
+	    !CtrAssetRef_ResolveRequired(reference, accessSize, 1, &hostPointer, "DrawLevel mosaic texture word") ||
+	    !DrawLevelOvr1P_IsNativeLevelSpan((uintptr_t)hostPointer, accessSize))
 	{
 		return 0;
 	}
 
-	return DrawLevelOvr1P_IsPlausibleTextureLayout((const struct TextureLayout *)ptr);
+	*hostPointerOut = hostPointer;
+	return 1;
+#else
+	(void)value;
+	(void)accessSize;
+	(void)hostPointerOut;
+	return 0;
+#endif
+}
+
+static int DrawLevelOvr1P_IsNativeLevelTexturePointer(u32 value)
+{
+#ifdef CTR_NATIVE
+	const u8 *hostPointer = NULL;
+
+	// NOTE(aalhendi): On i686 relocated level words are native 32-bit
+	// pointers. LP64 stores fixed-width guest references instead. Resolve
+	// either representation before applying the retail pointer-shaped branch.
+	return DrawLevelOvr1P_ResolveNativeLevelWord(value, sizeof(struct TextureLayout), &hostPointer) &&
+	       DrawLevelOvr1P_IsPlausibleTextureLayout((const struct TextureLayout *)hostPointer);
 #else
 	(void)value;
 	return 0;
+#endif
+}
+
+static const u8 *DrawLevelOvr1P_ResolveNativeMosaicSource(u32 mosaicBase, u32 sourceOffset)
+{
+#ifdef CTR_NATIVE
+	const u8 *source = NULL;
+
+	if (sourceOffset > UINT32_MAX - mosaicBase ||
+	    !DrawLevelOvr1P_ResolveNativeLevelWord(mosaicBase + sourceOffset, 3u * sizeof(u32), &source))
+	{
+		return NULL;
+	}
+
+	return source;
+#else
+	return (const u8 *)(uintptr_t)(mosaicBase + sourceOffset);
 #endif
 }
 
@@ -819,7 +856,12 @@ static void DrawLevelOvr1P_PrepareDeepestMosaicUv(const struct DrawLevelOvr1PScr
 	}
 	sourceOffset += *CTR_SCRATCHPAD_PTR(u32, DRAW_LEVEL_OVR1P_MOSAIC_SOURCE_BIAS_OFFSET);
 
-	const u8 *source = (const u8 *)(uintptr_t)(mosaicBase + sourceOffset);
+	const u8 *source = DrawLevelOvr1P_ResolveNativeMosaicSource(mosaicBase, sourceOffset);
+	if (source == NULL)
+	{
+		DrawLevelOvr1P_RestoreProjectedUvScratch();
+		return;
+	}
 	u32 uv0 = DrawLevelOvr1P_ReadPackedWord(source + 0);
 	u32 uv1 = DrawLevelOvr1P_ReadPackedWord(source + 4);
 
@@ -4515,7 +4557,12 @@ static void Ovr226_800a3f74_PrepareGround4x1DeepestUv(const struct DrawLevelOvr1
 	}
 	sourceOffset += *CTR_SCRATCHPAD_PTR(u32, DRAW_LEVEL_OVR1P_MOSAIC_SOURCE_BIAS_OFFSET);
 
-	const u8 *source = (const u8 *)(uintptr_t)(mosaicBase + sourceOffset);
+	const u8 *source = DrawLevelOvr1P_ResolveNativeMosaicSource(mosaicBase, sourceOffset);
+	if (source == NULL)
+	{
+		DrawLevelOvr1P_RestoreProjectedUvScratch();
+		return;
+	}
 	u32 uv0 = DrawLevelOvr1P_ReadPackedWord(source + 0);
 	u32 uv1 = DrawLevelOvr1P_ReadPackedWord(source + 4);
 
@@ -4844,7 +4891,12 @@ static void Ovr226_800a4b54_PrepareGround4x1RenderedDeepestUv(const struct DrawL
 	}
 	sourceOffset += *CTR_SCRATCHPAD_PTR(u32, DRAW_LEVEL_OVR1P_MOSAIC_SOURCE_BIAS_OFFSET);
 
-	const u8 *source = (const u8 *)(uintptr_t)(mosaicBase + sourceOffset);
+	const u8 *source = DrawLevelOvr1P_ResolveNativeMosaicSource(mosaicBase, sourceOffset);
+	if (source == NULL)
+	{
+		DrawLevelOvr1P_RestoreProjectedUvScratch();
+		return;
+	}
 	u32 uv0 = DrawLevelOvr1P_ReadPackedWord(source + 0);
 	u32 uv1 = DrawLevelOvr1P_ReadPackedWord(source + 4);
 

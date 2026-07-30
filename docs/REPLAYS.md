@@ -146,6 +146,24 @@ portable across rebuilt binaries: callback addresses currently use image
 offsets, and unity-build function offsets can change after a small source edit.
 Never use a bypassed run as checkpoint or parity evidence.
 
+To compare CPU render commands at one exact replay frame:
+
+```sh
+build/ctr_native \
+  --replay "debug/reports/20260605/ctr-123456/input.ctrreplay" \
+  --replay-start-checkpoint 6 \
+  --render-trace-frame 1802
+```
+
+Internal builds log one hash for every `DrawAllSplits` flush and one aggregate
+hash for the requested frame. The trace includes the packed 20-byte
+`GrVertex` stream and canonical draw-split state. It deliberately replaces
+host GL texture IDs with semantic white/VRAM/override kinds and excludes host
+pointers, so matching little-endian i686 and ARM64 traces are meaningful.
+This is a read-only diagnostic: it does not change the replay, checkpoint,
+memcard, retail image, or renderer output. Use the exact producing executable
+when starting from a checkpoint.
+
 ## Parity-gate proof
 
 Internal builds expose one deliberately destructive playback-only test option:

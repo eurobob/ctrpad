@@ -32,6 +32,8 @@ extern int g_dbg_polygonSelected;
 // NOTE(aalhendi): Little-endian tag `CTRG` = CTR native GPU snapshot.
 #define NATIVE_GPU_STATE_MAGIC     0x47525443
 #define NATIVE_GPU_STATE_VERSION   1
+#define NATIVE_GPU_TRACE_FNV_OFFSET UINT64_C(14695981039346656037)
+#define NATIVE_GPU_TRACE_FNV_PRIME  UINT64_C(1099511628211)
 
 #define GET_TPAGE_BLEND(tpage)     ((BlendMode)(((tpage >> 5) & 3) + 1))
 
@@ -111,6 +113,19 @@ typedef struct
 
 global_variable NativeGpuState s_gpu;
 
+struct NativeGpuRenderTrace
+{
+	u64 aggregateHash;
+	u32 replayFrame;
+	u32 flushCount;
+	u32 vertexCount;
+	u32 splitCount;
+	u32 formatSplitCounts[4];
+	b32 active;
+};
+
+global_variable struct NativeGpuRenderTrace s_renderTrace;
+
 struct NativeGpuSnapshot
 {
 	u32 magic;
@@ -122,6 +137,150 @@ struct NativeGpuSnapshot
 	s32 psxDrawMaskSet;
 	u16 vram[VRAM_WIDTH * VRAM_HEIGHT];
 };
+
+internal u64 NativeGpu_RenderTraceHash(u64 hash, const void *data, size_t size)
+{
+	const u8 *bytes = (const u8 *)data;
+
+	while (size-- != 0)
+	{
+		hash ^= *bytes++;
+		hash *= NATIVE_GPU_TRACE_FNV_PRIME;
+	}
+
+	return hash;
+}
+
+internal u64 NativeGpu_RenderTraceHashU32(u64 hash, u32 value)
+{
+	u8 bytes[4];
+
+	bytes[0] = (u8)(value >> 0);
+	bytes[1] = (u8)(value >> 8);
+	bytes[2] = (u8)(value >> 16);
+	bytes[3] = (u8)(value >> 24);
+	return NativeGpu_RenderTraceHash(hash, bytes, sizeof(bytes));
+}
+
+internal u64 NativeGpu_RenderTraceHashRect(u64 hash, const RECT16 *rect)
+{
+	hash = NativeGpu_RenderTraceHashU32(hash, (u16)rect->x);
+	hash = NativeGpu_RenderTraceHashU32(hash, (u16)rect->y);
+	hash = NativeGpu_RenderTraceHashU32(hash, (u16)rect->w);
+	return NativeGpu_RenderTraceHashU32(hash, (u16)rect->h);
+}
+
+internal u32 NativeGpu_RenderTraceTextureKind(TextureID texture)
+{
+	if (texture == NativeRenderer_GetWhiteTexture())
+	{
+		return 0;
+	}
+	if (texture == NativeRenderer_GetVRAMTexture())
+	{
+		return 1;
+	}
+	return 2;
+}
+
+internal u64 NativeGpu_RenderTraceHashSplit(u64 hash, const GPUDrawSplit *split)
+{
+	const DRAWENV *draw = &split->drawenv;
+	const DISPENV *disp = &split->dispenv;
+
+	hash = NativeGpu_RenderTraceHashU32(hash, (u32)split->blendMode);
+	hash = NativeGpu_RenderTraceHashU32(hash, (u32)split->texFormat);
+	hash = NativeGpu_RenderTraceHashU32(hash, NativeGpu_RenderTraceTextureKind(split->textureId));
+	hash = NativeGpu_RenderTraceHashU32(hash, (u32)split->drawPrimMode);
+	hash = NativeGpu_RenderTraceHashU32(hash, split->psxTexturedSemiTrans != 0);
+	hash = NativeGpu_RenderTraceHashU32(hash, split->psxTextureOutputSTP != 0);
+	hash = NativeGpu_RenderTraceHashU32(hash, split->psxDrawMaskSet != 0);
+	hash = NativeGpu_RenderTraceHashU32(hash, split->startVertex);
+	hash = NativeGpu_RenderTraceHashU32(hash, split->numVerts);
+
+	hash = NativeGpu_RenderTraceHashRect(hash, &draw->clip);
+	hash = NativeGpu_RenderTraceHashU32(hash, (u16)draw->ofs[0]);
+	hash = NativeGpu_RenderTraceHashU32(hash, (u16)draw->ofs[1]);
+	hash = NativeGpu_RenderTraceHashRect(hash, &draw->tw);
+	hash = NativeGpu_RenderTraceHashU32(hash, draw->tpage);
+	hash = NativeGpu_RenderTraceHashU32(hash, draw->dtd);
+	hash = NativeGpu_RenderTraceHashU32(hash, draw->dfe);
+	hash = NativeGpu_RenderTraceHashU32(hash, draw->drt);
+	hash = NativeGpu_RenderTraceHashU32(hash, draw->isbg);
+	hash = NativeGpu_RenderTraceHashU32(hash, draw->r0);
+	hash = NativeGpu_RenderTraceHashU32(hash, draw->g0);
+	hash = NativeGpu_RenderTraceHashU32(hash, draw->b0);
+
+	hash = NativeGpu_RenderTraceHashRect(hash, &disp->disp);
+	hash = NativeGpu_RenderTraceHashRect(hash, &disp->screen);
+	hash = NativeGpu_RenderTraceHashU32(hash, disp->isinter);
+	hash = NativeGpu_RenderTraceHashU32(hash, disp->isrgb24);
+	return hash;
+}
+
+internal void NativeGpu_RenderTraceFlush(void)
+{
+	u64 hash;
+	u32 formatSplitCounts[4] = {0, 0, 0, 0};
+
+	if (s_renderTrace.active == 0)
+	{
+		return;
+	}
+
+	hash = NATIVE_GPU_TRACE_FNV_OFFSET;
+	hash = NativeGpu_RenderTraceHashU32(hash, s_renderTrace.flushCount);
+	hash = NativeGpu_RenderTraceHashU32(hash, (u32)s_gpu.vertexIndex);
+	hash = NativeGpu_RenderTraceHashU32(hash, (u32)s_gpu.splitIndex);
+	hash = NativeGpu_RenderTraceHash(hash, s_gpu.vertexBuffer, (size_t)s_gpu.vertexIndex * sizeof(s_gpu.vertexBuffer[0]));
+
+	for (int i = 1; i <= s_gpu.splitIndex; i++)
+	{
+		const GPUDrawSplit *split = &s_gpu.splits[i];
+		hash = NativeGpu_RenderTraceHashSplit(hash, split);
+		if ((u32)split->texFormat < 4u)
+		{
+			formatSplitCounts[split->texFormat]++;
+			s_renderTrace.formatSplitCounts[split->texFormat]++;
+		}
+	}
+
+	s_renderTrace.aggregateHash = NativeGpu_RenderTraceHashU32(s_renderTrace.aggregateHash, s_renderTrace.flushCount);
+	s_renderTrace.aggregateHash = NativeGpu_RenderTraceHashU32(s_renderTrace.aggregateHash, (u32)(hash >> 0));
+	s_renderTrace.aggregateHash = NativeGpu_RenderTraceHashU32(s_renderTrace.aggregateHash, (u32)(hash >> 32));
+	s_renderTrace.vertexCount += (u32)s_gpu.vertexIndex;
+	s_renderTrace.splitCount += (u32)s_gpu.splitIndex;
+
+	NATIVE_GPU_LOG("render-trace frame=%u flush=%u hash=%08x%08x vertices=%u splits=%u formats=4:%u,8:%u,16:%u,rgba:%u\n",
+	               s_renderTrace.replayFrame, s_renderTrace.flushCount, (u32)(hash >> 32), (u32)hash, (u32)s_gpu.vertexIndex,
+	               (u32)s_gpu.splitIndex, formatSplitCounts[TF_4_BIT], formatSplitCounts[TF_8_BIT], formatSplitCounts[TF_16_BIT],
+	               formatSplitCounts[TF_32_BIT_RGBA]);
+	s_renderTrace.flushCount++;
+}
+
+void NativeGpu_RenderTraceBegin(u32 replayFrame)
+{
+	memset(&s_renderTrace, 0, sizeof(s_renderTrace));
+	s_renderTrace.aggregateHash = NATIVE_GPU_TRACE_FNV_OFFSET;
+	s_renderTrace.replayFrame = replayFrame;
+	s_renderTrace.active = 1;
+	NATIVE_GPU_LOG("render-trace begin frame=%u vertex-size=%u\n", replayFrame, (u32)sizeof(GrVertex));
+}
+
+void NativeGpu_RenderTraceEnd(u32 replayFrame)
+{
+	if ((s_renderTrace.active == 0) || (s_renderTrace.replayFrame != replayFrame))
+	{
+		return;
+	}
+
+	NATIVE_GPU_LOG("render-trace end frame=%u hash=%08x%08x flushes=%u vertices=%u splits=%u formats=4:%u,8:%u,16:%u,rgba:%u\n",
+	               replayFrame, (u32)(s_renderTrace.aggregateHash >> 32), (u32)s_renderTrace.aggregateHash, s_renderTrace.flushCount,
+	               s_renderTrace.vertexCount, s_renderTrace.splitCount, s_renderTrace.formatSplitCounts[TF_4_BIT],
+	               s_renderTrace.formatSplitCounts[TF_8_BIT], s_renderTrace.formatSplitCounts[TF_16_BIT],
+	               s_renderTrace.formatSplitCounts[TF_32_BIT_RGBA]);
+	s_renderTrace.active = 0;
+}
 
 int NativeGpu_HasPendingSplits(void)
 {
@@ -947,6 +1106,7 @@ void DrawAllSplits()
 	// CPU-originated LoadImage, MoveImage, and fill commands are GPU-visible
 	// before the next draw batch, matching PS1 command ordering.
 	NativeRenderer_UpdateVRAM();
+	NativeGpu_RenderTraceFlush();
 #ifdef CTR_INTERNAL
 	if (g_dbg_emulatorPaused)
 	{

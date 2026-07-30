@@ -4036,3 +4036,385 @@ The evidence rejects the broad geometry-corruption diagnosis and narrows the
 open defect toward texture sampling/state, CLUT handling, or UV presentation.
 Textureless and wireframe isolation remain the next visual probes. No
 speculative renderer change was made from this comparison.
+
+### Exact eight-component parity strengthened the visual comparison
+
+The first ARM64 image above came from the full replacement producer while the
+i686 image came from its separately regenerated prefix. To remove any doubt
+about the exact game state at the captured frame, the preserved ASan ARM64
+prefix was replayed at checkpoint 6 and captured again at frame 1,802:
+
+```text
+ARM64 ASan report:
+/tmp/ctrpad-arm64-asan-v4-0Z3iyC/debug/reports/20260730/ctr-103044
+
+/tmp/ctrpad-arm64-asan-parity-frame1802.rgba
+SHA-256 36d86b3c8117bf3d9ea4c592097872e4cf28ad7db8ae812654487bc0b0c3fcc0
+
+/tmp/ctrpad-arm64-asan-parity-frame1802.png
+SHA-256 e6c2b79e1f64e04b6be963249f6b41366777fae3ba4a33610c047403199be1f4
+```
+
+`tools/compare-replay-state-components.mjs` compared that report to the
+optimized i686 Release report `ctr-161136`. Timing, RNG, drivers, world,
+allocation, root, pads, and VSync matched for all 2,200 frames. The new ARM64
+capture still contained the striped surface. This is an exact input and
+game-state visual mismatch, not a merely similar camera position. Render
+primitive bytes and host GL state are not members of the canonical gameplay
+digest, so the comparison does not yet distinguish CPU primitive conversion
+from indexed-texture sampling.
+
+### Textureless isolation proved that the race geometry is coherent
+
+Three diagnostic attempts were rejected before the useful capture:
+
+1. Enabling textureless mode at `BeginFrame(1802)` captured the preceding
+   double-buffered frame and produced the unchanged textured image.
+2. The post-run rebuilt executable did not match the preserved producer's
+   stale debugger symbol map. The retry used the loaded image address rather
+   than treating old symbol addresses as current.
+3. A breakpoint conditioned on `BeginFrame(1800)` could not fire because
+   checkpoint 6 changes replay frame 0 to frame 1,800 from inside that first
+   `BeginFrame` call, after the condition was evaluated. Only that diagnostic
+   process was stopped.
+
+The accepted probe stopped at `NativeReplayScheduler_EndFrame` for frame
+1,800, wrote `1` to `g_dbg_texturelessMode`, verified the new value in process
+memory, and captured at `EndFrame(1802)`:
+
+```text
+/tmp/ctrpad-arm64-race-frame1802-textureless-v3.rgba
+SHA-256 9a81b82657caf642e5d32819d569e03414806c5379fed091de4ab0d937cd8b2b
+
+/tmp/ctrpad-arm64-race-frame1802-textureless-v3.png
+SHA-256 3f057233cf61a4a3b0e48a45bad9db9370c2f7f5a54eeeaeb36ddc9d2681561b
+```
+
+The corrupted stripes disappear. The road, kart, camera, and track polygons
+remain coherent; textured sprites and fonts become white blocks as expected
+when the renderer substitutes its one-pixel white texture. This isolates the
+observed defect to the texture/CLUT/UV path and rejects level geometry as the
+leading cause. The raw and converted retail-derived captures remain local and
+ignored.
+
+### A higher-precision VRAM-storage probe rejected the RG8 hypothesis
+
+A disposable ARM64 build changed the renderer's two-channel VRAM attachment
+from normalized `GL_RG8` storage to `GL_RG32F`. The experiment was isolated in
+`/tmp/ctrpad-arm64-rg32f-DKSBjH`; the temporary source switch was removed after
+the result and is not part of the accepted diff.
+
+Three operational details are part of the record:
+
+1. The first run appeared stopped in an audio semaphore, later advanced, and
+   was deliberately killed because it was only a diagnostic.
+2. The first exact-frame debugger capture declared `glReadPixels` with eight
+   arguments instead of its actual seven and produced no usable image. That
+   report was rejected as incomplete at frame 1,802.
+3. The corrected readback captured frame 1,801. A later debugger `free` call
+   lacked a declared return type, but that happened after the complete buffer
+   had been read; the capture itself is valid.
+
+```text
+diagnostic producer:
+/tmp/ctrpad-arm64-rg32f-DKSBjH/ctr_native
+SHA-256 9c34ec67044856f9882bada3769818c262956d90b2c8091e09b9544a8fa3d8c0
+(temporary diagnostic only)
+
+/tmp/ctrpad-arm64-rg32f-frame1801-fast.rgba
+size 1,920,000
+SHA-256 104b0f56fee9009a7738ce88ec0d5159d802b1f341960f2f2d45314a638872be
+
+/tmp/ctrpad-arm64-rg32f-frame1801-fast.png
+SHA-256 ffabd742b571d82cabd9a92e43efe4605d9109c0a5ac38a80e847f80f41459fd
+```
+
+The striped right-side surface remained. Some flat colors changed, as expected
+when changing the attachment representation, but the defining defect did not.
+This rejects normalized RG8 precision and host-side dithering as the root
+cause and moves the investigation upstream of VRAM storage.
+
+### A canonical CPU render trace separated game state from primitive state
+
+The canonical replay digest deliberately excludes renderer output. A new
+playback-only diagnostic, `--render-trace-frame N`, therefore hashes:
+
+- the packed 20-byte `GrVertex` byte stream;
+- canonical draw-split state including texture format, blend mode, draw and
+  display environments, and vertex ranges;
+- semantic white/VRAM/override texture kinds instead of host OpenGL IDs; and
+- every `DrawAllSplits` flush plus a frame aggregate.
+
+Host pointers, OpenGL object names, and padding are excluded. The
+implementation is in `platform/native_gpu.c`,
+`include/platform/native_gpu.h`, and `platform/native_replay_scheduler.c`;
+the command is documented in `docs/REPLAYS.md`. The playback-only and invalid
+frame-value rejection paths were exercised, and the ARM64 build passed all 13
+CTests before evidence collection.
+
+The new ARM64 prefix report finalized normally:
+
+```text
+report:
+build-macos-arm64/debug/reports/20260730/ctr-124322
+
+producer copy:
+/tmp/ctrpad-arm64-render-trace-producer
+SHA-256 bac8f3ba77b81f834f8546e114718bd2cdf3a2d9b80362cbf80206ec3d1825f0
+
+input.ctrreplay:
+size 968,148
+SHA-256 d96ae5967f974d28bfbd2d536f4356c8c25a77f164a7d33747ecf2c618c013fc
+
+state.ctrstates:
+size 35,476,672
+SHA-256 ba1a951e836fbe6462128d9184f6bbe358ac8055fb589f09f2c7bd0a728b2bdf
+
+metadata.txt:
+SHA-256 5520c5f1a545bbadb0a2b4e58addb7107a84577aa0a147cb0520bd58856c0f31
+
+ctr-native.log:
+SHA-256 8ed6bd4b2627e6b0a01fb59bc8cc881f469a1daebe53b7dddd075dec0306ba4a
+```
+
+All eight replay components match the earlier ASan prefix for all 2,200
+frames. Its pre-fix frame-1,802 render trace was:
+
+```text
+flush 0  63a7380632d5638c  vertices=2220 splits=65
+flush 1  93521c31d474278b  vertices=150  splits=22
+flush 2  9118e5e226fea243  vertices=168  splits=27
+flush 3  903548b85ad95a70  vertices=360  splits=62
+flush 4  1fcbed182bb64484  vertices=66   splits=11
+flush 5  9f903af4ae46ef5e  vertices=108  splits=18
+flush 6  30edbc4ccf8668dc  vertices=264  splits=38
+flush 7  df8bf96380d5d5b7  vertices=30   splits=6
+flush 8  ccaec33437cec6f1  vertices=2625 splits=275
+
+aggregate 9df50898e88fb638
+flushes=9 vertices=5991 splits=524
+formats=4:462,8:37,16:25,rgba:0
+
+log:
+/tmp/ctrpad-arm64-render-trace-frame1802.log
+SHA-256 f5a4588daf2d33cd4dd34b5c35a2b65871478992a8480cdbcc56c8544631fabb
+```
+
+The same total vertex count as i686 suggested coherent geometry, while nine
+flushes and 25 16-bit splits implicated erroneous framebuffer-feedback
+classification.
+
+### The optimized i686 trace supplied the decisive oracle
+
+The diagnostic i686 build used a clone of an already configured disposable
+cache at `/tmp/ctrpad-i686-render-cache-RfAU00`; the immutable historical
+baseline was never built into or modified. Starting a second clean configure
+was stopped when redundant SDL feature probes under emulation proved
+unnecessary. The cloned cache then built successfully and passed all 13
+CTests. Its final wrapper command returned nonzero only because a post-build
+`chown` tried to change the read-only mounted retail image; compilation and
+tests had already succeeded.
+
+```text
+/tmp/ctrpad-i686-render-cache-RfAU00/ctr_native
+ELF 32-bit Intel 80386, debug_info, not stripped
+size 9,198,724
+SHA-256 1ac34121e05b5615bf011530b0f9350a465103bb645f4b10ea6f536fc585cef1
+
+report:
+/tmp/ctrpad-i686-render-cache-RfAU00/debug/reports/20260730/ctr-175553
+
+input.ctrreplay:
+size 968,148
+SHA-256 e2f5e6124d8308e78a4484940aea7e1f796390a45f892e66500954981243dc79
+
+state.ctrstates:
+size 35,341,376
+SHA-256 52af48c4fd48e21a87057e19e6fbd6821ab344babc139263bd3e74c576ddb2b0
+
+metadata.txt:
+SHA-256 acfcdb36aabfdda83f621766ca053470e85406baa667ad6c594440ffd5fe0f59
+
+ctr-native.log:
+SHA-256 f85cba408834079b39885a72999315f95aadd90527c1646d8db916f7ecfe7a28
+```
+
+The first Xvfb readiness check used absent `xdpyinfo`, so it was rejected
+before game initialization. For the later exact trace, the original local
+image tag had been removed even though the configured container remained.
+Two launches that requested the missing tag or forced the committed amd64
+container snapshot to `linux/386` were rejected before game start. Reusing a
+local snapshot without the incorrect platform override then succeeded.
+
+Timing, RNG, drivers, world, allocation, root, pads, and VSync match ARM64 for
+all 2,200 frames. At exact frame 1,802, i686 produced:
+
+```text
+flush 0  4d1cbba5c0098b5c  vertices=5991 splits=352
+aggregate 76303b9b4c2ee4c2
+flushes=1 vertices=5991 splits=352
+formats=4:327,8:25,16:0,rgba:0
+```
+
+This proves the visible mismatch was already present in the ARM64 CPU render
+stream. The Apple OpenGL implementation and retail texture bytes were not the
+root cause.
+
+### Framebuffer-copy bounds were correct but their activation was not
+
+Two initial LLDB breakpoint-command constructions retained only `continue`.
+They counted nine `NativeRenderer_StoreFrameBuffer` calls but printed no
+arguments; the second redundant run was stopped early. The corrected
+multi-command breakpoint completed the exact replay:
+
+```text
+/tmp/ctrpad-arm64-frame1802-feedback-regions-v3.log
+size 13,945
+SHA-256 6888987a139aec78ec35767f20ac9dfb77541b11c188e87c04e71a78eef849a3
+```
+
+All nine calls copied `(x=0,y=296,w=512,h=216)`. Their active tpage sequence
+was `26608,26608,26608,32695,26608,32695,32695,32695,111`. The copy rectangle
+was internally consistent. The impossible high pages `0x67f0` and `0x7fb7`,
+not a partial framebuffer rectangle, triggered the extra barriers.
+
+An exact conditional trap on the first 16-bit classification stopped at:
+
+```text
+NativeGpu_TPageOverlapsActiveDrawPage(tpage=26608)
+ProcessGouraudPoly
+POLY_GT4 packet=0x00000001004eb334
+packet storage=s_mempackMemory+891516
+```
+
+The primitive layout static assertions pass on both widths. The invalid page
+was therefore produced by DrawLevel, not misread by the generic GPU parser.
+
+### Root cause: an LP64 guest reference was treated as a host pointer
+
+DrawLevel reads a level mosaic texture word from texture-layout data. After
+relocation:
+
+- i686 stores a native 32-bit host pointer in that word; and
+- LP64 stores the ADR-0001 eight-bit-region/24-bit-offset guest reference.
+
+`DrawLevelOvr1P_IsNativeLevelTexturePointer` cast the fixed-width word through
+`uintptr_t` and checked whether that numeric value lay inside MEMPACK. That is
+valid for i686 and necessarily false for LP64. ARM64 consequently treated a
+valid mosaic reference as a positive inline sentinel, advanced to the wrong
+texture-layout record, skipped the required deepest mosaic reload, and copied
+unrelated UV bytes into `POLY_GT4.tpage`. Values such as `0x67f0` then looked
+like 16-bit framebuffer texture pages to the GPU batching layer, causing the
+extra feedback copies and visible stripes.
+
+The accepted correction in
+`game/226/226_00_DrawLevelOvr1P.c`:
+
+- resolves the fixed-width word through `CtrAssetRef_ResolveRequired`, which
+  preserves i686 direct-pointer behavior and decodes LP64 guest references;
+- validates the resolved byte range against the active level MEMPACK span;
+- applies the existing plausible-texture check to the resolved host address;
+  and
+- resolves and bounds-checks all three deepest mosaic source reads instead of
+  casting `mosaicBase + sourceOffset` directly.
+
+No retail bytes, shader code, texture formats, feedback heuristics, or
+geometry code were changed.
+
+### Fixed ARM64 regeneration, trace, and presented-frame evidence
+
+The first fixed regeneration command used a relative seed path. Because the
+application changes its working directory to the executable base, that path
+resolved under `build-macos-arm64` twice. It failed before frame zero and
+created no valid report. The accepted retry used the absolute seed path and
+regenerated from frame zero rather than bypassing the old executable
+fingerprint or restoring callbacks from an incompatible unity-build
+checkpoint.
+
+```text
+report:
+build-macos-arm64/debug/reports/20260730/ctr-133039
+
+producer copy:
+build-macos-arm64/ctr_native-133039-producer
+SHA-256 8b2ddfe4ef5f0c0df23dc26ea2d53da38ec1610895c6a828f5ff079af2eb3b7d
+
+input.ctrreplay:
+size 968,148
+SHA-256 57a471f4e71823b3942f5483687a586fb0f838d78eafe647cf539936e98371e7
+
+state.ctrstates:
+size 35,476,672
+SHA-256 96d4898a3a59d5267244a4eac6e7e1a7f4f1c512fdafecd9e730277e72929f2e
+
+metadata.txt:
+size 1,043
+SHA-256 d3384fee3e0c2f8bec7340cb6e4c9b0ddbac9e79dc99d5befa14ff2375caac4a
+
+ctr-native.log:
+size 2,116
+SHA-256 1fe3b7d1b1effb245bcfe5652f6cf74ba06fb71585e66dfc2f879e95c5f264a1
+```
+
+The report finalized 2,200 frames with eight checkpoints. All eight canonical
+components match the pre-fix report for every frame, proving the visual fix
+does not alter gameplay timing or state.
+
+The fixed ARM64 render trace now matches the i686 trace exactly:
+
+```text
+flush 0  4d1cbba5c0098b5c  vertices=5991 splits=352
+aggregate 76303b9b4c2ee4c2
+flushes=1 vertices=5991 splits=352
+formats=4:327,8:25,16:0,rgba:0
+```
+
+Presented-frame capture had two rejected debugger attempts after stopping at
+the correct frame:
+
+1. `Platform_TakeScreenshot` had been inlined away in the optimized unity
+   build and could not be named by LLDB.
+2. The first direct-readback command passed the literal text `\u0024capture`
+   instead of LLDB's `$capture` persistent variable, so allocation never ran.
+
+The corrected seven-argument `glad_glReadPixels` call wrote the full default
+framebuffer and the replay then exited normally:
+
+```text
+/tmp/ctrpad-arm64-race-frame1802-fixed.rgba
+size 1,920,000
+SHA-256 b11f5585b3e8414db476b39ef544559b8ef1931f685a54f167e3e9da042d7fc3
+
+/tmp/ctrpad-arm64-race-frame1802-fixed.png
+800 x 600 RGBA, vertically corrected
+SHA-256 03ce067255e843fbb010687bf2390930110a8e3201d99a085f519784dae08cc4
+```
+
+Visual inspection shows coherent Crash Cove road and dirt textures, starting
+grid checker pattern, sky, karts, exhaust, and `ARCADE`/`CRASH COVE` text.
+The high-frequency striped surface is gone. The retail-derived capture remains
+local and ignored.
+
+Post-fix regression results:
+
+```text
+macOS ARM64 internal: 13/13 CTests
+macOS ARM64 ASan:     13/13 CTests
+Linux i686 internal:  13/13 CTests
+git diff --check:     clean
+```
+
+During the final pre-publication rerun, invoking `ctest --test-dir
+build-linux-i686-m3` directly from macOS was rejected as an invalid test
+environment: that CMake cache was configured inside the i686 container and
+records its binary directory as `/out`. It could not create
+`/out/Testing/Temporary` on the host. Running `ctest --test-dir /out
+--output-on-failure` inside the still-active `ctrpad-i686-debug` container
+produced the accepted 13/13 result above.
+
+The protected historical i686 binary remains unchanged:
+
+```text
+build-linux-i686-baseline/ctr_native
+SHA-256 afe7b3d264bd2674192e71485037842ab329d1eca9c0c34ca50da5d4487c76a7
+```

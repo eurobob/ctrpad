@@ -6,6 +6,7 @@
 #include "platform/native_audio.h"
 #include "platform/native_checkpoint.h"
 #include "platform/native_checkpoint_file.h"
+#include "platform/native_gpu.h"
 #include "platform/native_input.h"
 #include "platform/native_log.h"
 #include "platform/native_memcard.h"
@@ -129,6 +130,8 @@ global_variable u32 s_checkpointIndex;
 global_variable s32 s_checkpointWriterOpen;
 global_variable s32 s_restoreBootstrapCheckpoint;
 global_variable u32 s_restoreCheckpointIndex;
+global_variable s32 s_renderTraceEnabled;
+global_variable u32 s_renderTraceFrame;
 global_variable s32 s_frameTimingConsumed;
 global_variable u32 s_frameVBlankTotal;
 global_variable u32 s_frameVBlankPacketCount;
@@ -2241,16 +2244,19 @@ int NativeReplayScheduler_ConfigureFromArgs(int argc, char **argv)
 	const char *recordFromReplayPath = NativeReplayScheduler_ArgValue(argc, argv, "--record-from-replay");
 	const char *testPerturbFrameText = NativeReplayScheduler_ArgValue(argc, argv, "--replay-test-perturb-driver-x");
 	const char *startCheckpointText = NativeReplayScheduler_ArgValue(argc, argv, "--replay-start-checkpoint");
+	const char *renderTraceFrameText = NativeReplayScheduler_ArgValue(argc, argv, "--render-trace-frame");
 	const s32 recordReport = NativeReplayScheduler_ArgPresent(argc, argv, "--record");
 	const s32 recordFromReplay = NativeReplayScheduler_ArgPresent(argc, argv, "--record-from-replay");
 	const s32 playback = NativeReplayScheduler_ArgPresent(argc, argv, "--replay");
 	const s32 bypassHeaderIdentity = NativeReplayScheduler_ArgPresent(argc, argv, "--replay-bypass-header");
 	const s32 testPerturb = NativeReplayScheduler_ArgPresent(argc, argv, "--replay-test-perturb-driver-x");
 	const s32 startCheckpoint = NativeReplayScheduler_ArgPresent(argc, argv, "--replay-start-checkpoint");
+	const s32 renderTrace = NativeReplayScheduler_ArgPresent(argc, argv, "--render-trace-frame");
 	s32 toggle = NativeReplayScheduler_ArgPresent(argc, argv, "--toggle");
 	s32 detailed = NativeReplayScheduler_ArgPresent(argc, argv, "--detailed");
 	u32 testPerturbFrame = 0;
 	u32 startCheckpointIndex = 0;
+	u32 renderTraceFrame = 0;
 
 	if (((recordReport != 0) || (recordFromReplay != 0) || (playback != 0)) && (s_executableFingerprintReady == 0))
 	{
@@ -2276,6 +2282,11 @@ int NativeReplayScheduler_ConfigureFromArgs(int argc, char **argv)
 	if (NativeReplayScheduler_ArgMissingValue(argc, argv, "--replay-start-checkpoint"))
 	{
 		Platform_Log("[CTR Replay] missing --replay-start-checkpoint value\n");
+		return 1;
+	}
+	if (NativeReplayScheduler_ArgMissingValue(argc, argv, "--render-trace-frame"))
+	{
+		Platform_Log("[CTR Replay] missing --render-trace-frame value\n");
 		return 1;
 	}
 
@@ -2309,6 +2320,11 @@ int NativeReplayScheduler_ConfigureFromArgs(int argc, char **argv)
 		Platform_Log("[CTR Replay] --replay-start-checkpoint only applies to --replay\n");
 		return 1;
 	}
+	if ((renderTrace != 0) && (playback == 0))
+	{
+		Platform_Log("[CTR Replay] --render-trace-frame only applies to --replay\n");
+		return 1;
+	}
 	if ((testPerturb != 0) && !NativeReplayScheduler_ParseU32(testPerturbFrameText, &testPerturbFrame))
 	{
 		Platform_Log("[CTR Replay] invalid --replay-test-perturb-driver-x frame: %s\n",
@@ -2318,6 +2334,11 @@ int NativeReplayScheduler_ConfigureFromArgs(int argc, char **argv)
 	if ((startCheckpoint != 0) && !NativeReplayScheduler_ParseU32(startCheckpointText, &startCheckpointIndex))
 	{
 		Platform_Log("[CTR Replay] invalid --replay-start-checkpoint value: %s\n", startCheckpointText != NULL ? startCheckpointText : "");
+		return 1;
+	}
+	if ((renderTrace != 0) && !NativeReplayScheduler_ParseU32(renderTraceFrameText, &renderTraceFrame))
+	{
+		Platform_Log("[CTR Replay] invalid --render-trace-frame value: %s\n", renderTraceFrameText != NULL ? renderTraceFrameText : "");
 		return 1;
 	}
 
@@ -2334,6 +2355,8 @@ int NativeReplayScheduler_ConfigureFromArgs(int argc, char **argv)
 	s_reportManualStart = 0;
 	s_testPerturbEnabled = testPerturb;
 	s_testPerturbFrame = testPerturbFrame;
+	s_renderTraceEnabled = renderTrace;
+	s_renderTraceFrame = renderTraceFrame;
 	s_checkpointPolicy = (recordReport != 0) ? NATIVE_REPLAY_CHECKPOINT_POLICY_BOOTSTRAP_ONLY : NATIVE_REPLAY_CHECKPOINT_POLICY_ROLLING;
 	if ((detailed != 0) || (recordFromReplay != 0))
 	{
@@ -2545,6 +2568,10 @@ int NativeReplayScheduler_BeginFrame(const struct NativeReplaySchedulerFrameInfo
 		s_frameTimingConsumed = 0;
 		NativeReplayScheduler_BeginPlaybackFrameVSync(s_header.version, &s_pendingRecord);
 		s_beginOpen = 1;
+		if ((s_renderTraceEnabled != 0) && (s_replayFrame == s_renderTraceFrame))
+		{
+			NativeGpu_RenderTraceBegin(s_replayFrame);
+		}
 	}
 
 	return 0;
@@ -2808,6 +2835,10 @@ int NativeReplayScheduler_EndFrame(const struct NativeReplaySchedulerFrameInfo *
 
 	if (s_mode == NATIVE_REPLAY_MODE_PLAYBACK)
 	{
+		if ((s_renderTraceEnabled != 0) && (s_replayFrame == s_renderTraceFrame))
+		{
+			NativeGpu_RenderTraceEnd(s_replayFrame);
+		}
 		if (!NativeReplayScheduler_FrameInfoMatches(&s_pendingRecord.endInfo, info) || !NativeReplayScheduler_VSyncInfoMatches(&s_pendingRecord) ||
 		    (s_pendingRecord.padChecksum != livePadChecksum))
 		{
