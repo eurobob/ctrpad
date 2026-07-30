@@ -4568,3 +4568,67 @@ unfinished. Commit `53ab70e96` is present on `origin/codex/arm64-apple`, and
 the branch is the head of the open draft PR in
 `chrissotraidis/ctrpad#1`; the default `main` view therefore does not yet show
 these implementation files.
+
+### Live parity, visual, and publication checkpoint at 14:47 CDT
+
+The worktree and remote implementation branch both identified commit
+`5f6d3ca2d4b5775afcbdfe105924f34c69bacb30`. A direct GitHub query confirmed
+that `chrissotraidis/ctrpad#1` remained open and draft with
+`codex/arm64-apple` at that exact head, while `main` remained at
+`95417c723518407d6bfe3c81a37606294963efe2`. Consequently, GitHub's default
+branch view still did not show the implementation even though it was backed
+up in the draft pull request. No merge was attempted while parity acceptance
+remained incomplete.
+
+At this checkpoint the current-source i686 recording contained 6,384 complete
+frames. The prefix comparator required all eight available components and
+reported zero mismatches:
+
+```text
+timing, RNG, drivers, world, allocation, root: equal=6384 mismatched=0
+pads, VSync:                                  equal=6384 mismatched=0
+```
+
+Additional screenshots were inspected rather than accepted automatically:
+
+```text
+frame 4200:
+/tmp/ctrpad-i686-full-v4-current-cbRPWn/visual-evidence/frame-4200-upright.png
+SHA-256 59f7609ec09070c25280d38b04ae949abc227925b2fabaa42f0ae7cc4639be82
+active Crash Cove race; coherent kart, HUD, start gantry, road, and minimap
+
+frame 4800:
+/tmp/ctrpad-i686-full-v4-current-cbRPWn/visual-evidence/frame-4800-upright.png
+SHA-256 f75f4f58d41b1dce16c344d92c739b3c1f847e9ee79e9081c0029161120be266
+rejected: black transition/buffer capture
+
+frame 5400:
+/tmp/ctrpad-i686-full-v4-current-cbRPWn/visual-evidence/frame-5400-upright.png
+SHA-256 250cbf6979b82678922967ee7c9c73109fab5d0601b87a869a50afbcf62b95be
+active Crash Cove race; coherent kart, HUD, road, walls, scenery, and minimap
+
+frame 6000:
+/tmp/ctrpad-i686-full-v4-current-cbRPWn/visual-evidence/frame-6000-upright.png
+SHA-256 f75f4f58d41b1dce16c344d92c739b3c1f847e9ee79e9081c0029161120be266
+rejected: black transition/buffer capture
+```
+
+The process remained runnable and CPU-active while the file advanced. The
+repeated black image hash therefore represented a presented-buffer capture
+boundary, not a replay stall or claimed texture regression.
+
+A disposable performance probe tested Mesa's `GALLIUM_DRIVER=noop` against a
+clone of the historical i686 report. The bundled Mesa library exposes the
+no-op Gallium symbol, but the probe failed during platform initialization:
+
+```text
+glx: failed to create drisw screen
+X Error of failed request: BadValue
+Minor opcode: X_GLXCreateContext
+```
+
+This path was rejected before replay and cannot replace the accepted llvmpipe
+renderer. The 363 MiB disposable clone and its path marker were moved to the
+macOS Trash after the failure; they are recoverable until the Trash is
+emptied. The live report, protected baseline, source tree, and retail image
+were not modified by the probe.
