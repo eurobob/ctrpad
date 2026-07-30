@@ -5014,3 +5014,164 @@ acceptance sequence. It remains draft and unmerged. This preserves the
 distinction the user called out: the implementation is backed up on GitHub,
 but GitHub's default `main` branch still shows only the earlier merged
 foundation/viability work.
+
+## 2026-07-30 — Corrected full ARM64 report and explicit GitHub target audit
+
+### Clean committed producers
+
+Commit `55d3b71c6da56a5fdd3e7e7f206c6673061e96e6`
+(`docs: record checkpoint publication`) was used to rebuild both corrected
+producers from a clean source state. Their embedded build IDs therefore name
+the same source commit:
+
+```text
+macOS ARM64:
+  build-macos-arm64/ctr_native-corrected-full-producer-55d3b71c6da5
+  CTR Native 0.1.0-beta.7.1 (55d3b71c6da5)
+  SHA-256 49449fd9313a8a3414617058873dcd3a3f07401af770476b4468b8caa107f844
+  CTest 14/14
+
+Linux i686:
+  /tmp/ctrpad-i686-vehlap-8IzCKm/ctr_native-corrected-full-producer-55d3b71c6da5
+  CTR Native 0.1.0-beta.7.1 (55d3b71c6da5)
+  ELF 32-bit LSB PIE, Intel 80386
+  GNU Build ID 919868b2b65d04c4d3508eeca72e1cbe8cc33cdf
+  SHA-256 e07be52d72e6a2f323587d9302467be366401485cecd29d86ae54846f973528c
+  CTest 14/14
+```
+
+The corrected i686 producer is deliberately idle until rejected report
+`ctr-190458` releases the QEMU/llvmpipe resources. Running both full rendering
+jobs concurrently would make the diagnostic completion slower and would
+weaken timing observations without adding parity evidence.
+
+### Corrected ARM64 full report
+
+The clean ARM64 producer replayed the original 24,232-frame input into:
+
+```text
+build-macos-arm64/debug/reports/20260730/ctr-170507
+```
+
+It finalized normally with replay version 4, 24,232 frame records, and 81
+rolling checkpoints. It reached the end of the scripted race/save/load
+sequence and logged both the successful powerslide event and replay
+completion.
+
+```text
+input.ctrreplay
+  size 10662228
+  SHA-256 2c5d9b99a9f33854de8cce4a3cf19c7d5571183883d17115d7bf0379c2accfab
+state.ctrstates
+  size 359201012
+  SHA-256 cbac56813503cd2ffb9e5c514fe33dcacb3d0eafc5c7ec6da666d5f275ba14c8
+metadata.txt
+  size 1040
+  SHA-256 63c6a67e3d21543dccdc91a9d4f1afcb76240307f14a4b630db293c01572808e
+ctr-native.log
+  size 8336
+  SHA-256 ca862cdca66e62213a125bb24272cedacc836ac47bfcbbb5af2d2a2eee93dfc5
+memcard.recording/slot0/BASCUS-94426-SLOTS
+  size 6016
+  SHA-256 6a01b0f5562ed7a279d8f8e51e3b1874ac39a6120f55db4fe3873288950619a3
+```
+
+Comparing this corrected report with the superseded pre-guard ARM64 report
+shows that input scheduling stayed identical while state descended from the
+corrected AI result:
+
+```text
+timing:      24232 equal, 0 mismatch
+rng:         24232 equal, 0 mismatch
+pads:        24232 equal, 0 mismatch
+vsync:       24232 equal, 0 mismatch
+drivers:     19987 equal, 4245 mismatch
+root:        19987 equal, 4245 mismatch
+world:       24034 equal, 198 mismatch
+allocation:  24030 equal, 202 mismatch
+
+drivers/root mismatch ranges:
+  6780-7011
+  9825-13837
+world mismatch range:
+  6814-7011
+allocation mismatch range:
+  6810-7011
+```
+
+These are expected before/after-fix differences, not the cross-architecture
+acceptance comparison. The next optimized-i686 report must match the
+corrected ARM64 report on all eight components for all 24,232 frames.
+
+Two independent unchanged ARM64 playback processes were then scheduled
+sequentially against `ctr-170507`. At the time of this entry, attempt 1 was
+active, advancing at the expected approximately 30 game frames per second,
+and had produced no divergence. Their final status, log hashes, host-address
+samples, and mutation result will be added after both processes finish.
+
+### User-visible rendering at the apparent pause
+
+The rejected i686 diagnostic recording remained compute-bound rather than
+stuck. Its metadata advanced to frame 22,800 while the QEMU/llvmpipe process
+continued using multiple CPU cores. An external X11 capture at the replay's
+name-entry segment provides later visual evidence:
+
+```text
+/tmp/ctrpad-i686-full-v4-current-cbRPWn/targeted-visual-evidence/
+  target-22380-captured-22380.png
+SHA-256:
+71cbc6388b973eea21d62842675d60b5201e292a9c908091413181a2bfd477f2
+```
+
+The presented window contains the coherent `PLEASE ENTER YOUR NAME` screen,
+letter/number grid, Save/Cancel controls, character and kart background, and
+loaded textures. Together with the earlier frame-11,400 Crash Cove capture,
+this rules out a black-screen or frozen-renderer interpretation. The run
+remains rejected for deterministic state parity and is being allowed to
+finish only for its complete failure and coverage map.
+
+### Explicit fork, branch, PR, and default-branch audit
+
+The user correctly observed that the implementation was not visible in the
+GitHub default branch. A new read-only audit separated branch backup from
+merge state:
+
+```text
+origin:
+  https://github.com/chrissotraidis/ctrpad.git
+upstream:
+  https://github.com/CTR-tools/ctr-native.git
+
+local HEAD:
+  55d3b71c6da56a5fdd3e7e7f206c6673061e96e6
+origin/codex/arm64-apple:
+  55d3b71c6da56a5fdd3e7e7f206c6673061e96e6
+GitHub fork branch API:
+  55d3b71c6da56a5fdd3e7e7f206c6673061e96e6
+
+origin/main:
+  95417c723518407d6bfe3c81a37606294963efe2
+
+fork PR:
+  https://github.com/chrissotraidis/ctrpad/pull/1
+  state OPEN
+  draft true
+  base main
+  head codex/arm64-apple
+  head OID 55d3b71c6da56a5fdd3e7e7f206c6673061e96e6
+```
+
+An initial unqualified `gh pr view 1` resolved PR number 1 against the
+configured upstream repository and displayed the unrelated closed
+`CTR-tools/ctr-native#1`. No write followed that ambiguous lookup. Repeating
+the query with `--repo chrissotraidis/ctrpad`, then verifying the branch with
+both `git ls-remote origin` and the GitHub branch API, established the values
+above.
+
+Therefore:
+
+- the implementation and documentation are backed up on the fork branch;
+- the draft PR points to that exact branch commit;
+- `main` intentionally remains unchanged;
+- nothing was merged or pushed to upstream; and
+- any future PR command must name `--repo chrissotraidis/ctrpad` explicitly.

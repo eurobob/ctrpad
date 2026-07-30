@@ -513,6 +513,12 @@ Result so far:
   llvmpipe color skew, so the process was not a black-screen stall. The full
   byte-, field-, debugger-, failure-, and visual-evidence chain is recorded in
   `docs/history/ENGINEERING-JOURNAL.md`.
+- Clean committed ARM64 producer `55d3b71c6da5` finalized corrected report
+  `ctr-170507` with all 24,232 frame records, 81 checkpoints, the scripted
+  powerslide, and persisted 6,016-byte save. Two independent unchanged ARM64
+  playback processes and the new full optimized-i686 recording are the active
+  acceptance gates. The exact producer/report hashes and GitHub branch audit
+  are recorded in `docs/history/ENGINEERING-JOURNAL.md`.
 - Red-beaker rain no longer reads per-player MVP translations out of widened
   instance function/thread pointers. Named draw-record fields preserve the
   retail depth/LOD byte alias, and a four-player cross-width test covers the
@@ -525,8 +531,8 @@ Work:
 - Validate audio, desktop renderer, keyboard, MFi/Bluetooth controller,
   memcards, replays, savestates, XA audio, and STR video.
 - Run sanitizers and the full parity gate under Apple Clang.
-- Regenerate the full ARM64 and optimized-i686 version-4 reports after the
-  restart-node bounds correction; the old reports are diagnostic inputs, not
+- Regenerate the full optimized-i686 version-4 report from corrected ARM64
+  report `ctr-170507`; all pre-correction reports are diagnostic inputs, not
   acceptance artifacts.
 - Measure frame cadence against the retail 30 Hz logic / approximately
   59.817 Hz VBlank model.

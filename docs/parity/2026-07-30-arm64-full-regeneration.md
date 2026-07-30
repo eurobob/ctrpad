@@ -264,11 +264,15 @@ no result from it is acceptance evidence.
 
 ## Remaining acceptance work
 
-1. Generate a new full ARM64 version-4 report with the restart-node correction.
-2. Run optimized i686 regeneration from that corrected ARM64 input.
-3. Require timing, RNG, drivers, world, allocation, root, pads, and VSync to
+Corrected committed ARM64 producer `55d3b71c6da5` subsequently finalized
+report `build-macos-arm64/debug/reports/20260730/ctr-170507` with all 24,232
+frames and 81 checkpoints. Its producer and report hashes are recorded in
+`docs/history/ENGINEERING-JOURNAL.md`.
+
+1. Run optimized i686 regeneration from corrected ARM64 input `ctr-170507`.
+2. Require timing, RNG, drivers, world, allocation, root, pads, and VSync to
    match for all 24,232 frames.
-4. Replay the accepted reports unchanged in separate processes and run the
+3. Replay the accepted reports unchanged in separate processes and run the
    deliberate mutation gate.
-5. Re-observe and record all eight golden-run coverage checks rather than
+4. Re-observe and record all eight golden-run coverage checks rather than
    inferring them solely from the inherited pad script.
