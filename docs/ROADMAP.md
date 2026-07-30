@@ -348,9 +348,9 @@ Acceptance:
 
 ### M6 — Correct macOS ARM64 desktop build
 
-**Status:** in progress; native configure/build/CTest and a 2,200-frame
-intro-to-race coverage segment pass, but parity, complete play, save, and
-visual acceptance remain open
+**Status:** in progress; native configure/build/CTest, exact 2,200-frame
+gameplay/render parity, and a corrected race capture pass. Full 24,232-frame
+parity, complete play, save, and broad visual acceptance remain open
 
 Result so far:
 
@@ -476,12 +476,21 @@ Result so far:
   i686. Actual multiplayer end-of-race/VS execution remains unverified.
 - The level render-list walkers no longer write pointer heads through retail
   `slot * 8 + 4` / `0x28` offsets. They select named host-width fields, and a
-  media-free test covers all six heads on i686 and ARM64. Frame-matched
-  ARM64/i686 captures at replay frame 1,802 now show matching camera, kart,
-  and polygon placement, but differing surface presentation. ARM64 has
-  high-frequency texture stripes while i686/llvmpipe is flat and
-  incorrectly colorized. Geometry relocation is no longer the leading
-  visual hypothesis; texture/CLUT/UV presentation remains open.
+  media-free test covers all six heads on i686 and ARM64.
+- The frame-1,802 striped race surface was traced above OpenGL to DrawLevel's
+  LP64 texture-word classifier. It treated an ADR-0001 guest reference as a
+  host pointer, advanced to the wrong texture record, and emitted false
+  16-bit framebuffer pages. Resolving and bounding the mosaic reference
+  restores the exact i686 CPU render trace: one flush, 5,991 vertices, 352
+  splits, and zero 16-bit splits. The corrected ARM64 capture has coherent
+  Crash Cove road, dirt, grid, kart, sky, and HUD textures. Exact evidence is
+  in `docs/parity/2026-07-30-arm64-full-regeneration.md`.
+- A current-source optimized i686 full regeneration from the accepted ARM64
+  version-4 seed is running as report `ctr-190458`. Its first 3,211 frames
+  match timing, RNG, drivers, world, allocation, root, pads, and VSync
+  exactly. This is an in-flight prefix, not full-run acceptance; build,
+  rejection, screenshot, and verifier details are recorded in
+  `docs/history/ENGINEERING-JOURNAL.md`.
 - Red-beaker rain no longer reads per-player MVP translations out of widened
   instance function/thread pointers. Named draw-record fields preserve the
   retail depth/LOD byte alias, and a four-player cross-width test covers the

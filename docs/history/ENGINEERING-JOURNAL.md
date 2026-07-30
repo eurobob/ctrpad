@@ -4418,3 +4418,153 @@ The protected historical i686 binary remains unchanged:
 build-linux-i686-baseline/ctr_native
 SHA-256 afe7b3d264bd2674192e71485037842ab329d1eca9c0c34ca50da5d4487c76a7
 ```
+
+## 2026-07-30 — Current-source full i686 version-4 regeneration launched
+
+The next parity stage uses the finalized 24,232-frame ARM64 version-4 report
+as the sole pad and complete-VSync seed. This entry is an in-progress
+publication checkpoint, not acceptance of the unfinished i686 report.
+
+### Exact inputs and disposable build boundary
+
+```text
+source commit:
+53ab70e966b262b42c3f0c00b0c5748405622ad9
+
+ARM64 seed:
+build-macos-arm64/debug/reports/20260730/ctr-115352/input.ctrreplay
+size 10,662,228
+SHA-256 bf022938a8580e91fa06045f0cabb6b58a67fb7cc16bbd4909601b7e1ce93b86
+
+user-owned NTSC-U BIN:
+ref/CTR/CTR - Crash Team Racing (USA).bin
+size 605,698,800
+SHA-256 f780bf2331476aabfc00772fa758b12dd95ebfbc907968132cbd3cdd4e2c07c0
+
+disposable output:
+/tmp/ctrpad-i686-full-v4-current-cbRPWn
+```
+
+The disposable output began as a copy of the previously configured Release
+cache at `/tmp/ctrpad-i686-release-v4-QkBKSJ`. A clean build removed all 261
+objects before rebuilding. The protected
+`build-linux-i686-baseline/ctr_native` was neither mounted as output nor
+modified.
+
+Three pre-launch results were explicitly rejected:
+
+1. Executing the ELF32 producer directly from macOS returned
+   `exec format error`; only the container invocation is meaningful.
+2. Docker Desktop exposed the read-only `/src` mount root as UID 0 even
+   though `.git` remained UID 502. Git rejected the worktree as dubious, so
+   CMake labeled the otherwise passing build `unknown-dirty`. That executable,
+   SHA-256
+   `79b173a3ee81e8427642cc8d1224d50cf44329608c27b82ab27947a384f2982c`,
+   was not used.
+3. The first negative verifier wrapper tried to assign zsh's read-only
+   `status` parameter after correctly finding the missing build manifest.
+   The wrapper itself therefore failed and was replaced with a
+   task-specific variable; it did not launch the game.
+
+The accepted reconfigure passed a process-local Git safe-directory setting
+through `GIT_CONFIG_COUNT`, `GIT_CONFIG_KEY_0`, and
+`GIT_CONFIG_VALUE_0`. CMake then embedded the exact source label, rebuilt the
+unity object and affected SDL identity object, and passed all 13 CTests:
+
+```text
+version:
+CTR Native 0.1.0-beta.7.1 (53ab70e966b2)
+
+producer:
+/tmp/ctrpad-i686-full-v4-current-cbRPWn/ctr_native
+ELF 32-bit Intel 80386, Release with DWARF
+Build ID 26b34e7c1b73fd5f087adf67a5b3a26ea6421558
+SHA-256 42df6c21f43539248212c9614e2c2fb3f5223d9cc2cfd4af876cbdd6d2f193a3
+
+producer preservation copy:
+/tmp/ctrpad-i686-full-v4-current-cbRPWn/ctr_native-full-v4-producer
+SHA-256 42df6c21f43539248212c9614e2c2fb3f5223d9cc2cfd4af876cbdd6d2f193a3
+
+toolchain manifest:
+/tmp/ctrpad-i686-full-v4-current-cbRPWn/toolchain-packages.txt
+SHA-256 7533bb723143fa947795ded64dbde4c82ffb7bb902b246929a11ac725ec22cd6
+```
+
+The compiler repeated the two upstream format-security diagnostics and the
+previously reviewed optimized-only guarded-coordinate warning in
+`game/222.c`. No new warning came from the mosaic-reference correction or
+render trace.
+
+### Live regeneration and prefix evidence
+
+The full run launched at `2026-07-30T14:04:57-0500` under `caffeinate`, Xvfb,
+llvmpipe, and dummy host audio:
+
+```text
+destination:
+/tmp/ctrpad-i686-full-v4-current-cbRPWn/debug/reports/20260730/ctr-190458
+
+source timing declaration:
+version=4 complete-vsync=yes
+```
+
+At the publication checkpoint `2026-07-30T14:23:38-0500`, the in-flight file
+contained 3,211 complete frames while metadata had durably checkpointed frame
+3,000 and 11 checkpoints. `finalized=0` is expected and intentionally
+prevents an acceptance claim. The prefix comparator required and found exact
+equality for all 3,211 available frames:
+
+```text
+timing, RNG, drivers, world, allocation, root: equal=3211 mismatched=0
+pads, VSync:                                  equal=3211 mismatched=0
+```
+
+An external monitor sends the host-only F12 screenshot command at 600-frame
+metadata intervals. The key is not mapped into the PS1 pad snapshot; pad
+equality above also proves that the recording input stayed unchanged.
+Accepted visual checkpoints so far are:
+
+```text
+frame 300:
+/tmp/ctrpad-i686-full-v4-current-cbRPWn/visual-evidence/frame-300-startup.bmp
+SHA-256 ae306de912505a33691271c4264878ee7634fea42c5fdb13b882dc146cc6035a
+coherent CTR intro
+
+frame 1500:
+/tmp/ctrpad-i686-full-v4-current-cbRPWn/visual-evidence/frame-1500-menu-load-upright.png
+SHA-256 61ff162f760779f7169d588ee1495fed4db290a37232abb9d0910d49ca050c09
+Crash Cove selected in the track menu
+
+frame 2400:
+/tmp/ctrpad-i686-full-v4-current-cbRPWn/visual-evidence/frame-2400-upright.png
+SHA-256 abd57ccd53b951f1ea23907ef80e9fdc8ced6b9dcfe73a195b42d1a1b04942ab
+active Crash Cove race, lap 1/3, HUD, kart, track, and item slot
+```
+
+The known llvmpipe cyan/yellow color error makes these structural and coverage
+captures, not a color oracle. They remain local and ignored because they are
+retail-derived.
+
+### Verifier strengthened before acceptance
+
+`tools/verify-linux-i686-golden-replay.sh` now accepts an explicit disposable
+build directory and full expected source commit without overwriting the
+protected baseline. It additionally requires:
+
+- a source commit present in the repository and matching 12-character report
+  and producer build IDs;
+- finalized replay version 4;
+- exactly 24,232 frames and 81 checkpoints by default;
+- a retail image whose size is a multiple of 2,352-byte raw sectors; and
+- exact `replay finished after 24232 frames` lines from both unchanged
+  playback processes.
+
+Invalid zero counts and a non-hexadecimal source commit both reject with
+status 1. `sh -n` and `git diff --check` pass. The disposable-build invocation
+is documented in `docs/parity/NTSC-U-GOLDEN-RUN.md`.
+
+The GitHub implementation remains intentionally unmerged while the product is
+unfinished. Commit `53ab70e96` is present on `origin/codex/arm64-apple`, and
+the branch is the head of the open draft PR in
+`chrissotraidis/ctrpad#1`; the default `main` view therefore does not yet show
+these implementation files.

@@ -147,10 +147,34 @@ tools/verify-linux-i686-golden-replay.sh \
   auto
 ```
 
+The defaults intentionally verify the protected baseline build against the
+current clean commit. To verify an exact disposable i686 producer without
+copying it over the baseline, select its build directory and source commit:
+
+```sh
+CTRPAD_I686_BUILD_DIR=/absolute/path/to/disposable-build \
+CTRPAD_EXPECTED_SOURCE_COMMIT=0123456789abcdef0123456789abcdef01234567 \
+CTRPAD_DISC_IMAGE=/absolute/path/to/user-owned-ntsc-u.bin \
+tools/verify-linux-i686-golden-replay.sh \
+  /absolute/path/to/disposable-build/debug/reports/YYYYMMDD/ctr-HHMMSS \
+  auto
+```
+
+The selected report must be under the selected build directory. Its metadata
+must be finalized replay version 4, contain nonzero frame and checkpoint
+counts, and identify the expected commit's 12-character build ID. The
+producer must embed the same build ID. `CTRPAD_EXPECTED_SOURCE_COMMIT` must
+name a full commit present in this repository; it defaults to `HEAD`. The
+golden scenario defaults to exactly 24,232 frames and 81 checkpoints.
+`CTRPAD_EXPECTED_FRAME_COUNT` and `CTRPAD_EXPECTED_CHECKPOINT_COUNT` exist for
+a separately documented replacement scenario; do not lower them merely to
+make an incomplete report pass.
+
 The verifier:
 
-- requires the report, coverage note, clean source tree, matching binary, and
-  local retail image;
+- requires the finalized version-4 report, coverage note, clean source tree,
+  exact source/build identity, matching binary, and local raw-sector retail
+  image;
 - plays every frame twice in separate processes and requires exit status 0;
 - requires different logged host-address samples across those processes;
 - requires the pointer-sensitive restored raw-checkpoint checksum to differ

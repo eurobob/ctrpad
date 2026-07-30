@@ -9,12 +9,33 @@ fi
 
 ctrpad_root_dir=$(CDPATH= cd -- "$(dirname "$0")/.." && pwd)
 ctrpad_container_image="ctrpad-linux-i686:ubuntu-24.04"
-ctrpad_build_dir="${ctrpad_root_dir}/build-linux-i686-baseline"
+ctrpad_build_dir=${CTRPAD_I686_BUILD_DIR:-"${ctrpad_root_dir}/build-linux-i686-baseline"}
 ctrpad_report_dir=$1
 ctrpad_mutation_frame=$2
 ctrpad_disc_image=${CTRPAD_DISC_IMAGE:-"${ctrpad_root_dir}/assets/ctr-u.bin"}
+ctrpad_expected_source_commit=${CTRPAD_EXPECTED_SOURCE_COMMIT:-$(git -C "${ctrpad_root_dir}" rev-parse HEAD)}
+ctrpad_expected_frame_count=${CTRPAD_EXPECTED_FRAME_COUNT:-24232}
+ctrpad_expected_checkpoint_count=${CTRPAD_EXPECTED_CHECKPOINT_COUNT:-81}
 ctrpad_host_uid=$(id -u)
 ctrpad_host_gid=$(id -g)
+
+case "${ctrpad_expected_source_commit}" in
+    ""|*[!0-9a-fA-F]*)
+        echo "CTRPAD_EXPECTED_SOURCE_COMMIT must be a full hexadecimal Git commit." >&2
+        exit 1
+        ;;
+esac
+if [ "${#ctrpad_expected_source_commit}" -ne 40 ] ||
+    ! git -C "${ctrpad_root_dir}" cat-file -e "${ctrpad_expected_source_commit}^{commit}" 2>/dev/null; then
+    echo "CTRPAD_EXPECTED_SOURCE_COMMIT is not a full commit in this repository: ${ctrpad_expected_source_commit}" >&2
+    exit 1
+fi
+case "${ctrpad_expected_frame_count}:${ctrpad_expected_checkpoint_count}" in
+    *[!0-9:]*|0:*|*:0|"":*|*:"")
+        echo "Expected frame and checkpoint counts must be nonzero integers." >&2
+        exit 1
+        ;;
+esac
 
 case "${ctrpad_mutation_frame}" in
     auto)
@@ -39,6 +60,11 @@ if [ ! -f "${ctrpad_disc_image}" ]; then
 fi
 if [ ! -d "${ctrpad_report_dir}" ]; then
     echo "Missing report directory: ${ctrpad_report_dir}" >&2
+    exit 1
+fi
+ctrpad_disc_bytes=$(wc -c < "${ctrpad_disc_image}" | tr -d ' ')
+if [ $((ctrpad_disc_bytes % 2352)) -ne 0 ]; then
+    echo "Retail image size is not a multiple of 2352-byte raw sectors: ${ctrpad_disc_bytes}" >&2
     exit 1
 fi
 
@@ -74,6 +100,23 @@ for ctrpad_required_dir in memcard.seed memcard.recording; do
         exit 1
     fi
 done
+for ctrpad_metadata_entry in \
+    finalized=1 \
+    recording_status=finalized \
+    replay_version=4
+do
+    if ! grep -q "^${ctrpad_metadata_entry}$" "${ctrpad_report_dir}/metadata.txt"; then
+        echo "Golden report metadata is not accepted: missing ${ctrpad_metadata_entry}." >&2
+        exit 1
+    fi
+done
+ctrpad_frame_count=$(sed -n 's/^frame_count=//p' "${ctrpad_report_dir}/metadata.txt")
+ctrpad_checkpoint_count=$(sed -n 's/^checkpoint_count=//p' "${ctrpad_report_dir}/metadata.txt")
+if [ "${ctrpad_frame_count}" != "${ctrpad_expected_frame_count}" ] ||
+    [ "${ctrpad_checkpoint_count}" != "${ctrpad_expected_checkpoint_count}" ]; then
+    echo "Golden report count mismatch: frames=${ctrpad_frame_count}/${ctrpad_expected_frame_count} checkpoints=${ctrpad_checkpoint_count}/${ctrpad_expected_checkpoint_count}." >&2
+    exit 1
+fi
 
 for ctrpad_coverage_key in \
     startup_and_title \
@@ -94,7 +137,11 @@ grep -q "\\[CTR Gameplay\\] player powerslide boost:" "${ctrpad_report_dir}/ctr-
 
 ctrpad_replay_path="/out/${ctrpad_report_relative}/input.ctrreplay"
 ctrpad_container_report_dir="/out/${ctrpad_report_relative}"
-ctrpad_source_build_id=$(git -C "${ctrpad_root_dir}" rev-parse --short=12 HEAD)
+ctrpad_source_build_id=$(printf '%s' "${ctrpad_expected_source_commit}" | cut -c 1-12)
+if ! grep -q "^build_id=${ctrpad_source_build_id}$" "${ctrpad_report_dir}/metadata.txt"; then
+    echo "Golden report build_id does not match expected source ${ctrpad_source_build_id}." >&2
+    exit 1
+fi
 ctrpad_binary_version=$(docker run --rm \
     --platform linux/amd64 \
     --volume "${ctrpad_build_dir}:/out:ro" \
@@ -123,6 +170,7 @@ docker run --rm \
     --env "CTRPAD_REPLAY_PATH=${ctrpad_replay_path}" \
     --env "CTRPAD_REPORT_DIR=${ctrpad_container_report_dir}" \
     --env "CTRPAD_MUTATION_FRAME=${ctrpad_mutation_frame}" \
+    --env "CTRPAD_EXPECTED_FRAME_COUNT=${ctrpad_expected_frame_count}" \
     --volume "${ctrpad_build_dir}:/out" \
     --volume "${ctrpad_disc_image}:/out/assets/ctr-u.bin:ro" \
     "${ctrpad_container_image}" \
@@ -156,8 +204,8 @@ docker run --rm \
         /out/ctr_native --replay "${CTRPAD_REPLAY_PATH}" \
             >"${CTRPAD_REPORT_DIR}/playback-2.log" 2>&1
 
-        grep -q "\\[CTR Replay\\] replay finished after" "${CTRPAD_REPORT_DIR}/playback-1.log"
-        grep -q "\\[CTR Replay\\] replay finished after" "${CTRPAD_REPORT_DIR}/playback-2.log"
+        grep -q "\\[CTR Replay\\] replay finished after ${CTRPAD_EXPECTED_FRAME_COUNT} frames$" "${CTRPAD_REPORT_DIR}/playback-1.log"
+        grep -q "\\[CTR Replay\\] replay finished after ${CTRPAD_EXPECTED_FRAME_COUNT} frames$" "${CTRPAD_REPORT_DIR}/playback-2.log"
         grep -q "\\[CTR State\\] raw checkpoint comparison .* equal=no" "${CTRPAD_REPORT_DIR}/playback-1.log"
         grep -q "\\[CTR State\\] raw checkpoint comparison .* equal=no" "${CTRPAD_REPORT_DIR}/playback-2.log"
 
@@ -209,7 +257,9 @@ else
 fi
 
 {
-    echo "source_commit=$(git -C "${ctrpad_root_dir}" rev-parse HEAD)"
+    echo "source_commit=${ctrpad_expected_source_commit}"
+    echo "expected_frame_count=${ctrpad_expected_frame_count}"
+    echo "expected_checkpoint_count=${ctrpad_expected_checkpoint_count}"
     echo "binary_version=${ctrpad_binary_version}"
     echo "binary_sha256=${ctrpad_binary_hash}"
     echo "container_image_id=$(docker image inspect --format '{{.Id}}' "${ctrpad_container_image}")"
