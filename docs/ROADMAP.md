@@ -10,7 +10,7 @@ timing.
 **Current milestone:** M6 — macOS ARM64 runtime stabilization, while the M1
 cross-architecture parity trace remains open
 
-**Last updated:** 2026-07-30
+**Last updated:** 2026-07-31
 
 This is the working source of truth for the port. Milestone status changes only
 after its acceptance evidence has been recorded. A successful compile is
@@ -455,8 +455,15 @@ Result so far:
   textured 3D tracks, karts, item crates, UI text, and the main menu through
   the Apple M2 / OpenGL 4.1 Metal path. F10 finalized the recording and
   Command-Q closed the app cleanly. Rapid synthetic one-tap gameplay keys were
-  not sampled reliably, so this is visual/lifecycle evidence, not acceptance
-  of keyboard play, persistent saves, or XA/STR correctness.
+  not sampled reliably in that initial run, so that observation remains
+  visual/lifecycle evidence rather than input acceptance. A later direct
+  trace proved SDL delivered key-down and key-up between two retail polls.
+  The host layer now retains mapped press edges for exactly one PSX-shaped
+  snapshot. A single live `C` press reached the retail bus as packet
+  `00 41 ff bf 80 80 80 80` and advanced the textured menu into Adventure.
+  Exact source commit `24aff7d88`, 16/16 Release, ASan/UBSan, and i686 test
+  results, and rejected observations are recorded in
+  `docs/parity/2026-07-31-macos-arm64-keyboard-tap.md`.
 - Checkpoint v3 now stores host addresses at native width. After correcting
   nested gamepad, HOWL, resident-data, process-stack, and transient
   render-bucket ownership, a frame-zero checkpoint captured at one ARM64 ASLR
@@ -639,6 +646,12 @@ Result so far:
   4,032 source frames before interpolation/mixing. The device/open/output and
   initial XA decode boundaries are accepted; listening quality, broad
   mix/reverb/track coverage, STR synchronization, and iOS routes remain open.
+- Mapped macOS keyboard press edges now survive a complete key-down/key-up
+  pair between retail polls and are consumed for exactly one snapshot.
+  Replay, disabled-pad, init/shutdown, and state-restore boundaries clear the
+  host-only latch. The exact committed source passes 16/16 on ARM64 Release,
+  ARM64 ASan/UBSan, and optimized i686; the signed app is a strict-verifiable
+  thin ARM64 bundle. Broad manual keyboard/controller play remains open.
 - Red-beaker rain no longer reads per-player MVP translations out of widened
   instance function/thread pointers. Named draw-record fields preserve the
   retail depth/LOD byte alias, and a four-player cross-width test covers the
@@ -647,8 +660,9 @@ Result so far:
 
 Work:
 
-- Validate full-range audio mix/reverb/XA behavior, desktop renderer,
-  keyboard, MFi/Bluetooth controller, replays, savestates, and STR video.
+- Validate full-range audio mix/reverb/XA behavior, broader desktop renderer
+  and manual keyboard play, MFi/Bluetooth controller, replays, savestates,
+  and STR video.
 - Run sanitizers and the full parity gate under Apple Clang.
 - Allow clean optimized-i686 version-4 report `ctr-025812` to finalize after
   both typed emitter corrections. Require all eight components to match clean

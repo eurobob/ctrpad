@@ -31,6 +31,9 @@ Current evidence and procedures:
 - `2026-07-30-macos-arm64-audio-output.md` records the exact-producer
   CoreAudio open, non-silent PCM capture, zero short-run transport faults,
   and direct initial XA-sector decode.
+- `2026-07-31-macos-arm64-keyboard-tap.md` records the missing quick-tap root
+  cause, one-snapshot press-edge transport, direct live PSX packet trace, and
+  exact-commit ARM64/sanitizer/i686 validation.
 
 The first task is to evaluate `platform/native_replay_scheduler.c`,
 `platform/native_checkpoint.c`, `platform/native_savestate.c`, and

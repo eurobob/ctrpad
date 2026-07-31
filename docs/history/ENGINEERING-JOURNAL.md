@@ -6961,3 +6961,130 @@ The detailed commands, values, caveats, and acceptance boundary are in
 device/open/output and initial XA decode boundaries. Subjective listening,
 broad mix/reverb/track coverage, STR synchronization, and every iOS route and
 lifecycle case remain open.
+
+## 2026-07-30 to 2026-07-31 — Diagnosed and fixed disappearing quick keyboard taps
+
+### Why the visible game looked stuck
+
+Direct control of the signed ARM64 application had already proved that its
+window, renderer, textures, and lifecycle were live. The visible sequence
+included the SCEA screen, rotating Naughty Dog crate, fully textured CTR main
+menu, Crash Cove demo, and Adventure cutscenes. However, short synthetic
+gameplay-key presses did not reliably advance the menu. That observation was
+kept separate from renderer evidence and investigated instead of being
+treated as either a frozen game or accepted keyboard play.
+
+The retail input path polls at approximately 29.9 Hz. Computer Use emits a
+complete key-down/key-up pair quickly. Source inspection showed that
+`Platform_PollHostEvents` drained both SDL events, but
+`Platform_InputUpdate` later sampled only `SDL_GetKeyboardState`. If both
+events fell between polls, the final state was released and no press reached
+the game. This explained both the visibly running animation and the apparently
+ignored tap.
+
+### Implemented one-snapshot host press edges
+
+The correction added a host-only active-low keyboard latch:
+
+1. `Platform_PollHostEvents` forwards raw mapped key events after updating Alt
+   state and before Return/right-modifier shortcut normalization.
+2. Key-down clears the corresponding PSX bit in
+   `s_keyboardLatchedButtons`; key-up never erases an unconsumed press.
+3. The next input snapshot ORs that semantic press into held-key state,
+   writes the normal PSX packet, and resets the latch to `0xffff`.
+4. Replay-installed snapshots, disabled pad communication, initialization,
+   shutdown, and state restore clear the latch.
+5. Alt-modified host shortcuts do not enter the latch. Replay/checkpoint file
+   formats do not change because this transport edge is intentionally not
+   serialized.
+
+The self-test sends `C` and Right down and up before any consume. The first
+snapshot must contain both active-low bits; the second must be exactly
+`0xffff`. The CTest required-output expression includes
+`tap-latch=c+right one-snapshot`.
+
+### Live debugger trace and rejected observations
+
+The diagnostic signed app reported version
+`88ae012d5875-dirty` because the source was deliberately tested live before
+commit. LLDB stopped on `Platform_InputKeyboardEvent` for one Computer Use
+`C` press:
+
+```text
+key=6
+down=1
+latched after handler=0xbfff
+```
+
+The subsequent key-up used `down=0` and left the latch intact.
+`NativeInput_ConsumeKeyboard` entered with `0xbfff`, returned decimal 49151,
+and the completed retail packet was:
+
+```text
+00 41 ff bf 80 80 80 80
+```
+
+The first visual check after the press appeared unchanged. It was rejected
+because LLDB was still paused inside the consume path and the game could not
+advance. After resuming and detaching, the application advanced from the
+main menu into Adventure. Further no-debugger taps advanced a live cutscene,
+but that is weaker evidence because cutscenes also advance with time. The
+direct one-tap packet trace is the accepted observation.
+
+The four-file source diff was reviewed after the trace. `git diff --check`
+passed, and no source changed before commit. The exact traced source became:
+
+```text
+24aff7d88db66e241bb1277fe9f9b316d62a19bc
+fix: preserve quick keyboard taps
+```
+
+It was immediately pushed to `origin/codex/arm64-apple` as a recoverable
+GitHub checkpoint.
+
+### Rebuilt the exact clean commit on all active regression targets
+
+The committed build ID was `24aff7d88db6`.
+
+```text
+macOS ARM64 Release:
+  16/16 CTests passed
+  SHA-256 4181de9b2f55fc6251343e29633558ca779db4746f977b0c2f00d43f00904e57
+
+macOS ARM64 combined ASan/UBSan:
+  16/16 CTests passed
+  ASAN_OPTIONS=symbolize=0:abort_on_error=1
+  UBSAN_OPTIONS=halt_on_error=1:print_stacktrace=1
+  SHA-256 d0691133460b049627c3389d929483b2bf2330e1accd3367a3a51910431dc8ad
+
+optimized Linux i686:
+  16/16 CTests passed
+  SHA-256 2e6f2bbbb1945c91ad6742fd68c2e34b35339f24d6b583294a53737daf7a1de5
+
+signed app executable:
+  thin Mach-O ARM64
+  strict ad-hoc signature valid
+  Info.plist valid
+  identifier io.github.chrissotraidis.ctrpad
+  SHA-256 bab0099c7a9d68a92a0cd7dd96445ce537e98716c1ba726d7303f7baa78ad15e
+```
+
+The compiler repeated established warnings but emitted no test or sanitizer
+failure. The complete result and acceptance boundary are in
+`docs/parity/2026-07-31-macos-arm64-keyboard-tap.md`.
+
+### Kept the GitHub merge boundary explicit
+
+At the checkpoint, GitHub showed draft PR #1 open and clean with head
+`codex/arm64-apple` and base `main`. `origin/main` remained
+`95417c723518407d6bfe3c81a37606294963efe2`; the input source commit existed
+only on the draft branch. In other words, the viability documentation is
+merged, while native implementation and evidence are pushed for backup and
+review but not merged. No merge was attempted.
+
+The unrelated immutable i686 full-parity capture continued under producer
+`eee2a8df5b96`. At 2026-07-31 00:09 -0500 it remained healthy at frame 21,600,
+checkpoint 73 of the expected 81, with `finalized=0`. Rebuilding `/out` for
+the input test did not alter that capture's copied immutable `/run` producer.
+The full parity result remains pending rather than being inferred from its
+continued progress.
