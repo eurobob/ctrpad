@@ -169,6 +169,30 @@ ctr-native/
     ctr-u.bin
 ```
 
+### Keyboard Controls
+
+The desktop build accepts both the original compact key map and a more
+comfortable two-hand test layout. The aliases are additive: existing scripts
+and testers can keep using the original keys.
+
+| PS1 input | Test layout | Original layout | Common racing use |
+|---|---|---|---|
+| D-pad | `W` `A` `S` `D` | Arrow keys | steer, aim items, navigate menus |
+| Triangle | `I` | `Z` | skip race fly-in, menu action |
+| Square | `J` | `X` | brake/reverse, menu action |
+| Cross | `K` | `C` | accelerate, menu action |
+| Circle | `L` | `V` | use item, menu action |
+| L1 / R1 | `Q` / `E` | Left Shift / Right Shift | hop and drift |
+| L2 / R2 | Left Ctrl / Right Ctrl | Left Ctrl / Right Ctrl | camera / mapped retail input |
+| L3 / R3 | `[` / `]` | `[` / `]` | mapped retail input |
+| Start | `P` | Return | pause or advance |
+| Select | Tab | Space | Select |
+
+For a basic race test, steer with `A`/`D`, hold `K` to accelerate, use `J`
+to brake, tap `L` for an item, and use `Q` or `E` to hop/drift. Keyboard
+presses are translated to the same PS1-shaped pad packets as a controller;
+no keyboard-only physics path is used.
+
 ### Extracted Asset Override
 
 You do not need extracted assets for normal play.

@@ -34,13 +34,17 @@ struct NativeInputKeyboardMapping
 	s32 id;
 
 	s32 kc_square, kc_circle, kc_triangle, kc_cross;
+	s32 kc_square_alt, kc_circle_alt, kc_triangle_alt, kc_cross_alt;
 
 	s32 kc_l1, kc_l2, kc_l3;
 	s32 kc_r1, kc_r2, kc_r3;
+	s32 kc_l1_alt, kc_r1_alt;
 
 	s32 kc_start, kc_select;
+	s32 kc_start_alt, kc_select_alt;
 
 	s32 kc_dpad_left, kc_dpad_right, kc_dpad_up, kc_dpad_down;
+	s32 kc_dpad_left_alt, kc_dpad_right_alt, kc_dpad_up_alt, kc_dpad_down_alt;
 };
 
 struct NativeInputControllerMapping
@@ -289,6 +293,10 @@ internal void NativeInput_DefaultMappings(void)
 	s_keyboardMapping.kc_circle = SDL_SCANCODE_V;
 	s_keyboardMapping.kc_triangle = SDL_SCANCODE_Z;
 	s_keyboardMapping.kc_cross = SDL_SCANCODE_C;
+	s_keyboardMapping.kc_square_alt = SDL_SCANCODE_J;
+	s_keyboardMapping.kc_circle_alt = SDL_SCANCODE_L;
+	s_keyboardMapping.kc_triangle_alt = SDL_SCANCODE_I;
+	s_keyboardMapping.kc_cross_alt = SDL_SCANCODE_K;
 
 	s_keyboardMapping.kc_l1 = SDL_SCANCODE_LSHIFT;
 	s_keyboardMapping.kc_l2 = SDL_SCANCODE_LCTRL;
@@ -297,14 +305,22 @@ internal void NativeInput_DefaultMappings(void)
 	s_keyboardMapping.kc_r1 = SDL_SCANCODE_RSHIFT;
 	s_keyboardMapping.kc_r2 = SDL_SCANCODE_RCTRL;
 	s_keyboardMapping.kc_r3 = SDL_SCANCODE_RIGHTBRACKET;
+	s_keyboardMapping.kc_l1_alt = SDL_SCANCODE_Q;
+	s_keyboardMapping.kc_r1_alt = SDL_SCANCODE_E;
 
 	s_keyboardMapping.kc_dpad_up = SDL_SCANCODE_UP;
 	s_keyboardMapping.kc_dpad_down = SDL_SCANCODE_DOWN;
 	s_keyboardMapping.kc_dpad_left = SDL_SCANCODE_LEFT;
 	s_keyboardMapping.kc_dpad_right = SDL_SCANCODE_RIGHT;
+	s_keyboardMapping.kc_dpad_up_alt = SDL_SCANCODE_W;
+	s_keyboardMapping.kc_dpad_down_alt = SDL_SCANCODE_S;
+	s_keyboardMapping.kc_dpad_left_alt = SDL_SCANCODE_A;
+	s_keyboardMapping.kc_dpad_right_alt = SDL_SCANCODE_D;
 
 	s_keyboardMapping.kc_select = SDL_SCANCODE_SPACE;
 	s_keyboardMapping.kc_start = SDL_SCANCODE_RETURN;
+	s_keyboardMapping.kc_select_alt = SDL_SCANCODE_TAB;
+	s_keyboardMapping.kc_start_alt = SDL_SCANCODE_P;
 
 	s_controllerMapping.gc_square = SDL_GAMEPAD_BUTTON_WEST;
 	s_controllerMapping.gc_circle = SDL_GAMEPAD_BUTTON_EAST;
@@ -337,37 +353,37 @@ internal u16 NativeInput_KeyboardButtonBit(s32 key)
 {
 	const struct NativeInputKeyboardMapping *mapping = &s_keyboardMapping;
 
-	if (key == mapping->kc_square)
+	if ((key == mapping->kc_square) || (key == mapping->kc_square_alt))
 		return 0x8000;
-	if (key == mapping->kc_circle)
+	if ((key == mapping->kc_circle) || (key == mapping->kc_circle_alt))
 		return 0x2000;
-	if (key == mapping->kc_triangle)
+	if ((key == mapping->kc_triangle) || (key == mapping->kc_triangle_alt))
 		return 0x1000;
-	if (key == mapping->kc_cross)
+	if ((key == mapping->kc_cross) || (key == mapping->kc_cross_alt))
 		return 0x4000;
-	if (key == mapping->kc_l1)
+	if ((key == mapping->kc_l1) || (key == mapping->kc_l1_alt))
 		return 0x400;
 	if (key == mapping->kc_l2)
 		return 0x100;
 	if (key == mapping->kc_l3)
 		return 0x2;
-	if (key == mapping->kc_r1)
+	if ((key == mapping->kc_r1) || (key == mapping->kc_r1_alt))
 		return 0x800;
 	if (key == mapping->kc_r2)
 		return 0x200;
 	if (key == mapping->kc_r3)
 		return 0x4;
-	if (key == mapping->kc_dpad_up)
+	if ((key == mapping->kc_dpad_up) || (key == mapping->kc_dpad_up_alt))
 		return 0x10;
-	if (key == mapping->kc_dpad_down)
+	if ((key == mapping->kc_dpad_down) || (key == mapping->kc_dpad_down_alt))
 		return 0x40;
-	if (key == mapping->kc_dpad_left)
+	if ((key == mapping->kc_dpad_left) || (key == mapping->kc_dpad_left_alt))
 		return 0x80;
-	if (key == mapping->kc_dpad_right)
+	if ((key == mapping->kc_dpad_right) || (key == mapping->kc_dpad_right_alt))
 		return 0x20;
-	if (key == mapping->kc_select)
+	if ((key == mapping->kc_select) || (key == mapping->kc_select_alt))
 		return 0x1;
-	if (key == mapping->kc_start)
+	if ((key == mapping->kc_start) || (key == mapping->kc_start_alt))
 		return 0x8;
 
 	return 0;
@@ -572,23 +588,23 @@ internal u16 NativeInput_ReadKeyboard(void)
 		return buttons;
 	}
 
-	if (s_keyboardState[mapping->kc_square])
+	if (s_keyboardState[mapping->kc_square] || s_keyboardState[mapping->kc_square_alt])
 	{
 		buttons &= ~0x8000;
 	}
-	if (s_keyboardState[mapping->kc_circle])
+	if (s_keyboardState[mapping->kc_circle] || s_keyboardState[mapping->kc_circle_alt])
 	{
 		buttons &= ~0x2000;
 	}
-	if (s_keyboardState[mapping->kc_triangle])
+	if (s_keyboardState[mapping->kc_triangle] || s_keyboardState[mapping->kc_triangle_alt])
 	{
 		buttons &= ~0x1000;
 	}
-	if (s_keyboardState[mapping->kc_cross])
+	if (s_keyboardState[mapping->kc_cross] || s_keyboardState[mapping->kc_cross_alt])
 	{
 		buttons &= ~0x4000;
 	}
-	if (s_keyboardState[mapping->kc_l1])
+	if (s_keyboardState[mapping->kc_l1] || s_keyboardState[mapping->kc_l1_alt])
 	{
 		buttons &= ~0x400;
 	}
@@ -600,7 +616,7 @@ internal u16 NativeInput_ReadKeyboard(void)
 	{
 		buttons &= ~0x2;
 	}
-	if (s_keyboardState[mapping->kc_r1])
+	if (s_keyboardState[mapping->kc_r1] || s_keyboardState[mapping->kc_r1_alt])
 	{
 		buttons &= ~0x800;
 	}
@@ -612,27 +628,27 @@ internal u16 NativeInput_ReadKeyboard(void)
 	{
 		buttons &= ~0x4;
 	}
-	if (s_keyboardState[mapping->kc_dpad_up])
+	if (s_keyboardState[mapping->kc_dpad_up] || s_keyboardState[mapping->kc_dpad_up_alt])
 	{
 		buttons &= ~0x10;
 	}
-	if (s_keyboardState[mapping->kc_dpad_down])
+	if (s_keyboardState[mapping->kc_dpad_down] || s_keyboardState[mapping->kc_dpad_down_alt])
 	{
 		buttons &= ~0x40;
 	}
-	if (s_keyboardState[mapping->kc_dpad_left])
+	if (s_keyboardState[mapping->kc_dpad_left] || s_keyboardState[mapping->kc_dpad_left_alt])
 	{
 		buttons &= ~0x80;
 	}
-	if (s_keyboardState[mapping->kc_dpad_right])
+	if (s_keyboardState[mapping->kc_dpad_right] || s_keyboardState[mapping->kc_dpad_right_alt])
 	{
 		buttons &= ~0x20;
 	}
-	if (s_keyboardState[mapping->kc_select])
+	if (s_keyboardState[mapping->kc_select] || s_keyboardState[mapping->kc_select_alt])
 	{
 		buttons &= ~0x1;
 	}
-	if (s_keyboardState[mapping->kc_start])
+	if (s_keyboardState[mapping->kc_start] || s_keyboardState[mapping->kc_start_alt])
 	{
 		buttons &= ~0x8;
 	}
@@ -1152,8 +1168,28 @@ int Platform_InputGetSubmitNameKey(void)
 
 int Platform_InputRunSelfTest(void)
 {
+	const struct
+	{
+		s32 key;
+		u16 buttonBit;
+	} aliasExpectations[] = {
+		{SDL_SCANCODE_J, 0x8000},
+		{SDL_SCANCODE_L, 0x2000},
+		{SDL_SCANCODE_I, 0x1000},
+		{SDL_SCANCODE_K, 0x4000},
+		{SDL_SCANCODE_Q, 0x400},
+		{SDL_SCANCODE_E, 0x800},
+		{SDL_SCANCODE_W, 0x10},
+		{SDL_SCANCODE_S, 0x40},
+		{SDL_SCANCODE_A, 0x80},
+		{SDL_SCANCODE_D, 0x20},
+		{SDL_SCANCODE_TAB, 0x1},
+		{SDL_SCANCODE_P, 0x8},
+	};
 	struct PlatformInputPadSnapshot migrationSnapshots[NATIVE_INPUT_MAX_CONTROLLERS];
 	struct PlatformInputPadSnapshot *snapshot;
+	bool keyboardState[SDL_SCANCODE_COUNT];
+	u16 heldButtons;
 	u16 latchedButtons;
 	s32 slot;
 
@@ -1226,7 +1262,40 @@ int Platform_InputRunSelfTest(void)
 		return 1;
 	}
 
-	printf("[CTR Input] self-test passed: metadata-key=%d legacy-enter=%d migration-enter=%d live-start=retail tap-latch=c+right one-snapshot\n",
+	for (slot = 0; slot < (s32)(sizeof(aliasExpectations) / sizeof(aliasExpectations[0])); slot++)
+	{
+		if (NativeInput_KeyboardButtonBit(aliasExpectations[slot].key) != aliasExpectations[slot].buttonBit)
+		{
+			fprintf(stderr, "[CTR Input] self-test failed: keyboard alias index %d\n", slot);
+			return 1;
+		}
+	}
+
+	memset(keyboardState, 0, sizeof(keyboardState));
+	keyboardState[SDL_SCANCODE_K] = true;
+	keyboardState[SDL_SCANCODE_D] = true;
+	keyboardState[SDL_SCANCODE_E] = true;
+	s_keyboardState = keyboardState;
+	heldButtons = NativeInput_ReadKeyboard();
+	s_keyboardState = NULL;
+	if (((heldButtons & 0x4000) != 0) || ((heldButtons & 0x20) != 0) || ((heldButtons & 0x800) != 0))
+	{
+		fprintf(stderr, "[CTR Input] self-test failed: held keyboard aliases k+d+e\n");
+		return 1;
+	}
+
+	Platform_InputKeyboardEvent(SDL_SCANCODE_K, 1);
+	Platform_InputKeyboardEvent(SDL_SCANCODE_D, 1);
+	Platform_InputKeyboardEvent(SDL_SCANCODE_K, 0);
+	Platform_InputKeyboardEvent(SDL_SCANCODE_D, 0);
+	latchedButtons = NativeInput_ConsumeKeyboard();
+	if (((latchedButtons & 0x4000) != 0) || ((latchedButtons & 0x20) != 0))
+	{
+		fprintf(stderr, "[CTR Input] self-test failed: alias key-down tap was not latched\n");
+		return 1;
+	}
+
+	printf("[CTR Input] self-test passed: metadata-key=%d legacy-enter=%d migration-enter=%d live-start=retail tap-latch=c+right one-snapshot aliases=12 held=k+d+e alias-tap=k+d\n",
 	       SDL_SCANCODE_A, SDL_SCANCODE_RETURN, SDL_SCANCODE_RETURN);
 	return 0;
 }
