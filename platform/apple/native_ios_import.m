@@ -22,12 +22,14 @@
 @property(nonatomic, assign) NativeIOSImportCompletionCallback completionCallback;
 @property(nonatomic, assign) void *callbackUserdata;
 - (BOOL)start;
+- (NSInteger)removeStaleStagingDirectories;
 - (void)presentPicker;
 - (void)beginImportFromURL:(NSURL *)sourceURL;
 - (void)finishWithError:(NSString *)message;
 @end
 
 static CTRPadImportCoordinator *s_importCoordinator;
+static NSString *const s_importStagingPrefix = @".ctrpad-import-";
 
 @implementation CTRPadImportViewController
 
@@ -137,6 +139,51 @@ static CTRPadImportCoordinator *s_importCoordinator;
 
 @implementation CTRPadImportCoordinator
 
+- (NSInteger)removeStaleStagingDirectories
+{
+	NSFileManager *fileManager = NSFileManager.defaultManager;
+	NSError *listingError = nil;
+	NSArray<NSString *> *entries = [fileManager contentsOfDirectoryAtPath:self.importBasePath error:&listingError];
+	NSInteger removedCount = 0;
+
+	if (entries == nil)
+	{
+		if ((listingError != nil) &&
+		    !([listingError.domain isEqualToString:NSCocoaErrorDomain] && (listingError.code == NSFileNoSuchFileError)))
+		{
+			NSLog(@"[CTR Import] Could not inspect interrupted imports: %@", listingError.localizedDescription);
+		}
+		return 0;
+	}
+
+	for (NSString *entry in entries)
+	{
+		if (![entry hasPrefix:s_importStagingPrefix] || (entry.length == s_importStagingPrefix.length))
+		{
+			continue;
+		}
+
+		NSString *candidatePath = [self.importBasePath stringByAppendingPathComponent:entry];
+		BOOL isDirectory = NO;
+		if (![fileManager fileExistsAtPath:candidatePath isDirectory:&isDirectory] || !isDirectory)
+		{
+			continue;
+		}
+
+		NSError *removeError = nil;
+		if ([fileManager removeItemAtPath:candidatePath error:&removeError])
+		{
+			removedCount++;
+		}
+		else
+		{
+			NSLog(@"[CTR Import] Could not remove interrupted import %@: %@", entry, removeError.localizedDescription);
+		}
+	}
+
+	return removedCount;
+}
+
 - (UIWindowScene *)activeWindowScene
 {
 	for (UIScene *scene in UIApplication.sharedApplication.connectedScenes)
@@ -152,10 +199,12 @@ static CTRPadImportCoordinator *s_importCoordinator;
 - (BOOL)start
 {
 	UIWindowScene *windowScene = [self activeWindowScene];
+	NSInteger recoveredImportCount;
 	if (windowScene == nil)
 	{
 		return NO;
 	}
+	recoveredImportCount = [self removeStaleStagingDirectories];
 
 	self.viewController = [[CTRPadImportViewController alloc] init];
 	self.viewController.coordinator = self;
@@ -164,6 +213,20 @@ static CTRPadImportCoordinator *s_importCoordinator;
 	self.window.windowLevel = UIWindowLevelNormal + 2.0;
 	self.window.rootViewController = self.viewController;
 	[self.window makeKeyAndVisible];
+	if (recoveredImportCount != 0)
+	{
+		NSString *status;
+		if (recoveredImportCount == 1)
+		{
+			status = @"Recovered an interrupted import. No partial image was installed; choose your NTSC-U raw BIN to retry.";
+		}
+		else
+		{
+			status = [NSString stringWithFormat:@"Recovered %ld interrupted imports. No partial image was installed; choose your NTSC-U raw BIN to retry.",
+			                                             (long)recoveredImportCount];
+		}
+		[self.viewController setBusy:NO status:status];
+	}
 	return YES;
 }
 
@@ -240,7 +303,7 @@ static CTRPadImportCoordinator *s_importCoordinator;
 			}
 
 			NSFileManager *fileManager = NSFileManager.defaultManager;
-			NSString *stagingBasePath = [importBasePath stringByAppendingPathComponent:[@".ctrpad-import-" stringByAppendingString:NSUUID.UUID.UUIDString]];
+				NSString *stagingBasePath = [importBasePath stringByAppendingPathComponent:[s_importStagingPrefix stringByAppendingString:NSUUID.UUID.UUIDString]];
 			NSString *stagingAssetPath = [[stagingBasePath stringByAppendingPathComponent:@"assets"] stringByAppendingPathComponent:@"ctr-u.bin"];
 			NSString *destinationAssetPath = [[importBasePath stringByAppendingPathComponent:@"assets"] stringByAppendingPathComponent:@"ctr-u.bin"];
 			NSURL *stagingAssetURL = [NSURL fileURLWithPath:stagingAssetPath];
