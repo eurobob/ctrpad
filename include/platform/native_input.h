@@ -18,6 +18,7 @@ struct PlatformInputPadSnapshot
 int Platform_InputInit(void);
 void Platform_InputShutdown(void);
 void Platform_InputUpdate(void);
+void Platform_InputKeyboardEvent(int key, int down);
 void Platform_InputControllerAdded(int deviceIndex);
 void Platform_InputControllerRemoved(int instanceId);
 int Platform_InputCycleKeyboardController(void);

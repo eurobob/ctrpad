@@ -102,6 +102,10 @@ global_variable s32 s_installedSnapshotsActive;
 global_variable s32 s_keyboardControllerSlot = NATIVE_INPUT_DEFAULT_KEYBOARD_SLOT;
 global_variable s32 s_lastActiveControllerSlot = -1;
 global_variable s32 s_submitNameKey;
+// SDL can deliver key-down and key-up between two ~29.9 Hz retail pad polls.
+// Keep active-low button edges for exactly one snapshot so quick taps survive.
+// This is host input transport state and is intentionally not serialized.
+global_variable u16 s_keyboardLatchedButtons = 0xffff;
 
 extern s32 g_padCommEnable;
 
@@ -329,6 +333,67 @@ internal void NativeInput_DefaultMappings(void)
 	s_controllerMapping.gc_axis_right_y = SDL_GAMEPAD_AXIS_RIGHTY | NATIVE_INPUT_MAP_FLAG_AXIS;
 }
 
+internal u16 NativeInput_KeyboardButtonBit(s32 key)
+{
+	const struct NativeInputKeyboardMapping *mapping = &s_keyboardMapping;
+
+	if (key == mapping->kc_square)
+		return 0x8000;
+	if (key == mapping->kc_circle)
+		return 0x2000;
+	if (key == mapping->kc_triangle)
+		return 0x1000;
+	if (key == mapping->kc_cross)
+		return 0x4000;
+	if (key == mapping->kc_l1)
+		return 0x400;
+	if (key == mapping->kc_l2)
+		return 0x100;
+	if (key == mapping->kc_l3)
+		return 0x2;
+	if (key == mapping->kc_r1)
+		return 0x800;
+	if (key == mapping->kc_r2)
+		return 0x200;
+	if (key == mapping->kc_r3)
+		return 0x4;
+	if (key == mapping->kc_dpad_up)
+		return 0x10;
+	if (key == mapping->kc_dpad_down)
+		return 0x40;
+	if (key == mapping->kc_dpad_left)
+		return 0x80;
+	if (key == mapping->kc_dpad_right)
+		return 0x20;
+	if (key == mapping->kc_select)
+		return 0x1;
+	if (key == mapping->kc_start)
+		return 0x8;
+
+	return 0;
+}
+
+internal void NativeInput_ClearKeyboardLatch(void)
+{
+	s_keyboardLatchedButtons = 0xffff;
+}
+
+void Platform_InputKeyboardEvent(int key, int down)
+{
+	u16 buttonBit;
+
+	if (down == 0)
+	{
+		return;
+	}
+
+	buttonBit = NativeInput_KeyboardButtonBit(key);
+	if (buttonBit != 0)
+	{
+		s_keyboardLatchedButtons &= (u16)~buttonBit;
+	}
+}
+
 internal s32 NativeInput_ControllerButtonState(SDL_Gamepad *controller, s32 buttonOrAxis)
 {
 	if (controller == NULL)
@@ -500,7 +565,7 @@ internal void NativeInput_ApplyController(s32 slot)
 internal u16 NativeInput_ReadKeyboard(void)
 {
 	const struct NativeInputKeyboardMapping *mapping = &s_keyboardMapping;
-	u16 buttons = 0xffff;
+	u16 buttons = s_keyboardLatchedButtons;
 
 	if (s_keyboardState == NULL)
 	{
@@ -572,6 +637,14 @@ internal u16 NativeInput_ReadKeyboard(void)
 		buttons &= ~0x8;
 	}
 
+	return buttons;
+}
+
+internal u16 NativeInput_ConsumeKeyboard(void)
+{
+	u16 buttons = NativeInput_ReadKeyboard();
+
+	NativeInput_ClearKeyboardLatch();
 	return buttons;
 }
 
@@ -780,6 +853,7 @@ int Platform_InputInit(void)
 	s_installedSnapshotsActive = 0;
 	s_keyboardState = SDL_GetKeyboardState(NULL);
 	s_submitNameKey = 0;
+	NativeInput_ClearKeyboardLatch();
 
 	if (SDL_InitSubSystem(SDL_INIT_GAMEPAD | SDL_INIT_HAPTIC) == 0)
 	{
@@ -813,6 +887,7 @@ void Platform_InputShutdown(void)
 	s_keyboardControllerSlot = NATIVE_INPUT_DEFAULT_KEYBOARD_SLOT;
 	s_lastActiveControllerSlot = -1;
 	s_submitNameKey = 0;
+	NativeInput_ClearKeyboardLatch();
 	memset(s_padSlotData, 0, sizeof(s_padSlotData));
 	s_keyboardState = NULL;
 }
@@ -831,17 +906,23 @@ void Platform_InputUpdate(void)
 	{
 		// NOTE(aalhendi): replay/state installs PSX-shaped pad bytes here;
 		// SDL host state is not serialized.
+		NativeInput_ClearKeyboardLatch();
 		NativeInput_WriteInstalledSnapshots();
 		return;
 	}
 
 	if (g_padCommEnable == 0)
 	{
+		NativeInput_ClearKeyboardLatch();
 		return;
 	}
 
 	SDL_PumpEvents();
-	keyboardButtons = NativeInput_KeyboardSuppressed() ? 0xffff : NativeInput_ReadKeyboard();
+	keyboardButtons = NativeInput_ConsumeKeyboard();
+	if (NativeInput_KeyboardSuppressed())
+	{
+		keyboardButtons = 0xffff;
+	}
 
 	for (slot = 0; slot < NATIVE_INPUT_MAX_CONTROLLERS; slot++)
 	{
@@ -1073,9 +1154,13 @@ int Platform_InputRunSelfTest(void)
 {
 	struct PlatformInputPadSnapshot migrationSnapshots[NATIVE_INPUT_MAX_CONTROLLERS];
 	struct PlatformInputPadSnapshot *snapshot;
+	u16 latchedButtons;
 	s32 slot;
 
 	memset(s_controllers, 0, sizeof(s_controllers));
+	NativeInput_DefaultMappings();
+	s_keyboardState = NULL;
+	NativeInput_ClearKeyboardLatch();
 	s_keyboardControllerSlot = NATIVE_INPUT_DEFAULT_KEYBOARD_SLOT;
 	s_installedSnapshotsActive = 0;
 	for (slot = 0; slot < NATIVE_INPUT_MAX_CONTROLLERS; slot++)
@@ -1125,8 +1210,24 @@ int Platform_InputRunSelfTest(void)
 		return 1;
 	}
 
-	printf("[CTR Input] self-test passed: metadata-key=%d legacy-enter=%d migration-enter=%d live-start=retail\n", SDL_SCANCODE_A,
-	       SDL_SCANCODE_RETURN, SDL_SCANCODE_RETURN);
+	Platform_InputKeyboardEvent(SDL_SCANCODE_C, 1);
+	Platform_InputKeyboardEvent(SDL_SCANCODE_RIGHT, 1);
+	Platform_InputKeyboardEvent(SDL_SCANCODE_C, 0);
+	Platform_InputKeyboardEvent(SDL_SCANCODE_RIGHT, 0);
+	latchedButtons = NativeInput_ConsumeKeyboard();
+	if (((latchedButtons & 0x4000) != 0) || ((latchedButtons & 0x20) != 0))
+	{
+		fprintf(stderr, "[CTR Input] self-test failed: key-down tap was not latched\n");
+		return 1;
+	}
+	if (NativeInput_ConsumeKeyboard() != 0xffff)
+	{
+		fprintf(stderr, "[CTR Input] self-test failed: quick tap survived more than one snapshot\n");
+		return 1;
+	}
+
+	printf("[CTR Input] self-test passed: metadata-key=%d legacy-enter=%d migration-enter=%d live-start=retail tap-latch=c+right one-snapshot\n",
+	       SDL_SCANCODE_A, SDL_SCANCODE_RETURN, SDL_SCANCODE_RETURN);
 	return 0;
 }
 
@@ -1219,6 +1320,7 @@ int Platform_InputRestoreState(const void *src, int srcSize)
 		s_controllerToSlotMapping[slot] = snapshot->controllers[slot].controllerToSlotMapping;
 	}
 	s_submitNameKey = NativeInput_GetSnapshotSubmitNameKey(&s_controllers[s_keyboardControllerSlot].snapshot);
+	NativeInput_ClearKeyboardLatch();
 	NativeInput_WritePadBus();
 
 	return 1;

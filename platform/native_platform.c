@@ -463,6 +463,13 @@ void Platform_PollHostEvents(void)
 				break;
 			}
 
+			// Preserve a complete quick key tap until the next retail pad
+			// snapshot. Host Alt shortcuts must never leak into game input.
+			if (s_hostAltKeyState == 0)
+			{
+				Platform_InputKeyboardEvent(key, down);
+			}
+
 			if (key == SDL_SCANCODE_RETURN)
 			{
 				if ((s_hostAltKeyState != 0) && (down != 0) && (event.key.repeat == 0))
