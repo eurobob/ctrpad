@@ -241,6 +241,10 @@ if(BUILD_TESTING)
     set_tests_properties(ctr_native_audio_state_alignment PROPERTIES PASS_REGULAR_EXPRESSION
         "^\\[CTR AudioState\\] self-test passed: snapshot-align=(4|8) blob-mod8=4 boundary=memcpy"
     )
+    add_test(NAME ctr_native_audio_mixer COMMAND $<TARGET_FILE:ctr_native> --self-test-audio-mixer)
+    set_tests_properties(ctr_native_audio_mixer PROPERTIES PASS_REGULAR_EXPRESSION
+        "^\\[CTR AudioMixer\\] self-test passed: adpcm=streamed pan=left reverb=tail dry=0x132e19d77167fb3d wet=0x4bdedc91d1293ad8 tail-frames=6905"
+    )
     add_test(NAME ctr_native_checkpoint_pointer_validation COMMAND $<TARGET_FILE:ctr_native> --self-test-checkpoint-pointer-validation)
     set_tests_properties(ctr_native_checkpoint_pointer_validation PROPERTIES PASS_REGULAR_EXPRESSION
         "^\\[CTR State\\] pointer-validation self-test passed: scalar=ignored relocated=reversion-checked overlap-idempotence=checked pool-allocation=free-list-complement camera-quad=checked"

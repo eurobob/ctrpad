@@ -198,6 +198,11 @@ static int NativeArg_IsAudioStateAlignmentSelfTest(const char *arg)
 	return (arg != NULL) && (strcmp(arg, "--self-test-audio-state-alignment") == 0);
 }
 
+static int NativeArg_IsAudioMixerSelfTest(const char *arg)
+{
+	return (arg != NULL) && (strcmp(arg, "--self-test-audio-mixer") == 0);
+}
+
 static int NativeArg_IsCheckpointPointerValidationSelfTest(const char *arg)
 {
 	return (arg != NULL) && (strcmp(arg, "--self-test-checkpoint-pointer-validation") == 0);
@@ -305,6 +310,10 @@ int main(int argc, char *argv[])
 		if (NativeArg_IsAudioStateAlignmentSelfTest(argv[argIndex]))
 		{
 			return NativeAudio_RunStateAlignmentSelfTest();
+		}
+		if (NativeArg_IsAudioMixerSelfTest(argv[argIndex]))
+		{
+			return NativeAudio_RunMixerSelfTest();
 		}
 		if (NativeArg_IsCheckpointPointerValidationSelfTest(argv[argIndex]))
 		{

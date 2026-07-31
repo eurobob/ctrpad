@@ -2746,6 +2746,163 @@ int NativeAudio_RunStateAlignmentSelfTest(void)
 	return 0;
 }
 
+#define NATIVE_AUDIO_MIXER_SELF_TEST_DRY_FRAMES   4096
+#define NATIVE_AUDIO_MIXER_SELF_TEST_REVERB_FRAMES 24000
+#define NATIVE_AUDIO_MIXER_SELF_TEST_DRY_DIGEST     0x132e19d77167fb3dULL
+#define NATIVE_AUDIO_MIXER_SELF_TEST_REVERB_DIGEST  0x4bdedc91d1293ad8ULL
+#define NATIVE_AUDIO_MIXER_SELF_TEST_TAIL_FRAMES    6905
+
+internal u64 NativeAudio_MixerSelfTestDigest(const s16 *samples, int frameCount)
+{
+	u64 hash = 0xcbf29ce484222325ULL;
+	int i;
+
+	for (i = 0; i < frameCount * NATIVE_AUDIO_CHANNELS; i++)
+	{
+		u16 bits = (u16)samples[i];
+
+		hash ^= bits & 0xffu;
+		hash *= 0x100000001b3ULL;
+		hash ^= bits >> 8;
+		hash *= 0x100000001b3ULL;
+	}
+
+	return hash;
+}
+
+internal int NativeAudio_MixerSelfTestStartVoice(u8 blockFlags, s16 volumeLeft, s16 volumeRight, int reverb)
+{
+	static const u8 sampleNibbles[NATIVE_AUDIO_ADPCM_BLOCK_BYTES - 2] = {
+	    0x71, 0xe4, 0x2b, 0xd5, 0x63, 0x9f, 0x40, 0xc8, 0x17, 0xae, 0x52, 0xf3, 0x6d, 0x80,
+	};
+	u8 block[NATIVE_AUDIO_ADPCM_BLOCK_BYTES];
+	SpuVoiceAttr attr;
+	struct NativeAudioVoice *voice = &s_audio.voices[0];
+	const u32 sampleAddress = 0x2000;
+
+	memset(block, 0, sizeof(block));
+	block[0] = 0x04;
+	block[1] = blockFlags;
+	memcpy(&block[2], sampleNibbles, sizeof(sampleNibbles));
+	if ((NativeAudio_SpuSetTransferStartAddr(sampleAddress) == 0) ||
+	    (NativeAudio_SpuWrite(block, sizeof(block)) != sizeof(block)))
+	{
+		return 0;
+	}
+
+	memset(&attr, 0, sizeof(attr));
+	attr.voice = SPU_VOICECH(0);
+	attr.mask = SPU_VOICE_VOLL | SPU_VOICE_VOLR | SPU_VOICE_PITCH | SPU_VOICE_WDSA | SPU_VOICE_ADSR_SR | SPU_VOICE_ADSR_SMODE;
+	attr.volume.left = volumeLeft;
+	attr.volume.right = volumeRight;
+	attr.pitch = 0x1000;
+	attr.addr = sampleAddress;
+	attr.sr = 0x7f;
+	attr.s_mode = SPU_VOICE_LINEARIncN;
+	NativeAudio_SpuSetVoiceAttr(&attr);
+	NativeAudio_SpuSetReverbVoice(reverb, SPU_VOICECH(0));
+	NativeAudio_SpuSetKey(SPU_ON, SPU_VOICECH(0));
+
+	// Hold the envelope at unity so this test isolates decode, panning, and
+	// reverb. Key On still executes the production block decoder and stream
+	// setup before the deterministic sustain state is installed.
+	voice->adsrLevel = NATIVE_AUDIO_ADSR_MAX;
+	voice->attr.envx = NATIVE_AUDIO_ADSR_MAX;
+	voice->adsrPhase = NATIVE_AUDIO_ADSR_SUSTAIN;
+	voice->adsrCounter = 0;
+
+	return voice->active && voice->stream.valid && (voice->stream.decoded[0] != 0 || voice->stream.decoded[1] != 0);
+}
+
+internal void NativeAudio_MixerSelfTestReset(void)
+{
+	memset(&s_audio, 0, sizeof(s_audio));
+	s_audio.init = 1;
+	s_audio.cdMixEnabled = 1;
+	s_audio.masterVolumeLeft = 0x7fff;
+	s_audio.masterVolumeRight = 0x7fff;
+	s_audio.reverbAttr.mode = SPU_REV_MODE_OFF;
+}
+
+int NativeAudio_RunMixerSelfTest(void)
+{
+	s16 dry[NATIVE_AUDIO_MIXER_SELF_TEST_DRY_FRAMES * NATIVE_AUDIO_CHANNELS];
+	s16 wet[NATIVE_AUDIO_MIXER_SELF_TEST_REVERB_FRAMES * NATIVE_AUDIO_CHANNELS];
+	SpuReverbAttr reverb;
+	u64 dryDigest;
+	u64 wetDigest;
+	u64 dryLeftEnergy = 0;
+	u64 dryRightEnergy = 0;
+	int dryNonzero = 0;
+	int wetTailNonzero = 0;
+	int i;
+
+	NativeAudio_MixerSelfTestReset();
+	if (!NativeAudio_MixerSelfTestStartVoice(ADPCM_LOOP_END | ADPCM_REPEAT | ADPCM_LOOP_START, 0x6000, 0x2000, 0) ||
+	    NativeAudio_RenderFrames(dry, NATIVE_AUDIO_MIXER_SELF_TEST_DRY_FRAMES) != NATIVE_AUDIO_MIXER_SELF_TEST_DRY_FRAMES)
+	{
+		fprintf(stderr, "[CTR AudioMixer] self-test failed: dry render setup\n");
+		return 1;
+	}
+	for (i = 0; i < NATIVE_AUDIO_MIXER_SELF_TEST_DRY_FRAMES; i++)
+	{
+		int left = dry[i * NATIVE_AUDIO_CHANNELS];
+		int right = dry[i * NATIVE_AUDIO_CHANNELS + 1];
+
+		dryLeftEnergy += (u64)(left < 0 ? -left : left);
+		dryRightEnergy += (u64)(right < 0 ? -right : right);
+		dryNonzero += (left != 0) || (right != 0);
+	}
+	if ((dryNonzero == 0) || (dryRightEnergy == 0) || (dryLeftEnergy <= dryRightEnergy * 2))
+	{
+		fprintf(stderr, "[CTR AudioMixer] self-test failed: stereo pan invariant left=%llu right=%llu nonzero=%d\n",
+		        (unsigned long long)dryLeftEnergy, (unsigned long long)dryRightEnergy, dryNonzero);
+		return 1;
+	}
+	dryDigest = NativeAudio_MixerSelfTestDigest(dry, NATIVE_AUDIO_MIXER_SELF_TEST_DRY_FRAMES);
+
+	NativeAudio_MixerSelfTestReset();
+	memset(&reverb, 0, sizeof(reverb));
+	reverb.mask = SPU_REV_MODE | SPU_REV_DEPTHL | SPU_REV_DEPTHR;
+	reverb.mode = SPU_REV_MODE_ROOM | SPU_REV_MODE_CLEAR_WA;
+	reverb.depth.left = 0x7fff;
+	reverb.depth.right = 0x7fff;
+	if ((NativeAudio_SpuSetReverbModeParam(&reverb) != SPU_SUCCESS) ||
+	    !NativeAudio_MixerSelfTestStartVoice(ADPCM_LOOP_END, 0x6000, 0x6000, 1))
+	{
+		fprintf(stderr, "[CTR AudioMixer] self-test failed: reverb setup\n");
+		return 1;
+	}
+	NativeAudio_SpuSetReverb(SPU_ON);
+	if (NativeAudio_RenderFrames(wet, NATIVE_AUDIO_MIXER_SELF_TEST_REVERB_FRAMES) != NATIVE_AUDIO_MIXER_SELF_TEST_REVERB_FRAMES)
+	{
+		fprintf(stderr, "[CTR AudioMixer] self-test failed: reverb render\n");
+		return 1;
+	}
+	for (i = 256; i < NATIVE_AUDIO_MIXER_SELF_TEST_REVERB_FRAMES; i++)
+	{
+		wetTailNonzero += (wet[i * NATIVE_AUDIO_CHANNELS] != 0) || (wet[i * NATIVE_AUDIO_CHANNELS + 1] != 0);
+	}
+	if ((s_audio.voices[0].active != 0) || (wetTailNonzero == 0))
+	{
+		fprintf(stderr, "[CTR AudioMixer] self-test failed: reverb tail active=%d nonzero=%d\n", s_audio.voices[0].active, wetTailNonzero);
+		return 1;
+	}
+	wetDigest = NativeAudio_MixerSelfTestDigest(wet, NATIVE_AUDIO_MIXER_SELF_TEST_REVERB_FRAMES);
+	if ((dryDigest != NATIVE_AUDIO_MIXER_SELF_TEST_DRY_DIGEST) ||
+	    (wetDigest != NATIVE_AUDIO_MIXER_SELF_TEST_REVERB_DIGEST) ||
+	    (wetTailNonzero != NATIVE_AUDIO_MIXER_SELF_TEST_TAIL_FRAMES))
+	{
+		fprintf(stderr, "[CTR AudioMixer] self-test failed: cross-width oracle dry=0x%016llx wet=0x%016llx tail=%d\n",
+		        (unsigned long long)dryDigest, (unsigned long long)wetDigest, wetTailNonzero);
+		return 1;
+	}
+
+	printf("[CTR AudioMixer] self-test passed: adpcm=streamed pan=left reverb=tail dry=0x%016llx wet=0x%016llx tail-frames=%d\n",
+	       (unsigned long long)dryDigest, (unsigned long long)wetDigest, wetTailNonzero);
+	return 0;
+}
+
 internal void NativeAudio_MixFrame(s16 *outLeft, s16 *outRight)
 {
 	int mixLeft = 0;

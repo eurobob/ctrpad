@@ -41,5 +41,6 @@ int NativeAudio_GetStateSize(void);
 int NativeAudio_CaptureState(void *dst, int dstSize);
 int NativeAudio_RestoreState(const void *src, int srcSize);
 int NativeAudio_RunStateAlignmentSelfTest(void);
+int NativeAudio_RunMixerSelfTest(void);
 
 #endif
