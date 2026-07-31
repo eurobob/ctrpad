@@ -24,6 +24,8 @@ void MM_Scrapbook_Init(void)
 #define SCRAPBOOK_NATIVE_DISPLAY_WIDTH SCREEN_WIDTH
 
 global_variable s32 s_scrapbookNativeNextVBlank;
+global_variable s32 s_scrapbookNativeStartVBlank;
+global_variable s32 s_scrapbookNativeXAWasActive;
 global_variable u32 s_scrapbookNativeFramesUploaded;
 
 static void MM_Scrapbook_GetNativeSource(s16 *srcX, s16 *srcY, s16 *displayY)
@@ -55,6 +57,7 @@ void MM_Scrapbook_PlayMovie(struct RectMenu *menu)
 {
 	struct GameTracker *gGT = sdata->gGT;
 #ifdef CTR_NATIVE
+	int nativeXACurrentActive;
 	int nativeXAWasActive;
 #endif
 
@@ -101,9 +104,12 @@ void MM_Scrapbook_PlayMovie(struct RectMenu *menu)
 				goto GO_BACK;
 			}
 			s_scrapbookNativeFramesUploaded = 0;
-			s_scrapbookNativeNextVBlank = Platform_GetVBlankCount() + SCRAPBOOK_FRAME_VBLANKS;
-			Platform_Log("[CTR Scrapbook] native playback started: xaActive=%d xaChannel=%d cadenceVBlanks=%d\n",
-			             NativeAudio_IsXAPlaying(), SCRAPBOOK_NATIVE_XA_CHANNEL, SCRAPBOOK_FRAME_VBLANKS);
+			s_scrapbookNativeStartVBlank = Platform_GetVBlankCount();
+			s_scrapbookNativeNextVBlank = s_scrapbookNativeStartVBlank + SCRAPBOOK_FRAME_VBLANKS;
+			s_scrapbookNativeXAWasActive = NativeAudio_IsXAPlaying();
+			Platform_Log("[CTR Scrapbook] native playback started: xaActive=%d xaChannel=%d cadenceVBlanks=%d startVBlank=%d\n",
+			             s_scrapbookNativeXAWasActive, SCRAPBOOK_NATIVE_XA_CHANNEL, SCRAPBOOK_FRAME_VBLANKS,
+			             s_scrapbookNativeStartVBlank);
 			D230.scrapbookState = SCRAP_PLAY;
 			return;
 		}
@@ -166,13 +172,21 @@ void MM_Scrapbook_PlayMovie(struct RectMenu *menu)
 				s_scrapbookNativeFramesUploaded++;
 			}
 		}
+		nativeXACurrentActive = NativeAudio_IsXAPlaying();
+		if ((s_scrapbookNativeXAWasActive != 0) && (nativeXACurrentActive == 0))
+		{
+			Platform_Log("[CTR Scrapbook] native XA exhausted: framesUploaded=%u vblanksElapsed=%d\n",
+			             s_scrapbookNativeFramesUploaded, Platform_GetVBlankCount() - s_scrapbookNativeStartVBlank);
+		}
+		s_scrapbookNativeXAWasActive = nativeXACurrentActive;
 
 		if ((getButtonPress != 0) || (nativeUploaded == 0))
 #endif
 		{
 #ifdef CTR_NATIVE
-			Platform_Log("[CTR Scrapbook] native playback ending: reason=%s framesUploaded=%u xaActive=%d\n",
-			             getButtonPress != 0 ? "input-skip" : "stream-end", s_scrapbookNativeFramesUploaded, NativeAudio_IsXAPlaying());
+			Platform_Log("[CTR Scrapbook] native playback ending: reason=%s framesUploaded=%u xaActive=%d vblanksElapsed=%d\n",
+			             getButtonPress != 0 ? "input-skip" : "stream-end", s_scrapbookNativeFramesUploaded, nativeXACurrentActive,
+			             Platform_GetVBlankCount() - s_scrapbookNativeStartVBlank);
 #endif
 			if (getButtonPress != 0)
 			{
