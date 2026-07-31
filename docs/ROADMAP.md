@@ -631,6 +631,14 @@ Result so far:
   macOS file persistence and checksum-valid relaunch are accepted; the
   diagnostic process itself was killed after observation, so clean normal
   quit and all iOS sandbox/lifecycle cases remain open.
+- The exact immutable ARM64 producer opened CoreAudio at 44.1 kHz stereo. An
+  ordinary 702-frame SDL disk-sink probe produced distinct non-silent PCM with
+  no full-scale samples and zero measured underrun/overflow deltas. A live
+  audio-thread breakpoint then proved initial XA request `category=1`,
+  `track=80` loaded 52 sectors at 37.8 kHz and decoded its first sector into
+  4,032 source frames before interpolation/mixing. The device/open/output and
+  initial XA decode boundaries are accepted; listening quality, broad
+  mix/reverb/track coverage, STR synchronization, and iOS routes remain open.
 - Red-beaker rain no longer reads per-player MVP translations out of widened
   instance function/thread pointers. Named draw-record fields preserve the
   retail depth/LOD byte alias, and a four-player cross-width test covers the
@@ -639,8 +647,8 @@ Result so far:
 
 Work:
 
-- Validate audio, desktop renderer, keyboard, MFi/Bluetooth controller,
-  replays, savestates, XA audio, and STR video.
+- Validate full-range audio mix/reverb/XA behavior, desktop renderer,
+  keyboard, MFi/Bluetooth controller, replays, savestates, and STR video.
 - Run sanitizers and the full parity gate under Apple Clang.
 - Allow clean optimized-i686 version-4 report `ctr-025812` to finalize after
   both typed emitter corrections. Require all eight components to match clean

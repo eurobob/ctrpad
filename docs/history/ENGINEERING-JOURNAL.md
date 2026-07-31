@@ -6884,3 +6884,80 @@ launches. It does not accept complete manual play, a clean quit for this
 diagnostic process, iOS sandbox placement, or device lifecycle persistence.
 The detailed evidence is in
 `docs/parity/2026-07-30-macos-arm64-save-relaunch.md`.
+
+## 2026-07-30 — Proved ordinary macOS audio output and initial XA decode
+
+### Why the replay report was not audio acceptance
+
+The clean 24,232-frame replay reports exercise deterministic audio state, but
+their logs do not prove that an ordinary process opened CoreAudio or submitted
+non-silent samples. The next probe therefore kept the exact accepted
+`eee2a8df5b96` producer and changed only its runtime sink.
+
+### Real device boundary
+
+An ordinary no-replay launch opened:
+
+```text
+driver=coreaudio
+src=44100 Hz/2 ch
+dst=44100 Hz/2 ch
+device=44100 Hz/2 ch
+sampleFrames=1024
+```
+
+It ran another ten seconds without an audio-output fault report and was
+stopped with Ctrl-C. The signal path shut down cleanly with exit 0. This
+accepted device creation, not audio content.
+
+### Captured the submitted PCM
+
+The same immutable binary was launched with SDL's compiled-in disk driver,
+`SDL_AUDIO_DISK_OUTPUT_FILE` under `/private/tmp`, and a performance output
+directory. Ctrl-C after 702 measured game frames produced a clean exit and
+summary. The CSV's named `audio_underrun_delta` and
+`audio_overflow_delta` columns both summed to zero.
+
+The 6,332,416-byte S16LE stereo capture had SHA-256
+`eac89fd2abc7d1d115070faaf847aa1293c4e32addd4272e75fec99a47f14834`.
+Both channels were non-silent, 1,530,073 frames differed between channels,
+neither channel contained a full-scale sample, and the peaks were about
+-4 dBFS. `tools/inspect-native-pcm-s16le.mjs` now performs this inspection
+without committing the disposable raw audio. `/dev/null` is rejected as an
+empty capture.
+
+The 35.898050-second value calculated from the number of captured samples is
+not treated as wall-clock cadence evidence for SDL's diagnostic sink.
+
+### Proved the initial XA path rather than inferring it
+
+An LLDB name breakpoint on `NativeAudio_PlayXATrack` captured the automatic
+`StateZero` request:
+
+```text
+categoryID=1
+xaID=80
+volumeLeft=32640
+volumeRight=32640
+```
+
+The loader returned 1 and activated 52 mono compressed sectors, 209,664
+source frames, at 37.8 kHz.
+
+The first attempt to follow
+`NativeAudio_XaStreamDecodeNextSectorNoLock` used `thread step-out` from an
+optimized inline frame. It appeared to return 0 without moving a counter.
+That observation was rejected because the debugger can force an inline return
+instead of executing the optimized body.
+
+The replacement breakpoint targeted the actual success boundary at
+`native_audio.c:2224`. SDL audio thread `SDLAudioP15` reached it with
+`nextSector=1`; one source step changed `decodedFrames` from 0 to 4,032. The
+stack continued through XA pseudo-37.8-kHz sampling, zig-zag interpolation,
+mixing, frame rendering, and `NativeAudio_StreamCallback`.
+
+The detailed commands, values, caveats, and acceptance boundary are in
+`docs/parity/2026-07-30-macos-arm64-audio-output.md`. This accepts the macOS
+device/open/output and initial XA decode boundaries. Subjective listening,
+broad mix/reverb/track coverage, STR synchronization, and every iOS route and
+lifecycle case remain open.
