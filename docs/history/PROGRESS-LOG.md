@@ -1310,3 +1310,44 @@ documentation reading was 185,118 seconds: 2 days, 3 hours, 25 minutes,
 18 seconds cumulative, adding 1,162 seconds (19 minutes, 22 seconds). The
 timer is cumulative product-task time, including pauses, not a benchmark or
 labor estimate.
+
+### 2026-07-31 — Interrupted-import next-launch recovery
+
+- A source audit found that every handled import failure removed its unique
+  `.ctrpad-import-*` stage, but process termination could bypass those handlers
+  and leave a partial 605 MB copy in Documents indefinitely.
+- Commit `c745390a55eb` centralizes the reserved staging prefix and, before
+  media-free onboarding, removes only direct child directories with that
+  prefix and a nonempty suffix. It reports the recovered count and keeps retry
+  enabled; unrelated entries and ordinary files are not cleanup targets.
+- Exact clean source identity `c745390a5` linked thin ARM64 Simulator and
+  device products at SHA-256 `019cf0a4...25fce` and
+  `1cc45ac0...f1919`. The macOS ARM64 product at
+  `ea2c719c...ef934` passed 21/21 CTests in 0.94 seconds. Both iOS products
+  retain the iOS 15.0 floor and SDK 26.5.
+- A unique ad-hoc Simulator copy passed strict/deep signature verification.
+  The isolated negative-test clone was seeded with two stale stages plus three
+  controls: a nonmatching directory, the exact prefix without a suffix, and a
+  same-prefix ordinary file.
+- Launch PID `81703` removed exactly the two stale stages, preserved all three
+  controls, left no installed partial destination, and visibly reported
+  `Recovered 2 interrupted imports` with an enabled chooser.
+- The clone's accepted 605,698,800-byte BIN (`f780bf23...07c0`) and 6,016-byte
+  save (`6a01b0f5...619a`) retained their inodes, sizes and hashes. Restoring
+  the accepted destination and cold-launching PID `81856` rendered retail CTR
+  output with the complete touch overlay.
+- The clone was shut down. The original validation Simulator was restored and
+  relaunched at PID `82204`; its original BIN/save inodes and hashes remained
+  unchanged. All retail data, fixtures, signed app copies and screenshots
+  remained outside Git.
+- The source commit was pushed to `origin/codex/arm64-apple` and the correct
+  repo-qualified draft PR #1 remains open against `main`. Physical iPad
+  signing/import and a real Files-provider/background termination during copy
+  remain open; the seeded durable recovery state is accepted without claiming
+  that live event.
+
+The preceding published reading was 185,118 goal seconds. The pre-publication
+documentation reading was 186,029 seconds: 2 days, 3 hours, 40 minutes,
+29 seconds cumulative, adding 911 seconds (15 minutes, 11 seconds). The timer
+is cumulative product-task time, including pauses, not a benchmark or labor
+estimate.

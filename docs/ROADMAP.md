@@ -860,8 +860,10 @@ memory-card replacement have landed; a clean frame-zero Simulator gameplay
 run created and preserved a retail memory-card profile across backgrounding;
 an explicit default-root seed was retained across app updates and cold-read;
 live Simulator wrong-region and incomplete-image failures are now accepted;
-physical Files/signing/save behavior, inaccessible/copy-interruption coverage,
-and explicit asset re-selection remain open; depends on M8
+reserved interrupted-import staging is recovered safely on the next launch;
+physical Files/signing/save behavior, inaccessible-provider/live-transfer
+interruption coverage, and explicit asset re-selection remain open; depends on
+M8
 
 Checkpoint `02a6623f80a0` establishes the storage ownership boundary without
 shipping retail data. On iOS, a valid raw image in
@@ -897,6 +899,18 @@ Selecting the full NTSC-U image then started the game in the original PID; a
 cold relaunch bypassed onboarding. The disposable clone was shut down and the
 original evidence Simulator was restored unchanged.
 
+Checkpoint `c745390a55eb` closes the recoverable-residue half of the
+interrupted-import gate. Before showing media-free onboarding, iOS now removes
+only direct child directories in the reserved
+`.ctrpad-import-<nonempty-suffix>` namespace and reports the recovered count
+without disabling retry. A clean exact Simulator build removed two seeded
+stale stages while preserving a nonmatching directory, the exact bare prefix,
+a same-prefix ordinary file, the retained 605,698,800-byte image and the
+6,016-byte save. After restoring the valid destination, the same build cold-
+launched rendered CTR output with the touch overlay. This accepts next-launch
+recovery from the durable state left by process termination; a live provider
+failure or real termination during the 605 MB transfer remains open.
+
 Checkpoint `4b078065ff03` replaces direct memory-card truncation with a hidden
 same-directory temporary-file transaction. It writes and flushes all bytes,
 closes the temporary file, then atomically replaces the final save; every
@@ -922,8 +936,9 @@ Work:
 - Retain the landed nonblocking iOS document picker, security-scoped coordinated
   copy, same-volume staging and validate-before-replace contract.
 - Retain the live Simulator wrong-region and incomplete-image outcomes;
-  complete physical-device repetition plus inaccessible-file, coordinated-copy
-  interruption and background/termination-during-copy coverage.
+  retain narrowly scoped next-launch interrupted-stage recovery; complete
+  physical-device repetition plus inaccessible-file and actual coordinated-
+  copy/background/termination-during-copy coverage.
 - Retain the accepted Simulator game-driven save, suspend/resume, app-update
   retention and cold retail Load-screen read; repeat the required subset on
   physical hardware and cover asset re-selection explicitly.
@@ -938,8 +953,10 @@ Acceptance:
   **Accepted on Simulator through Files and same-process continuation.**
 - Cooked ISO, wrong-region, truncated, and inaccessible files receive distinct
   errors. **Invalid-format, detected wrong-region, and truncated/incomplete
-  outcomes are accepted through the real Simulator Files picker. Inaccessible
-  and interrupted-copy behavior plus physical hardware remain open.**
+  outcomes are accepted through the real Simulator Files picker. Recovery of
+  reserved stale stages on next launch is accepted from isolated seeded state.
+  Inaccessible-provider and live interrupted-copy behavior plus physical
+  hardware remain open.**
 - Saves persist across launch, backgrounding, app updates, and asset
   re-selection. **Save creation, backgrounding, update retention and cold read
   are accepted on Simulator; asset re-selection and physical hardware remain

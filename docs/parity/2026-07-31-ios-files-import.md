@@ -208,15 +208,17 @@ Accepted on iPad Simulator:
 - same-volume install only after validation;
 - same-process transition into the game;
 - cold relaunch from Documents;
+- next-launch cleanup of importer-owned stale stages with visible retry status;
 - coherent visible geometry/textures; and
 - exact ARM64 macOS/Simulator/device builds plus sanitizer coverage.
 
 Still open:
 
 - signed installation and Files behavior on physical iPad hardware;
-- inaccessible and copy-interruption paths exercised through Files; the later
-  follow-up below accepts wrong-region and incomplete-image behavior;
-- background/resume or termination during the 605 MB copy;
+- inaccessible-provider and actual copy-interruption paths exercised through
+  Files; the follow-ups below accept wrong-region/incomplete validation and the
+  next-launch recovery state;
+- live background/resume or termination during the 605 MB copy;
 - explicit re-import/settings UX beyond manual file replacement behavior;
 - game-driven iOS memory-card creation, reload, app-update persistence and
   background save atomicity;
@@ -320,3 +322,115 @@ same-process transition, and cold relaunch. It does not accept inaccessible
 Files providers, coordinated-copy interruption/background termination,
 explicit in-app re-import of an already active destination, or any physical-
 iPad behavior. Those remain M9 gates.
+
+## Follow-up — next-launch recovery after an interrupted import
+
+Checkpoint `c745390a55ebbbef08bba1b81f982914eabecc31` addresses the
+durable staging residue that can survive when the process is killed before the
+normal copy/validation/install error handlers run. This is a source and live
+Simulator acceptance continuation; no retail byte, generated app, fixture or
+screenshot entered Git.
+
+### Cleanup contract
+
+The importer now owns one file-scope `.ctrpad-import-` prefix for both staging
+creation and recovery. Before media-free onboarding appears, it lists only the
+direct children of `Documents/CTRPad`. It removes an entry only if all three
+conditions hold:
+
+1. the name starts with `.ctrpad-import-`;
+2. the name has a nonempty suffix; and
+3. the entry is a directory.
+
+Missing import roots are a normal no-op. Other listing/removal failures are
+logged, and only successful removals contribute to the user-visible recovery
+count. One recovery uses singular text; multiple recoveries show the exact
+count. In both cases the existing chooser is enabled. Staging generation uses
+the same constant, eliminating a recovery/creation naming drift
+(`platform/apple/native_ios_import.m:31-32,142-184,199-230,305-310`).
+
+### Exact clean build matrix
+
+After the implementation was committed, all targets were explicitly
+reconfigured and rebuilt from source identity
+`SDL-3.4.10-beta-7.1-135-gc745390a5` with no dirty suffix:
+
+```text
+target                    SHA-256                                                          result
+iOS Simulator ARM64       019cf0a495696d30cca0bc9be2564c4e117c28ddd4bc9e52875d8e404c825fce  linked
+iOS device ARM64          1cc45ac04a6b23136f10500ed3db194c314619b4c39071df3866b321f83f1919  linked
+macOS ARM64               ea2c719c9565d3b6181086f2aab337e7748a4294ea4d09cd8e9f5f59d66ef934  21/21 CTests
+```
+
+All three are thin `arm64`. The Simulator and device Mach-O load commands are
+respectively `IOSSIMULATOR` and `IOS`, each with iOS 15.0 minimum and SDK 26.5.
+The established 32 C warnings repeated; the Objective-C recovery code added no
+warning. CTest completed in 0.94 seconds. A unique disposable copy of the
+Simulator app was ad-hoc signed: the unsigned executable matched the matrix
+hash above, the signed executable was
+`a879cae7c58e200097da431f369c24f7bb9a37a33f4a0e976c635795404c94a3`,
+and strict/deep verification passed. This is Simulator authorization only, not
+an Apple development signature.
+
+### Isolated recovery fixture and controls
+
+The original `CTRPad Import Validation` device was shut down and never edited.
+Testing reused the disposable `CTRPad Import Negatives` clone at UDID
+`26F3DEE8-8840-446D-85FE-C882009C9C06`. Its valid destination was renamed
+inside only the clone to `ctr-u.bin.accepted-before-recovery`, preserving inode
+`111313696`, 605,698,800 bytes and SHA-256
+`f780bf2331476aabfc00772fa758b12dd95ebfbc907968132cbd3cdd4e2c07c0`.
+The clone's memory card remained inode `111309627`, 6,016 bytes and SHA-256
+`6a01b0f5562ed7a279d8f8e51e3b1874ac39a6120f55db4fe3873288950619a3`.
+
+Two importer-owned stale directories were then seeded: one contained an
+`assets/ctr-u.bin` marker and one was empty. Three negative controls were also
+created:
+
+```text
+.ctrpad-keep-control          nonmatching directory
+.ctrpad-import-               exact prefix, no suffix, directory
+.ctrpad-import-control-file   matching prefix and suffix, ordinary 118-byte file
+```
+
+Installing the exact app migrated the Simulator's data-container UUID from
+`FBB4DE38-856C-43D6-BC82-0D2D1777BAAE` to
+`E6915D41-574B-4380-9FCB-2EA255109A3D`; paths were re-resolved before launch.
+The asset and save retained their original clone inodes and hashes across that
+migration.
+
+Launch PID `81703` removed exactly the two importer-owned stage directories.
+All three controls remained with their original types, the final
+`assets/ctr-u.bin` destination remained absent, and the retained image/save
+inodes, sizes and hashes were unchanged. The enabled onboarding screen visibly
+reported:
+
+```text
+Recovered 2 interrupted imports. No partial image was installed; choose your
+NTSC-U raw BIN to retry.
+```
+
+The local-only 2064-by-2752 screenshot
+`/private/tmp/ctrpad-import-recovery-exact.png` has SHA-256
+`405fd31047bf323ad71a1f325b8c3d154c1c9958ab21adfac983f0d47e464500`.
+
+The accepted image was then moved back to the normal destination without
+changing its inode. A deliberate cold launch at PID `81856` bypassed onboarding
+and visibly rendered the retail copyright presentation with the complete touch
+overlay. The three controls, accepted image and save still survived unchanged.
+The local-only screenshot
+`/private/tmp/ctrpad-import-recovery-normal-exact.png` has SHA-256
+`dff60f6d43e36aff4c252c6848030df2065bd29a20ce407da39484c27be3da8d`.
+
+Finally, the clone was terminated and shut down. The original validation
+device was booted and relaunched at PID `82204`; its retail image remained inode
+`111131200` and its save inode `111222179`, with the same accepted byte sizes
+and SHA-256 values. The original evidence device is therefore still the active
+Simulator and the disposable clone remains recoverable but shut down.
+
+This accepts narrow next-launch cleanup, retry messaging, preservation of
+similarly named non-owned entries, and normal startup after recovery. The
+staging state was seeded to reproduce the post-kill durable condition; a live
+Files-provider failure or actual background/termination event during the 605 MB
+copy was not performed and remains open, as do physical-iPad import and Apple
+signing.

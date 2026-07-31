@@ -10402,3 +10402,143 @@ documentation reading was 185,118 seconds: 2 days, 3 hours, 25 minutes,
 18 seconds cumulative, adding 1,162 seconds (19 minutes, 22 seconds). It
 includes paused/resumed task lifetime and is not a build benchmark or
 person-hour estimate.
+
+## 2026-07-31 — Made interrupted iOS imports recoverable on the next launch
+
+**Implementation commit:** `c745390a55ebbbef08bba1b81f982914eabecc31`
+
+### Why this was the next software gap
+
+The live Files matrix had accepted cancel, invalid raw input, detected PAL,
+truncated NTSC-U, full validation, same-process startup and cold relaunch. A
+fresh source audit then separated two meanings of “interrupted import.” The
+existing importer removes its unique stage after a coordinated-copy error,
+validation rejection, install failure or success. Those are handled returns.
+If iOS kills the process during the background copy, none of those returns is
+guaranteed to execute. The validated destination is still safe because it is
+not installed until the copy and production-loader validation finish, but the
+partial `.ctrpad-import-<UUID>` directory can survive indefinitely.
+
+That recovery state was actionable without a physical device or external Files
+provider. The implementation deliberately did not scan recursively, delete all
+dot directories, or remove every name that merely looked similar. A shared
+file-scope prefix now drives both stage creation and cleanup. Startup lists only
+the direct children of `Documents/CTRPad`; it requires the reserved prefix, a
+nonempty suffix and directory type before removing an entry. A missing base is
+a normal first-launch no-op. Other listing/removal errors are logged. Successful
+removals are counted, and onboarding uses singular/plural status text while
+leaving the chooser enabled (`platform/apple/native_ios_import.m:31-32,142-184,199-230,305-310`).
+
+### Implementation and build sequence
+
+The first diagnostic build was intentionally run with the source edit still
+dirty. Simulator and device products linked and the macOS regression suite
+passed 21/21, proving the Objective-C change compiled before a checkpoint was
+created. The established 32 legacy C warnings repeated and the importer added
+no Objective-C warning. The source was then committed as
+`fix: recover interrupted iOS imports`.
+
+All three presets were explicitly reconfigured and rebuilt after that commit so
+the acceptance binaries carried clean identity
+`SDL-3.4.10-beta-7.1-135-gc745390a5` rather than a dirty suffix:
+
+```text
+Simulator ARM64  019cf0a495696d30cca0bc9be2564c4e117c28ddd4bc9e52875d8e404c825fce
+device ARM64     1cc45ac04a6b23136f10500ed3db194c314619b4c39071df3866b321f83f1919
+macOS ARM64      ea2c719c9565d3b6181086f2aab337e7748a4294ea4d09cd8e9f5f59d66ef934
+```
+
+`lipo` reported thin `arm64` for every product. `vtool` reported
+`IOSSIMULATOR` and `IOS`, iOS 15.0 minimum and SDK 26.5. The macOS suite passed
+21/21 in 0.94 seconds. A unique temporary Simulator bundle copy was required
+because bundle resource assembly invalidates the linker's placeholder
+signature. Before signing it matched the matrix executable hash; after ad-hoc
+signing it was
+`a879cae7c58e200097da431f369c24f7bb9a37a33f4a0e976c635795404c94a3`,
+and `codesign --verify --deep --strict` passed. No Apple-authorized signature is
+claimed.
+
+### Isolation, seeded durable state and negative controls
+
+The accepted `CTRPad Import Validation` Simulator was terminated and shut down
+without deleting or renaming any of its data. The disposable `CTRPad Import
+Negatives` clone was still available from the prior validation work, so it was
+reused rather than creating another multi-gigabyte copy. Its current valid
+destination was renamed inside only the clone to
+`ctr-u.bin.accepted-before-recovery`, preserving inode `111313696`, size
+605,698,800 and SHA-256 `f780bf23...07c0`. The clone save was inode
+`111309627`, size 6,016 and SHA-256 `6a01b0f5...619a`.
+
+Two cleanup-positive fixtures were created directly under the clone's import
+base. `.ctrpad-import-interrupted-one` contained a nested 118-byte
+`assets/ctr-u.bin` marker; `.ctrpad-import-interrupted-two` was empty. Three
+cleanup-negative controls made overbroad behavior observable:
+
+```text
+.ctrpad-keep-control          directory; no reserved prefix
+.ctrpad-import-               directory; prefix but no suffix
+.ctrpad-import-control-file   ordinary file; prefix and nonempty suffix
+```
+
+The exact signed app installation migrated the Simulator data-container UUID
+from `FBB4DE38-856C-43D6-BC82-0D2D1777BAAE` to
+`E6915D41-574B-4380-9FCB-2EA255109A3D`. That did not invalidate the test: the
+new path was resolved from `simctl listapps` before launch, and the retained
+BIN/save still had their original clone inodes and hashes. Treating the stale
+path as current would have been rejected evidence.
+
+### Live observations and restoration
+
+PID `81703` launched the exact build. Both positive fixture directories were
+absent afterward. The nonmatching directory, bare-prefix directory and
+same-prefix 118-byte file remained with their expected types. No
+`assets/ctr-u.bin` destination appeared, so cleanup did not manufacture or
+install partial content. The accepted backup and memory card retained their
+inodes, sizes and exact hashes. The 2064-by-2752 screen visibly showed the
+enabled chooser and exact plural message:
+
+```text
+Recovered 2 interrupted imports. No partial image was installed; choose your
+NTSC-U raw BIN to retry.
+```
+
+The local screenshot hash was
+`405fd31047bf323ad71a1f325b8c3d154c1c9958ab21adfac983f0d47e464500`.
+
+The app was terminated, the accepted backup moved back to its normal filename
+without changing inode, and PID `81856` cold-launched. It bypassed onboarding
+and visibly rendered the retail copyright presentation and complete safe-area
+touch overlay. The controls, retail BIN and save still survived unchanged. The
+local screenshot hash was
+`dff60f6d43e36aff4c252c6848030df2065bd29a20ce407da39484c27be3da8d`.
+
+The clone was terminated and shut down. The original validation device was
+booted and relaunched at PID `82204`. Its source retail image remained inode
+`111131200`, 605,698,800 bytes and `f780bf23...07c0`; its save remained inode
+`111222179`, 6,016 bytes and `6a01b0f5...619a`. Thus the isolated mutation and
+Simulator install never changed the preserved source evidence. Retail data,
+fixtures, temporary signed bundles, app containers and screenshots remained
+outside the repository and staging surface.
+
+### Publishing correction and remaining boundary
+
+The source commit was pushed immediately after acceptance. An unqualified
+`gh pr view 1` read followed an upstream repository context and displayed the
+unrelated closed `CTR-tools/ctr-native` PR #1. It was a read-only result and was
+rejected. A repo-qualified query against `chrissotraidis/ctrpad` confirmed the
+actual draft PR #1 is open from `codex/arm64-apple` into `main`; no upstream PR
+was changed.
+
+This checkpoint accepts the next-launch state machine after an interrupted
+copy: narrow stage removal, visible retry, similar-name preservation, asset/save
+preservation and normal subsequent startup. The staging state was seeded rather
+than produced by killing a live 605 MB Files transfer. A real inaccessible
+provider, coordinated read failure, background termination during copy,
+physical-iPad behavior and Apple signing therefore remain open. The goal stays
+active.
+
+The preceding published timer was 185,118 seconds. The pre-publication
+documentation reading was 186,029 seconds: 2 days, 3 hours, 40 minutes,
+29 seconds cumulative, adding 911 seconds (15 minutes, 11 seconds). It includes
+paused/resumed task lifetime and is not a build benchmark or person-hour
+estimate.

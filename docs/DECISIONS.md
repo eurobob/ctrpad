@@ -403,3 +403,29 @@ probe proved CodeDirectory v20400 and the four intended DER entitlements after
 a dotted-key construction bug was corrected. This does not prove that an Apple
 profile authorizes the app or that a real iPad installs/runs it; those require
 the user's identity, profile and device.
+
+## 2026-07-31 — Recover only reserved interrupted-import directories on launch
+
+**Decision:** use one shared `.ctrpad-import-` staging prefix for creation and
+recovery. Before presenting media-free onboarding, inspect only the direct
+children of `Documents/CTRPad` and remove an entry only when it is a directory,
+starts with that reserved prefix, and has a nonempty suffix. Leave ordinary
+files, the bare prefix, nonmatching entries, the installed asset and all private
+Application Support state untouched. Report the number removed in the existing
+status label and leave the chooser enabled (`platform/apple/native_ios_import.m:31-32,142-184,199-230,305-310`).
+
+**Why:** every handled copy/validation/install failure already deletes its
+unique stage, but a process kill or OS termination can prevent those handlers
+from running. The destination is not installed until validation succeeds, so a
+surviving stage is disposable on the next media-free launch. Restricting
+cleanup to the importer-owned directory namespace avoids treating Documents as
+a scratch area or deleting a similarly named user file.
+
+**Verification boundary:** exact commit `c745390a55eb` removed two isolated
+seeded stages and visibly reported both recoveries while preserving three
+controls: a nonmatching directory, the exact bare-prefix directory, and a
+same-prefix ordinary file. The accepted 605,698,800-byte image and 6,016-byte
+save retained their inodes and SHA-256 values; restoring the image produced a
+normal cold launch. This accepts recovery from the durable state an interrupted
+copy can leave. It does not claim a live Files-provider fault, background kill,
+or physical-iPad transfer interruption.
