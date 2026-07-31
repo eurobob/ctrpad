@@ -4,11 +4,11 @@ This directory will contain the deterministic baseline definition, scripted
 input fixtures that contain no retail data, comparison-tool documentation, and
 per-milestone results.
 
-No full acceptance baseline has passed yet. The 2,200-frame
-startup/menu/loader/early-race prefix matches across ARM64 and i686 on all
-eight required state and transport components. The finalized corrected
-24,232-frame comparison is rejected at frame 16,561 because the i686 path
-advances the particle RNG five additional times.
+No formal same-commit full acceptance pair has passed yet. Both cross-width
+emitter defects are corrected: clean ARM64 report `ctr-215303` matches the
+earlier immutable i686 trajectory on all eight state/transport components for
+24,232 frames, and the clean current i686 regeneration is still running.
+Fresh current-build version-4 report `ctr-223221` structurally advances a lap.
 
 Current evidence and procedures:
 
@@ -21,8 +21,11 @@ Current evidence and procedures:
 - `2026-07-30-arm64-full-regeneration.md` records the complete ARM64 capture
   and the rejected pre-correction i686 candidate.
 - `2026-07-30-full-cross-width-result.md` records the finalized corrected
-  i686 rejection, first-divergence diagnosis, rejected tracing routes, and
-  typed lap-coverage audit.
+  i686 rejection, both first-divergence diagnoses and corrections, rejected
+  tracing/extension routes, and accepted current-format lap coverage.
+- `2026-07-30-macos-arm64-cadence.md` records the complete transport audit and
+  direct checkpoint-local wall measurement against the exact NTSC VBlank
+  model.
 
 The first task is to evaluate `platform/native_replay_scheduler.c`,
 `platform/native_checkpoint.c`, `platform/native_savestate.c`, and

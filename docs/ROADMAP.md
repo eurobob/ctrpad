@@ -616,6 +616,13 @@ Result so far:
   version-4 input and steering extensions A and B remain rejected:
   A ends at `maxLap=0`, while B was stopped at frame 28,850 after checkpoint
   progress had remained unchanged for 7,550 frames and never advanced a lap.
+- `tools/analyze-replay-cadence.mjs` validates complete replay timing and can
+  measure checkpoint-local wall cadence with live line-buffered markers.
+  Clean report `ctr-215303` uses 32 ms and two VBlanks together on
+  24,200/24,231 post-bootstrap frames. A 3,232-frame/6,465-VBlank segment
+  measured 108.051815 seconds against a 108.079040-second model
+  (`-0.025190%`) and exited 0. The macOS ARM64 desktop cadence task is
+  accepted; iOS display/lifecycle pacing remains a later platform gate.
 - Red-beaker rain no longer reads per-player MVP translations out of widened
   instance function/thread pointers. Named draw-record fields preserve the
   retail depth/LOD byte alias, and a four-player cross-width test covers the
@@ -636,8 +643,6 @@ Work:
   structural coverage is cited separately, and cannot be labeled a full
   golden-coverage pass. All pre-correction mismatched and partial reports
   remain diagnostic inputs, not acceptance artifacts.
-- Measure frame cadence against the retail 30 Hz logic / approximately
-  59.817 Hz VBlank model.
 
 Acceptance:
 
@@ -805,7 +810,7 @@ timestamps are explicitly excluded from game-visible deterministic state.
 | Reference documentation is stale | `ref/README.md` claims four clones that are absent | Derive documentation from actual remote/commit checks |
 | Retail assets can be committed accidentally | M0 ignore and tracked-file probes pass | Keep the M0 checks in release verification |
 | Wrong-region retail media can corrupt indexed loads | The archived PAL image identifies as `SCES_021.05`; the replacement identifies as `SCUS_944.26` | Keep the import/runtime identity gate and exercise both accept/reject cases |
-| Apple lifecycle/pacing changes perturb timing | Current code blocks and spin-waits around synthetic VBlank | Compare game-state timing and measured cadence before/after display integration |
+| Apple lifecycle/pacing changes perturb timing | macOS ARM64 clean report `ctr-215303` uses the retail 32-ms/two-VBlank step on 99.872065% of post-bootstrap frames; a 6,465-VBlank checkpoint segment measured within -0.025190% of the exact 59.817333-Hz model | Preserve this macOS baseline and repeat state/cadence measurement after iOS display-link and lifecycle integration |
 | Touch boost chains are ergonomically poor despite correct input injection | Three boosts require steering + drift hold + repeated taps | Device prototypes and repeated triple-boost usability criterion |
 | Signing/publishing depends on credentials and external accounts | Not yet inventoried | Keep configuration credential-free; verify available team/device before release milestone |
 | GPL provenance and commercial-IP exposure need legal judgment | Facts are documented but not legal advice (`docs/ctr-native-viability.md:363-400`) | Sideload-only, publish corresponding source, and obtain counsel review before public release |

@@ -6642,3 +6642,134 @@ Golden report metadata is not accepted: missing finalized=1.
 That rejection is expected and proves the verifier will not start the three
 long playback processes from an in-flight report. The full command is
 prepared, not yet claimed as passed.
+
+## 2026-07-30 — Measured macOS ARM64 cadence
+
+### Static timing and complete replay audit
+
+The remaining independent M6 work item was to measure cadence against retail
+logic and VBlank timing. Source establishes two different quantities:
+
+```text
+platform/native_platform.c:
+  GPU clock                    53,693,175 Hz
+  cycles per NTSC VBlank          897,619
+  exact VBlank target          59.817333412 Hz
+  two-VBlank frame target      29.908666706 Hz
+
+include/macros.h:
+  nominal NTSC FPS             30
+  ordinary logic elapsed       32 ms
+```
+
+`Native_AdvanceVBlankTarget` carries its rational remainder, so integer
+counter conversion does not accumulate drift. The game consumes the separate
+32-ms retail logic quantum through `MainFrame_GameLogic`.
+
+`tools/analyze-replay-cadence.mjs` was added so this audit is reproducible. It
+validates the file version/layout, every record index, pad checksum, record
+checksum, version-aware VSync boundary, RLE packet, and decoded total before
+reporting timing.
+
+Clean report `ctr-215303` produced:
+
+```text
+frames/version:
+  24232 / 4
+elapsedTimeMS histogram:
+  31:2,32:24216,48:9,64:5
+pre-frame VBlank histogram:
+  0:24231,857:1
+in-frame VBlank histogram:
+  0:1,2:24215,3:9,4:2,5:1,6:2,8:2
+post-bootstrap frames:
+  24231
+32-ms plus two-VBlank frames:
+  24200 (99.872065%)
+```
+
+Frame zero contains all 857 initial asynchronous-loader VBlanks and no
+in-frame VBlank. It is valid captured timing but not an ordinary rendered
+frame. The remaining transport contains 36 VBlanks above a uniform
+two-per-frame schedule, producing a post-bootstrap transport average of
+29.886466 Hz. Those explicit loading/stall packets are evidence, not noise to
+discard.
+
+The existing log has twelve 2,000-frame wall samples:
+
+```text
+31.31, 29.86, 29.83, 29.86, 29.91, 29.88,
+29.90, 29.91, 29.91, 29.91, 29.91, 29.90
+```
+
+The first is a startup transient. The remaining eleven average 29.889091
+with minimum 29.83 and maximum 29.91. Because log windows are not
+checkpoint-local, a direct wall measurement was still required.
+
+### Rejected measurement routes
+
+Checkpoint 70 maps to frame 21,000. The 3,232-frame tail contains exactly
+6,465 VBlanks: 3,231 two-VBlank frames and one three-VBlank frame. The exact
+model duration is:
+
+```text
+6465 / 59.817333412 = 108.079040 seconds
+```
+
+The first `/usr/bin/time` playback exited 0 in 126.31 seconds. It was rejected
+as a cadence result because the interval began at process launch and included
+asset validation, shaders, audio, checkpoint validation, and restoration.
+
+A second attempt timestamped filtered child output, but redirected C stdio was
+block-buffered. It emitted no trustworthy live markers and was deliberately
+stopped. No timing from that run is evidence.
+
+### Accepted line-buffered wall measurement
+
+The same unchanged producer was then launched through `/usr/bin/stdbuf -oL
+-eL`. A Node monitor timestamped only lines when they were emitted:
+
+```text
+checkpoint restore:
+  process wall +16.269339 seconds
+replay finish:
+  restore wall +108.051815 seconds
+process exit:
+  0
+```
+
+Against the 108.079040-second model:
+
+```text
+deviation:
+  -0.027225 seconds
+  -0.025190 percent
+observed frame cadence:
+  29.911575 frames/second
+```
+
+The built-in `FPS: 31.23` line seen in this checkpoint playback was rejected:
+its 2,000-frame counter began before checkpoint restoration, so it does not
+describe 2,000 frames inside the measured tail.
+
+Measurement mode was added to the checked-in analyzer so the line-buffered
+method can be repeated directly. A short checkpoint-80 self-test covered
+232 frames and 464 VBlanks:
+
+```text
+expectedSeconds=7.756949
+observedSeconds=7.722709
+deviationSeconds=-0.034240
+deviationPercent=-0.441409
+exit=0
+```
+
+The 34-ms short-run difference is consistent with the roughly 27-ms
+marker-delivery difference in the 108-second run. The long segment is the
+accepted sustained-cadence measurement.
+
+The full report, commands, identities, hashes, source citations, and
+acceptance boundary are in
+`docs/parity/2026-07-30-macos-arm64-cadence.md`. macOS desktop cadence is
+accepted for M6. iOS display-link/lifecycle pacing remains unimplemented and
+must be measured independently.
