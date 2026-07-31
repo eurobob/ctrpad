@@ -24,6 +24,7 @@ void MM_Scrapbook_Init(void)
 #define SCRAPBOOK_NATIVE_DISPLAY_WIDTH SCREEN_WIDTH
 
 global_variable s32 s_scrapbookNativeNextVBlank;
+global_variable u32 s_scrapbookNativeFramesUploaded;
 
 static void MM_Scrapbook_GetNativeSource(s16 *srcX, s16 *srcY, s16 *displayY)
 {
@@ -53,6 +54,9 @@ CTR_GCC_OPTIMIZE_O0 int ScrapBookPlayMovie_DecodeFrame()
 void MM_Scrapbook_PlayMovie(struct RectMenu *menu)
 {
 	struct GameTracker *gGT = sdata->gGT;
+#ifdef CTR_NATIVE
+	int nativeXAWasActive;
+#endif
 
 	// book state (0,1,2,3,4)
 	switch (D230.scrapbookState)
@@ -96,7 +100,10 @@ void MM_Scrapbook_PlayMovie(struct RectMenu *menu)
 				NativeSTR_Stop();
 				goto GO_BACK;
 			}
+			s_scrapbookNativeFramesUploaded = 0;
 			s_scrapbookNativeNextVBlank = Platform_GetVBlankCount() + SCRAPBOOK_FRAME_VBLANKS;
+			Platform_Log("[CTR Scrapbook] native playback started: xaActive=%d xaChannel=%d cadenceVBlanks=%d\n",
+			             NativeAudio_IsXAPlaying(), SCRAPBOOK_NATIVE_XA_CHANNEL, SCRAPBOOK_FRAME_VBLANKS);
 			D230.scrapbookState = SCRAP_PLAY;
 			return;
 		}
@@ -154,11 +161,19 @@ void MM_Scrapbook_PlayMovie(struct RectMenu *menu)
 		{
 			NativeRenderer_ClearVRAM(nativeSrcX, nativeDisplayY, SCRAPBOOK_NATIVE_DISPLAY_WIDTH, SCREEN_HEIGHT, 0, 0, 0);
 			nativeUploaded = NativeSTR_UploadNextFrame(nativeSrcX, nativeSrcY);
+			if (nativeUploaded != 0)
+			{
+				s_scrapbookNativeFramesUploaded++;
+			}
 		}
 
 		if ((getButtonPress != 0) || (nativeUploaded == 0))
 #endif
 		{
+#ifdef CTR_NATIVE
+			Platform_Log("[CTR Scrapbook] native playback ending: reason=%s framesUploaded=%u xaActive=%d\n",
+			             getButtonPress != 0 ? "input-skip" : "stream-end", s_scrapbookNativeFramesUploaded, NativeAudio_IsXAPlaying());
+#endif
 			if (getButtonPress != 0)
 			{
 				RaceFlag_SetFullyOnScreen();
@@ -202,8 +217,10 @@ void MM_Scrapbook_PlayMovie(struct RectMenu *menu)
 
 		MM_Video_ClearMem();
 #else
+		nativeXAWasActive = NativeAudio_IsXAPlaying();
 		NativeAudio_StopXA();
 		NativeSTR_Stop();
+		Platform_Log("[CTR Scrapbook] native teardown: xaBefore=%d xaAfter=%d\n", nativeXAWasActive, NativeAudio_IsXAPlaying());
 #endif
 
 		if (RaceFlag_IsFullyOffScreen())
