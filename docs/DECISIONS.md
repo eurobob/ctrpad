@@ -305,3 +305,40 @@ Simulator and device ARM64 products link. Game-driven iOS save/relaunch and
 physical-flash behavior are separate product evidence and are not inferred
 from this unit oracle. Full evidence and rejected routes are in
 `docs/parity/2026-07-31-ios-memory-card-atomicity.md`.
+
+## 2026-07-31 — Compose touch as a player-one peer and retain edges for two host snapshots
+
+**Decision:** implement iOS/iPadOS touch as a native safe-area-aware UIKit
+overlay and compose it into player one's existing PS1-shaped pad snapshot.
+Touch buttons combine active-low with controller and keyboard buttons. An
+active touch stick replaces only the left analog axes, preserving the right
+stick and all physical-controller buttons. The stick's continuous analog
+position remains available for racing, while its outer ring emits D-pad edges
+for retail menus (`platform/apple/native_ios_touch.m:89-117`,
+`platform/native_input.c:432-479`, `platform/native_input.c:549-579`). Keyboard
+and touch press edges remain
+eligible for two consecutive host snapshots before returning to neutral
+(`platform/native_input.c:487-500`, `platform/native_input.c:549-555`,
+`platform/native_input.c:783-789`).
+
+**Why:** a separate touch-only game path could diverge from retail input,
+physics, replay, and controller semantics. Composing at the established pad
+boundary keeps one gameplay transport and permits controller-plus-touch use.
+The menu layer reads D-pad buttons rather than analog steering, so an outer
+ring is needed without sacrificing real analog race input. Live Simulator
+LLDB tracing proved that a one-host-snapshot edge could be assembled correctly
+and still be replaced by a neutral host update before the next retail poll;
+two snapshots bridge that observed host/display-to-retail cadence without
+inventing a permanently held input.
+
+**Verification boundary:** the retail-free input oracle proves analog axes,
+D-pad direction, multi-button chords, quick taps across two snapshots followed
+by neutralization, and controller-peer preservation. Exact `c783eda740c4`
+builds pass 21/21 on macOS
+ARM64 and combined ASan/UBSan, compile the input unit under exact optimized
+i686 flags, and link thin ARM64 iOS Simulator/device products. A signed exact
+Simulator build visibly navigates Adventure -> Load and displays saved profile
+`A` using touch alone. Physical-iPad ergonomics, frame cadence, rotation,
+development/distribution signing, full touch-only race completion and
+drift/boost feel remain separate device acceptance. Full evidence is in
+`docs/parity/2026-07-31-ios-touch-controls.md`.

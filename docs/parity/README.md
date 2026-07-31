@@ -60,11 +60,17 @@ Current evidence and procedures:
   temporary writes and atomic replacement, injected-failure preservation,
   exact cross-target validation, visible exact-app startup, the bounded iOS
   keyboard audit, the rejected incompatible-checkpoint shortcut, and the
-  clean frame-zero game-driven iOS persistence run.
+  completed frame-zero game-driven iOS persistence run, lifecycle preservation
+  and later production cold read.
+- `2026-07-31-ios-touch-controls.md` records the safe-area-aware multi-touch
+  overlay, player-one peer composition, analog plus outer-ring menu input,
+  direct live packet trace, two-host-snapshot cadence correction, exact matrix,
+  touch-only menu/save-reader evidence and remaining physical-iPad gates.
 - `2026-07-31-macos-arm64-keyboard-tap.md` records the missing quick-tap root
-  cause, one-snapshot press-edge transport, direct live PSX packet trace, and
-  exact-commit ARM64/sanitizer/i686 validation plus live Time Trial
-  acceleration and steering with the practical aliases.
+  cause, historical one-snapshot press-edge transport, its later two-snapshot
+  supersession, direct live PSX packet traces, and exact-commit
+  ARM64/sanitizer/i686 validation plus live Time Trial acceleration and
+  steering with the practical aliases.
 - `2026-07-31-macos-arm64-controller-hotplug.md` records controller-slot
   ownership, duplicate-add/removal/reconnect coverage, standardized
   button/axis translation, and rumble through an SDL virtual gamepad.

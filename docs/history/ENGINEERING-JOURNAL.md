@@ -9626,3 +9626,220 @@ at the start of this continuation read 168,298 seconds: 1 day, 22 hours,
 57 seconds). The reading includes the paused/resumed task lifetime and is not
 a benchmark or person-hour estimate. A final reading follows the live run and
 documentation publication.
+
+## 2026-07-31 — Save completion, native touch implementation and live cadence diagnosis
+
+### Let the clean frame-zero persistence run finish
+
+The exact `4b078065ff03` process continued without checkpoint restore or
+identity bypass. At 13:54 CDT it visibly reached Roo's Tubes in the textured
+track menu. The local-only screenshot was 743 by 1018, 144,651 bytes, and had
+SHA-256
+`4beff345e9861db4c1c4f3a600b5767f5d3c18a842be06e4e9afa4938b1d41e3`.
+
+At 14:22:16 CDT, after checkpoint 74/frame 22,200 and before checkpoint
+75/frame 22,500, the game created
+`debug/reports/20260731/ctr-131503/memcard.recording/slot0/BASCUS-94426-SLOTS`.
+The accepted properties were:
+
+```text
+size                 6016 bytes
+icon/payload         256 / 5760 bytes
+blocks               1
+profile version      -18
+profile size         0x1600
+CRC remainder        0
+SHA-256              6a01b0f5562ed7a279d8f8e51e3b1874ac39a6120f55db4fe3873288950619a3
+temporary residue    none
+```
+
+The app was sent Home only after the save appeared. PID `36490` remained alive
+at approximately 3.3 percent CPU; inode, length, modification time and hash did
+not change. The log emitted `will-enter-background` and
+`did-enter-background` with audio suspended. Reopening the app recorded the
+foreground transition and later active audio. The resumed frame visibly
+contained coherent kart, terrain, particles, HUD and minimap. Its local-only
+743-by-1018 JPEG was 124,957 bytes with SHA-256
+`ce9c3a0a8d5f0421434ee000c60c8940ff41daa2041b57c021b94dd48419a901`.
+
+The run ended naturally at 14:27:21 CDT. Metadata recorded 24,232 frames, 81
+checkpoints, `finalized=1`, `recording_status=finalized` and build
+`4b078065ff03`; the log reported the 24,232-frame replay-seeded finish and then
+closed. Final local artifact hashes were:
+
+```text
+save       6a01b0f5562ed7a279d8f8e51e3b1874ac39a6120f55db4fe3873288950619a3
+input      a471aa692c39a6d62813cd9d41acec9a3fb6e4893ac29ecb50ce6164112fb411
+states     e52598538ef0e8b490560dd38024279289c46ec13e7c7021882e32af45e92965
+metadata   90421662a92a44668c268a17fe75930b2a7caf63b12a703852e58c5db4211e91
+log        02b5f482d548a1c870e653cdb66b0211c260ae3cff4c2f18184d95e75cf923ed
+```
+
+The UIKit main loop kept the completed process alive and idle, so it was
+terminated through `simctl` only after the report's closed state and hashes
+were inspected. No source or data was mutated by that termination.
+
+To isolate the production cold-reader boundary, the game-created bytes were
+then copied explicitly from the isolated recording root to the default private
+memory-card root. Size and SHA remained identical; the inode changed, as
+expected for the copy. This is a disclosed test fixture step. It does not claim
+that reports automatically promote saves or that a natural non-report run had
+written the default path. Later app installation migrated the Simulator data
+container while retaining the imported BIN and this default save unchanged.
+
+### Added a native touch peer instead of a second gameplay path
+
+The first touch source checkpoint, `c496c27f04c878fdd27af78749ed82ea3618341e`,
+adds a UIKit overlay only on iOS/iPadOS. It attaches after SDL establishes its
+root controller, uses safe-area constraints, keeps the center transparent, and
+provides accessibility labels/identifiers. Controls are an analog stick, Gas
+(Cross), Brake (Square), Item (Circle), View (Triangle), L/R Drift/Boost
+(L1/R1), Pause (Start) and Select.
+
+The portable input API exposes enable, button, left-stick and reset calls.
+Touch intent is composed after controller and keyboard mapping into slot zero:
+buttons AND in active-low form, while an active touch stick replaces only left
+axes. Physical-controller buttons and right axes remain intact. Replay input
+remains authoritative. Touch contacts reset on disable, suspend/resume,
+shutdown, checkpoint/state restore and replay installation so UIKit state
+cannot leak into deterministic artifacts.
+
+The first Objective-C compile rejected five calls to
+`NSLayoutDimension constraintEqualTo:`. They were corrected to
+`constraintEqualToAnchor:` before source acceptance. The initial exact matrix
+then passed:
+
+```text
+macOS ARM64 Release     21/21 in 4.60 s
+ARM64 ASan + UBSan      21/21 in 6.38 s, no finding
+iOS Simulator/device   both linked thin ARM64, iOS 15.0 / SDK 26.5
+```
+
+Base executable hashes were `d0e80d00...7495` for macOS Release,
+`fd1cee98...72d3` for sanitizer, `3ea608d1...d75e` for unsigned Simulator and
+`5c0ea2fc...34a` for unsigned device. The ad-hoc signed Simulator executable
+was `e0bf890e...6576`. Established warnings were 32 ordinary/iOS and 59 under
+sanitizers; no new finding was introduced.
+
+Computer Use inspection of that exact app showed the transparent overlay over
+coherent Sony, Naughty Dog crate, CTR title and seven-row menu content. Gas
+selected Adventure. Short stick drags did not move the menu. That observation
+was retained as a failed product test, and source inspection confirmed the
+retail menu reads D-pad bits rather than analog steering.
+
+### Diagnosed the still-missed menu edge at the retail packet boundary
+
+The stick gained a direction ring at 68 percent of its radius. Crossing the
+ring emits active-high D-pad intent, with release/press deltas, while the
+continuous signed analog vector remains active for races. A first live trial
+still missed a bounded Down tap, so LLDB was attached to the running Simulator
+process instead of guessing.
+
+The touch callback entered `Platform_InputTouchButton(buttonMask=64, down=1)`.
+At the inlined `NativeInput_ConsumeTouchButtons`, registers after the OR held
+`w8=0x00000040` and `w10=0x00000040`. Immediately after
+`NativeInput_ApplyTouch`, the eight slot-zero bytes were exactly:
+
+```text
+00 73 bf ff 80 80 80 80
+```
+
+That is a valid analog pad with active-low Down. At the next
+`GAMEPAD_ProcessHold`, however, retail-visible controller bytes were again
+`0xff 0xff`. A neutral host/display snapshot had overwritten the correct
+one-shot edge before retail polled. This rejected both “the game is stuck” and
+“UIKit did not deliver touch” as diagnoses; the defect was host-to-retail edge
+duration.
+
+The correction adds `s_keyboardLatchedButtonsNext` and touch
+`latchedButtonsNext`. A press is exposed to two host snapshots, then removed
+unless the button remains held. The retail-free oracle now requires both
+snapshots to contain the tap and the third to be neutral. Keyboard aliases use
+the same corrected contract; replay/state semantics remain unchanged.
+
+The first CTest after this code change failed only because its PASS regex still
+required the old `one-snapshot` wording. The self-test executable had emitted
+success. CMake was updated to require the new two-snapshot/touch marker, after
+which the suite passed. This was a contract-string mismatch, not a code-test
+failure.
+
+A concurrent macOS and iOS rebuild was cancelled after the compiler driver
+appeared stationary at zero percent. Inspection showed the child `cc1` process
+was actually CPU-active on the large unity translation unit. Later sequential
+builds finished normally, disproving the initial lock suspicion; no source or
+artifact was lost. A separate direct i686 compile first hit the project's
+`internal` macro colliding with an SDL field. Pre-including vendored
+`SDL3/SDL.h` before the project header matched the established compile route
+and passed with strict implicit-declaration errors. `clang-format --dry-run`
+was not promoted to a gate because its Objective-C mode was unavailable and it
+also rejected baseline repository C format; diff, build and test gates were
+used instead.
+
+### Published and revalidated the exact correction
+
+Commit `c783eda740c4cbfec538c276fa39220674810f64` (`fix: make touch menu
+gestures reliable`) contains the direction ring, two-snapshot latch and updated
+oracle. It was pushed to `origin/codex/arm64-apple`; local and remote-tracking
+identities matched. Together with base commit `c496c27f04c8`, it remains on
+draft PR #1 and is not merged to `main`.
+
+Exact final validation was:
+
+```text
+macOS ARM64 Release     21/21 in 0.88 s; SHA c77d84b1...e642
+ARM64 ASan + UBSan      21/21 in 5.98 s; SHA 69115f77...2cf4; no finding
+i686 input TU           passed exact optimized C17 flags and implicit-error
+iOS Simulator ARM64     SHA 27fc3a7d...bd6c3; thin; iOS 15.0 / SDK 26.5
+iOS device ARM64        SHA 4211ceb7...a819; thin; iOS 15.0 / SDK 26.5
+```
+
+The exact local-only package is
+`/private/tmp/ctrpad-ios-touch-exact.N9hvQT/CTRPad.app`. Its post-ad-hoc-sign
+executable SHA is
+`60a1373d13dcb66040b8ec504e6cd2970f7067f57c115ee116a1ecf7fab329f3`.
+Strict/deep verification passed with identifier
+`io.github.chrissotraidis.ctrpad` and no TeamIdentifier. This is a Simulator
+test signature, not a sideloadable physical-device signature.
+
+The exact app visibly repeated coherent presentation under the overlay. An
+edge delivered immediately across a retail screen transition could be ignored,
+so bounded retries were used only at transitions. On the stable submenu, Down
+moved New -> Load on its first tap and Gas opened Load on its first tap. The
+touch-only route displayed `CHOOSE A GAME TO LOAD`, profile `A`, Crash's icon
+and populated counters, with other slots `EMPTY`. This proves the production
+reader consumed the deliberately seeded accepted save bytes after an app
+update.
+
+Exact local-only evidence hashes were:
+
+```text
+main-menu JPEG      aa31f5d6a73523ff30516d4874a8907ebd9c22db9a68897a8dcd78eab1cd214a
+load-profile JPEG   a1c5135dee001ead4b68d39d619157a45632c610df0b7ae20874efd4c01f700b
+runtime log         99f5a1710c5adbcfc67c44f223f1b3496749adccac6d5d4c4c44e051c71a344a
+```
+
+Simulator cadence remained approximately 6–9 FPS under Apple Software
+Renderer. The exact app was terminated after evidence collection. No retail
+image, save, screenshot, log or app package was committed.
+
+### Open device boundary and elapsed-time ledger
+
+The controls are now functional and testable in Simulator, and the user can
+also test the already published desktop keyboard aliases. Remaining M8/M9/M10
+acceptance is physical: Apple development/distribution signing, actual iPad
+installation, device cadence/thermal/rotation behavior, touch-target and
+contrast review, a complete held-input touch race, and practical L/R
+drift-boost execution. The goal remains active.
+
+A read-only availability audit returned `No devices found` from
+`xcrun devicectl list devices`, zero valid identities from
+`security find-identity -v -p codesigning`, and no file in the standard local
+provisioning-profile directory. No device, account or credential was mutated.
+The existing unsigned ARM64 device product can enter the next gate only after
+a physical iPad and Apple development signing identity/profile are available.
+
+The previous published timer was 168,298 seconds. The pre-publication
+documentation reading was 176,394 seconds: 2 days, 0 hours, 59 minutes,
+54 seconds cumulative, adding 8,096 seconds (2 hours, 14 minutes, 56 seconds).
+It includes paused/resumed task lifetime and is not a build benchmark or
+person-hour estimate.

@@ -257,3 +257,31 @@ Goal elapsed at the 05:46:33 CDT close checkpoint was 1 day, 15 hours,
 17 minutes, 19 seconds. The preserved alternate-loader i686 verifier remained
 running, unpaused, and not OOM-killed; it had passed driver transitions at
 frames 4,636/4,689 but had not yet reached its next 6,000-frame marker.
+
+## Two-host-snapshot supersession
+
+The one-snapshot behavior above is retained as the exact historical contract
+of commits `24aff7d88` and `2c10b00b34df`. It was sufficient in the observed
+macOS path, but later native-touch validation found a slower host/display-to-
+retail cadence boundary on iOS Simulator.
+
+In the first outer-ring touch prototype, LLDB observed a correct active-low
+Down packet (`00 73 bf ff 80 80 80 80`) immediately after touch composition.
+The following `GAMEPAD_ProcessHold` nevertheless saw neutral button bytes
+because another host snapshot had replaced the one-shot edge before the retail
+poll. Commit `c783eda740c4` therefore retains keyboard and touch press edges for
+two host snapshots. The updated self-test requires the edge in snapshots one
+and two and neutrality in snapshot three; held input, replay authority and the
+active-low pad transport are unchanged.
+
+The superseding marker is:
+
+```text
+tap-latch=c+right two-host-snapshots aliases=12 held=k+d+e alias-tap=k+d touch=analog+dpad+chord+tap+gamepad-peer
+```
+
+Exact `c783eda740c4` macOS ARM64 and ASan/UBSan builds pass 21/21, and an exact
+optimized i686 translation-unit compile passes. The exact signed Simulator
+product visibly moves stable menus with outer-ring touch input. Full rationale,
+matrix, trace and physical-device boundary are in
+`2026-07-31-ios-touch-controls.md`.

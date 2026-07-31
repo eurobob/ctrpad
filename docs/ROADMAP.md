@@ -7,8 +7,8 @@ timing.
 
 **Roadmap status:** active
 
-**Current milestone:** M6 — macOS ARM64 runtime stabilization; the M1 full
-cross-architecture and independent-process/mutation gates are accepted
+**Current milestone:** M10 — touch-control iteration, while M8/M9 await their
+physical-iPad signing, controller, Files, performance, and lifecycle gates
 
 **Last updated:** 2026-07-31
 
@@ -812,6 +812,13 @@ opens audio. The generated physical-device binary is unsigned and has not run
 on hardware. Simulator logs still report unbalanced UIKit appearance
 transitions, so lifecycle acceptance remains explicitly open.
 
+The 2026-07-31 physical-gate audit reported `No devices found` from
+`xcrun devicectl list devices`, zero valid code-signing identities from
+`security find-identity -v -p codesigning`, and no local provisioning-profile
+files. The unsigned ARM64 device product is ready for that gate, but hardware
+installation cannot begin on this Mac until an iPad and Apple development
+signing assets are available.
+
 Checkpoint `afb5463cc511` adds a synchronous SDL/UIKit lifecycle reducer,
 cooperative quit, paired audio/input suspension, host-only VBlank deadline
 rebasing, and a `CADisplayLink` callback that returns to UIKit between retail
@@ -849,9 +856,11 @@ Acceptance:
 
 **Status:** in progress; sandbox ownership, Files document-picker import,
 staged validation, same-process startup, Simulator relaunch, and atomic
-memory-card replacement have landed; a clean frame-zero Simulator
-gameplay/save run is in progress; physical Files/signing, live wrong-region
-coverage and complete save lifecycle acceptance remain open; depends on M8
+memory-card replacement have landed; a clean frame-zero Simulator gameplay
+run created and preserved a retail memory-card profile across backgrounding;
+an explicit default-root seed was retained across app updates and cold-read;
+physical Files/signing/save behavior and live wrong-region coverage remain
+open; depends on M8
 
 Checkpoint `02a6623f80a0` establishes the storage ownership boundary without
 shipping retail data. On iOS, a valid raw image in
@@ -884,9 +893,14 @@ CTest 17 explicitly injects an open failure and proves preservation plus
 successful retry. Clean macOS ARM64 and ASan/UBSan runs pass 21/21, the exact
 i686 source compile passes with implicit declarations promoted to errors, and
 both iOS ARM64 products link. A clean exact-app frame-zero replay-seeded
-recording is running toward the real game-created save transition without
-restoring an incompatible checkpoint. Complete implementation, build, visual,
-keyboard-delivery, rejected-shortcut, and eventual live-save evidence is in
+recording completed all 24,232 frames without restoring an incompatible
+checkpoint. It created a 6,016-byte checksum-valid profile, left no temporary
+residue, survived a Home/background/foreground cycle unchanged, finalized 81
+checkpoints, and was then explicitly copied from the isolated report root to
+the default private root for a bounded cold-reader test. It later appeared as
+profile `A` in the exact clean app's retail Load screen after repeated bundle
+updates. Complete implementation, build, visual, keyboard-delivery,
+rejected-shortcut, and live-save evidence is in
 `docs/parity/2026-07-31-ios-memory-card-atomicity.md`.
 
 Work:
@@ -897,9 +911,9 @@ Work:
   copy, same-volume staging and validate-before-replace contract.
 - Complete physical-device and live wrong-region/incomplete/inaccessible-file
   coverage for the implemented distinct errors.
-- Complete game-driven save creation, suspend/resume, cold relaunch, app-update
-  retention, and asset-reselection retention on iOS, then repeat the required
-  subset on physical hardware.
+- Retain the accepted Simulator game-driven save, suspend/resume, app-update
+  retention and cold retail Load-screen read; repeat the required subset on
+  physical hardware and cover asset re-selection explicitly.
 - Retain atomic same-directory memory-card replacement and private Application
   Support ownership for memcards, settings, logs, and crash diagnostics.
 
@@ -913,18 +927,40 @@ Acceptance:
   errors. **Distinct branches are implemented; invalid-format is accepted live,
   while the other negative branches remain to be exercised through Files.**
 - Saves persist across launch, backgrounding, app updates, and asset
-  re-selection.
+  re-selection. **Save creation, backgrounding, update retention and cold read
+  are accepted on Simulator; asset re-selection and physical hardware remain
+  open.**
 - No retail byte is included in the application bundle or Git history.
 
 ### M10 — Touch-first controls
 
-**Status:** pending; depends on M8 and M9
+**Status:** in progress; a functional safe-area-aware Simulator prototype,
+peer input composition, continuous analog steering, menu D-pad edges and core
+button layout have landed; physical-iPad ergonomics and drift-boost acceptance
+remain open; depends on M8 and M9
+
+Checkpoint `c496c27f04c8` adds an iOS UIKit overlay with a virtual analog
+stick, Cross/Square/Circle/Triangle, L1/R1, Start and Select. Touch is composed
+with player one's PS1-shaped snapshot after controller and keyboard input, so
+buttons combine active-low and touch steering replaces only the left analog
+pair while active. Lifecycle suspension, replay/state installation, shutdown
+and restore reset host contacts.
+
+Checkpoint `c783eda740c4` adds D-pad direction edges at the stick's outer 32%
+and retains quick keyboard/touch edges for two host snapshots. LLDB proved why
+the earlier one-snapshot version failed: the correct `00 73 bf ff ...` Down
+packet was replaced by neutral `ff ff` before the retail `GAMEPAD_ProcessHold`
+poll. The exact clean app then navigated Adventure → Time Trial → Adventure,
+opened Adventure → Load, and displayed persisted profile `A` using the touch
+overlay. Exact build, test, visual and rejected-route evidence is in
+`docs/parity/2026-07-31-ios-touch-controls.md`.
 
 Work:
 
-- Add touch as a peer in the platform input composition path so it can coexist
-  with a connected controller.
-- Preserve true analog steering and multi-touch holds.
+- Retain the implemented touch peer in the platform input composition path so
+  it can coexist with a connected controller.
+- Retain true analog steering, outer-ring menu directions, multi-touch holds,
+  and the two-host-snapshot press-edge transport.
 - Iterate on layouts for steering + held drift + three boost taps, the core
   simultaneity problem identified in the viability report
   (`docs/ctr-native-viability.md:319-358`).
@@ -936,6 +972,8 @@ Work:
 Acceptance:
 
 - Touch-only users can start the app, select content, race, pause, and save.
+- **Startup, menu navigation, selection and cold Load-screen access are
+  accepted on Simulator; a complete touch-only race/save is still open.**
 - Steering remains continuously analog while accelerate and drift are held.
 - A tester can intentionally execute repeated three-boost drift chains in both
   turn directions without grip changes or missed simultaneous contacts.

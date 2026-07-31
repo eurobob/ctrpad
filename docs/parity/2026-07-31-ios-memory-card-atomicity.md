@@ -15,12 +15,13 @@ ARM64, and iOS device ARM64 build boundaries described below. The exact
 committed Simulator app also launches the user's already imported retail image
 and visibly renders coherent game textures.
 
-At the time this report was opened, a clean frame-zero iOS replay-seeded
-recording was still running toward the accepted input stream's real
-game-created save event. That run, its background/relaunch follow-up, and the
-final elapsed-time reading are recorded later in this report. Until those
-results are present, atomic writer implementation is accepted but full M9
-save persistence is not.
+A clean frame-zero iOS replay-seeded recording subsequently reached the
+accepted input stream's real game-created save event, preserved the exact file
+through background/foreground, and finalized all 24,232 frames normally. A
+later exact touch build read the same bytes from the production default root
+after installation and displayed saved profile `A`. The run and the explicit
+copy used to isolate the cold-reader test are recorded below; no report-root
+to default-root transfer is inferred.
 
 ## Starting boundary
 
@@ -149,9 +150,13 @@ The requested basic keyboard controls were already published in commit
 `2c10b00b34df`: `WASD`, `IJKL`, `Q/E`, `P`, and Tab are additive aliases for
 D-pad, face buttons, shoulders, Start, and Select. They use the same active-low
 PS1 pad transport as the original arrow/`Z/X/C/V` map and gamepads. The input
-self-test covers all aliases, one-snapshot taps, and the simultaneous `K+D+E`
-chord; a signed macOS run had already proven menu navigation, acceleration,
-and steering.
+self-test at this checkpoint covered all aliases, one-snapshot taps, and the
+simultaneous `K+D+E` chord; a signed macOS run had already proven menu
+navigation, acceleration, and steering. Follow-up touch work in
+`c783eda740c4` extended keyboard and touch edge retention to two host snapshots
+after live iOS tracing showed that one snapshot could be overwritten before a
+retail poll. The later exact matrix and supersession are recorded in
+`2026-07-31-ios-touch-controls.md`.
 
 For iOS Simulator, Computer Use enabled **Capture Keyboard** and
 **Connect Hardware Keyboard**. UIKit/SDL logs detected a `Generic Keyboard`,
@@ -211,15 +216,69 @@ Documents retail image, initialized the 1376-by-1032 UIKit GLES surface and
 intervals. Early checkpoints 0 through 3 (frames 0 through 900) were written
 normally while the app remained alive.
 
-Final frame, save, temporary-file, suspend/resume, cold-read, artifact-hash,
-and process-duration results will be appended here before this report is used
-to change M9 acceptance.
+At 13:54 CDT the live screen had reached the textured Roo's Tubes selection.
+The local-only 743-by-1018 JPEG is 144,651 bytes with SHA-256
+`4beff345e9861db4c1c4f3a600b5767f5d3c18a842be06e4e9afa4938b1d41e3`.
+It visibly shows coherent menu text, track art and textures; it is not a
+committed retail artifact.
+
+The game created
+`memcard.recording/slot0/BASCUS-94426-SLOTS` at 14:22:16 CDT, after checkpoint
+74/frame 22,200 and before checkpoint 75/frame 22,500. The file is 6,016 bytes,
+contains a 256-byte icon followed by a 5,760-byte profile, reports profile
+version `-18`, profile size `0x1600`, one block, and has CRC remainder zero.
+Its SHA-256 is
+`6a01b0f5562ed7a279d8f8e51e3b1874ac39a6120f55db4fe3873288950619a3`.
+No `.ctrpad-*.tmp` file remained beside it.
+
+After that save, sending the app Home left PID `36490` alive at approximately
+3.3 percent CPU. The save's inode, size, modification time and hash remained
+unchanged. The log recorded `will-enter-background` and
+`did-enter-background` with audio suspended. Foregrounding the app recorded
+the foreground transition, then active audio, and returned to a coherent
+kart/terrain/particle/HUD/minimap frame. That 743-by-1018 local-only JPEG is
+124,957 bytes with SHA-256
+`ce9c3a0a8d5f0421434ee000c60c8940ff41daa2041b57c021b94dd48419a901`.
+
+The recording finalized naturally at 14:27:21 CDT with `frame_count=24232`,
+`checkpoint_count=81`, `finalized=1`, `recording_status=finalized`, and build
+identity `4b078065ff03`. The final log states
+`replay-seeded recording finished after 24232 frames` before its closed-log
+marker. Artifact SHA-256 values are:
+
+```text
+memory card     6a01b0f5562ed7a279d8f8e51e3b1874ac39a6120f55db4fe3873288950619a3
+input replay    a471aa692c39a6d62813cd9d41acec9a3fb6e4893ac29ecb50ce6164112fb411
+states          e52598538ef0e8b490560dd38024279289c46ec13e7c7021882e32af45e92965
+metadata        90421662a92a44668c268a17fe75930b2a7caf63b12a703852e58c5db4211e91
+runtime log     02b5f482d548a1c870e653cdb66b0211c260ae3cff4c2f18184d95e75cf923ed
+```
+
+UIKit intentionally kept the now-idle process alive after the report closed;
+it was terminated through `simctl` only after the finalized files were
+inspected. The accepted save was then copied byte-for-byte from the isolated
+recording root into the default private memory-card root. This deliberate copy
+kept the 6,016-byte size and SHA-256 but changed the inode. It separates the
+reader test from report isolation: it proves that production default-path
+lookup reads and retains these game-created bytes, not that a report sandbox
+automatically migrates a save.
+
+Later exact touch commit `c783eda740c4` was installed as an app update. The
+Simulator migrated the data container while preserving the imported BIN and
+default save hashes. A touch-only Adventure -> Load route displayed
+`CHOOSE A GAME TO LOAD`, saved slot `A`, Crash's icon and populated counters;
+the remaining slots were `EMPTY`. This is direct production cold-reader and
+app-update retention evidence on Simulator. The local-only load-screen JPEG
+is 121,963 bytes with SHA-256
+`a1c5135dee001ead4b68d39d619157a45632c610df0b7ae20874efd4c01f700b`.
 
 ## Evidence boundary
 
 This checkpoint accepts the production atomic replacement contract, its
-failure-preservation oracle, clean cross-target build coverage, and exact
-Simulator startup/visual evidence. It does not yet accept a physical device,
+failure-preservation oracle, clean cross-target build coverage, an exact
+Simulator game-created save, background/foreground preservation, normal
+recording finalization, app-update retention, and a later production cold read
+of the accepted bytes. It does not accept a physical device,
 development/distribution signing, physical-flash failure semantics, a physical
-keyboard, or iOS game-save persistence until the clean game-driven run and
-lifecycle/relaunch checks above complete.
+keyboard, a natural non-report save followed by cold relaunch, or automatic
+transfer from an isolated report memory-card root to the default root.

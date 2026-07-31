@@ -183,10 +183,14 @@ Imported media takes priority over any development-only bundle fallback.
 Logs, memory cards, and private diagnostics are stored separately in
 Application Support and persist independently of the app bundle. Simulator
 acceptance covers the picker, cancellation, invalid-format rejection, a full
-valid import, same-process startup, and cold relaunch. Wrong-region live UI,
-physical-device Files behavior, game-driven save persistence, distribution
-signing, and the final sideloadable package remain roadmap work. See
-`docs/parity/2026-07-31-ios-files-import.md` for the exact tested boundary.
+valid import, same-process startup, cold relaunch, a game-created memory-card
+save, background/foreground survival, app-update retention, and a later cold
+read of that profile through the retail Load screen after explicitly seeding
+the accepted report bytes into the default private root. Wrong-region live UI,
+physical-device Files/save behavior, distribution signing, and the final
+sideloadable package remain roadmap work. See
+`docs/parity/2026-07-31-ios-files-import.md` and
+`docs/parity/2026-07-31-ios-memory-card-atomicity.md` for the exact boundaries.
 
 For development builds run from `build/`, put the same `assets/ctr-u.bin` next to the source tree:
 
@@ -224,8 +228,37 @@ no keyboard-only physics path is used.
 
 Click the game window before testing. In iOS Simulator, also enable its
 hardware-keyboard capture for the running app. macOS keyboard play is accepted;
-Simulator delivery has been observed but remains less consistent, and a
-physical keyboard on a real iPad has not yet passed the device acceptance gate.
+Computer Use key injection produced no SDL keyboard events in the Simulator,
+and a physical keyboard on a real iPad has not yet passed the device acceptance
+gate.
+
+### iOS/iPadOS Touch Controls
+
+The iOS build presents a native safe-area-aware touch overlay after the game
+surface starts. Touch is composed as player one's peer input, so a connected
+MFi controller can remain active without disabling the overlay.
+
+| Touch control | Retail input | Use |
+|---|---|---|
+| Left virtual stick | Left analog stick | continuous steering |
+| Stick outer ring | D-pad | reliable menu navigation while retaining analog steering |
+| **GAS ✕** | Cross | accelerate / confirm |
+| **BRAKE □** | Square | brake, reverse / menu action |
+| **ITEM ○** | Circle | use item / menu action |
+| **VIEW △** | Triangle | camera or skip / menu action |
+| **L DRIFT / BOOST** | L1 | hop, hold drift, fire boosts |
+| **R DRIFT / BOOST** | R1 | alternate hop/drift side |
+| **PAUSE** | Start | pause or advance |
+| **SELECT** | Select | retail Select input |
+
+Quick keyboard and touch edges remain active for two host snapshots so an
+input update immediately before the next approximately 29.9 Hz retail pad
+poll cannot erase a tap. Simulator tests have navigated the main menu in both
+directions, selected Adventure, opened **Load**, and displayed a persisted
+profile using only the overlay. Physical-iPad ergonomics, performance, safe-
+area/aspect-ratio coverage, and repeated three-boost drift chains remain open;
+the current overlay is a functional first prototype, not the final control
+layout. See `docs/parity/2026-07-31-ios-touch-controls.md`.
 
 ### Extracted Asset Override
 

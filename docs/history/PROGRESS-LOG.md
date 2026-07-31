@@ -1061,3 +1061,70 @@ the current replay does not redefine the final objective as complete.
 Full implementation, build, visual, rejected-route, and live-run evidence is
 in `docs/parity/2026-07-31-ios-memory-card-atomicity.md` and the corresponding
 engineering-journal entry.
+
+### 2026-07-31 — Completed iOS save proof and added native touch controls
+
+- The clean exact-`4b078065ff03` Simulator recording reached its real
+  game-created save at 14:22:16 CDT. The 6,016-byte
+  `BASCUS-94426-SLOTS` has CRC remainder zero and SHA-256
+  `6a01b0f5562ed7a279d8f8e51e3b1874ac39a6120f55db4fe3873288950619a3`;
+  no temporary writer file remained.
+- Background/foreground preserved the save's inode, size, time and hash while
+  lifecycle logs showed audio suspension and reactivation. The resumed screen
+  visibly retained coherent kart, terrain, particle, HUD and minimap content.
+- The report finalized naturally at 14:27:21 CDT after 24,232 frames and 81
+  checkpoints. Its replay, states, metadata and log hashes are recorded in the
+  parity report. The idle UIKit process was terminated only after report close
+  and artifact inspection.
+- The accepted report-root save was transparently copied byte-for-byte into
+  the production default root to isolate a cold-reader test. A later app
+  update preserved it and touch-only Adventure -> Load navigation displayed
+  profile `A`. This accepts the production reader and update retention, not
+  automatic report-to-default migration or a natural default-root save.
+- Commit `c496c27f04c8` adds a safe-area-aware native UIKit overlay with an
+  analog stick, Cross/Square/Circle/Triangle, L1/R1, Start and Select. Touch is
+  composed as a player-one peer: active-low buttons combine with controller
+  and keyboard, while active touch steering replaces only the left axes.
+- The first live prototype rendered coherent Sony/crate/title/menu textures
+  and selected Adventure with Gas, but short stick drags did not move menus.
+  That result was rejected; menu code consumes D-pad, so the stick gained a
+  0.68-radius outer ring that emits direction edges while retaining analog
+  steering.
+- LLDB proved a second failure precisely: the touch path produced pad bytes
+  `00 73 bf ff 80 80 80 80` for Down, but a neutral host update replaced that
+  one-snapshot edge before `GAMEPAD_ProcessHold`. Commit `c783eda740c4` keeps
+  keyboard and touch press edges for two host snapshots. Stable Simulator
+  menus then moved on the first direction tap.
+- The exact `c783eda740c4` matrix passed 21/21 macOS ARM64 CTests and 21/21
+  combined ASan/UBSan tests with no finding; the direct optimized i686 input
+  compile passed; thin ARM64 Simulator and device products linked. Exact
+  unsigned executable hashes are `27fc3a7d...bd6c3` for Simulator and
+  `4211ceb7...a819` for device.
+- The signed exact Simulator executable hash is `60a1373d...29f3`; strict/deep
+  verification passed, but it is ad-hoc and has no TeamIdentifier. It is not a
+  physical-device or distribution-signing result. Simulator cadence remained
+  approximately 6–9 FPS under Apple Software Renderer.
+- Corrected/rejected work remains visible in the detailed report: five bad
+  Objective-C constraint selectors, the live-insufficient one-snapshot latch,
+  a stale CTest regex, a cancelled parallel build whose `cc1` was actually
+  CPU-active, an i686 macro/include-order collision, and an unsuitable
+  clang-format gate. None was used as acceptance evidence.
+- Both source commits were pushed to `origin/codex/arm64-apple` and remain in
+  open draft PR #1, not merged to `main`. Retail media, saves, packages,
+  screenshots, logs and credentials remained outside Git.
+- The requested keyboard controls remain available: `WASD`, `IJKL`, `Q/E`,
+  `P`, and Tab. The two-snapshot correction now applies to keyboard quick taps
+  as well as touch; the established held-key and gamepad paths are unchanged.
+- Physical-iPad development signing, real-device cadence/rotation, touch
+  ergonomics/accessibility, full touch-only racing and practical drift/boost
+  remain open. The goal remains active rather than being declared complete.
+- A final read-only physical-gate audit found no `devicectl` device, zero valid
+  code-signing identities, and no local provisioning profile. The unsigned
+  device binary is built, but installing it requires a connected iPad and
+  Apple development signing assets.
+
+The previous published timer was 168,298 goal seconds. The pre-publication
+documentation reading was 176,394 seconds: 2 days, 0 hours, 59 minutes,
+54 seconds cumulative, adding 8,096 seconds (2 hours, 14 minutes, 56 seconds).
+The timer is cumulative product-task time, including pauses, not a benchmark
+or labor estimate.
