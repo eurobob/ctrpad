@@ -289,6 +289,10 @@ if(BUILD_TESTING)
     set_tests_properties(ctr_native_lifecycle PROPERTIES PASS_REGULAR_EXPRESSION
         "^\\[CTR Lifecycle\\] self-test passed: background=idempotent foreground=rebase quit=cooperative audio=paired low-memory=flush"
     )
+    add_test(NAME ctr_native_storage COMMAND $<TARGET_FILE:ctr_native> --self-test-storage)
+    set_tests_properties(ctr_native_storage PROPERTIES PASS_REGULAR_EXPRESSION
+        "^\\[CTR Storage\\] self-test passed: bundle=read-only preferences=private documents=user-visible imports=preferred desktop=portable"
+    )
     add_test(NAME ctr_native_checkpoint_pointer_validation COMMAND $<TARGET_FILE:ctr_native> --self-test-checkpoint-pointer-validation)
     set_tests_properties(ctr_native_checkpoint_pointer_validation PROPERTIES PASS_REGULAR_EXPRESSION
         "^\\[CTR State\\] pointer-validation self-test passed: scalar=ignored relocated=reversion-checked overlap-idempotence=checked pool-allocation=free-list-complement camera-quad=checked"

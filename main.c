@@ -26,11 +26,13 @@
 #include "platform/native_asset_relocation.h"
 #include "platform/native_guest_ref.h"
 #include "platform/native_log.h"
+#include "platform/native_memcard.h"
 #include "platform/native_memory.h"
 #include "platform/native_perf.h"
 #include "platform/native_replay_scheduler.h"
 #include "platform/native_savestate.h"
 #include "platform/native_state_digest.h"
+#include "platform/native_storage.h"
 
 #include <platform.h>
 
@@ -74,6 +76,7 @@
 #include "platform/native_savestate.c"
 #include "platform/native_state.c"
 #include "platform/native_state_digest.c"
+#include "platform/native_storage.c"
 #include "platform/native_str.c"
 
 #ifndef CC
@@ -213,6 +216,11 @@ static int NativeArg_IsRendererDialectSelfTest(const char *arg)
 static int NativeArg_IsLifecycleSelfTest(const char *arg)
 {
 	return (arg != NULL) && (strcmp(arg, "--self-test-lifecycle") == 0);
+}
+
+static int NativeArg_IsStorageSelfTest(const char *arg)
+{
+	return (arg != NULL) && (strcmp(arg, "--self-test-storage") == 0);
 }
 
 static int NativeArg_IsCheckpointPointerValidationSelfTest(const char *arg)
@@ -357,6 +365,10 @@ int main(int argc, char *argv[])
 		{
 			return Platform_RunLifecycleSelfTest();
 		}
+		if (NativeArg_IsStorageSelfTest(argv[argIndex]))
+		{
+			return NativeStorage_RunSelfTest();
+		}
 		if (NativeArg_IsCheckpointPointerValidationSelfTest(argv[argIndex]))
 		{
 			return NativeCheckpoint_RunPointerValidationSelfTest();
@@ -409,14 +421,24 @@ int main(int argc, char *argv[])
 	const char *sdlBasePath = SDL_GetBasePath();
 	printf("[CTR Native] SDL base path: %s\n", sdlBasePath ? sdlBasePath : "(null)");
 	fflush(stdout);
+	if (!NativeStorage_Init(sdlBasePath))
+	{
+		fprintf(stderr, "[CTR Native] Failed to initialize storage paths.\n");
+		return NativeConsole_Return(1);
+	}
 
 #if defined(CTR_INTERNAL)
 	NativeReplayScheduler_SetExecutableIdentity(argv[0], sdlBasePath);
 #endif
 
-	if (!NativeAssets_Init(sdlBasePath))
+	if (!NativeAssets_Init(sdlBasePath, NativeStorage_GetImportBaseDir()))
 	{
 		fprintf(stderr, "[CTR Native] Failed to initialize asset paths.\n");
+		return NativeConsole_Return(1);
+	}
+	if (!NativeStorage_FinalizeForAssetBase(NativeAssets_GetBaseDir()))
+	{
+		fprintf(stderr, "[CTR Native] Failed to finalize storage paths.\n");
 		return NativeConsole_Return(1);
 	}
 
@@ -424,12 +446,33 @@ int main(int argc, char *argv[])
 	printf("[CTR Native] Built with: " CC "\n");
 	printf("[CTR Native] Base: %s\n", NativeAssets_GetBaseDir());
 	printf("[CTR Native] Assets: %s\n", NativeAssets_GetAssetDir());
+	printf("[CTR Native] Writable data: %s\n", NativeStorage_GetWritableRoot());
+	if (NativeStorage_GetImportAssetDir() != NULL)
+	{
+		printf("[CTR Native] User import assets: %s\n", NativeStorage_GetImportAssetDir());
+	}
 	fflush(stdout);
 
-	if (chdir(NativeAssets_GetBaseDir()) != 0)
+	if (chdir(NativeStorage_GetWritableRoot()) != 0)
 	{
-		fprintf(stderr, "[CTR Native] Failed to enter base directory: %s\n", NativeAssets_GetBaseDir());
+		fprintf(stderr, "[CTR Native] Failed to enter writable directory: %s\n", NativeStorage_GetWritableRoot());
 		return NativeConsole_Return(1);
+	}
+	{
+		char logPath[1024];
+		char memcardPath[1024];
+
+		if (!NativeStorage_BuildWritablePath("Crash Team Racing.log", logPath, sizeof(logPath)) || !Platform_LogSetPath(logPath))
+		{
+			fprintf(stderr, "[CTR Native] Failed to configure the writable log path.\n");
+			return NativeConsole_Return(1);
+		}
+		if (!NativeStorage_BuildWritablePath("memcards", memcardPath, sizeof(memcardPath)) ||
+		    (NativeMemcard_SetRoot(memcardPath) != NATIVE_MEMCARD_OK))
+		{
+			fprintf(stderr, "[CTR Native] Failed to configure the writable memory-card path.\n");
+			return NativeConsole_Return(1);
+		}
 	}
 
 	if (!NativeAssets_Validate())

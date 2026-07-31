@@ -532,7 +532,7 @@ internal int NativeAssets_SetBaseDir(NativeStr8 baseDir)
 	return 1;
 }
 
-int NativeAssets_Init(const char *executableBasePath)
+int NativeAssets_Init(const char *executableBasePath, const char *preferredBasePath)
 {
 	char parentDir[NATIVE_ASSETS_PATH_MAX];
 	char grandparentDir[NATIVE_ASSETS_PATH_MAX];
@@ -544,6 +544,15 @@ int NativeAssets_Init(const char *executableBasePath)
 	}
 
 	exeDir = NativePath_TrimTrailingSeparators(NativeStr8_FromCString(executableBasePath));
+	if ((preferredBasePath != NULL) && (preferredBasePath[0] != '\0'))
+	{
+		NativeStr8 preferredBase = NativePath_TrimTrailingSeparators(NativeStr8_FromCString(preferredBasePath));
+
+		if (NativeAssets_BaseHasRequiredFile(preferredBase))
+		{
+			return NativeAssets_SetBaseDir(preferredBase);
+		}
+	}
 
 	if (NativeAssets_BaseHasRequiredFile(exeDir))
 	{
@@ -570,6 +579,11 @@ int NativeAssets_Init(const char *executableBasePath)
 		}
 	}
 
+	if ((preferredBasePath != NULL) && (preferredBasePath[0] != '\0'))
+	{
+		return NativeAssets_SetBaseDir(NativePath_TrimTrailingSeparators(NativeStr8_FromCString(preferredBasePath)));
+	}
+
 	return NativeAssets_SetBaseDir(exeDir);
 }
 
@@ -585,7 +599,7 @@ const char *NativeAssets_GetAssetDir(void)
 
 int NativeAssets_BuildPathStr8(NativeStr8 relativePath, char *dst, size_t dstSize)
 {
-	if (!s_nativeAssetsInitialized && !NativeAssets_Init("."))
+	if (!s_nativeAssetsInitialized && !NativeAssets_Init(".", NULL))
 	{
 		return 0;
 	}
