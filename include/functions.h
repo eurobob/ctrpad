@@ -1012,6 +1012,7 @@ void RB_RainCloud_FadeAway(struct Thread *t);
 void RB_RainCloud_ThTick(struct Thread *t);
 void RB_RainCloud_Init(struct Driver *d);
 void RB_Explosion_ThTick(struct Thread *t);
+int RB_Explosion_RunPotionEmitterSelfTest(void);
 void RB_Explosion_InitPotion(struct Instance *inst);
 void RB_Explosion_InitGeneric(struct Instance *inst);
 void RB_Blowup_ThTick(struct Thread *t);
@@ -1160,7 +1161,7 @@ void AH_MaskHint_SpawnParticles(s16 numParticles, struct ParticleEmitter *emSet,
 void AH_MaskHint_LerpVol(int blend);
 void AH_MaskHint_Update(void);
 
-struct Particle *Particle_Init(u32 param_1, struct IconGroup *ig, struct ParticleEmitter *emSet);
+struct Particle *Particle_Init(u32 param_1, struct IconGroup *ig, const struct ParticleEmitter *emSet);
 void Particle_FuncPtr_PotionShatter(struct Particle *p);
 void Particle_FuncPtr_SpitTire(struct Particle *p);
 void Particle_FuncPtr_ExhaustUnderwater(struct Particle *p);

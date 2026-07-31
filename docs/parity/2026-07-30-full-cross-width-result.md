@@ -11,6 +11,11 @@ This is a finalized parity rejection, not an incomplete run and not an
 accepted platform difference. Fixed-point gameplay is expected to match
 across these architectures, so M6 remains open and iOS work remains gated.
 
+The defect that produced this rejection has since been isolated and corrected
+in source. The rejected reports below remain the immutable evidence that
+bounded it; they are not retroactively relabeled as passes. A new full pair
+must still prove the correction across all 24,232 frames.
+
 ## Accepted producer and report identities
 
 ARM64 reference:
@@ -150,9 +155,102 @@ not call it. A complete flame-jet emission is also inconsistent with the
 five-call delta: static tracing through `game/231/RB_FlameJet.c:228-276`
 accounts for 14 calls, and the ARM64 breakpoint did not fire.
 
-The remaining bounded finding is that i686 executes one additional
-five-field particle-RNG pattern. Its exact i686 emitter has not yet been
-observed. Naming one without the accepted-binary trace would be speculation.
+The ARM64 trace alone bounded the defect but did not name the missing i686
+objects. The accepted i686 producer was subsequently inspected without
+modifying its executable or replay headers, as described next.
+
+## Exact i686 process-memory observation
+
+A disposable amd64 Linux container ran the exact accepted producer
+`e07be52d...` under the ordinary `qemu-i386` path. The retail image was mounted
+read-only. The container had `SYS_PTRACE` solely so a helper could read
+`/proc/66/mem`; no diagnostic instructions were added to the binary and no
+checkpoint identity check was bypassed.
+
+The process was stopped at the start and end of frame 16,561 by polling the
+accepted producer's `s_replayFrame`. Its loaded ELF base was `0xb586b000`;
+subtracting the linked guest base `0x40000000` gave the runtime relocation
+delta used to resolve the accepted symbol addresses. At the common start:
+
+```text
+RNG:       1b9ef97b,533fcdb6
+particles: 34
+free:      94
+```
+
+At the end:
+
+```text
+i686 RNG:       b5fd73cb,deb84781
+i686 particles: 39
+i686 free:      89
+ARM64 RNG:      a8c39902,7d5e2621
+ARM64 particles:34
+ARM64 free:     94
+```
+
+The ARM64 comparison was taken from the exact accepted ARM64 producer under
+LLDB at `NativeReplayScheduler_EndFrame`, with `s_replayFrame == 16561`.
+Its 19,456-byte particle pool was dumped from host address `0x1005ffe50`;
+the ordinary-list head was `0x1006017d8` and the LP64 item size was 152.
+
+Walking both ordinary-particle lists established:
+
+- all 34 ARM64 records match i686 records 5 through 38 in their scalar fields
+  and axes;
+- i686 has exactly five extra records at the list head;
+- each extra record has `framesLeftInLife=19`,
+  `flagsSetColor=0x00a1`, `flagsAxisWord=0x000003a7`,
+  `funcPtr=Particle_FuncPtr_PotionShatter`, and model/owner union `0x45`; and
+- i686 has consumed five free particle slots while ARM64 has not.
+
+These five objects explain both observed signatures. Their configured
+20-frame lifetime produces the exact frame-16,561-through-16,580 world and
+allocation mismatch. Their Y-axis emitter flags include randomized velocity
+with a seed of 400, consuming exactly one particle-RNG call per object and
+therefore the exact five-call delta.
+
+## Root cause and correction
+
+`game/231/RB_Explosion.c` stored the potion emitter as 81 raw `u32` words:
+nine retail `ParticleEmitter` records with a 0x24-byte ILP32 stride. It then
+cast that byte table to `struct ParticleEmitter *`.
+
+That representation is valid only on 32-bit:
+
+```text
+                 ILP32    LP64
+InitTypes offset 0x04     0x08
+data offset      0x14     0x20
+record size      0x24     0x30
+```
+
+Consequently ARM64 read the wrong union offsets and advanced through the table
+with the wrong stride. The five `Particle_Init` calls seen in the ARM64 trace
+were made, but their malformed records did not create the five persistent
+retail particles.
+
+The runtime table is now a semantic
+`static const struct ParticleEmitter[]`. Native compilers therefore choose
+the correct host offsets and stride, while the 32-bit layout remains byte-for-
+byte retail-compatible. `Particle_Init` now accepts a const emitter pointer,
+and the unsafe cast was removed.
+
+A new media-free entry point,
+`--self-test-potion-emitter-layout`, validates the function record, seven axis
+records, terminator, 20-frame lifespan, and randomized Y velocity. On i686 it
+also compares all nine typed records against the original 81 retail words.
+Verification after the correction:
+
+```text
+macOS ARM64 Release:   15/15 CTests
+macOS ARM64 ASan/UBSan:15/15 CTests
+Linux optimized i686:  15/15 CTests
+git diff --check:      passed
+```
+
+This is structural and sanitizer acceptance of the fix, not the full parity
+acceptance. New clean producers and reports are still required.
 
 ## Rejected i686 tracing routes
 
@@ -174,8 +272,14 @@ Every tracing attempt below was kept separate from acceptance evidence:
    then received target SIGSEGV and exited 139 before initialization. The
    untouched producer survived the same launch. This diagnostic is also
    rejected.
+5. The same instrumentation was rebuilt through the ordinary CMake unity path
+   rather than manual compilation. Its SHA-256 was
+   `987c35ef9a5a5b6ef0bba7d3a243a8f82347b6e47f43de83cb2a7002005103cb`.
+   A fresh boot remained alive, but checkpoint playback exited 139 during
+   validation before the target frame. It is rejected as trace evidence.
 
-No tracing-only source change remains in the worktree.
+All tracing-only source changes were reverted. The successful `/proc` route
+observed the untouched accepted producer and did not require instrumentation.
 
 ## Lap-coverage audit and rejected extension
 
@@ -273,10 +377,9 @@ recorded and accepted on its own.
 
 ## Required next work
 
-1. Trace or otherwise isolate the extra i686 five-call particle-RNG path
-   without relying on a crashing instrumentation build.
-2. Correct the architecture-dependent condition and regenerate both full
-   reports from a clean committed producer.
+1. Commit the typed-emitter correction and produce clean ARM64 and optimized
+   i686 binaries with recorded identities.
+2. Regenerate both full reports from those clean producers.
 3. Require all eight components to match all 24,232 frames before running
    the two-process i686 and deliberate-mutation gates.
 4. Record or derive a version-4 coverage input that structurally reaches

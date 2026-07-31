@@ -201,10 +201,16 @@ Result so far:
   every frame; RNG, world, allocation, and root first differ at frame 16,561,
   followed by drivers at frame 17,213. Exact recurrence analysis proves that
   i686 makes five additional particle-RNG calls at the first boundary.
-  Accepted-binary ARM64 tracing bounds its 33 calls to one wall spark, six
-  exhaust particles, and five RNG-free potion fragments. The corresponding
-  i686 emitter remains unresolved. Full ranges and rejected diagnostic routes
-  are in `docs/parity/2026-07-30-full-cross-width-result.md`.
+  Accepted-producer memory inspection proves the delta is five correctly
+  initialized i686 potion-shatter particles that ARM64 misinitializes and
+  immediately loses. `RB_Explosion.c` had cast nine packed 0x24-byte retail
+  emitter records to a pointer-bearing host struct whose LP64 size is 0x30.
+  The table is now typed, `Particle_Init` accepts a const emitter, and a
+  fifteenth media-free test checks all fields on both widths plus the exact
+  original 81-word layout on i686. ARM64 Release, ARM64 ASan/UBSan, and i686
+  each pass 15/15 tests. Full-range regeneration is still required before the
+  gate can pass. Evidence and rejected diagnostic routes are in
+  `docs/parity/2026-07-30-full-cross-width-result.md`.
 
 Work:
 
@@ -545,6 +551,16 @@ Result so far:
   additional i686 particle-RNG calls. Exact ranges, accepted-binary tracing,
   and rejected diagnostic routes are in
   `docs/parity/2026-07-30-full-cross-width-result.md`.
+- Direct read-only inspection of the exact accepted producers at frame 16,561
+  found 34 ARM64 versus 39 i686 live particles and 94 versus 89 free slots.
+  The last 34 i686 records match the complete ARM64 list field-for-field; the
+  five extra i686 list-head records are potion fragments with 19 frames left.
+  The shared common RNG state advances once for each fragment because the
+  emitter randomizes Y velocity by 400, explaining the exact five-call delta
+  and the 20-frame allocation/world mismatch. The root cause was the raw
+  32-bit emitter-table cast in `RB_Explosion.c`; the typed replacement and its
+  cross-width byte-layout test pass 15/15 on ARM64 Release, ARM64 ASan/UBSan,
+  and optimized i686. Clean full-report regeneration remains pending.
 - `tools/inspect-replay-lap-coverage.mjs` validates checkpoint checksums and
   resolves player lap/checkpoint fields for checkpoint versions 2 and 3 on
   ILP32 and LP64. It confirms the historical version-2 report reaches
@@ -563,10 +579,11 @@ Work:
 - Validate audio, desktop renderer, keyboard, MFi/Bluetooth controller,
   memcards, replays, savestates, XA audio, and STR video.
 - Run sanitizers and the full parity gate under Apple Clang.
-- Isolate and correct the extra five-call i686 particle-RNG path at frame
-  16,561, then regenerate clean full ARM64 and optimized-i686 version-4
-  reports. All current and pre-correction mismatched reports are diagnostic
-  inputs, not acceptance artifacts.
+- Regenerate clean full ARM64 and optimized-i686 version-4 reports after the
+  typed potion-emitter correction. Require all eight components to match all
+  24,232 frames, then repeat the two-process and mutation gates. All current
+  and pre-correction mismatched reports remain diagnostic inputs, not
+  acceptance artifacts.
 - Record or derive a current version-4 input that reaches `lapIndex >= 1`;
   retain failed steering extensions as explicit rejected evidence.
 - Measure frame cadence against the retail 30 Hz logic / approximately
@@ -732,7 +749,7 @@ timestamps are explicitly excluded from game-visible deterministic state.
 |---|---|---|
 | Guest-reference design expands into a full arena rewrite | Asset relocation writes host bases into 32-bit file slots; about 75 pinned pointer-bearing structs were estimated | M2 prototype on real assets before broad edits; preserve guest layout and centralize translation |
 | Existing replay/checkpoint tooling is not a sufficient parity oracle | Prior report found infrastructure but did not run or assess coverage (`docs/ctr-native-viability.md:471-474`) | Prove mutation sensitivity in M1 or build a state-hash harness |
-| Full NTSC-U cross-width trace diverges | Both corrected reports finalize 24,232 frames; timing/pads/VSync match, but i686 advances particle RNG five extra times at frame 16,561 | Isolate the architecture-dependent emitter condition, regenerate both reports, require all eight components to match, then run two-process/mutation verification |
+| Full NTSC-U cross-width trace diverges | Exact producer-memory inspection traced the frame-16,561 delta to a raw 0x24-byte retail potion-emitter table cast to an LP64 0x30-byte host struct; the typed correction passes 15/15 tests on ARM64, sanitizers, and i686 | Regenerate both clean full reports, require all eight components to match, then run two-process/mutation verification |
 | Current version-4 input does not advance a lap | Typed v2 inspection proves historical `lapIndex=1`; current inherited input and extension A both report `maxLap=0` | Record or derive a current input with structural `lapIndex >= 1` evidence |
 | Upstream has moved since `2df55dc5a` | Viability report is commit-specific | Freeze a reproducible baseline, inspect current head, then rebase intentionally |
 | Reference documentation is stale | `ref/README.md` claims four clones that are absent | Derive documentation from actual remote/commit checks |

@@ -5855,3 +5855,231 @@ base:
 
 This publishes and backs up the work on the draft implementation branch. It
 does not merge the known parity failure to `main`.
+
+## 2026-07-30 — Frame-16,561 potion-emitter root cause and typed-layout correction
+
+### GitHub state clarified before the fix
+
+The user correctly observed that implementation work was not present on
+GitHub's `main` branch. A read-only audit at the start of this continuation
+showed:
+
+```text
+local HEAD:
+  185e9f9b9245589f473149a3299e6834da9f6029
+origin/codex/arm64-apple:
+  185e9f9b9245589f473149a3299e6834da9f6029
+draft PR #1 head:
+  185e9f9b9245589f473149a3299e6834da9f6029
+origin/main:
+  95417c723518407d6bfe3c81a37606294963efe2
+```
+
+Thus the implementation and evidence were backed up on the draft PR branch,
+but not merged. This distinction is intentional while M6 is red and is now
+stated explicitly in status updates. No merge was performed.
+
+### Final rejected instrumentation route
+
+The earlier frame-gated i686 source instrumentation was rebuilt once through
+the same CMake unity-build path as the accepted producer, ruling out the
+manual object-build method as the sole cause of its failure. The diagnostic
+copy was:
+
+```text
+/private/tmp/ctrpad-i686-frame16561-NgN10e/
+  ctr_native-diag-cmake-particle-16561
+SHA-256:
+  987c35ef9a5a5b6ef0bba7d3a243a8f82347b6e47f43de83cb2a7002005103cb
+```
+
+A fresh boot survived for 60 seconds, but a checkpoint-replay launch exited
+139 during validation before frame 16,561. It was rejected. The temporary
+logging patch was immediately reverted, and no output from this binary was
+used as acceptance evidence.
+
+### Read-only accepted-producer probe
+
+The next route modified neither executable nor replay. Disposable container
+`ctrpad-i686-proc-probe` ran the exact accepted producer:
+
+```text
+producer:
+  /diag/ctr_native-corrected-full-producer-55d3b71c6da5
+SHA-256:
+  e07be52d72e6a2f323587d9302467be366401485cecd29d86ae54846f973528c
+launch:
+  --replay /diag/debug/reports/20260730/ctr-223323/input.ctrreplay
+  --replay-start-checkpoint 55
+```
+
+The host retail BIN was mounted read-only. The container used
+`--cap-add SYS_PTRACE --security-opt seccomp=unconfined` so a helper could
+read `/proc/66/mem` while `qemu-i386` executed the accepted process. This did
+not patch code, change report headers, or bypass executable/checkpoint
+identity. The loaded ELF base was `0xb586b000`; relative to the linked guest
+base `0x40000000`, the runtime relocation delta was `0x7586b000`.
+
+A polling helper sent `SIGSTOP` at the target replay counter. A second
+read/resume/stop step left the process stopped at `s_replayFrame=16562`,
+which is the end of recorded frame 16,561. The exact state was:
+
+```text
+start of frame 16561:
+  RNG common: 1b9ef97b,533fcdb6
+  live particles: 34
+  free particles: 94
+
+end of frame 16561:
+  i686 RNG: b5fd73cb,deb84781
+  live particles: 39
+  free particles: 89
+```
+
+For the ARM64 side, LLDB stopped the exact accepted producer at
+`NativeReplayScheduler_EndFrame` with `s_replayFrame == 16561`:
+
+```text
+ARM64 RNG:       a8c39902,7d5e2621
+live particles:  34
+free particles:  94
+ordinary head:   0x1006017d8
+particle pool:   0x1005ffe50
+LP64 item size:  152
+```
+
+The complete 19,456-byte ARM64 particle pool was retained as ignored local
+evidence at `/private/tmp/ctrpad-arm-frame16561-pool.bin`. The LLDB command
+and transcript are:
+
+```text
+build-macos-arm64/debug/arm-frame-16561-pool.lldb
+build-macos-arm64/debug/arm-frame-16561-pool.log
+```
+
+### Exact list comparison
+
+Both ordinary-particle linked lists were decoded using their native struct
+layout and pool bounds. The comparison found:
+
+```text
+ARM64 active ordinary particles: 34
+i686 active ordinary particles:  39
+i686 records 5..38:              match ARM64 records 0..33
+i686-only list-head records:     5
+```
+
+Every i686-only record was a potion-shatter particle:
+
+```text
+framesLeftInLife: 19
+flagsSetColor:    0x00a1
+flagsAxisWord:    0x000003a7
+funcPtr:          Particle_FuncPtr_PotionShatter
+modelID union:    0x45
+```
+
+Their positions differed as expected, but their emitter-derived scalar fields
+and axis schema were the same. Because the record begins with a lifespan of
+20 and is inspected after its first update, `framesLeftInLife=19` explains
+why world and allocation differ for exactly 20 frames, 16,561 through
+16,580. Each record also randomizes Y velocity with seed 400, requiring one
+`MixRNG_Particles` call. Five correct i686 records therefore explain the
+five-call RNG delta exactly.
+
+This supersedes the earlier honest statement that the exact i686 emitter was
+not yet observed. That earlier statement remains in the preceding
+chronological entry because it accurately records what was known then.
+
+### Source-level root cause
+
+`game/231/RB_Explosion.c` encoded `s_potionShatterEmitter` as 81 raw `u32`
+words and cast it to `struct ParticleEmitter *`. The words are nine retail
+records of 0x24 bytes each. That is correct for ILP32, where:
+
+```text
+InitTypes offset: 0x04
+data offset:      0x14
+record size:      0x24
+```
+
+On LP64 the pointer inside `FuncInit` changes the native layout:
+
+```text
+InitTypes offset: 0x08
+data offset:      0x20
+record size:      0x30
+```
+
+ARM64 therefore interpreted valid retail bytes at invalid native offsets and
+advanced between entries with the wrong stride. Its five potion
+`Particle_Init` calls occurred, as the accepted trace had shown, but did not
+leave the five valid 20-frame particles that i686 created.
+
+### Correction
+
+The raw runtime table was replaced with a typed
+`static const struct ParticleEmitter[]` containing:
+
+```text
+entry 0: function init, color flags 0x00a1, lifespan 20, ordinary type
+entry 1: X start 1
+entry 2: Z start 1
+entry 3: Y start 1, velocity 3800, acceleration -280,
+         randomized velocity seed 400
+entry 4: scale X start 0x1000
+entry 5: red start 1
+entry 6: green start 0xc800
+entry 7: blue start 1
+entry 8: zero terminator
+```
+
+`Particle_Init` and its public declaration now take
+`const struct ParticleEmitter *`, and `RB_Explosion_InitPotion` passes the
+typed table without a cast.
+
+A new CTest entry point,
+`--self-test-potion-emitter-layout`, validates all semantic records on both
+pointer widths. On 32-bit it additionally compares the entire typed table
+against the original 81 `u32` words. This proves the correction preserves the
+retail ILP32 representation while allowing the compiler to form the correct
+LP64 offsets and stride.
+
+### Verification
+
+The corrected source passed:
+
+```text
+macOS ARM64 Release:
+  build-macos-arm64/ctr_native
+  15/15 CTests
+  potion test reports pointer-size=8
+  SHA-256 b68c72b7252acd35c6f657b4f7f14bf96a9c8d90b39713e383c2dae620e33ddf
+
+macOS ARM64 ASan/UBSan:
+  /tmp/ctrpad-macos-arm64-asan-vehlap-OTDxVr/ctr_native
+  ASAN_OPTIONS=symbolize=0:abort_on_error=1:detect_leaks=0
+  UBSAN_OPTIONS=halt_on_error=1:print_stacktrace=1
+  15/15 CTests
+  SHA-256 dd9450b111a5e54e21b8b671a50f771cda756486093c0a62ae7828da136c4c9c
+
+Linux optimized i686:
+  /private/tmp/ctrpad-i686-vehlap-8IzCKm/ctr_native
+  ELF 32-bit LSB PIE, Intel 80386
+  Build ID 07c4c9a68db6db738e1531696bc6fac7b0ee88da
+  15/15 CTests, including exact 81-word comparison
+  SHA-256 28afbee11aaea30afa4a4a4b6240c988f1a8baf460bf27a342f803ffdb7faa0a
+
+git diff --check:
+  passed
+```
+
+The macOS builds repeated only pre-existing compiler warnings. The i686 build
+repeated the established two format-security and two optimized
+maybe-uninitialized warnings. No new warning was introduced by the typed
+table.
+
+This verifies the source correction and cross-width layout guard. It does not
+retroactively make reports `ctr-170507` and `ctr-223323` match. M6 remains
+open until clean committed producers regenerate the full trace and all eight
+required components match for all 24,232 frames.

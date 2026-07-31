@@ -249,4 +249,8 @@ if(BUILD_TESTING)
     set_tests_properties(ctr_native_vehicle_lap_checkpoint_bounds PROPERTIES PASS_REGULAR_EXPRESSION
         "^\\[CTR VehLap\\] self-test passed: count=4 first=valid last=valid one-past=rejected sentinel=0xff-rejected empty=rejected"
     )
+    add_test(NAME ctr_native_potion_emitter_layout COMMAND $<TARGET_FILE:ctr_native> --self-test-potion-emitter-layout)
+    set_tests_properties(ctr_native_potion_emitter_layout PROPERTIES PASS_REGULAR_EXPRESSION
+        "^\\[CTR PotionEmitter\\] self-test passed: pointer-size=(4|8) entries=8 lifespan=20 random-velocity=400 typed-layout=yes"
+    )
 endif()

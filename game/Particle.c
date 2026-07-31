@@ -1489,7 +1489,7 @@ static void Particle_LinkOscillators(struct Particle *p, struct ParticleOscillat
 }
 
 // NOTE(aalhendi): ASM-verified NTSC-U 926 0x80040308-0x80040850
-struct Particle *Particle_Init(u32 param_1, struct IconGroup *ig, struct ParticleEmitter *emSet)
+struct Particle *Particle_Init(u32 param_1, struct IconGroup *ig, const struct ParticleEmitter *emSet)
 {
 	struct GameTracker *gGT = sdata->gGT;
 	struct Particle *p;
