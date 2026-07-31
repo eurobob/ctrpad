@@ -472,8 +472,9 @@ void Platform_Init(const char *title, int width, int height)
 
 #if defined(SDL_PLATFORM_IOS)
 	// UIKit consults this before creating its SDL view controller. Keep CTR's
-	// native 4:3 surface in landscape instead of inheriting the device's current
-	// portrait orientation during launch.
+	// native 4:3 surface landscape on iPhone and older full-screen iPadOS. On
+	// iPadOS 26+, the scene may instead be portrait or dynamically resized; the
+	// renderer and native touch overlay adapt to the scene bounds.
 	SDL_SetHint(SDL_HINT_ORIENTATIONS, "LandscapeLeft LandscapeRight");
 #endif
 
