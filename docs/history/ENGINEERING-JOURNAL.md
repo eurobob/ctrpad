@@ -7856,3 +7856,167 @@ direct-loader process stayed running, unpaused, and not OOM-killed. Its
 flushed log advanced to the ninth 2,000-frame marker, so frame 18,000 is now
 durable. The exit-status capture remains empty; playback 1, playback 2, and
 mutation remain unaccepted.
+
+## 2026-07-31 — Let Scrapbook finish and measured its silent tail
+
+### First natural run
+
+The same exact `63b0a0773a00` app and checksum-valid disposable save were
+restarted through the normal retail sequence. `SCRAPBOOK` was selected and no
+skip input was sent. The app uploaded all 4,424 frames, returned through the
+ordinary title/menu transition, and showed the intact seven-row menu.
+
+The run started at 04:12:47 CDT and returned at 04:17:43 CDT, about 296
+seconds. This is close to the declared 4,424 / 15 = 294.93 seconds without
+attempting to subtract transition or observation granularity. A steady
+2,000-frame runtime window reported 14.95 FPS. The frozen log ended with:
+
+```text
+[CTR Scrapbook] native playback ending: reason=stream-end framesUploaded=4424 xaActive=0
+[CTR Scrapbook] native teardown: xaBefore=0 xaAfter=0
+---- LOG CLOSED ----
+```
+
+Its SHA-256 is
+`384f0f6b5b0d6a1df56b5114e1794fc112e1c462c6dfabf21e684c2e5bd15a5f`.
+Temporary one-minute visual checks showed advancing coherent scenes, but the
+desktop service removed those captures during close. No screenshot hash is
+claimed for them.
+
+### Added observation without changing the scheduler
+
+The first natural run showed that XA had ended before video stream exhaustion
+but not when. Commit `900f5656b41d` added only:
+
+- the starting VBlank count;
+- a one-time active-to-inactive XA transition record; and
+- elapsed VBlanks at both transition and stream end.
+
+The upload, `Platform_WaitUntilVBlank`, four-VBlank cadence, input test, and
+audio stop order were unchanged. The source checkpoint was committed and
+pushed, the exact app rebuilt, and 16/16 CTests passed.
+
+### Second natural run and frame-content interpretation
+
+The exact `900f5656b41d` app repeated normal startup and natural playback. It
+started at 04:22:59 CDT and reached stream end at 04:27:55 CDT:
+
+```text
+[CTR Scrapbook] native playback started: xaActive=1 xaChannel=1 cadenceVBlanks=4 startVBlank=4315
+[CTR Scrapbook] native XA exhausted: framesUploaded=4371 vblanksElapsed=17480
+[CTR Scrapbook] native playback ending: reason=stream-end framesUploaded=4424 xaActive=0 vblanksElapsed=17696
+[CTR Scrapbook] native teardown: xaBefore=0 xaAfter=0
+```
+
+The endpoint equals `4424 * 4` exactly. The XA transition was sampled after
+successful upload 4,371 and before that frame's scheduled wait. The stream
+then accepted 53 more frames. The existing full-presentation records were
+queried rather than assuming those frames were active content: indices 4,371
+through 4,393 have changing hashes during a fade, while 4,394 through 4,423
+are 30 identical black frames. The black decoded/presented hashes match the
+movie's initial black frame:
+
+```text
+decoded  cc257394fc1aa6bf
+presented 2bf050200a5e1325
+```
+
+The 216-VBlank difference between observations is 3.6 seconds. The 53 later
+uploads are 3.53 seconds at 15 FPS; the one-frame discrepancy is the expected
+sampling position described above. This rejects the hypothesis of cumulative
+video scheduler drift and identifies an authored silent fade/black tail.
+
+The app returned to the normal menu and was closed through its window button.
+Normal close removed the temporary live log before it could be frozen, so the
+second run has no claimed post-close file hash. The exact lines were captured
+before close and are recorded as such. Natural end, exact video cadence, menu
+return, and the measured authored-tail boundary are accepted; listening
+quality and human-perceived synchronization are not.
+
+## 2026-07-31 — Added a practical keyboard layout
+
+### Chose additive aliases
+
+The desktop input layer already mapped arrows, `Z/X/C/V`, Shift/Ctrl,
+brackets, Space, and Return directly to PS1 buttons. Those keys worked after
+the earlier tap-latch correction, but they were difficult to discover and
+awkward for simultaneous accelerate, steer, and drift.
+
+The implementation keeps every old scancode and adds a spatial two-hand
+layout:
+
+```text
+W/A/S/D  -> D-pad
+I/J/K/L  -> Triangle/Square/Cross/Circle
+Q/E      -> L1/R1
+P        -> Start
+Tab      -> Select
+```
+
+Alternative fields were added to `NativeInputKeyboardMapping`. Both the
+key-down latch translator and current-held-state reader test the original or
+alias scancode before clearing the same active-low PS1 bit. No replay,
+checkpoint, gamepad packet, or gameplay/physics representation changed.
+
+The media-free self-test enumerates all 12 new key-to-bit expectations, uses a
+synthetic held keyboard state to require Cross + Right + R1 for `K+D+E`, and
+sends a complete `K+D` down/up pair before a poll to require the alias tap
+latch. This specifically tests race-useful chording as well as menu taps.
+
+### Rejected and corrected verification attempts
+
+The first rebuilt suite reported 15/16 because CTest's required-success regex
+still expected the old exact self-test sentence. The executable itself
+printed a passing result with the new alias evidence. The stable
+`tap-latch=c+right one-snapshot` marker was restored unchanged and the alias
+evidence appended; this preserved downstream CI compatibility. The rebuilt
+suite then passed 16/16.
+
+A manual follow-up invoked a guessed `--internal-test-input` spelling that is
+not a supported internal flag. It launched the normal game instead of the
+self-test and was interrupted after renderer/audio initialization. The
+process closed its log cleanly, but that launch is rejected as test evidence.
+CTest's configured `ctr_native_input` invocation is the accepted automated
+path.
+
+The first visual run used the rebuilt pre-commit functional diff. `K` advanced
+the legal/splash sequence, and the real menu accepted `S` and `W`. The source
+was then reviewed with `git diff --check`; retail-path tracking remained
+empty. Source, README control table, and the viability map were committed as:
+
+```text
+2c10b00b34df4f0eb61aa8b72cbe99588a930ed6
+feat: add practical desktop keyboard controls
+```
+
+CMake was reconfigured after commit so the app embedded exact build ID
+`2c10b00b34df`. The 4,167,248-byte executable has SHA-256
+`6e3171d1619fbc34ee1985679604a018107ac62039e6de5d8489b1729224f9e9`,
+is a thin ARM64 Mach-O, passes strict deep signature and plist checks, and
+passes 16/16 CTests.
+
+The exact app was then launched through normal retail startup. `K` advanced
+to the seven-row main menu; at a stable menu, `S` moved the selection from
+Adventure to Time Trial and `W` moved it back. Key pulses delivered during
+noninteractive title transitions were ignored by retail and bounded retries
+were used; the first stable-menu `S` press succeeded. The app was closed
+normally. Temporary captures were inspected but removed automatically on
+close, so no hash or retail pixel is published.
+
+### Publication, time, and concurrent verifier
+
+The source commit was created at 04:39:42 CDT, the exact executable was
+written at 04:40:48 CDT, and visual verification completed by 04:43:44 CDT.
+Commit `2c10b00b3` was pushed to `origin/codex/arm64-apple`; local and remote
+tips matched. Draft PR #1 remains open and unmerged.
+
+The goal API reported 1 day, 14 hours, 8 minutes, 23 seconds of cumulative
+goal time during the runtime checkpoint and 1 day, 14 hours, 17 minutes,
+32 seconds immediately before the documentation freeze. This product timer is
+not treated as active labor or a benchmark.
+
+The preserved i686 direct-loader container remained running, unpaused, and
+not OOM-killed. Its playback-1 log has durable 2,000-frame markers through
+frame 22,000 and a driver-inactive event at frame 21,331. The 24,232-frame
+finish line and machine-captured exit status are still absent; playback 2 and
+mutation have not begun and remain unaccepted.

@@ -140,3 +140,67 @@ draft branch until the user explicitly approves a merge.
 
 No disc image, extracted retail asset, raw audio capture, memory-card file, or
 other retail byte was added to Git.
+
+## Additive two-hand test layout
+
+The one-tap transport fix made the original keyboard map reliable, but that
+map remained obscure and awkward for a complete race. Commit
+`2c10b00b34df4f0eb61aa8b72cbe99588a930ed6` adds an ergonomic alias for
+every input needed in a basic race while preserving every prior binding:
+
+```text
+W/A/S/D       D-pad
+I/J/K/L       Triangle/Square/Cross/Circle
+Q/E           L1/R1
+P             Start
+Tab           Select
+```
+
+Left/Right Ctrl and `[`/`]` remain the L2/R2 and L3/R3 bindings. Arrow keys,
+`Z/X/C/V`, Left/Right Shift, Space, and Return remain unchanged. The aliases
+enter the same active-low PS1 button mapper and pad snapshot as the original
+keys, so they do not create a keyboard-only physics or replay path.
+
+The input self-test now verifies all 12 aliases individually. It also proves
+that held `K+D+E` produces Cross + D-pad Right + R1 simultaneously and that a
+complete `K+D` down/up pair is latched for one retail snapshot. The stable
+older success marker was retained for CI compatibility, with the new result
+appended:
+
+```text
+tap-latch=c+right one-snapshot aliases=12 held=k+d+e alias-tap=k+d
+```
+
+The exact committed application identified as:
+
+```text
+CTR Native 0.1.0-beta.7.1 (2c10b00b34df)
+Mach-O 64-bit executable arm64
+executable SHA-256 6e3171d1619fbc34ee1985679604a018107ac62039e6de5d8489b1729224f9e9
+```
+
+It passed 16/16 CTests, strict deep code-signature verification, plist
+validation, and the thin-ARM64 architecture check. Computer Use then launched
+that exact app through normal startup. `K` advanced the retail legal/splash
+sequence into the real seven-row main menu; at the stable menu, `S` visibly
+moved the highlight from Adventure to Time Trial and `W` moved it back to
+Adventure. The window was then closed normally.
+
+Synthetic key pulses sent during noninteractive title transitions are
+intentionally ignored by the retail state machine, so bounded retries were
+needed while crossing the boot sequence. This is not a lost-pad-edge result:
+the stable main-menu `S` press moved on its first attempt, and the media-free
+tests cover both tap latching and held combinations.
+
+The temporary UI captures were visually inspected but were automatically
+removed by the desktop capture service during normal app close. No screenshot
+hash is claimed and no retail-derived pixel is in Git. The source checkpoint
+was committed at 04:39:42 CDT, the exact application executable was written
+at 04:40:48 CDT, visible verification completed by 04:43:44 CDT, and the
+source branch had already been pushed to GitHub. The goal API reported
+1 day, 14 hours, 8 minutes, 23 seconds of cumulative goal time during this
+checkpoint; that timer is not benchmark or labor time.
+
+This accepts a documented, practical desktop keyboard test layout and its
+main-menu behavior. A complete human-driven race, gamepad coverage, touch
+input, and iOS/iPadOS input remain separate acceptance tasks.

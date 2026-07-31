@@ -8,9 +8,9 @@
 `75b09db17d1cabb91f2fece68a43edbf04662992`
 
 **Status:** all 4,424 production frames accepted through decode, macOS OpenGL
-presentation, and ASan/UBSan; the real menu route, configured 15-fps scheduler,
-XA lifetime, input skip, and teardown are accepted; perceptual A/V
-synchronization remains open
+presentation, and ASan/UBSan; the real menu route, configured 15-fps
+scheduler, XA lifetime, input skip, natural stream end, teardown, and measured
+authored-tail boundary are accepted; perceptual listening remains open
 
 ## Question
 
@@ -293,6 +293,64 @@ interval. The exact source commit was created at 04:02:11 CDT; the exact
 binary was written at 04:02:57 CDT; and the commit-to-frozen-evidence interval
 was 4 minutes, 34 seconds.
 
+## Natural end and authored silent tail
+
+Two subsequent normal-startup runs selected `SCRAPBOOK` from the same
+checksum-valid loaded profile and did not send a skip input.
+
+The first run used exact source `63b0a0773a00`. It uploaded all 4,424 frames,
+returned to the intact seven-row menu, and closed normally:
+
+```text
+[CTR Scrapbook] native playback started: xaActive=1 xaChannel=1 cadenceVBlanks=4
+[CTR Native] FPS: 14.95 (last 2000 frames)
+[CTR Scrapbook] native playback ending: reason=stream-end framesUploaded=4424 xaActive=0
+[CTR Scrapbook] native teardown: xaBefore=0 xaAfter=0
+```
+
+Playback started at 04:12:47 CDT and reached the returned menu at 04:17:43
+CDT, an observed interval of about 296 seconds. The declared cadence model is
+4,424 / 15 = 294.93 seconds; process startup/transition and observation
+granularity are not subtracted from the wall interval. The runtime reported
+14.95 FPS over its steady 2,000-frame window. The frozen full log SHA-256 is
+`384f0f6b5b0d6a1df56b5114e1794fc112e1c462c6dfabf21e684c2e5bd15a5f`.
+
+Commit `900f5656b41d` then added observation-only VBlank and XA-exhaustion
+telemetry without changing playback order or timing. The exact committed app
+repeated the natural run:
+
+```text
+[CTR Scrapbook] native playback started: xaActive=1 xaChannel=1 cadenceVBlanks=4 startVBlank=4315
+[CTR Scrapbook] native XA exhausted: framesUploaded=4371 vblanksElapsed=17480
+[CTR Scrapbook] native playback ending: reason=stream-end framesUploaded=4424 xaActive=0 vblanksElapsed=17696
+[CTR Scrapbook] native teardown: xaBefore=0 xaAfter=0
+```
+
+The video endpoint is exactly `4424 * 4 = 17696` elapsed VBlanks. XA changed
+from active to inactive at the observation containing successful upload
+4,371. There were 53 later successful uploads before stream exhaustion.
+Independent full-probe manifests show that later encoded content is an
+authored tail:
+
+- frame indices 4,371 through 4,393 are 23 changing fade-out frames; and
+- frame indices 4,394 through 4,423 are 30 identical black frames, with
+  decoded hash `cc257394fc1aa6bf` and presented hash `2bf050200a5e1325`.
+
+The elapsed-VBlank observations differ by 216 VBlanks (3.6 seconds). The
+53 later uploads represent 3.53 seconds at 15 FPS; the one-frame difference
+is explained by the XA transition being sampled after the current upload but
+before its scheduled wait, while stream exhaustion is sampled after the
+final successful wait. This is evidence of a silent fade/black tail rather
+than accumulating scheduler drift.
+
+The second run began at 04:22:59 CDT, reached stream end at 04:27:55 CDT, and
+visibly returned to the menu. Its exact telemetry was captured before normal
+window close. The temporary logging service removed that live log and the
+temporary UI captures during close, so there is deliberately no claimed
+post-close SHA-256 for the second run. The first natural-run log hash, the
+exact lines above, and the already frozen all-frame manifests remain the
+durable evidence. No retail-derived pixel or audio byte was committed.
+
 ## Acceptance boundary
 
 Accepted:
@@ -310,12 +368,15 @@ Accepted:
 - the configured four-vblank/15-fps movie scheduler and an active XA channel
   throughout observed playback; and
 - ordinary input skip, XA active-to-inactive teardown, title transition, and
-  intact menu return.
+  intact menu return;
+- a complete 4,424-frame natural-end production-menu run and normal menu
+  return; and
+- exact video endpoint cadence plus XA exhaustion at the authored
+  fade-to-black tail.
 
 Not accepted:
 
-- perceptual or independently measured interleaved XA/video synchronization;
-- full natural-end playback through the real menu loop;
+- human-perceived lip/music synchronization or listening quality;
 - broad manual play beyond this focused menu route; or
 - GLES/iOS presentation.
 

@@ -419,13 +419,13 @@ development app bundle, direct Metal-backed visual inspection, corrected
 complete. Both observed cross-width emitter defects are corrected, the clean
 ARM64 report matches the prior i686 trajectory across all 24,232 frames, and a
 fresh current-build version-4 report structurally reaches `lapIndex=1`.
-Formal same-commit i686 finalization, natural-end Scrapbook A/V observation,
-and complete manual play remain open.
+Independent i686 repeatability/mutation, broad audio listening, and complete
+manual play remain open.
 
 Result so far:
 
 - `macos-arm64` configures and builds a thin ARM64 Mach-O with Apple Clang;
-  all fourteen media-free tests pass. The newest tests verify all 65
+  all sixteen media-free tests pass. The newest tests verify all 65
   translated retail physics constants across all four engine classes and
   resolve all 46 generic reads across the 51 real VS/battle quip metadata
   records, every native render-list head, and all four red-beaker cloud draw
@@ -663,7 +663,11 @@ Result so far:
   Replay, disabled-pad, init/shutdown, and state-restore boundaries clear the
   host-only latch. The exact committed source passes 16/16 on ARM64 Release,
   ARM64 ASan/UBSan, and optimized i686; the signed app is a strict-verifiable
-  thin ARM64 bundle. Broad manual keyboard/controller play remains open.
+  thin ARM64 bundle. Commit `2c10b00b34df` adds documented `WASD`, `IJKL`,
+  `Q/E`, `P`, and Tab aliases without removing the original map. The exact
+  app passed 16/16 and visibly accepted `K`, `S`, and `W` through normal boot
+  and main-menu navigation. Full-race keyboard and controller play remain
+  open.
 - A headless retail scrapbook probe now reads `TEST.STR` through the production
   disc-image path and hashes decoded RGB555 output without renderer startup.
   ARM64 and optimized i686 produce identical dimensions and hashes for the
@@ -689,8 +693,11 @@ Result so far:
   startup, exposed and entered the production Scrapbook row, uploaded 674
   frames with XA channel 1 active and the four-vblank scheduler selected,
   accepted a Start skip, changed XA from active to inactive during teardown,
-  and returned to the intact menu. Perceptual A/V synchronization and a
-  natural-end real-menu run remain open.
+  and returned to the intact menu. Two later normal-startup runs uploaded all
+  4,424 frames, ended at exactly 17,696 elapsed VBlanks, and returned to the
+  menu. XA exhausted before the existing 23-frame fade plus 30-frame black
+  tail. Natural end, cadence, and authored-tail alignment are accepted;
+  human-perceived listening quality/synchronization remains open.
 - Red-beaker rain no longer reads per-player MVP translations out of widened
   instance function/thread pointers. Named draw-record fields preserve the
   retail depth/LOD byte alias, and a four-player cross-width test covers the
@@ -699,9 +706,9 @@ Result so far:
 
 Work:
 
-- Validate full-range audio mix/reverb/XA behavior, natural-end Scrapbook A/V,
-  broader desktop renderer and manual keyboard play, MFi/Bluetooth controller,
-  replays, and savestates.
+- Validate full-range audio mix/reverb/XA listening, broader desktop renderer
+  and full-race manual keyboard play, MFi/Bluetooth controller, replays, and
+  savestates.
 - Run sanitizers and the full parity gate under Apple Clang.
 - Run the two unchanged i686 processes and deliberate-mutation gate against
   finalized all-eight-match report `ctr-025812`. The verifier accepts an

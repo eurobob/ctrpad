@@ -517,12 +517,72 @@ was 82,117 bytes and changed at 04:05:48 CDT. The machine-captured exit-status
 file remains empty, so playback 1, alternate-layout playback 2, and mutation
 are still unaccepted.
 
+### 2026-07-31 — Natural-end Scrapbook cadence and authored tail
+
+**Outcome**
+
+- Exact source `63b0a0773a00` completed all 4,424 production Scrapbook
+  uploads without input skip and returned to the intact seven-row menu.
+- The observed start-to-return interval was about 296 seconds against the
+  294.93-second 15-FPS content model, and the runtime reported 14.95 FPS over
+  its steady 2,000-frame window.
+- That run's frozen log SHA-256 is
+  `384f0f6b5b0d6a1df56b5114e1794fc112e1c462c6dfabf21e684c2e5bd15a5f`.
+- Observation-only commit `900f5656b41d` repeated the complete natural run.
+  Video ended at exactly 17,696 elapsed VBlanks (`4424 * 4`); XA exhausted at
+  upload count 4,371 and 17,480 elapsed VBlanks.
+- The 53 later uploaded frames are not unexplained drift: the already frozen
+  all-frame manifests show 23 changing fade-out frames followed by 30
+  identical black frames.
+- The second live log and temporary captures were removed by normal app close
+  before a post-close hash. The exact pre-close telemetry is documented
+  without inventing an artifact hash.
+
+Natural stream end, configured cadence, teardown, menu return, and measured
+XA alignment to the authored silent tail are accepted. Human-perceived
+listening quality/synchronization remains open.
+
+### 2026-07-31 — Practical desktop keyboard test controls
+
+**Outcome**
+
+- Commit `2c10b00b34df4f0eb61aa8b72cbe99588a930ed6` adds `WASD`,
+  `IJKL`, `Q/E`, `P`, and Tab aliases while preserving arrows, `Z/X/C/V`,
+  Shift/Ctrl, brackets, Space, and Return.
+- The aliases use the existing keyboard-to-active-low-PS1 mapper; replay
+  schema, pad packets, and gameplay physics are unchanged.
+- The media-free input test checks all 12 aliases, a held
+  accelerate+right+R1 combination (`K+D+E`), and a latched `K+D` tap.
+- The exact app identifies as `2c10b00b34df`, is thin ARM64, has executable
+  SHA-256
+  `6e3171d1619fbc34ee1985679604a018107ac62039e6de5d8489b1729224f9e9`,
+  passes 16/16 CTests, and passes strict signature and plist validation.
+- Normal-startup visual verification used `K` to advance into the real menu,
+  `S` to move Adventure to Time Trial, and `W` to move back. The app closed
+  normally.
+- The source commit was pushed to `codex/arm64-apple` before this documentation
+  update. Draft PR #1 remains open and unmerged.
+
+**Time and concurrent work**
+
+The source commit was created at 04:39:42 CDT, the exact executable was
+written at 04:40:48 CDT, and visible verification completed by 04:43:44 CDT.
+The goal API reported cumulative elapsed 1 day, 14 hours, 8 minutes,
+23 seconds during the runtime checkpoint and 1 day, 14 hours, 17 minutes,
+32 seconds immediately before this documentation freeze.
+
+The long i686 verifier remains running, unpaused, and not OOM-killed.
+Playback 1 has durable FPS markers through frame 22,000 and a driver-inactive
+transition at frame 21,331. The process has not emitted the 24,232-frame
+completion line, its machine-captured exit-status file is still empty, and
+playback 2/mutation remain unaccepted.
+
 ## Current open path to the requested product
 
 1. Finish independent-process/mutation acceptance for the existing full
    cross-width trace.
-2. Close remaining macOS M6 runtime evidence, including natural-end Scrapbook
-   A/V observation and broader renderer/input/manual-play coverage.
+2. Close remaining macOS M6 runtime evidence, including broader audio
+   listening, renderer, controller, and full-race manual-play coverage.
 3. Implement and validate the shared GLES 3 renderer.
 4. Add the iOS/iPadOS lifecycle, sandbox, display pacing, audio, and controller
    application shell.
