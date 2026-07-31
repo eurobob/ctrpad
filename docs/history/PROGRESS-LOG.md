@@ -885,3 +885,62 @@ mutation gates remain unaccepted.
 
 This list remains deliberately broader than the current macOS gate. Passing
 the current replay does not redefine the final objective as complete.
+
+### 2026-07-31 — iOS sandbox storage and Documents-only retail startup
+
+- Audited every ordinary asset, log, memory-card, performance, replay,
+  savestate and screenshot path before editing. The existing process-wide
+  `chdir` made relative writers follow the asset base, which would point at the
+  read-only installed bundle on iOS.
+- Commit `02a6623f80a0` adds one storage owner. iOS now prefers
+  `Documents/CTRPad/assets`, places private state under
+  `Library/Application Support/chrissotraidis/CTRPad`, and uses the bundle only
+  as an immutable asset fallback. Desktop retains its portable beside-assets
+  behavior.
+- The generated iOS metadata now enables Files sharing and opening documents
+  in place. This creates a Files-visible import boundary; it does not yet add
+  the fresh-install document picker or validation/error UI required for M9.
+- CTest 16 is a retail-free sandbox/portable path contract. Exact pushed
+  commit `02a6623f80a0` passed 20/20 on the signed macOS ARM64 app and the
+  macOS GLES-selected build. Combined ASan/UBSan also passed 20/20 with
+  fail-fast options and no finding.
+- A first dirty Simulator run proved private directory/log creation and
+  bundle fallback. An attempted incremental replacement with a clean package
+  retained the old bundle asset, so it was rejected as Documents-only
+  evidence instead of being reported as success.
+- The corrected fresh 3.4 MB package contained no asset directory. With the
+  ignored 605,698,800-byte retail BIN only in Documents, it selected the
+  Documents base, initialized GLES 3, all PSX/VRAM pipelines and CoreAudio,
+  and rendered coherent textured Naughty Dog crate pixels.
+- The exact committed repeat installed a locally signed 3.4 MB package with
+  no bundled media. Simulator migrated the Documents file through the app
+  update without changing its size or inode, build `02a6623f80a0` launched
+  from that file, and its private Application Support log captured three FPS
+  windows. This is import-file update persistence, not yet a game-save
+  persistence or physical-device claim.
+- Exact hashes are macOS app `f6a3bf25...fdeaa282`, macOS GLES
+  `b4676a7a...997f5b0`, ASan/UBSan `37aeba39...580d262`, Simulator pre-sign
+  `806c1ec7...866e10f`, and unsigned device `d4d083b8...137eb18`. Complete
+  values and the local exact package/log/screenshot hashes are in
+  `docs/parity/2026-07-31-ios-sandbox-storage.md`.
+- The recurring UIKit appearance-transition warnings and rotated raw
+  Simulator capture remain open. Simulator cadence remains roughly 7–9 FPS on
+  Apple Software Renderer and is not accepted as device performance.
+- Implementation commit `02a6623f8` was pushed at 10:06 CDT; local HEAD and
+  `origin/codex/arm64-apple` matched immediately afterward. The user's retail
+  files remained ignored, and no package, retail byte, save, log or screenshot
+  was staged.
+- A separate exact optimized i686 producer was started from a read-only source
+  mount. At this intermediate record it was still compiling and therefore was
+  not yet counted as a pass. The protected historical alternate-loader
+  verifier was left running, unpaused and unrestarted.
+- The exact i686 producer subsequently passed 20/20 in 3.85 seconds. It is an
+  ELF32 Intel 80386 PIE, embeds `02a6623f80a0`, has GNU Build ID
+  `e3fab55f8a436052e856dd313a72e08ef78f84b5`, SHA-256
+  `96158b047af41542bbe1797e1c16d4de5ecc0c51b358ba02ca06a5780b5bdd33`,
+  and repeated only four established warnings.
+- Goal elapsed advanced from the prior 155,756-second checkpoint to 158,249
+  seconds at 10:26 CDT: 1 day, 19 hours, 57 minutes, 29 seconds cumulative,
+  adding 2,493 seconds (41 minutes, 33 seconds). The protected verifier still
+  had an empty status file after ten 2,000-frame playback-2 windows; no
+  completion or mutation result was inferred.

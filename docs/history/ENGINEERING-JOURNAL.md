@@ -8955,3 +8955,206 @@ running and not OOM-killed; its machine-owned status file was zero bytes. The
 latest playback log had crossed nine 2,000-frame windows, but completion,
 independent-process/layout separation and deliberate mutation remain
 unaccepted until that verifier writes its own final status.
+
+## 2026-07-31 — iOS sandbox ownership and Documents-only retail launch
+
+### Scope and initial audit
+
+This slice started from clean, published source
+`5d6a3baac1c0e96f8bf42098891b38ee1432c9e7`. The prior UIKit checkpoint could
+launch and resume, but `main.c` still changed the process directory to the
+asset base. On desktop that is a convenient portable layout; on installed iOS
+it points at the read-only application bundle.
+
+The investigation did not stop at the two paths named in the goal. It followed
+all ordinary path owners:
+
+```text
+platform/native_assets.c           retail image/extracted reads
+platform/native_log.c              Crash Team Racing.log
+platform/native_memcard.c          memcards/slot*/BASCUS-94426*
+platform/native_perf.c             performance CSVs
+platform/native_replay_scheduler.c replay reports and sandboxes
+platform/native_savestate.c        savestates
+platform/native_renderer.c         screenshots and VRAM diagnostics
+```
+
+SDL source inspection confirmed that its shipped filesystem implementation
+maps `SDL_GetPrefPath` to Application Support on Apple platforms,
+`SDL_GetUserFolder(SDL_FOLDER_DOCUMENTS)` to the application Documents
+container, and `SDL_CreateDirectory` creates parent directories. That made an
+SDL-owned cross-platform boundary preferable to hard-coded Apple container
+paths.
+
+### Contract and implementation
+
+The selected ownership policy is:
+
+```text
+iOS bundle                          immutable asset fallback
+iOS Documents/CTRPad/assets        user-visible preferred retail input
+iOS Application Support/.../CTRPad private writes and working directory
+desktop selected asset base        assets plus existing portable writes
+```
+
+`platform/native_storage.c` owns normalization, directory creation, getters
+and the desktop compatibility finalization. `NativeAssets_Init` now receives a
+preferred base and validates it before the bundle/desktop fallbacks. If no
+asset exists yet, iOS still selects the Documents base so the validation error
+points at the location the user can populate. Startup resolves storage before
+assets, switches to the writable root, then assigns absolute log and memory-
+card roots before validation. This also makes remaining relative diagnostics
+private on iOS without rewriting each diagnostic subsystem in the first slice.
+
+`platform/apple/Info-iOS.plist.in` enables
+`LSSupportsOpeningDocumentsInPlace` and `UIFileSharingEnabled`. These keys make
+the Documents directory available through Apple's file-sharing surface; they
+do not create the eventual in-app picker. CTest 16 exercises synthetic bundle,
+Application Support, Documents, import, `memcards`, and Windows portable paths
+without reading retail media.
+
+The first source review found one indentation error in the self-test argument
+dispatch and corrected it before commit. The full diff then passed
+`git diff --check`. A live desktop startup using the ignored retail BIN kept
+its base/assets/writable paths at `build-macos-arm64-app`, found the existing
+save, initialized desktop GL/CoreAudio, and unwound cooperatively on Ctrl-C.
+The pre-commit macOS app passed all 20 CTests.
+
+### Diagnostic Simulator runs and rejected evidence
+
+The first dirty Simulator product identified as `5d6a3baac1c0-dirty`. A
+disposable package received a cloned local retail BIN and an ad-hoc signature.
+A clean Simulator uninstall/install/launch proved that initialization creates:
+
+```text
+Documents/CTRPad/assets
+Library/Application Support/chrissotraidis/CTRPad/Crash Team Racing.log
+```
+
+The log recorded GLES 3, four PSX shader modes, ready VRAM pipelines and the
+UIKit display loop. This proved private writes but still used bundle fallback
+for media.
+
+The next intended test copied the retail file into Documents and installed the
+3.4 MB build output over the app. `simctl` migrated the Documents file to a new
+data UUID, but inspection caught that the installed application still retained
+the earlier 578 MB bundle asset. Its resource seal also mismatched. That run is
+rejected as Documents-only evidence. Recording this failure matters: relying
+only on the selected `Base` line would have hidden an incremental-install
+artifact.
+
+The corrected procedure was:
+
+```text
+ditto <clean app> <temporary app>
+codesign --force --sign - <temporary app>
+codesign --verify --deep --strict <temporary app>
+simctl uninstall <simulator> io.github.chrissotraidis.ctrpad
+simctl install <simulator> <temporary app>
+simctl get_app_container <simulator> <bundle-id> app|data
+copy ignored BIN only to Documents/CTRPad/assets/ctr-u.bin
+simctl launch --console-pty <simulator> <bundle-id>
+simctl io <simulator> screenshot <local-only PNG>
+```
+
+Inspection proved the installed bundle was 3.4 MB and had no asset directory.
+The console then selected Documents for `Base` and `Assets`, Application
+Support for `Writable data`, and successfully initialized retail rendering and
+audio. The 2064-by-2752 screenshot showed the textured Naughty Dog crate,
+including wood grain, braces, logo texture, shaded side face and starfield.
+The raw Simulator PNG was rotated 90 degrees relative to the landscape app;
+this supports the texture claim but keeps orientation open.
+
+### Incremental source publication and exact rebuild
+
+After pre-commit validation, only the seven intended implementation files were
+staged. GitHub CLI 2.96.0 was authenticated, and commit
+`02a6623f80a0f0999165f97f56c69a7cde64b4aa` was created at 10:06:21 CDT with
+message `feat: split iOS assets and writable storage`. It was immediately
+pushed to `origin/codex/arm64-apple`; local and remote hashes matched. No
+retail/media path appeared in the staged file list.
+
+Every Apple producer was then reconfigured rather than merely relinked:
+
+```text
+cmake --preset macos-arm64-app
+cmake --build --preset macos-arm64-app --parallel 3
+ctest --preset macos-arm64-app
+
+cmake --preset ios-simulator-arm64
+cmake --build --preset ios-simulator-arm64 --parallel 3
+
+cmake --preset ios-device-arm64
+cmake --build --preset ios-device-arm64 --parallel 3
+```
+
+All binaries embed `02a6623f80a0`. The desktop app passed 20/20, strict deep
+signature verification and plist lint, and is thin ARM64. Both iOS binaries
+are thin ARM64, have iOS 15.0 floors against SDK 26.5, carry the Files keys,
+and identify the correct Simulator/device platform. Normal Apple compiles
+repeated the established 32 warnings.
+
+Fresh GLES and sanitizer trees were configured independently. GLES passed
+20/20, then a retail-backed diagnostic exited 1 cleanly because the host's
+Cocoa backend could not initialize its GLES library. Combined ASan/UBSan passed
+20/20 with `detect_leaks=0`, `halt_on_error=1`, `abort_on_error=1` and
+`print_stacktrace=1`; there was no sanitizer finding. The sanitizer compile
+repeated the established 59 warnings. Exact hashes are recorded in the parity
+report rather than abbreviated here.
+
+### Exact committed Documents-only repeat
+
+The exact Simulator build was copied to
+`/private/tmp/ctrpad-ios-storage-exact.Cb5A7b/CTRPad.app`, locally signed and
+strictly verified. Before the update, the Documents import was 605,698,800
+bytes at data-container UUID `39CA500F-9766-4130-B86C-709CE96B1EC7`.
+Installing the exact app migrated data to UUID
+`13DFD41B-6192-4DB1-946C-5964EC8CA796`; the import retained both its size and
+inode. The installed app still measured 3.4 MB with no `assets` directory.
+
+The exact console identified `02a6623f80a0`, selected the migrated Documents
+file, assigned Application Support as writable data, initialized a 1376-by-
+1032 GLES surface, all PSX/VRAM shaders and CoreAudio, and emitted 9.27, 7.15
+and 8.61 FPS windows. The private 794-byte log hash is
+`6c2d5fc1...b3bb54a`; the exact local-only texture screenshot hash is
+`7b194105...d25b88f`. Two unbalanced UIKit appearance-transition warnings and
+the Simulator WebCore/WebKit duplicate-class message repeated. Ctrl-C ended
+the console-bound process; process lookup confirmed PID 88996 no longer
+existed. This remains bounded termination rather than a natural UIKit-event
+claim.
+
+### Open boundary and concurrent work
+
+This slice accepts storage ownership, actual Documents preference, private log
+creation, Files metadata, and app-update persistence of the imported document
+in Simulator. It does not accept document-picker UX, invalid-image UX,
+security-scoped access, physical Files behavior, game-driven iOS memory-card
+creation/reload, background save atomicity, or M9 as a whole.
+
+The exact optimized i686 build was started through
+`CTRPAD_BUILD_JOBS=4 tools/build-linux-i686-baseline.sh`, which mounts source
+read-only and uses a separate output directory. At this intermediate journal
+point it remained in the long unity compile and was not counted as passing.
+The historical verifier container `ec58fcd7069c` was not paused, restarted,
+rebuilt, terminated or used as the new matrix producer.
+
+The independent exact producer then completed all 20 tests in 3.85 seconds.
+It emitted an ELF 32-bit LSB PIE for Intel 80386 with GNU Build ID
+`e3fab55f8a436052e856dd313a72e08ef78f84b5`, embedded clean source identity
+`02a6623f80a0`, and had SHA-256
+`96158b047af41542bbe1797e1c16d4de5ecc0c51b358ba02ca06a5780b5bdd33`.
+The build repeated only the four established i686 warnings. This is the new
+matrix producer, not the executable inside the historical verifier.
+
+The previous documentation checkpoint ended at 155,756 goal seconds. The
+final exact-matrix reading at 10:26:43 CDT was 158,249 seconds, or 1 day,
+19 hours, 57 minutes, 29 seconds cumulative. The interval was 2,493 seconds
+(41 minutes, 33 seconds). This is the product-task timer requested for the
+historical record, not a labor estimate or benchmark.
+
+At that read-only audit, Docker reported historical container `ec58fcd7069c`
+running, unpaused and not OOM-killed. Its machine-owned exit-status file was
+still zero bytes. Playback 2 had emitted ten 2,000-frame FPS windows, most
+recently 0.48 FPS, and its log had last changed at 10:18:13 CDT. These are
+progress observations only; completion, alternate-layout separation and the
+deliberate mutation remain unaccepted until the verifier writes final status.

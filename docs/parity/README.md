@@ -47,6 +47,10 @@ Current evidence and procedures:
   lifecycle reducer, cooperative display loop, explicit audio/input/VBlank
   suspension boundaries, fully yielding iOS wait, repeated Home/resume runs,
   Simulator software-renderer diagnosis, and deliberately open device gates.
+- `2026-07-31-ios-sandbox-storage.md` records the bundle/Documents/Application
+  Support ownership split, Documents-priority retail startup, private log and
+  memory-card roots, Files metadata, exact cross-target matrix, rejected
+  incremental-install evidence, and deliberately open import/save UX gates.
 - `2026-07-31-macos-arm64-keyboard-tap.md` records the missing quick-tap root
   cause, one-snapshot press-edge transport, direct live PSX packet trace, and
   exact-commit ARM64/sanitizer/i686 validation plus live Time Trial

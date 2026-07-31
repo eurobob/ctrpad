@@ -847,12 +847,26 @@ Acceptance:
 
 ### M9 — Sandbox storage and retail-disc import
 
-**Status:** pending; depends on M8
+**Status:** in progress; sandbox path split and Documents-priority retail
+startup landed, while fresh-install import UI, validation/error UX and full
+save persistence remain open; depends on M8
+
+Checkpoint `02a6623f80a0` establishes the storage ownership boundary without
+shipping retail data. On iOS, a valid raw image in
+`Documents/CTRPad/assets/ctr-u.bin` takes precedence over bundle fallback
+assets, while the log, memory-card root and relative diagnostics live beneath
+Application Support. The iOS metadata exposes Documents through Files sharing;
+desktop retains its portable beside-assets layout. A clean 3.4 MB Simulator
+bundle with no asset inside it launched the retail presentation from a local
+Documents-only copy, created its private log, initialized GLES/VRAM/CoreAudio,
+and rendered coherent textured pixels. Media-free storage coverage is CTest
+16. Detailed evidence and the deliberately open boundary are in
+`docs/parity/2026-07-31-ios-sandbox-storage.md`.
 
 Work:
 
-- Separate immutable bundle resources, imported retail media, user-visible
-  documents, and private preference/save paths.
+- Retain the landed split between immutable bundle resources, imported retail
+  media, user-visible Documents and private Application Support state.
 - Use an iOS document picker / Files integration to import or securely reference
   the user's image.
 - Validate raw MODE2/2352 structure and NTSC-U identity with clear, actionable

@@ -159,6 +159,29 @@ signature that binds the bundle metadata. Distribution signing and
 notarization are separate release steps and are not implied by this
 development signature.
 
+For the current iOS/iPadOS development build:
+
+```sh
+cmake --preset ios-simulator-arm64
+cmake --build --preset ios-simulator-arm64
+
+cmake --preset ios-device-arm64
+cmake --build --preset ios-device-arm64
+```
+
+The generated `CTRPad.app` contains no retail data. On first launch it creates
+the Files-visible import directory `Documents/CTRPad/assets`; place your own
+raw NTSC-U image there as `ctr-u.bin`. Imported media takes priority over any
+development-only bundle fallback. Logs, memory cards, and private diagnostics
+are stored separately in Application Support and persist independently of the
+app bundle.
+
+This is an interim developer flow. A fresh build with no image currently exits
+after reporting the required path; the in-app document picker, friendly
+invalid-image errors, physical-device Files verification, and signed
+sideloadable package are still roadmap work. See
+`docs/parity/2026-07-31-ios-sandbox-storage.md` for the exact tested boundary.
+
 For development builds run from `build/`, put the same `assets/ctr-u.bin` next to the source tree:
 
 ```

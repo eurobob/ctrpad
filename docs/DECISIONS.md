@@ -214,3 +214,35 @@ the retail-pressure arena was incorrect.
 `lngStrings` is not relocated as captured LP64 storage; restore validates the
 count, table extent, and every string offset before rebuilding the native
 table.
+
+## 2026-07-31 — Split iOS media, documents, and private state
+
+**Decision:** on iOS/iPadOS, treat the installed application bundle as an
+immutable fallback asset source, prefer user-supplied retail media beneath
+`Documents/CTRPad/assets`, and place private writable state beneath the
+Application Support directory returned by
+`SDL_GetPrefPath("chrissotraidis", "CTRPad")`. Keep the established portable
+desktop behavior, where assets and writable files remain beside the selected
+asset base.
+
+**Why:** the application bundle is read-only after installation, while retail
+disc media must remain user-owned and must never ship in CTRPad. Files-visible
+Documents is the appropriate staging boundary for that media; logs, memory
+cards, replay reports, savestates, and other implementation state should not
+clutter the import surface. The split is resolved before asset validation and
+before any relative diagnostic writer runs (`platform/native_storage.c:67-168`,
+`platform/native_assets.c:535-587`, `main.c:421-476`).
+
+**Compatibility:** `NativeStorage_FinalizeForAssetBase` deliberately maps the
+desktop writable root back to the selected asset base
+(`platform/native_storage.c:116-129`). iOS advertises Files access through
+`UIFileSharingEnabled` and `LSSupportsOpeningDocumentsInPlace`
+(`platform/apple/Info-iOS.plist.in:28-39`). This checkpoint creates and uses
+the import location; it does not yet implement the required fresh-install
+document-picker UI or distinct invalid-image error screens.
+
+**Verification:** media-free CTest 16 checks normalized sandbox, writable,
+import, and portable path contracts (`platform/native_storage.c:171-210`,
+`CMakeLists.txt:292-295`). Live Simulator evidence is recorded separately in
+`docs/parity/2026-07-31-ios-sandbox-storage.md`; no retail byte or screenshot
+is committed.
