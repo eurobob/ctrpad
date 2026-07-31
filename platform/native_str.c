@@ -1,11 +1,14 @@
 #include <macros.h>
+#include <platform.h>
 #include <platform/native_assets.h>
 #include <platform/native_disc_image.h>
 #include <platform/native_renderer.h>
 #include <platform/native_str.h>
 #include <psx/libgpu.h>
 
+#include <SDL3/SDL.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 #define NATIVE_STR_EXTRACTED_SECTOR_SIZE    0x800
@@ -28,6 +31,8 @@
 #define NATIVE_STR_FNV1A64_PRIME             0x100000001b3ull
 #define NATIVE_STR_SCRAPBOOK_PATH           "TEST.STR"
 #define NATIVE_STR_SCRAPBOOK_FRAME_COUNT    0x1148
+#define NATIVE_STR_PROBE_WINDOW_WIDTH        800
+#define NATIVE_STR_PROBE_WINDOW_HEIGHT       600
 
 enum NativeSTRFormat
 {
@@ -119,6 +124,19 @@ internal u64 NativeSTR_HashDecodedFrame(void)
 		u16 pixel = s_str.rgb555[i];
 		hash = NativeSTR_Fnv1a64Byte(hash, (u8)(pixel >> 0));
 		hash = NativeSTR_Fnv1a64Byte(hash, (u8)(pixel >> 8));
+	}
+
+	return hash;
+}
+
+internal u64 NativeSTR_HashBytes(const u8 *bytes, size_t byteCount)
+{
+	u64 hash = NATIVE_STR_FNV1A64_OFFSET;
+	size_t i;
+
+	for (i = 0; i < byteCount; i++)
+	{
+		hash = NativeSTR_Fnv1a64Byte(hash, bytes[i]);
 	}
 
 	return hash;
@@ -932,4 +950,102 @@ s32 NativeSTR_RunScrapbookProbe(s32 frameCount)
 	printf("[CTR STR] scrapbook probe passed: frames=%d sequence-fnv1a64=%08x%08x\n", frameCount, (u32)(sequenceHash >> 32),
 	       (u32)sequenceHash);
 	return 0;
+}
+
+s32 NativeSTR_RunScrapbookPresentProbe(s32 frameCount, const char *screenshotPath)
+{
+	u64 sequenceHash = NATIVE_STR_FNV1A64_OFFSET;
+	u8 *presentedPixels = NULL;
+	SDL_Surface *screenshotSurface = NULL;
+	const size_t presentedByteCount = (size_t)NATIVE_STR_PROBE_WINDOW_WIDTH * NATIVE_STR_PROBE_WINDOW_HEIGHT * 4;
+	s32 probeFrame;
+	s32 result = 1;
+
+	if ((frameCount <= 0) || (frameCount > NATIVE_STR_SCRAPBOOK_FRAME_COUNT) || (screenshotPath == NULL) ||
+	    (screenshotPath[0] == '\0'))
+	{
+		fprintf(stderr, "[CTR STR] scrapbook present probe requires 1-%d frames and a screenshot path\n",
+		        NATIVE_STR_SCRAPBOOK_FRAME_COUNT);
+		return 1;
+	}
+
+	Platform_Init("CTR Scrapbook Presentation Probe", NATIVE_STR_PROBE_WINDOW_WIDTH, NATIVE_STR_PROBE_WINDOW_HEIGHT);
+	if (!Platform_IsInitialized())
+	{
+		fprintf(stderr, "[CTR STR] scrapbook present probe could not initialize the renderer\n");
+		return 1;
+	}
+
+	presentedPixels = (u8 *)malloc(presentedByteCount);
+	if (presentedPixels == NULL)
+	{
+		fprintf(stderr, "[CTR STR] scrapbook present probe could not allocate framebuffer storage\n");
+		goto CLEANUP;
+	}
+
+	if (NativeSTR_StartScrapbook() == 0)
+	{
+		fprintf(stderr, "[CTR STR] scrapbook present probe could not open %s\n", NATIVE_STR_SCRAPBOOK_PATH);
+		goto CLEANUP;
+	}
+
+	for (probeFrame = 0; probeFrame < frameCount; probeFrame++)
+	{
+		u64 decodedHash;
+		u64 presentedHash;
+
+		NativeRenderer_ClearVRAM(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT, 0, 0, 0);
+		if (NativeSTR_UploadNextFrame(0, 4) == 0)
+		{
+			fprintf(stderr, "[CTR STR] scrapbook present probe could not upload frame %d\n", probeFrame);
+			goto CLEANUP;
+		}
+
+		decodedHash = NativeSTR_HashDecodedFrame();
+		NativeRenderer_PresentVRAMRect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
+		if (!NativeRenderer_CapturePresentedRGBA(presentedPixels, NATIVE_STR_PROBE_WINDOW_WIDTH, NATIVE_STR_PROBE_WINDOW_HEIGHT))
+		{
+			fprintf(stderr, "[CTR STR] scrapbook present probe could not read frame %d from the presented framebuffer\n", probeFrame);
+			goto CLEANUP;
+		}
+		presentedHash = NativeSTR_HashBytes(presentedPixels, presentedByteCount);
+		sequenceHash = NativeSTR_Fnv1a64LE32(sequenceHash, (u32)probeFrame);
+		sequenceHash = NativeSTR_Fnv1a64LE32(sequenceHash, (u32)(decodedHash >> 0));
+		sequenceHash = NativeSTR_Fnv1a64LE32(sequenceHash, (u32)(decodedHash >> 32));
+		sequenceHash = NativeSTR_Fnv1a64LE32(sequenceHash, (u32)(presentedHash >> 0));
+		sequenceHash = NativeSTR_Fnv1a64LE32(sequenceHash, (u32)(presentedHash >> 32));
+
+		printf("[CTR STR] scrapbook present frame=%d source-frame=%d decoded-rgb555-fnv1a64=%08x%08x "
+		       "presented-rgba-fnv1a64=%08x%08x\n",
+		       probeFrame, s_str.frameIndex - 1, (u32)(decodedHash >> 32), (u32)decodedHash, (u32)(presentedHash >> 32),
+		       (u32)presentedHash);
+		NativeRenderer_SwapWindow();
+	}
+
+	screenshotSurface = SDL_CreateSurfaceFrom(NATIVE_STR_PROBE_WINDOW_WIDTH, NATIVE_STR_PROBE_WINDOW_HEIGHT, SDL_PIXELFORMAT_RGBA32,
+	                                          presentedPixels, NATIVE_STR_PROBE_WINDOW_WIDTH * 4);
+	if (screenshotSurface == NULL)
+	{
+		fprintf(stderr, "[CTR STR] scrapbook present probe could not create the screenshot surface: %s\n", SDL_GetError());
+		goto CLEANUP;
+	}
+	if (!SDL_SaveBMP(screenshotSurface, screenshotPath))
+	{
+		fprintf(stderr, "[CTR STR] scrapbook present probe could not save %s: %s\n", screenshotPath, SDL_GetError());
+		goto CLEANUP;
+	}
+
+	printf("[CTR STR] scrapbook present probe passed: frames=%d sequence-fnv1a64=%08x%08x screenshot=%s\n", frameCount,
+	       (u32)(sequenceHash >> 32), (u32)sequenceHash, screenshotPath);
+	result = 0;
+
+CLEANUP:
+	if (screenshotSurface != NULL)
+	{
+		SDL_DestroySurface(screenshotSurface);
+	}
+	free(presentedPixels);
+	NativeSTR_Stop();
+	Platform_Shutdown();
+	return result;
 }

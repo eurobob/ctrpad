@@ -2144,6 +2144,46 @@ void NativeRenderer_PresentVRAMRect(int displayX, int displayY, int displayW, in
 	s_lastBoundTexture = (TextureID)-1;
 }
 
+int NativeRenderer_CapturePresentedRGBA(u8 *dst, int width, int height)
+{
+	const size_t rowBytes = (size_t)width * 4;
+	GLint previousPackAlignment;
+	u8 *swapRow;
+
+	if ((dst == NULL) || (width != g_windowWidth) || (height != g_windowHeight) || (width <= 0) || (height <= 0))
+	{
+		return 0;
+	}
+
+	glGetIntegerv(GL_PACK_ALIGNMENT, &previousPackAlignment);
+	glPixelStorei(GL_PACK_ALIGNMENT, 1);
+	glReadPixels(0, 0, width, height, GL_RGBA, GL_UNSIGNED_BYTE, dst);
+	glPixelStorei(GL_PACK_ALIGNMENT, previousPackAlignment);
+	if (glGetError() != GL_NO_ERROR)
+	{
+		return 0;
+	}
+
+	swapRow = (u8 *)SDL_malloc(rowBytes);
+	if (swapRow == NULL)
+	{
+		return 0;
+	}
+
+	for (int y = 0; y < height / 2; y++)
+	{
+		u8 *top = dst + (size_t)y * rowBytes;
+		u8 *bottom = dst + (size_t)(height - 1 - y) * rowBytes;
+
+		SDL_memcpy(swapRow, top, rowBytes);
+		SDL_memcpy(top, bottom, rowBytes);
+		SDL_memcpy(bottom, swapRow, rowBytes);
+	}
+
+	SDL_free(swapRow);
+	return 1;
+}
+
 void NativeRenderer_PresentVRAMDisplay(void)
 {
 	// NOTE(aalhendi): ctr-native local divergence. Retail presents this boot

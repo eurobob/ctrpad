@@ -268,6 +268,11 @@ void Platform_Init(const char *title, int width, int height)
 	Platform_InputInit();
 }
 
+int Platform_IsInitialized(void)
+{
+	return s_platformInitialized;
+}
+
 void Platform_Shutdown(void)
 {
 	if (s_platformInitialized == 0)

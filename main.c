@@ -223,6 +223,11 @@ static int NativeArg_IsScrapbookSTRProbe(const char *arg)
 	return (arg != NULL) && (strcmp(arg, "--probe-str-scrapbook") == 0);
 }
 
+static int NativeArg_IsScrapbookSTRPresentProbe(const char *arg)
+{
+	return (arg != NULL) && (strcmp(arg, "--probe-str-scrapbook-present") == 0);
+}
+
 static int NativeArg_ParseScrapbookSTRProbeFrames(const char *text, s32 *frameCount)
 {
 	char *end = NULL;
@@ -247,6 +252,8 @@ static int NativeArg_ParseScrapbookSTRProbeFrames(const char *text, s32 *frameCo
 int main(int argc, char *argv[])
 {
 	s32 scrapbookSTRProbeFrames = 0;
+	s32 scrapbookSTRPresentProbeFrames = 0;
+	const char *scrapbookSTRPresentProbePath = NULL;
 
 	for (int argIndex = 1; argIndex < argc; argIndex++)
 	{
@@ -325,6 +332,24 @@ int main(int argc, char *argv[])
 			}
 			argIndex++;
 		}
+		if (NativeArg_IsScrapbookSTRPresentProbe(argv[argIndex]))
+		{
+			if ((scrapbookSTRPresentProbeFrames != 0) || (argIndex + 2 >= argc) ||
+			    !NativeArg_ParseScrapbookSTRProbeFrames(argv[argIndex + 1], &scrapbookSTRPresentProbeFrames) ||
+			    (argv[argIndex + 2][0] == '\0'))
+			{
+				fprintf(stderr, "[CTR STR] --probe-str-scrapbook-present requires one positive frame count and screenshot path\n");
+				return 1;
+			}
+			scrapbookSTRPresentProbePath = argv[argIndex + 2];
+			argIndex += 2;
+		}
+	}
+
+	if ((scrapbookSTRProbeFrames != 0) && (scrapbookSTRPresentProbeFrames != 0))
+	{
+		fprintf(stderr, "[CTR STR] select only one scrapbook probe mode\n");
+		return 1;
 	}
 
 	printf("[CTR Native] Starting...\n");
@@ -364,6 +389,11 @@ int main(int argc, char *argv[])
 	if (scrapbookSTRProbeFrames != 0)
 	{
 		return NativeConsole_Return((u32)NativeSTR_RunScrapbookProbe(scrapbookSTRProbeFrames));
+	}
+	if (scrapbookSTRPresentProbeFrames != 0)
+	{
+		return NativeConsole_Return(
+		    (u32)NativeSTR_RunScrapbookPresentProbe(scrapbookSTRPresentProbeFrames, scrapbookSTRPresentProbePath));
 	}
 
 #if defined(CTR_INTERNAL)
