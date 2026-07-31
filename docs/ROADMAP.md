@@ -675,9 +675,9 @@ Result so far:
   the production add/snapshot/rumble/remove/reconnect path and proves
   active-low buttons `0xb5ff`, analog bytes `80 ff 00 80`, exact low/high
   rumble magnitudes, one-handle duplicate-add behavior, and slot reuse. Exact
-  ARM64 Release and ASan/UBSan builds pass 16/16; physical MFi/Bluetooth/USB
-  hardware and full-race play remain open. Evidence is in
-  `docs/parity/2026-07-31-macos-arm64-controller-hotplug.md`.
+  clean-tip ARM64 Release, ASan/UBSan, and optimized i686 builds pass 16/16;
+  physical MFi/Bluetooth/USB hardware and full-race play remain open. Evidence
+  is in `docs/parity/2026-07-31-macos-arm64-controller-hotplug.md`.
 - A headless retail scrapbook probe now reads `TEST.STR` through the production
   disc-image path and hashes decoded RGB555 output without renderer startup.
   ARM64 and optimized i686 produce identical dimensions and hashes for the

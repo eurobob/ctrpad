@@ -8135,3 +8135,55 @@ raw-layout separation, and mutation detection therefore remain open.
 At 05:18:22 CDT, the goal API reported 139,736 elapsed seconds: 1 day,
 14 hours, 48 minutes, 56 seconds. It is recorded as cumulative product-task
 time, not continuous labor or a performance measurement.
+
+### Final clean-tip controller matrix
+
+After the bootstrap i686 build completed all 261 targets, the same disposable
+tree was reconfigured from cache against clean synchronized tip `359e8d5a0`.
+Configuration took 22.4 seconds and identified:
+
+```text
+SDL-3.4.10-beta-7.1-103-g359e8d5a0
+64-bit: FALSE
+joystick drivers: hidapi linux virtual
+```
+
+Only SDL's revision-sensitive object and the game unity object rebuilt. The
+two new `SDL_JoystickID` sign-comparison warnings were absent. GCC repeated
+only the four already established i686 warnings: two nonliteral format-string
+warnings and two maybe-uninitialized warnings in the existing end-event menu.
+
+The final executable reports:
+
+```text
+CTR Native 0.1.0-beta.7.1 (359e8d5a0f07)
+ELF 32-bit LSB PIE executable, Intel 80386
+interpreter /lib/ld-linux.so.2
+GNU Build ID e71bd4d9b99bf1efc5214a6d4c250ca22621ef96
+SHA-256 d21c04bd129399a28a0e983fd26d187f5c98adcc1506983caf18a029992bfd10
+```
+
+The first final CTest invocation mounted `/out` read-only. CTest could not
+create `Testing/Temporary/LastTest.log`, ran no tests, and exited 8. That
+invocation is rejected as a harness error. The corrected invocation kept
+source read-only but mounted the disposable output read/write; all 16 tests
+passed in 3.51 seconds, including `ctr_native_input` in 0.76 seconds.
+
+The clean-tip signed macOS app passes 16/16 in 0.61 seconds, passes strict
+deep signature and plist validation, and is thin ARM64. Its executable SHA is
+`c97953dddfe682962732aea7a2d2e8ebde6f8083a2add1eb7ef47388924ae446`.
+The exact combined ASan/UBSan executable passes 16/16 in 3.90 seconds with no
+finding and has SHA
+`ec4d49d5ca1180dc2711bfd7353d58d84e9e142a724e97947940d14dad12adfd`.
+Both identify as `359e8d5a0f07`.
+
+At 05:36:44 CDT the preserved alternate-loader process had crossed durable
+frame 4,000, reported a 1.52 FPS second window, and observed driver-inactive
+and active transitions at 3,017/3,070 and 3,920/3,973. Docker reported
+running, unpaused, and not OOM-killed. The playback log was 20,677 bytes and
+the machine status file remained empty. Completion, exit capture, raw-layout
+separation, and deliberate mutation remain unaccepted.
+
+The goal API then reported 140,855 elapsed seconds: 1 day, 15 hours,
+7 minutes, 35 seconds. This remains cumulative task time rather than labor or
+benchmark time.

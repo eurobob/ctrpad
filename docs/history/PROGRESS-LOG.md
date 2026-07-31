@@ -617,6 +617,31 @@ The goal API reported cumulative elapsed 1 day, 14 hours, 48 minutes,
 56 seconds at 05:18:22 CDT. This product timer is recorded for transparency;
 it is not a labor estimate or benchmark.
 
+**Final cross-width result at 05:36 CDT**
+
+- Clean synchronized tip `359e8d5a0` rebuilt and passed 16/16 on the signed
+  ARM64 app, combined ASan/UBSan ARM64, and optimized Linux i686.
+- Final hashes are signed app
+  `c97953dddfe682962732aea7a2d2e8ebde6f8083a2add1eb7ef47388924ae446`,
+  sanitizer
+  `ec4d49d5ca1180dc2711bfd7353d58d84e9e142a724e97947940d14dad12adfd`,
+  and i686
+  `d21c04bd129399a28a0e983fd26d187f5c98adcc1506983caf18a029992bfd10`.
+- The exact i686 compile eliminated both new ID-comparison warnings and
+  retained only four established warnings. Its ELF32 Intel 80386 executable
+  embeds the clean tip and GNU Build ID
+  `e71bd4d9b99bf1efc5214a6d4c250ca22621ef96`.
+- A read-only-output CTest attempt exited 8 before tests because it could not
+  write `LastTest.log`; it is rejected as an invocation error. The corrected
+  disposable-output invocation passed all 16 in 3.51 seconds.
+
+The preserved alternate-loader verifier independently crossed its second
+durable FPS marker at frame 4,000 and observed the expected driver transitions
+at frames 3,017/3,070 and 3,920/3,973. It remains running, unpaused, and not
+OOM-killed; its machine-captured status file remains empty, so completion and
+mutation are still unaccepted. Goal elapsed at 05:36:44 CDT was 1 day,
+15 hours, 7 minutes, 35 seconds.
+
 ## Current open path to the requested product
 
 1. Finish independent-process/mutation acceptance for the existing full

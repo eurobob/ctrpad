@@ -19,10 +19,12 @@ instance ID only after `SDL_OpenGamepad` succeeds and resets that slot to `-1`
 when the controller closes. Duplicate add, removal, and reconnect therefore
 use one explicit ownership record.
 
-The exact committed signed ARM64 app and a separate combined ASan/UBSan build
-pass all 16 media-free CTests. A disposable optimized Linux i686 build from a
-read-only source mount is still running at this documentation draft; its
-result will be added only after the executable and test exit are observed.
+The exact committed signed ARM64 app, a separate combined ASan/UBSan build,
+and a disposable optimized Linux i686 build all pass the 16 media-free CTests.
+The i686 source mount was read-only and its output tree was disposable. The
+final i686 compile repeats only four established warnings; two new
+signed/unsigned warnings exposed by the first attempt were corrected before
+acceptance.
 
 ## Virtual-gamepad integration proof
 
@@ -78,10 +80,41 @@ The signed app executable was written at 04:55:57 CDT and is 4,167,584 bytes.
 The sanitizer executable was written at 05:00:36 CDT and is 25,123,304 bytes.
 The source commit was created at 04:54:36 CDT.
 
+## Final clean-tip cross-width validation
+
+The functional commit was followed by test-only commit `764205d4c`, which
+casts the historical signed mapping bits back to SDL's unsigned
+`SDL_JoystickID` for two comparisons. Documentation checkpoint `359e8d5a0`
+then froze the complete process while i686 was still running. With the
+worktree clean and synchronized, all final builds identify as:
+
+```text
+CTR Native 0.1.0-beta.7.1 (359e8d5a0f07)
+```
+
+| Exact clean-tip build | Result | Executable SHA-256 |
+|---|---|---|
+| signed macOS ARM64 app | 16/16 in 0.61 s; strict signature/plist valid; thin ARM64 | `c97953dddfe682962732aea7a2d2e8ebde6f8083a2add1eb7ef47388924ae446` |
+| macOS ARM64 ASan+UBSan | 16/16 in 3.90 s; no sanitizer finding | `ec4d49d5ca1180dc2711bfd7353d58d84e9e142a724e97947940d14dad12adfd` |
+| optimized Linux i686 | 16/16 in 3.51 s; ELF32 Intel 80386 | `d21c04bd129399a28a0e983fd26d187f5c98adcc1506983caf18a029992bfd10` |
+
+The final i686 executable is a 32-bit little-endian PIE with interpreter
+`/lib/ld-linux.so.2` and GNU Build ID
+`e71bd4d9b99bf1efc5214a6d4c250ca22621ef96`. The exact recompile removed both
+new sign-comparison warnings; it retained only two established format-string
+and two established maybe-uninitialized warnings.
+
+The first final CTest command mounted `/out` read-only. CTest exited 8 before
+running a test because it could not create `Testing/Temporary/LastTest.log`.
+That invocation is rejected as infrastructure error, not counted as a test
+failure. Repeating with only the disposable output tree read/write ran and
+passed all 16 tests; the repository source remained read-only throughout.
+
 ## Publication and evidence boundary
 
-The source checkpoint was pushed to `origin/codex/arm64-apple`. Draft pull
-request #1 remains open and unmerged; `origin/main` remains
+The functional source and running-history checkpoint were pushed through
+`359e8d5a0` on `origin/codex/arm64-apple`. Draft pull request #1 remains open
+and unmerged; `origin/main` remains
 `95417c723518407d6bfe3c81a37606294963efe2`.
 
 No retail disc image, extracted asset, save file, screenshot, device
