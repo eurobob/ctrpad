@@ -15,6 +15,7 @@ typedef enum NativeIOSImportValidationResult (*NativeIOSImportValidateCallback)(
 	                                                                            size_t detailSize, void *userdata);
 typedef int (*NativeIOSImportCompletionCallback)(void *userdata);
 
+int NativeIOSImport_RecoverStaleStages(const char *importBaseDir);
 int NativeIOSImport_Begin(const char *importBaseDir, NativeIOSImportValidateCallback validateCallback,
 	                      NativeIOSImportCompletionCallback completionCallback, void *userdata);
 

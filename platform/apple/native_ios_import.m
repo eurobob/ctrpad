@@ -421,6 +421,24 @@ static NSString *const s_importStagingPrefix = @".ctrpad-import-";
 
 @end
 
+int NativeIOSImport_RecoverStaleStages(const char *importBaseDir)
+{
+	if ((importBaseDir == NULL) || (importBaseDir[0] == '\0'))
+	{
+		return -1;
+	}
+
+	NSString *basePath = [NSString stringWithUTF8String:importBaseDir];
+	if (basePath.length == 0)
+	{
+		return -1;
+	}
+
+	CTRPadImportCoordinator *coordinator = [[CTRPadImportCoordinator alloc] init];
+	coordinator.importBasePath = basePath;
+	return (int)[coordinator removeStaleStagingDirectories];
+}
+
 int NativeIOSImport_Begin(const char *importBaseDir, NativeIOSImportValidateCallback validateCallback,
 	                      NativeIOSImportCompletionCallback completionCallback, void *userdata)
 {

@@ -672,5 +672,19 @@ int main(int argc, char *argv[])
 		return NativeConsole_Return(1);
 	}
 
+#if defined(SDL_PLATFORM_IOS)
+	int recoveredImportCount = NativeIOSImport_RecoverStaleStages(NativeStorage_GetImportBaseDir());
+	if (recoveredImportCount < 0)
+	{
+		fprintf(stderr, "[CTR Import] Could not inspect interrupted imports before runtime startup.\n");
+	}
+	else if (recoveredImportCount != 0)
+	{
+		printf("[CTR Import] Recovered %d interrupted import%s before runtime startup.\n", recoveredImportCount,
+		       recoveredImportCount == 1 ? "" : "s");
+		fflush(stdout);
+	}
+#endif
+
 	return NativeApp_StartRuntime(&launchOptions);
 }
