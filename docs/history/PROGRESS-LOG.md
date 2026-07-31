@@ -429,6 +429,40 @@ The source correction was pushed to `codex/arm64-apple` at `75b09db17`; local
 and remote branch tips matched immediately after the push. Draft PR #1 remains
 open and unmerged. `main` still contains only the viability boundary.
 
+### 2026-07-31 — Complete 4,424-frame scrapbook coverage
+
+**Outcome**
+
+- Exact clean functional source `75b09db17d1c` decoded all 4,424 retail
+  scrapbook frames in both Release and ASan/UBSan.
+- Every frame was 512 by 208; frame and source indices were contiguous from 0
+  through 4,423.
+- Both builds produced decoded sequence `4b193011f608bc90` and identical
+  per-frame record manifest
+  `6f70283316cf03bc786e3b96847cf04ace34a12dea33a5e3d6a630f7cb63c7e5`.
+- Both builds then uploaded, presented, and read back all 4,424 frames. They
+  produced sequence `e7e81ffeedaa7b2c`, identical per-frame record manifest
+  `96d3254f21c70e004e2319886ef72080c5ca3d413f920c4e04a591238e1f480e`,
+  and byte-identical final BMP.
+- No sanitizer report appeared. The sanitizer presentation run used the
+  already documented renderer-only HID isolation.
+- The final frame is black movie tail and is not substituted for the
+  previously inspected coherent frame-9 visual.
+
+**Measured process wall time**
+
+- Release full decode: 61.35 seconds;
+- sanitizer full decode: 68.69 seconds;
+- Release full presentation: 64.85 seconds;
+- sanitizer full presentation: 78.75 seconds; and
+- four serial low-priority commands combined: 273.64 seconds.
+
+The commands ran at nice level 15 while the i686 gate continued. At the 03:44
+checkpoint, Docker still reported running, unpaused, and no OOM; its latest
+durable marker remained frame 14,000. Codex goal elapsed was
+1 day, 13 hours, 15 minutes, 21 seconds. Real-menu 15-fps cadence, interleaved
+STR XA synchronization, and menu entry/skip/teardown remain unaccepted.
+
 ## Current open path to the requested product
 
 1. Finish independent-process/mutation acceptance for the existing full

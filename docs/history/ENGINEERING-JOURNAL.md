@@ -7676,3 +7676,70 @@ not person-hours. The goal API reported cumulative elapsed
 The bounded STR sanitizer question is now accepted. Full 4,424-frame movie
 coverage, retail menu cadence, STR XA synchronization, broad normal-menu
 entry/skip/teardown, GLES, and iOS remain open.
+
+## 2026-07-31 — Complete scrapbook decode and presentation coverage
+
+The ten-frame sanitizer gate was extended immediately to the declared
+`NATIVE_STR_SCRAPBOOK_FRAME_COUNT` of 4,424. No new code or binary was
+introduced: all commands used the exact clean `75b09db17d1c` Release and
+sanitizer binaries already accepted above. They ran serially with
+`nice -n 15` so the active i686 verifier retained CPU priority.
+
+### Full headless decode
+
+The Release command completed in 61.35 seconds; ASan/UBSan completed in 68.69
+seconds. Both emitted exactly 4,424 frame records, all 512 by 208, with
+contiguous probe and source indices 0 through 4,423. Both ended with:
+
+```text
+[CTR STR] scrapbook probe passed:
+frames=4424 sequence-fnv1a64=4b193011f608bc90
+```
+
+Hashing only the 4,424 per-frame evidence lines produced the same SHA-256 in
+both builds:
+
+```text
+6f70283316cf03bc786e3b96847cf04ace34a12dea33a5e3d6a630f7cb63c7e5
+```
+
+A strict comparison of those lines exited 0. No sanitizer diagnostic
+appeared.
+
+### Full VRAM upload, presentation, and framebuffer readback
+
+The Release command completed in 64.85 seconds; the HID-isolated sanitizer
+command completed in 78.75 seconds. Both emitted exactly 4,424 contiguous
+records and ended with:
+
+```text
+[CTR STR] scrapbook present probe passed:
+frames=4424 sequence-fnv1a64=e7e81ffeedaa7b2c
+```
+
+The per-frame records include both decoded RGB555 and presented RGBA hashes.
+Their filtered SHA-256 manifest was identical across builds:
+
+```text
+96d3254f21c70e004e2319886ef72080c5ca3d413f920c4e04a591238e1f480e
+```
+
+The final frame is black movie tail. The two final BMPs are byte-identical at:
+
+```text
+85b43f1be768060c8abf89f7f9dfc1052cd78249947910302f5a5a19657677aa
+```
+
+That frame is not promoted as visual evidence; the coherent, inspected frame
+9 remains the visual proof. Temporary logs and retail-derived BMPs remain
+outside Git.
+
+The four commands account for 273.64 seconds of measured serial process wall
+time. At the 03:44 CDT checkpoint, the concurrently preserved i686 verifier
+remained running, unpaused, not OOM-killed, and at or beyond its durable
+frame-14,000 marker. The goal API reported cumulative elapsed
+1 day, 13 hours, 15 minutes, 21 seconds.
+
+Complete probe-based movie decode and host presentation are accepted. This
+does not establish the real menu's 15-fps scheduler, interleaved XA A/V sync,
+normal skip/teardown behavior, GLES, or iOS.

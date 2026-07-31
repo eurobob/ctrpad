@@ -680,8 +680,11 @@ Result so far:
   byte-identical BMP. The renderer sanitizer run disables SDL HID enumeration
   to avoid a separately documented Apple CoreGraphics ASan fault; the
   sanitized input CTest still passes. Exact results and every rejected run are
-  in `docs/parity/2026-07-31-scrapbook-str-presentation.md`. Complete movie
-  coverage, real-menu cadence, and audio/video synchronization remain open.
+  in `docs/parity/2026-07-31-scrapbook-str-presentation.md`. Exact clean
+  Release and sanitizer runs subsequently decoded, uploaded, presented, and
+  read back all 4,424 frames with identical per-frame manifests and sequence
+  hashes. Complete probe coverage is accepted; real-menu cadence and
+  audio/video synchronization remain open.
 - Red-beaker rain no longer reads per-player MVP translations out of widened
   instance function/thread pointers. Named draw-record fields preserve the
   retail depth/LOD byte alias, and a four-player cross-width test covers the

@@ -7,8 +7,8 @@
 **Sanitizer-corrected source:**
 `75b09db17d1cabb91f2fece68a43edbf04662992`
 
-**Status:** first ten production frames accepted through macOS OpenGL
-presentation and ASan/UBSan; full-movie cadence and A/V synchronization remain
+**Status:** all 4,424 production frames accepted through decode, macOS OpenGL
+presentation, and ASan/UBSan; real-menu cadence and A/V synchronization remain
 open
 
 ## Question
@@ -167,22 +167,63 @@ diagnosis, correction, normal-build validation, and the clean rebuild. The
 source correction was committed at 03:26:12 CDT; the final accepted screenshot
 followed 7 minutes, 31 seconds later.
 
+## Complete movie coverage
+
+The exact clean `75b09db17d1c` Release and sanitizer binaries were then run
+across the declared 4,424-frame scrapbook length. All four commands ran
+serially at host nice level 15 so the preserved i686 parity verifier retained
+priority:
+
+```text
+Release   --probe-str-scrapbook 4424
+Sanitize  --probe-str-scrapbook 4424
+Release   --probe-str-scrapbook-present 4424 OUTPUT.bmp
+Sanitize  --probe-str-scrapbook-present 4424 OUTPUT.bmp
+```
+
+Results:
+
+| Path | Release wall | Sanitizer wall | Sequence FNV-1a64 |
+|---|---:|---:|---:|
+| RGB555 decode | 61.35 s | 68.69 s | `4b193011f608bc90` |
+| VRAM/presentation/readback | 64.85 s | 78.75 s | `e7e81ffeedaa7b2c` |
+
+Every headless record reported 512 by 208 pixels. Independent continuity
+checks proved that both headless builds and both presentation builds emitted
+source/probe indices 0 through 4,423 exactly once. The 4,424 filtered
+per-frame lines had these compact SHA-256 manifests:
+
+```text
+decoded records:    6f70283316cf03bc786e3b96847cf04ace34a12dea33a5e3d6a630f7cb63c7e5
+presented records:  96d3254f21c70e004e2319886ef72080c5ca3d413f920c4e04a591238e1f480e
+```
+
+Release and sanitizer produced the same manifest in each case; strict
+per-frame comparisons exited 0. The final frame is part of the movie's black
+tail, so its BMP is not used as new visual evidence. It nevertheless compared
+byte-for-byte equal across builds with SHA-256
+`85b43f1be768060c8abf89f7f9dfc1052cd78249947910302f5a5a19657677aa`.
+The earlier coherent frame 9 remains the inspected visual artifact.
+
+The four measured process times total 273.64 seconds. No ASan/UBSan diagnostic
+appeared. Logs, BMPs, and retail-derived pixels remain in `/private/tmp` and
+outside Git.
+
 ## Acceptance boundary
 
 Accepted:
 
-- real NTSC-U disc-image lookup and first-ten-frame decode;
+- real NTSC-U disc-image lookup and all-4,424-frame decode;
 - exact continuity with the accepted headless RGB555 hashes;
 - production `LoadImage` plus host VRAM texture upload;
 - macOS ARM64 direct-VRAM presentation shader execution;
 - actual framebuffer readback and a coherent, repeatable visual artifact;
 - defined and compile-time-pinned OpenGL vertex attribute offsets; and
-- the bounded headless/presentation path under ASan/UBSan, with the
+- the complete headless/presentation path under ASan/UBSan, with the
   renderer-only HID isolation described above.
 
 Not accepted:
 
-- all 4,424 scrapbook frames;
 - retail 15-fps presentation cadence during the real menu loop;
 - interleaved XA audio/video synchronization;
 - normal menu entry, skip, and teardown under broad manual play; or
