@@ -1,5 +1,4 @@
 #define _CRT_SECURE_NO_WARNINGS
-#define SDL_MAIN_HANDLED
 
 #include <errno.h>
 #include <limits.h>
@@ -15,6 +14,9 @@
 #endif
 
 #include <SDL3/SDL.h>
+#if !defined(SDL_PLATFORM_IOS)
+#define SDL_MAIN_HANDLED
+#endif
 #include <SDL3/SDL_main.h>
 #define _EnterCriticalSection(x)
 #define EnterCriticalSection(x)

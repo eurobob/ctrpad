@@ -91,8 +91,17 @@ internal void Platform_GetWindowName(const char *appName, char *buffer, size_t b
 
 internal void Platform_HandleWindowResize(int width, int height)
 {
-	g_windowWidth = width;
-	g_windowHeight = height;
+	int pixelWidth = width;
+	int pixelHeight = height;
+
+	if ((g_window != NULL) && !SDL_GetWindowSizeInPixels(g_window, &pixelWidth, &pixelHeight))
+	{
+		pixelWidth = width;
+		pixelHeight = height;
+	}
+
+	g_windowWidth = pixelWidth;
+	g_windowHeight = pixelHeight;
 	NativeRenderer_ResetDevice();
 }
 
@@ -118,7 +127,10 @@ internal void Platform_HandleFullscreenToggle(void)
 	int fullscreen = (SDL_GetWindowFlags(g_window) & SDL_WINDOW_FULLSCREEN) != 0;
 
 	SDL_SetWindowFullscreen(g_window, fullscreen == 0);
-	SDL_GetWindowSize(g_window, &g_windowWidth, &g_windowHeight);
+	if (!SDL_GetWindowSizeInPixels(g_window, &g_windowWidth, &g_windowHeight))
+	{
+		SDL_GetWindowSize(g_window, &g_windowWidth, &g_windowHeight);
+	}
 	Platform_UpdateCursorVisibility();
 	NativeRenderer_ResetDevice();
 }
@@ -240,9 +252,16 @@ void Platform_Init(const char *title, int width, int height)
 
 	Platform_Log("[CTR Native] Initialising platform\n");
 
+#if defined(SDL_PLATFORM_IOS)
+	// UIKit consults this before creating its SDL view controller. Keep CTR's
+	// native 4:3 surface in landscape instead of inheriting the device's current
+	// portrait orientation during launch.
+	SDL_SetHint(SDL_HINT_ORIENTATIONS, "LandscapeLeft LandscapeRight");
+#endif
+
 	if (SDL_Init(SDL_INIT_VIDEO) == 0)
 	{
-		Platform_LogError("[CTR Native] Failed to initialise SDL\n");
+		Platform_LogError("[CTR Native] Failed to initialise SDL: %s\n", SDL_GetError());
 		Platform_LogShutdown();
 		return;
 	}
@@ -442,6 +461,7 @@ void Platform_PollHostEvents(void)
 			exit(0);
 			break;
 		case SDL_EVENT_WINDOW_RESIZED:
+		case SDL_EVENT_WINDOW_PIXEL_SIZE_CHANGED:
 			Platform_HandleWindowResize(event.window.data1, event.window.data2);
 			break;
 		case SDL_EVENT_WINDOW_ENTER_FULLSCREEN:

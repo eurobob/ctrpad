@@ -213,12 +213,16 @@ global_variable GLuint s_presentVramShader = 0;
 global_variable GLint s_presentVramSourceRectLoc = -1;
 global_variable GLuint s_vramQuadVAO = 0;
 global_variable GLuint s_vramQuadVBO = 0;
+global_variable GLuint s_presentFramebuffer = 0;
+global_variable GLuint s_presentRenderbuffer = 0;
 // Shutdown can be reached after SDL starts but before a GL/GLES context or
 // entry-point table exists. Keep that failure path free of unresolved GL calls.
 global_variable b32 s_rendererApiReady = false;
 
 internal int NativeRenderer_InitialiseGLContext(char *windowName, int fullscreen);
 internal int NativeRenderer_InitialiseGLExt(void);
+internal void NativeRenderer_UpdatePresentSurface(void);
+internal void NativeRenderer_BindPresentFramebuffer(void);
 internal void NativeRenderer_DestroyTexture(TextureID texture);
 internal void NativeRenderer_SetScissorState(int enable);
 internal void NativeRenderer_EnableDepth(int enable);
@@ -247,7 +251,11 @@ global_variable GLuint s_glVramFramebuffer;
 
 internal int NativeRenderer_InitialiseGLContext(char *windowName, int fullscreen)
 {
+#if defined(SDL_PLATFORM_IOS)
+	SDL_WindowFlags windowFlags = SDL_WINDOW_OPENGL | SDL_WINDOW_FULLSCREEN;
+#else
 	SDL_WindowFlags windowFlags = SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE;
+#endif
 	int minorVersion = s_rendererDialect.contextMinor;
 
 	if (fullscreen)
@@ -278,6 +286,29 @@ internal int NativeRenderer_InitialiseGLContext(char *windowName, int fullscreen
 
 		if (SDL_GL_CreateContext(g_window))
 		{
+			int pointWidth = 0;
+			int pointHeight = 0;
+			int pixelWidth = 0;
+			int pixelHeight = 0;
+
+			SDL_GetWindowSize(g_window, &pointWidth, &pointHeight);
+			if (!SDL_GetWindowSizeInPixels(g_window, &pixelWidth, &pixelHeight))
+			{
+				pixelWidth = pointWidth;
+				pixelHeight = pointHeight;
+			}
+
+			if ((pixelWidth > 0) && (pixelHeight > 0))
+			{
+				g_windowWidth = pixelWidth;
+				g_windowHeight = pixelHeight;
+			}
+
+			NativeRenderer_UpdatePresentSurface();
+			NATIVE_RENDERER_LOG("*Window size: %dx%d points, %dx%d pixels\n", pointWidth, pointHeight, pixelWidth,
+			                    pixelHeight);
+			NATIVE_RENDERER_LOG("*Presentation objects: framebuffer=%u renderbuffer=%u\n", s_presentFramebuffer,
+			                    s_presentRenderbuffer);
 			return 1;
 		}
 
@@ -288,6 +319,27 @@ internal int NativeRenderer_InitialiseGLContext(char *windowName, int fullscreen
 	NATIVE_RENDERER_ERROR("Failed to initialise - %s %d.x is not supported: %s\n", s_rendererDialect.apiName,
 	                      s_rendererDialect.contextMajor, SDL_GetError());
 	return 0;
+}
+
+internal void NativeRenderer_UpdatePresentSurface(void)
+{
+	if (g_window == NULL)
+	{
+		s_presentFramebuffer = 0;
+		s_presentRenderbuffer = 0;
+		return;
+	}
+
+	const SDL_PropertiesID properties = SDL_GetWindowProperties(g_window);
+	s_presentFramebuffer =
+	    (GLuint)SDL_GetNumberProperty(properties, SDL_PROP_WINDOW_UIKIT_OPENGL_FRAMEBUFFER_NUMBER, 0);
+	s_presentRenderbuffer =
+	    (GLuint)SDL_GetNumberProperty(properties, SDL_PROP_WINDOW_UIKIT_OPENGL_RENDERBUFFER_NUMBER, 0);
+}
+
+internal void NativeRenderer_BindPresentFramebuffer(void)
+{
+	glBindFramebuffer(GL_FRAMEBUFFER, s_presentFramebuffer);
 }
 
 internal int NativeRenderer_InitialiseGLExt(void)
@@ -381,6 +433,8 @@ void NativeRenderer_Shutdown(void)
 	glDeleteProgram(s_presentVramShader);
 	glDeleteVertexArrays(1, &s_vramQuadVAO);
 	glDeleteBuffers(1, &s_vramQuadVBO);
+	s_presentFramebuffer = 0;
+	s_presentRenderbuffer = 0;
 }
 
 #if defined(CTR_NATIVE_GPU_TIMERS)
@@ -607,7 +661,7 @@ internal void NativeRenderer_InitRenderTarget(struct NativeRenderTarget *target)
 	{
 		NATIVE_RENDERER_ERROR("%s\n", "failed to create RGBA/stencil render target");
 	}
-	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+	NativeRenderer_BindPresentFramebuffer();
 }
 
 internal void NativeRenderer_DestroyRenderTarget(struct NativeRenderTarget *target)
@@ -764,6 +818,7 @@ internal void NativeRenderer_ClearPresentationBars(void)
 
 void NativeRenderer_ResetDevice(void)
 {
+	NativeRenderer_UpdatePresentSurface();
 	NativeRenderer_UpdatePresentationViewport();
 	NativeRenderer_UpdateSwapIntervalState(0);
 }
@@ -1316,7 +1371,7 @@ int NativeRenderer_InitialisePSX(void)
 			glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, 0, 0);
 			glFramebufferTexture2D(GL_FRAMEBUFFER, GL_STENCIL_ATTACHMENT, GL_TEXTURE_2D, 0, 0);
 
-			glBindFramebuffer(GL_FRAMEBUFFER, 0);
+			NativeRenderer_BindPresentFramebuffer();
 		}
 	}
 
@@ -2223,7 +2278,7 @@ void NativeRenderer_PresentVRAMRect(int displayX, int displayY, int displayW, in
 	NativeRenderer_UpdateVRAM();
 
 	NativeRenderer_SetViewPort(s_presentViewport.x, s_presentViewport.y, s_presentViewport.w, s_presentViewport.h);
-	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+	NativeRenderer_BindPresentFramebuffer();
 
 	NativeRenderer_SetScissorState(0);
 	NativeRenderer_EnableDepth(0);
@@ -2288,7 +2343,14 @@ void NativeRenderer_PresentVRAMDisplay(void)
 void NativeRenderer_SwapWindow(void)
 {
 	NativePerf_BeginScope(NATIVE_PERF_BUCKET_SWAP_WINDOW);
-	SDL_GL_SwapWindow(g_window);
+	if (s_presentRenderbuffer != 0)
+	{
+		glBindRenderbuffer(GL_RENDERBUFFER, s_presentRenderbuffer);
+	}
+	if (!SDL_GL_SwapWindow(g_window))
+	{
+		NATIVE_RENDERER_ERROR("Failed to swap SDL window: %s\n", SDL_GetError());
+	}
 	NativePerf_EndScope(NATIVE_PERF_BUCKET_SWAP_WINDOW);
 }
 

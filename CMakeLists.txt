@@ -4,6 +4,9 @@ include(CheckCCompilerFlag)
 
 set(CTR_NATIVE_VERSION "0.1.0-beta.7.1")
 option(CTR_NATIVE_MACOS_BUNDLE "Build CTR Native as a macOS application bundle" OFF)
+set(CTR_NATIVE_IOS_BUNDLE_IDENTIFIER "io.github.chrissotraidis.ctrpad" CACHE STRING
+    "Reverse-DNS bundle identifier for iOS and iPadOS builds"
+)
 
 set(CTR_NATIVE_RENDERER_GLES_DEFAULT OFF)
 if(ANDROID OR IOS)
@@ -107,7 +110,7 @@ add_subdirectory(externals/SDL)
 
 # CTR Native
 set(CTR_NATIVE_EXECUTABLE_OPTIONS)
-if(CTR_NATIVE_MACOS_BUNDLE)
+if(CTR_NATIVE_MACOS_BUNDLE OR IOS)
     list(APPEND CTR_NATIVE_EXECUTABLE_OPTIONS MACOSX_BUNDLE)
 endif()
 
@@ -139,6 +142,21 @@ if(CTR_NATIVE_MACOS_BUNDLE)
             "$<TARGET_BUNDLE_DIR:ctr_native>"
         COMMENT "Ad-hoc signing CTRPad.app for local macOS execution"
         VERBATIM
+    )
+endif()
+if(IOS)
+    set_target_properties(ctr_native PROPERTIES
+        OUTPUT_NAME "CTRPad"
+        MACOSX_BUNDLE_BUNDLE_NAME "CTRPad"
+        MACOSX_BUNDLE_GUI_IDENTIFIER "${CTR_NATIVE_IOS_BUNDLE_IDENTIFIER}"
+        MACOSX_BUNDLE_INFO_STRING "Touch-first native Crash Team Racing runtime"
+        MACOSX_BUNDLE_LONG_VERSION_STRING "${CTR_NATIVE_VERSION}"
+        MACOSX_BUNDLE_SHORT_VERSION_STRING "0.1.0"
+        MACOSX_BUNDLE_BUNDLE_VERSION "1"
+        MACOSX_BUNDLE_COPYRIGHT "GPL-3.0; retail game data is user-supplied"
+        MACOSX_BUNDLE_INFO_PLIST "${CMAKE_SOURCE_DIR}/platform/apple/Info-iOS.plist.in"
+        XCODE_ATTRIBUTE_PRODUCT_BUNDLE_IDENTIFIER "${CTR_NATIVE_IOS_BUNDLE_IDENTIFIER}"
+        XCODE_ATTRIBUTE_TARGETED_DEVICE_FAMILY "1,2"
     )
 endif()
 target_include_directories(ctr_native PRIVATE ${CMAKE_SOURCE_DIR}/include)
