@@ -757,8 +757,9 @@ build.
 
 ### M7 — Shared OpenGL ES 3 renderer
 
-**Status:** in progress; first shared-dialect compile slice landed; live GLES
-runtime/frame acceptance remains open and still depends on M6
+**Status:** in progress; shared dialect and first live iPad Simulator GLES
+presentation landed; representative frame/parity/cadence acceptance remains
+open and still depends on M6
 
 Checkpoint `78ef952dbecc` adds the explicit ES 3.0 / GLSL ES 300 production
 dialect, SDL proc loading, desktop-only feature guards, pre-context-safe
@@ -766,8 +767,17 @@ cleanup, an exact dialect/lifecycle CTest, an iOS Simulator ARM64 compile/link
 probe, and clean 18/18 ordinary ARM64, sanitizer ARM64, GLES-configured ARM64,
 and optimized i686 gates. Desktop GL still initializes all PSX/VRAM shaders on
 Apple M2. The host lacks the ANGLE/EGL runtime required by SDL's Cocoa GLES
-backend, so no live GLES pixels or M7 acceptance are claimed. Full evidence is
-in `docs/parity/2026-07-31-shared-gles3-dialect-bringup.md`.
+backend, so that checkpoint claimed no live GLES pixels or M7 acceptance. Full
+evidence is in `docs/parity/2026-07-31-shared-gles3-dialect-bringup.md`.
+
+Checkpoint `98ae2c6d86fe` subsequently launches that shared GLES renderer on an
+ARM64 iPad Simulator through SDL/UIKit. The exact clean run selected UIKit's
+framebuffer/renderbuffer 1, compiled all PSX and VRAM pipelines, opened
+CoreAudio, and rendered a coherent full-frame textured title menu. This clears
+the live-context/pixel bring-up boundary on Simulator, but one title scene is
+not the representative frame comparison, deterministic state or cadence
+evidence required for M7 acceptance. Detailed evidence is in
+`docs/parity/2026-07-31-ios-simulator-gles-bringup.md`.
 
 Work:
 
@@ -790,14 +800,24 @@ Acceptance:
 
 ### M8 — iOS/iPadOS application with controller input
 
-**Status:** pending; depends on M6 and M7
+**Status:** in progress; reproducible app-shell and Simulator launch slice
+landed; physical-device/controller/lifecycle acceptance depends on M6 and M7
+
+Checkpoint `98ae2c6d86fe` adds ARM64 Simulator/device presets, credential-free
+iPhone/iPad metadata, landscape declarations, SDL's iOS-owned entry point,
+physical-pixel sizing and UIKit presentation-object handling. An exact clean
+local-only Simulator package launches the production retail path, renders and
+opens audio. The generated physical-device binary is unsigned and has not run
+on hardware. Simulator logs still report unbalanced UIKit appearance
+transitions, so lifecycle acceptance remains explicitly open.
 
 Work:
 
-- Add device and simulator CMake presets, app-bundle metadata, orientations,
-  launch assets, and signing configuration that does not embed personal team
-  credentials in source.
-- Adopt SDL's iOS-owned entry point and lifecycle.
+- Retain the completed device/simulator presets, bundle metadata and
+  credential-free signing configuration; add final launch artwork only when
+  it can be distributed without retail content.
+- Retain SDL's iOS-owned entry point and finish the UIKit lifecycle rather
+  than treating launch alone as lifecycle acceptance.
 - Replace direct process exit with suspend/resume-safe state transitions.
 - Replace battery-hostile spin pacing with an iOS-appropriate display-driven
   mechanism while retaining retail timing.

@@ -8461,3 +8461,260 @@ modified. Docker still reported running, unpaused and not OOM-killed; playback
 2 crossed frame 10,000 at its fifth fixed window (1.47 FPS), while the
 machine-owned status file remained empty. No completion, exit-zero, layout or
 mutation result is inferred.
+
+## 2026-07-31 — Presented the shared GLES renderer through SDL/UIKit
+
+### Starting boundary
+
+The shared renderer checkpoint could compile a thin ARM64 Simulator executable
+but could not install it. The CMake product had empty app metadata, SDL main
+ownership was unresolved, no bundle resources were sealed, and neither a live
+GLES context nor a pixel had been observed. macOS could not provide the live
+GLES step because SDL's Cocoa path requires an absent ANGLE/EGL runtime.
+
+The user-supplied `ref/CTR` tree remained read-only reference material. Retail
+execution used only the ignored NTSC-U image already validated by the project;
+no reference or retail file entered the implementation diff.
+
+### First temporary packaging and SDL main diagnosis
+
+The first Simulator experiment copied the compile-probe bundle to
+`/private/tmp`, manually supplied minimum metadata, added a local asset copy
+and applied an ad-hoc Simulator signature. This was intentionally a discovery
+vehicle, not a claimed build product. Launch stopped at SDL initialization.
+
+The previous platform log printed only the high-level failure. Adding SDL's
+actual error showed that SDL main had not been initialized. `main.c` defined
+`SDL_MAIN_HANDLED` on every platform and called the native entry directly.
+That is suitable for the established desktop executable but bypasses the
+entry/lifecycle wrapper SDL supplies for UIKit. The final change retains the
+define outside iOS and lets SDL own the iOS entry.
+
+Once corrected, the process reached normal retail startup, initialized the
+renderer and audio, and continued drawing. The Simulator display remained
+black.
+
+### Rejected size-only hypothesis
+
+UIKit differentiates logical window points from drawable pixels. The renderer
+had read the logical window size. `SDL_GetWindowSizeInPixels` and
+`SDL_EVENT_WINDOW_PIXEL_SIZE_CHANGED` were added so the presentation path and
+viewport operate on the physical surface. Live logs then reported identical
+1376-by-1032 point and pixel dimensions in this Simulator configuration.
+
+The screen was still black. This established that the size correction was
+necessary platform work but not the presentation root cause. It was not
+reverted, and it was not misreported as the black-frame fix.
+
+### UIKit framebuffer ownership
+
+Runtime tracing confirmed the live call chain reached `CTR_Main`,
+`RenderSubmit`, `DrawOTag` and `glDrawArrays`. Shader compilation and GL error
+checks did not identify a missing draw. Attention moved from CPU/retail draw
+generation to the final presentation object.
+
+SDL's UIKit implementation publishes these window properties:
+
+```text
+SDL_PROP_WINDOW_UIKIT_OPENGL_FRAMEBUFFER_NUMBER
+SDL_PROP_WINDOW_UIKIT_OPENGL_RENDERBUFFER_NUMBER
+```
+
+The live values were both 1. The renderer inherited the desktop assumption
+that framebuffer 0 is the window presentation target, and explicitly rebound
+zero around render/readback work. Under SDL/UIKit, object 1 is the drawable
+SDL creates and swaps. All draws were therefore valid but directed away from
+the visible UIKit target.
+
+The final implementation stores the presentation framebuffer/renderbuffer
+after window/context creation. It uses zero on other platforms, binds the
+UIKit FBO for presentation on iOS and rebinds the UIKit renderbuffer before
+`SDL_GL_SwapWindow`. That minimal distinction preserves the shared renderer
+and the desktop behavior.
+
+This produced visible CTR pixels immediately. No shader, CLUT, primitive or
+GPU-link bridge change was needed.
+
+### Orientation distinction
+
+The new plist declared landscape left/right for iPhone and iPad, preferred
+landscape right, full-screen display and a hidden status bar. The code also
+sets SDL's iOS orientation hint before subsystem initialization. Nevertheless,
+the already booted Simulator hardware was portrait. The app created a
+landscape drawable inside that host orientation, yielding an apparently
+clipped landscape view.
+
+Simulator's Device > Orientation > Landscape Right action corrected the host
+device state. The resulting view filled the simulated iPad in landscape. This
+is recorded as a test-environment correction, not proof of rotation callbacks
+or physical-device orientation handling.
+
+### Reproducible app metadata and presets
+
+The manual discovery package was replaced with repository-owned configuration:
+
+```text
+ios-simulator-arm64: iPhoneSimulator SDK, ARM64, iOS 15.0, GLES, RelWithDebInfo
+ios-device-arm64:    iPhoneOS SDK, ARM64, iOS 15.0, GLES, RelWithDebInfo
+bundle identifier:   io.github.chrissotraidis.ctrpad
+device families:     iPhone (1), iPad (2)
+```
+
+No Apple team, certificate name, provisioning profile, retail asset or user
+path is stored in the presets or plist. The device product is deliberately
+unsigned. The raw Simulator CMake product has only the linker's ad-hoc code
+signature and no sealed resource envelope, so strict bundle verification
+fails as expected. The local execution copy was populated in `/private/tmp`
+and ad-hoc signed afterward; that exact copy passed strict deep verification.
+
+Implementation was committed before final acceptance rebuilding:
+
+```text
+98ae2c6d86fe527fb4ae4977357cec51d8a5f46f
+feat: present GLES through UIKit
+6 files changed, 221 insertions, 10 deletions
+```
+
+### Exact clean Simulator rerun
+
+The committed Simulator app was copied to
+`/private/tmp/ctrpad-ios-clean-8dujJB/CTRPad.app`. The user's ignored retail
+image was cloned into that temporary copy as `assets/ctr-u.bin`, after which
+the package received a local ad-hoc signature, passed strict verification and
+was installed on Simulator UDID
+`D80E9862-C29A-4D69-B8E5-D81D396C17D5`.
+
+The exact launch reported:
+
+```text
+version                 0.1.0-beta.7.1 (98ae2c6d86fe)
+window                  1376x1032 points, 1376x1032 pixels
+presentation            framebuffer=1, renderbuffer=1
+adapter                 Apple Software Renderer, Apple Inc.
+API                     OpenGL ES 3.0 APPLE-23.1.1
+shader language         OpenGL ES GLSL ES 3.00
+PSX shader modes        4-bit, 8-bit, 16-bit, RGBA; all ready
+VRAM pipelines          ready
+audio                   CoreAudio, 44100 Hz, stereo, 1024 sample frames
+```
+
+Live visual inspection showed the legal screen, intro animation and full
+title menu. The final retained local frame showed a full landscape iPad,
+checkered background, Crash, the trophy, blue CTR ring, logo and menu with
+coherent color, alpha, text and textures. Its evidence metadata is:
+
+```text
+path:       /private/tmp/ctrpad-ios-clean-8dujJB/exact-clean-keyboard-title.jpeg
+dimensions: 932 x 768
+size:       199375 bytes
+SHA-256:    77916c2f69de6ef39432006a9aa3f8ca778aa20f261ff764576bd29be30a8a12
+tracked:    no; contains retail-derived pixels
+```
+
+The app was boundedly terminated with `simctl`, not through a natural UIKit
+shutdown. Two `SDL_uikitviewcontroller` begin/end appearance-transition
+warnings repeated during the run. The Simulator OS also printed a duplicate
+WebCore/WebKit accessibility-bundle class warning. The latter is treated as a
+Simulator runtime message; the former remains an app lifecycle risk and is
+not waived.
+
+### Keyboard observation
+
+Basic keyboard controls were implemented earlier in commit `2c10b00b3` and
+the quick-tap transport was accepted through exact PSX packet, ARM64,
+sanitizer, i686 and live macOS tests. The iOS metadata now advertises indirect
+input events, so the Simulator run also exercised the path.
+
+With Simulator Capture Keyboard visibly enabled, `C` was sent during the exact
+committed app's intro and the title menu appeared afterward. The intro could
+have ended naturally during the observation interval, so this is not accepted
+as direct key-delivery evidence. On the earlier pre-commit live run, a later
+`C` advanced immediately from the title menu to the Adventure intro. Repeated
+`C`, alternate Cross `K`, and D-pad Down `S` on the exact clean title menu did
+not yield a reliable visible selection change.
+
+The earlier Adventure transition is retained only as diagnostic evidence
+because the action did not repeat consistently after the clean rebuild.
+Keyboard capture was explicitly released before app termination. No iPad
+keyboard delivery is accepted, and no claim is made for a physical Magic
+Keyboard, Bluetooth keyboard or full iPad menu/gameplay path.
+
+### Exact clean cross-target matrix
+
+All producers were rebuilt after `98ae2c6d86fe` so the embedded source
+identity matches the implementation under test:
+
+```text
+macOS ARM64 desktop GL app
+  CTest:       18/18 in 3.58 seconds
+  signature:   strict deep ad-hoc verification passed
+  SHA-256:     ee690c9fc934c4a4735f1373b41a9a2dc5f479c706be136203daec6c4e8bfed1
+
+macOS ARM64 GLES configuration
+  CTest:       18/18 in 1.60 seconds
+  runtime:     expected clean diagnostic exit 1; Cocoa ANGLE/EGL absent
+  SHA-256:     1d9fb361edcf7442cc70338d7c2881aef6a7192ce0b2171d531dabf59f2bbfa4
+
+combined ASan/UBSan ARM64
+  CTest:       18/18 in 10.82 seconds
+  leak detect: disabled because unsupported by Apple's ASan runtime
+  finding:     none
+  SHA-256:     33ad829f4f1d0baa51a20ed3f1dad032ef7b04badbc453a32ceb2cf5be4dc700
+
+iOS Simulator ARM64
+  platform:    IOSSIMULATOR, iOS 15.0 floor, SDK 26.5
+  live:        launch, GLES shaders/VRAM, audio, pixels
+  SHA-256:     9e09fb41b41ba63339e26ac733de31fc1b8c196f6a9089d97929d201b1709771
+
+iOS device ARM64
+  platform:    IOS, iOS 15.0 floor, SDK 26.5
+  live:        not run; unsigned
+  SHA-256:     09576e97b9bde31d89f41efcb52388777ed54f7330dcaf668cf9f5202f1d3f43
+```
+
+The exact Linux i686 rebuild was intentionally allowed to finish rather than
+reusing an older binary:
+
+```text
+optimized Linux i686
+  CTest:       18/18 in 4.23 seconds
+  architecture: ELF 32-bit LSB PIE, Intel 80386
+  interpreter: /lib/ld-linux.so.2
+  GNU Build ID: dfac03fc776068dfd25ee53f0284975b1d914217
+  SHA-256:     4bcc7844e9cd107ea0ddc67e734397a0df420d6b635843454975289742c21611
+```
+
+The pinned amd64 multilib builder mounted source read-only and output in the
+disposable cached tree. The binary embeds `98ae2c6d86fe`; it is not the binary
+inside the protected historical verifier.
+
+The normal Apple/iOS compiles repeated 32 established warnings; the sanitizer
+build repeated 59. The implementation introduced no newly accepted warning.
+
+### Acceptance boundary and next dependency
+
+This work accepts the first live Simulator GLES context and full title-menu
+presentation, plus the source-owned app/preset boundary. It does not accept
+M7 as a whole because representative renderer comparisons, state parity and
+cadence are absent. It does not accept M8 because controller play, lifecycle,
+display pacing, physical iPad install/execution and a complete race are absent.
+
+The next product dependency is to correct/verify UIKit lifecycle and replace
+host spin pacing with a display-driven path without changing the retail
+VBlank state model. After that, physical-device controller/audio/video and
+sandbox import/save work can be accepted honestly. Touch remains a later peer
+input source, not part of this checkpoint.
+
+### Elapsed time and protected concurrent work
+
+The prior documented renderer checkpoint ended at 146,335 goal seconds. The
+first documentation read for this slice was 150,428 seconds. The pre-commit
+reading at 08:23:51 CDT was 150,887 seconds: 1 day, 17 hours, 54 minutes,
+47 seconds cumulative and 4,552 seconds (1 hour, 15 minutes, 52 seconds) since
+the prior checkpoint.
+
+The independent historical i686 alternate-loader verifier was not used as the
+exact-build matrix producer and was not changed. Docker reported it running,
+unpaused and not OOM-killed. Its machine-owned exit-status file remained zero
+bytes. No alternate playback completion, process exit, layout separation or
+deliberate mutation is inferred.

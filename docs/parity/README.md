@@ -38,6 +38,11 @@ Current evidence and procedures:
   reference delta, shared desktop/GLES renderer dialect, context-failure
   cleanup correction, exact ARM64/sanitizer/i686 matrix, iOS Simulator
   compile/link probe, rejected attempts, and deliberately open runtime gate.
+- `2026-07-31-ios-simulator-gles-bringup.md` records the reproducible iOS
+  Simulator/device bundles, SDL-owned UIKit entry, nonzero presentation-FBO
+  correction, exact clean live GLES/audio/title-menu result, bounded keyboard
+  evidence, rejected black-frame/orientation attempts, and deliberately open
+  lifecycle, cadence, device-signing, import and touch gates.
 - `2026-07-31-macos-arm64-keyboard-tap.md` records the missing quick-tap root
   cause, one-snapshot press-edge transport, direct live PSX packet trace, and
   exact-commit ARM64/sanitizer/i686 validation plus live Time Trial

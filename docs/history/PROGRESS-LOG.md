@@ -735,6 +735,70 @@ The checkpoint ran approximately 06:25–07:08 CDT. Goal elapsed advanced from
 unpaused and not OOM-killed; it crossed frame 10,000, but its machine status
 file remained empty, so completion and mutation were not accepted.
 
+### 2026-07-31 — First live iPad Simulator GLES presentation
+
+- Commit `98ae2c6d86fe` converts the earlier iOS compile/link probe into
+  CMake-generated ARM64 Simulator and device app bundles. It adds
+  credential-free iPhone/iPad metadata, iOS 15.0 presets, landscape
+  declarations and SDL's UIKit-owned entry point.
+- The first manually patched temporary bundle is rejected as reproducibility
+  evidence. Its diagnostics nevertheless exposed that `SDL_MAIN_HANDLED`
+  prevented SDL's iOS main initialization, which the committed entry change
+  corrects.
+- After startup, the complete retail draw path and `glDrawArrays` ran against
+  a black screen. A point-to-pixel sizing change was necessary but did not fix
+  presentation and is rejected as the black-frame root cause.
+- SDL/UIKit owned framebuffer 1 and renderbuffer 1 while the desktop-derived
+  renderer rebound framebuffer 0. Querying SDL's UIKit window properties,
+  retaining that presentation FBO and rebinding its RBO before swap produced
+  the first live GLES pixels.
+- The first visible run was clipped because Simulator hardware remained in
+  portrait despite the landscape app declarations. Rotating the simulated
+  device to Landscape Right yielded a full 1376-by-1032 landscape surface.
+- Every producer was rebuilt from exact clean source `98ae2c6d86fe`. The
+  exact Simulator run reported UIKit framebuffer/renderbuffer 1, Apple
+  Software Renderer, OpenGL ES 3.0, GLSL ES 3.00, four ready PSX shaders,
+  ready VRAM pipelines and 44.1-kHz stereo CoreAudio. Visual inspection showed
+  coherent Crash/trophy/logo/menu geometry, colors, text and textures.
+- The local-only title-menu JPEG is 199,375 bytes, 932 by 768, and has SHA-256
+  `77916c2f69de6ef39432006a9aa3f8ca778aa20f261ff764576bd29be30a8a12`.
+  It was not tracked because it contains retail-derived pixels. The temporary
+  test package and retail copy also remained outside Git.
+- Exact clean 18/18 results are macOS desktop GL in 3.58 seconds, macOS GLES
+  configuration in 1.60 seconds, and ASan/UBSan in 10.82 seconds with no
+  finding. The optimized Linux i686 build also passed 18/18 in 4.23 seconds;
+  it is ELF32 Intel 80386 with GNU Build ID
+  `dfac03fc776068dfd25ee53f0284975b1d914217` and SHA-256
+  `4bcc7844e9cd107ea0ddc67e734397a0df420d6b635843454975289742c21611`.
+  The macOS GLES binary still exits cleanly with status 1 because this host
+  lacks Cocoa ANGLE/EGL. Other exact hashes are in the parity report.
+- The exact Simulator and device binaries are thin ARM64 with iOS 15.0 floors
+  and SHA-256 values `9e09fb41...b1709771` and
+  `09576e97...f1d3f43`. The Simulator package was ad-hoc signed locally only;
+  the physical-device product is unsigned and untested on hardware.
+- Simulator keyboard capture was visibly active while `C` was sent during the
+  exact clean intro, but the intro could have ended naturally before the next
+  observation. An earlier pre-commit run advanced immediately from the title
+  menu into Adventure with `C`; repeated exact-run menu taps were inconsistent,
+  so iPad keyboard delivery/navigation is not accepted. Basic keyboard support
+  itself remains accepted through commit `2c10b00b3`, its deterministic
+  PSX-packet test and the live macOS movement evidence.
+- Two SDL/UIKit appearance-transition warnings keep background/resume,
+  rotation and view lifecycle open. Display-driven pacing, controller input,
+  physical-device signing/execution, sandbox import/saves and touch controls
+  are also still open; neither M7 nor M8 is marked accepted.
+
+This slice began at the prior 146,335-second goal checkpoint. The first
+documentation reading was 150,428 seconds. At 08:23:51 CDT, the pre-commit
+reading was 150,887 seconds, or 1 day, 17 hours, 54 minutes, 47 seconds
+cumulative: an interval of 4,552 seconds (1 hour, 15 minutes, 52 seconds).
+The timer is product-task elapsed time, not a labor estimate or benchmark.
+
+The protected alternate-loader i686 verifier was not restarted, paused,
+rebuilt or terminated. Docker still reported running, unpaused and not
+OOM-killed, and its machine status file remained empty. Completion, alternate
+layout and deliberate mutation remain unaccepted.
+
 ## Current open path to the requested product
 
 1. Finish independent-process/mutation acceptance for the existing full
