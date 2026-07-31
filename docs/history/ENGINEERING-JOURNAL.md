@@ -6773,3 +6773,114 @@ acceptance boundary are in
 `docs/parity/2026-07-30-macos-arm64-cadence.md`. macOS desktop cadence is
 accepted for M6. iOS display-link/lifecycle pacing remains unimplemented and
 must be measured independently.
+
+## 2026-07-30 — Proved macOS save persistence across relaunch
+
+### Why report output alone was insufficient
+
+Clean current ARM64 reports `ctr-215303` and `ctr-223221` both began with
+empty memory-card seeds and wrote:
+
+```text
+memcard.recording/slot0/BASCUS-94426-SLOTS
+bytes:
+  6016
+SHA-256:
+  6a01b0f5562ed7a279d8f8e51e3b1874ac39a6120f55db4fe3873288950619a3
+```
+
+This proves a game-driven write. It does not by itself prove a later process
+loaded the bytes, because replay playback deliberately clones the sibling
+empty `memcard.seed` into a disposable sandbox on every run.
+
+### Static artifact validation
+
+`tools/inspect-native-memcard-save.mjs` was added to validate the file without
+embedding or committing it. It checks:
+
+- exact size 6,016 bytes;
+- 0x100-byte `SC` icon header and one-block count;
+- 0x1680-byte game payload;
+- profile version `-18` (`0xffee`);
+- declared `MemcardProfile` size 0x1600; and
+- the complete retail CRC recurrence from `MEMCARD_Checksum.c`.
+
+The actual save passes with CRC remainder zero and the expected SHA-256.
+Passing the 988-byte report metadata as a negative input exits 1 on the size
+gate.
+
+### Exact-producer second process
+
+The ordinary default root `build-macos-arm64/memcards` was confirmed absent.
+The report's save was copied to:
+
+```text
+build-macos-arm64/memcards/slot0/BASCUS-94426-SLOTS
+```
+
+The copied hash remained
+`6a01b0f5562ed7a279d8f8e51e3b1874ac39a6120f55db4fe3873288950619a3`.
+Git ignore resolution pointed to the existing `build-*/` rule; no save byte
+appeared in `git status`.
+
+The immutable producer
+`ctr_native-cutscene-fix-producer-eee2a8df5b96` was started with no replay
+arguments under LLDB. The renderer initialized on Apple M2 / OpenGL 4.1 Metal
+and all PSX shaders/VRAM pipelines reported ready.
+
+Computer Use was considered to advance the title flow, but the raw
+non-bundled SDL executable has no bundle identifier and was not exposed as a
+targetable app. Attempts using its absolute path and process name both
+returned `Invalid app`; no synthetic UI action was accepted from that route.
+The process subsequently reached the normal startup memory-card read
+automatically, so no input injection was needed.
+
+A breakpoint on `NativeMemcard_ReadSaveData` stopped with:
+
+```text
+save_name="bu00:BASCUS-94426-SLOTS"
+byte_count=5760
+data_offset=256
+```
+
+Stepping out returned:
+
+```text
+w0=0
+nativeResult=NATIVE_MEMCARD_OK
+```
+
+Stepping out of the enclosing `MEMCARD_Load` allowed its full
+`MEMCARD_ChecksumLoad` loop to run and returned:
+
+```text
+Return value: (u8) 0
+```
+
+Value 0 is `MC_RETURN_IOE`, the retail success code. The adapter can return it
+only after the native read and checksum both succeed. The second process's
+live payload header read `0xffee 0x1600`; its stored terminal CRC bytes were
+`b1 00`.
+
+This is a real cross-process read/checksum result from the exact producer, not
+a file-existence inference or a rebuilt diagnostic binary.
+
+### Cleanup and scope
+
+The process was resumed briefly after the load, then intentionally killed
+under LLDB. That exit is not normal lifecycle acceptance. The temporary
+default root was moved intact to:
+
+```text
+/private/tmp/ctrpad-memcard-relaunch-root-20260730
+```
+
+The build's default `memcards` path is absent again, matching its pre-test
+state and preventing later tests from silently inheriting the profile. The
+authoritative source artifact remains in ignored report `ctr-215303`.
+
+This accepts macOS file persistence and checksum-valid load across process
+launches. It does not accept complete manual play, a clean quit for this
+diagnostic process, iOS sandbox placement, or device lifecycle persistence.
+The detailed evidence is in
+`docs/parity/2026-07-30-macos-arm64-save-relaunch.md`.

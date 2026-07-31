@@ -413,8 +413,7 @@ development app bundle, direct Metal-backed visual inspection, corrected
 complete. Both observed cross-width emitter defects are corrected, the clean
 ARM64 report matches the prior i686 trajectory across all 24,232 frames, and a
 fresh current-build version-4 report structurally reaches `lapIndex=1`.
-Formal same-commit i686 finalization, complete manual play, and
-persistent-save relaunch acceptance remain open.
+Formal same-commit i686 finalization and complete manual play remain open.
 
 Result so far:
 
@@ -623,6 +622,15 @@ Result so far:
   measured 108.051815 seconds against a 108.079040-second model
   (`-0.025190%`) and exited 0. The macOS ARM64 desktop cadence task is
   accepted; iOS display/lifecycle pacing remains a later platform gate.
+- Clean current ARM64 report `ctr-215303` wrote a 6,016-byte
+  `BASCUS-94426-SLOTS` profile from an empty seed. The checked-in save
+  inspector validates its one-block wrapper, `0xffee`/`0x1600` retail profile
+  header, and zero CRC remainder. A later normal startup of the exact
+  immutable producer read all 5,760 payload bytes from the default memcard
+  root and returned `NATIVE_MEMCARD_OK` plus game-level `MC_RETURN_IOE`.
+  macOS file persistence and checksum-valid relaunch are accepted; the
+  diagnostic process itself was killed after observation, so clean normal
+  quit and all iOS sandbox/lifecycle cases remain open.
 - Red-beaker rain no longer reads per-player MVP translations out of widened
   instance function/thread pointers. Named draw-record fields preserve the
   retail depth/LOD byte alias, and a four-player cross-width test covers the
@@ -632,7 +640,7 @@ Result so far:
 Work:
 
 - Validate audio, desktop renderer, keyboard, MFi/Bluetooth controller,
-  memcards, replays, savestates, XA audio, and STR video.
+  replays, savestates, XA audio, and STR video.
 - Run sanitizers and the full parity gate under Apple Clang.
 - Allow clean optimized-i686 version-4 report `ctr-025812` to finalize after
   both typed emitter corrections. Require all eight components to match clean

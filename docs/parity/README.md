@@ -26,6 +26,8 @@ Current evidence and procedures:
 - `2026-07-30-macos-arm64-cadence.md` records the complete transport audit and
   direct checkpoint-local wall measurement against the exact NTSC VBlank
   model.
+- `2026-07-30-macos-arm64-save-relaunch.md` records the game-driven save,
+  retail CRC validation, and exact-producer second-process reload.
 
 The first task is to evaluate `platform/native_replay_scheduler.c`,
 `platform/native_checkpoint.c`, `platform/native_savestate.c`, and
