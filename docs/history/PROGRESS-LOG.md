@@ -868,18 +868,16 @@ mutation gates remain unaccepted.
 
 ## Current open path to the requested product
 
-1. Finish independent-process/mutation acceptance for the existing full
-   cross-width trace.
-2. Close remaining macOS M6 runtime evidence, including broader audio
+1. Close remaining macOS M6 runtime evidence, including broader audio
    listening, renderer, controller, and full-race manual-play coverage.
-3. Continue live GLES 3 runtime, frame-capture, parity, and cadence validation
+2. Continue live GLES 3 runtime, frame-capture, parity, and cadence validation
    from the landed shared renderer dialect.
-4. Continue the landed iOS/iPadOS lifecycle/display loop with rotation,
+3. Continue the landed iOS/iPadOS lifecycle/display loop with rotation,
    physical-hardware cadence, sandbox audio/saves, and controller acceptance.
-5. Add document-picker import and persistent sandbox storage for the user's raw
-   NTSC-U image and saves.
-6. Build and iterate genuinely playable, simultaneous analog touch controls.
-7. Run device parity and lifecycle acceptance, produce a signed sideloadable
+4. Complete physical-device Files/import coverage and persistent sandbox
+   storage for game-driven iOS saves.
+5. Build and iterate genuinely playable, simultaneous analog touch controls.
+6. Run device parity and lifecycle acceptance, produce a signed sideloadable
    iPad build, and publish GPL-3.0-complete source/install information without
    retail bytes or credentials.
 
@@ -944,3 +942,79 @@ the current replay does not redefine the final objective as complete.
   adding 2,493 seconds (41 minutes, 33 seconds). The protected verifier still
   had an empty status file after ten 2,000-frame playback-2 windows; no
   completion or mutation result was inferred.
+
+### 2026-07-31 — Fresh-install iOS Files import
+
+- Commit `7872f7e61ad6` splits iOS media selection from runtime startup and adds
+  an ARC UIKit onboarding/document-picker bridge. A missing asset returns from
+  `SDL_main` without blocking UIKit; successful validation enters the ordinary
+  game startup path in the same process.
+- Files selections use coordinated security-scoped reading and a unique
+  same-volume staging directory. The production disc/asset loaders distinguish
+  unreadable raw media, wrong region and missing required content. Only a fully
+  valid stage moves/replaces `Documents/CTRPad/assets/ctr-u.bin`; all failures
+  preserve an existing import and remove staging residue.
+- A fresh iPad Pro 13-inch (M5) iOS 26.5 Simulator showed the native no-media
+  screen and real Files picker. Cancel returned to the ready state. A 118-byte
+  local fixture received the raw MODE2/2352 error, installed nothing and left
+  no staging directory. A no-media cold relaunch returned to the chooser.
+- The user's ignored 605,698,800-byte NTSC-U source was selected through Files.
+  Its source/destination SHA-256 matched
+  `f780bf2331476aabfc00772fa758b12dd95ebfbc907968132cbd3cdd4e2c07c0`.
+  PID `93200` persisted into the rendered game and a later cold launch used the
+  installed Documents image directly.
+- The implementation was committed and pushed before exact validation. An
+  exact locally signed Simulator app embedding `7872f7e61ad6` repeated the
+  media-free picker/import path. PID `99595` remained continuous into the game,
+  the installed image retained its size/hash, and no stage leaked.
+- The exact local-only screenshot visibly contains coherent checkered-flag
+  geometry/textures. It is 2064 by 2752 pixels with SHA-256
+  `e83b12b1551a9f5e62915f6ed4e401433da0070fe11c1e556cfc609040be36d9`;
+  its portrait raw capture is not promoted to physical rotation acceptance.
+- Exact hashes are macOS ARM64 app `f488dc74...53b7e`, ASan/UBSan
+  `c28e83e9...36cb`, signed Simulator executable `44e66cfc...209a`, and
+  unsigned/unrun device executable `6350c11c...eff`. The isolated optimized
+  i686 producer passed 20/20 in 4.04 seconds, is ELF32 Intel 80386 with GNU
+  Build ID `063a0ff1...a6c7c`, and has SHA-256 `361d313e...bab12`. macOS and
+  sanitizer each passed 20/20; codesign/plist/architecture/platform checks
+  passed as applicable.
+- Recurring Simulator scene/assets/full-screen, appearance-transition and
+  WebCore/WebKit warnings remain documented. Simulator software-renderer
+  cadence remains about 5–9 FPS and is not a hardware performance claim.
+- No retail byte, fixture, app package, screenshot, log, memory card or staging
+  output entered Git. Physical Files/signing, live wrong-region/incomplete/
+  inaccessible/interrupted import, iOS saves, device play and touch remain
+  open. Complete evidence is in
+  `docs/parity/2026-07-31-ios-files-import.md`.
+
+### 2026-07-31 — Historical alternate-layout verifier completed
+
+- The protected verifier completed naturally at 12:05:03 CDT. Its `--rm`
+  container `ec58fcd7069c` disappeared only after completion; no pause, stop,
+  restart, rebuild or termination was issued in this slice. Its previously
+  empty machine-owned status file became the two bytes `0\n`.
+- Direct and copied-loader i686 processes each completed all 24,232 unchanged
+  replay frames. Their host samples differed (`sdata=0x403cd040` versus
+  `0x3efaf040`) and their restored raw checkpoint checksums differed
+  (`0xd4c950a8` versus `0x46478f61`), proving the intended address/layout
+  separation while canonical playback remained equal.
+- The automatically selected first-active-driver mutation at replay frame
+  1,711 changed `posCurr.x` by one, exited through parity status 2, and named
+  `drivers mask=0x00000004` as the first canonical difference. Pads, VBlank,
+  timing, RNG, world and allocation still matched at that frame.
+- A clean detached `7872f7e61ad6` worktree ran finalize-only verification with
+  coverage disabled because the manual coverage form is separately accepted.
+  It launched no game process, rechecked both completions, source/binary
+  identity, raw/address separation and mutation semantics, then exited 0 with
+  `Replay process-determinism and mutation verification passed.`
+- Producer SHA-256 is `d2e6f060...276c8e`; alternate loader
+  `eccfafa9...4278d`; playback logs `26a80193...9249` and
+  `a579d856...f728`; mutation log `affa27f8...c8c`; final evidence-manifest
+  SHA-256 `19fce285...fdcdf`.
+- This closes M1's independent-process/mutation gate. It does not close the
+  broader M6 physical-controller, complete-race, human-audio, renderer,
+  savestate or natural-quit boundaries.
+- The prior documented timer was 158,249 seconds. The final documentation
+  reading at 12:16 CDT was 164,821 seconds: 1 day, 21 hours, 47 minutes,
+  1 second cumulative, adding 6,572 seconds (1 hour, 49 minutes, 32 seconds).
+  This is the product's cumulative goal timer, not benchmark or labor time.

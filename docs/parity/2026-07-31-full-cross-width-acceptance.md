@@ -12,10 +12,11 @@ This is the first accepted full same-commit cross-width trajectory. It closes
 the full ARM64/i686 comparison that remained open after the potion and
 cutscene emitter corrections.
 
-The broader golden gate is not complete yet. Two unchanged i686 replay
-processes under different host address layouts and the deliberate active
-driver mutation still have to pass. Those process/mutation runs are separate
-from the cross-width recording comparison accepted here.
+At this report's initial publication, the two-process/mutation portion was
+still running. It subsequently completed naturally and passed in full, as
+recorded in **Independent i686 process/mutation completion** below. The
+cross-width comparison and the independent-process proof remain distinct
+claims even though both are now accepted.
 
 ## Shared source identity
 
@@ -145,7 +146,7 @@ file hashes are expected: checkpoint headers and native state bodies contain
 pointer-width-specific representation, while the canonical per-frame
 components deliberately compare game-visible semantics.
 
-## Acceptance boundary and next gate
+## Acceptance boundary
 
 Accepted:
 
@@ -157,19 +158,65 @@ Accepted:
 - recorded powerslide behavior on both runs; and
 - the same checksum-valid game-generated memory-card result.
 
-Still required:
-
-- two unchanged full i686 playback processes;
-- distinct host-address samples across those processes;
-- raw restored checkpoints that differ while canonical state matches;
-- an automatically selected active-driver mutation;
-- exit status 2 at the exact mutation frame; and
-- `drivers` as the first canonical divergence.
-
-The checked-in verifier performs those remaining operations. Its
-`CTRPAD_REQUIRE_COVERAGE=0` mode omits only the separately documented manual
-coverage form and must be described as process-determinism/mutation
-verification, not a complete golden-coverage pass.
+The checked-in verifier's `CTRPAD_REQUIRE_COVERAGE=0` mode omits only the
+separately documented manual coverage form and is described as
+process-determinism/mutation verification, not a second complete
+golden-coverage run.
 
 No retail image, replay report, checkpoint, save, or extracted asset is
 tracked by Git.
+
+## Independent i686 process/mutation completion
+
+The long-running verifier completed without intervention at 12:05:03 CDT on
+2026-07-31. Its `--rm` container `ec58fcd7069c` therefore no longer existed,
+and the machine-owned `container-exit-status.txt` changed from empty to the two
+bytes `0\n`. It produced all three expected logs.
+
+Both unchanged processes ran the complete 24,232-frame replay and logged normal
+completion. The direct process restored the recording's raw checkpoint
+checksum while the copied i386 loader produced a different raw layout:
+
+```text
+playback 1 raw: recorded=0xd4c950a8 restored=0xd4c950a8 equal=yes
+playback 1 host: sdata=0x403cd040 gGT=0x403d6bf4 mempack=0x408c8bc0
+
+playback 2 raw: recorded=0xd4c950a8 restored=0x46478f61 equal=no
+playback 2 host: sdata=0x3efaf040 gGT=0x3efb8bf4 mempack=0x3f4aabc0
+```
+
+Canonical playback nevertheless remained equal through each normal exit. The
+automatic mutation selected the first active driver at replay frame 1,711,
+changed `driver[0].posCurr.x` from `-165632` to `-165631`, exited through the
+required parity-failure route, and reported `drivers mask=0x00000004` as the
+first canonical difference. Pads, VBlank transport, timing, RNG, world and
+allocation remained equal at the divergence.
+
+A clean detached worktree at `7872f7e61ad6` ran the repository's
+`CTRPAD_FINALIZE_ONLY=1 CTRPAD_REQUIRE_COVERAGE=0` verifier against the captured
+artifacts. This mode launched no game process; it rechecked source/binary
+identity, frame/checkpoint counts, both normal completions, address/raw-layout
+separation, the exact mutation result, and then wrote the evidence manifests.
+It exited 0 with:
+
+```text
+Replay process-determinism and mutation verification passed.
+```
+
+Exact producer and final evidence identity:
+
+```text
+source commit:       eee2a8df5b9605d27c7b20e943bba76174a4f6fc
+i686 binary:         d2e6f06023ccaedae689f11b36b33e005cb30d7bbc70d2a5e3e036f57b276c8e
+alternate loader:    eccfafa93226e52e32aff3f97f5f779e7d02306cda017eae6d9c358142d4278d
+playback 1 log:      26a801935f3b0ed3749c77047b982d9fa0a6f59c4fd9830e8bf7871b27589249
+playback 2 log:      a579d85653751c322a3232a73aa6d4785ca3ffd4525929f7ecf8ea2cee24f728
+mutation log:        affa27f8e1f1673dbff38d2f3a160b0948e0bbe5a255a0de2547fd64b1f02c8c
+evidence manifest:   19fce2859213c28f9cc5ad6c7a28981b6f9ac1c9db7abf0c52dffc3a54bfdcdf
+container image:     sha256:633753dde557f377e580536a32acefb4d11ac6fc8621644602acbddc6f1c6cb5
+```
+
+The earlier manual coverage form, accepted cross-width pair, and this
+process/mutation result together close M1's deterministic parity-harness gate.
+They do not by themselves close M6's broader physical-controller, full-race,
+human-audio, renderer, savestate, or natural-quit evidence.

@@ -169,18 +169,24 @@ cmake --preset ios-device-arm64
 cmake --build --preset ios-device-arm64
 ```
 
-The generated `CTRPad.app` contains no retail data. On first launch it creates
-the Files-visible import directory `Documents/CTRPad/assets`; place your own
-raw NTSC-U image there as `ctr-u.bin`. Imported media takes priority over any
-development-only bundle fallback. Logs, memory cards, and private diagnostics
-are stored separately in Application Support and persist independently of the
-app bundle.
+The generated `CTRPad.app` contains no retail data. On a first launch with no
+media, CTRPad presents a native **Choose CTR disc image** screen. Select your
+own NTSC-U single-track raw MODE2/2352 BIN through Files. CTRPad copies the
+selection to `Documents/CTRPad/assets/ctr-u.bin`, validates its disc identity
+and required contents, and starts the game in the same app process. Cancelling
+or choosing an invalid file leaves the chooser available, and an invalid
+selection never replaces an existing verified import. As a manual fallback,
+Files sharing still permits placing the correctly named image directly in that
+directory.
 
-This is an interim developer flow. A fresh build with no image currently exits
-after reporting the required path; the in-app document picker, friendly
-invalid-image errors, physical-device Files verification, and signed
-sideloadable package are still roadmap work. See
-`docs/parity/2026-07-31-ios-sandbox-storage.md` for the exact tested boundary.
+Imported media takes priority over any development-only bundle fallback.
+Logs, memory cards, and private diagnostics are stored separately in
+Application Support and persist independently of the app bundle. Simulator
+acceptance covers the picker, cancellation, invalid-format rejection, a full
+valid import, same-process startup, and cold relaunch. Wrong-region live UI,
+physical-device Files behavior, game-driven save persistence, distribution
+signing, and the final sideloadable package remain roadmap work. See
+`docs/parity/2026-07-31-ios-files-import.md` for the exact tested boundary.
 
 For development builds run from `build/`, put the same `assets/ctr-u.bin` next to the source tree:
 

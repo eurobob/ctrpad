@@ -8,7 +8,7 @@ timing.
 **Roadmap status:** active
 
 **Current milestone:** M6 — macOS ARM64 runtime stabilization; the M1 full
-cross-architecture trace matches and its process/mutation gate remains open
+cross-architecture and independent-process/mutation gates are accepted
 
 **Last updated:** 2026-07-31
 
@@ -142,8 +142,7 @@ Acceptance:
 
 ### M1 — Reproducible upstream baseline and parity gate
 
-**Status:** in progress; full same-commit cross-width trace accepted,
-process/mutation verification pending
+**Status:** completed 2026-07-31
 
 Result so far:
 
@@ -182,8 +181,8 @@ Result so far:
   does not record VBlanks emitted between tracked frames during loading.
   `--record-from-replay` now uses only the validated old pad snapshots and
   memcard seed to automate a fresh recording with its own timing/checkpoint.
-  M1 is not accepted until coverage is re-observed and that report passes both
-  unchanged processes and the deliberate driver mutation.
+  This was the open boundary at that checkpoint; later clean reports and the
+  completed process/mutation verifier below closed it.
 - The first full current-source optimized-i686 version-4 regeneration is a
   rejected parity candidate. It matched all eight components through frame
   6,779, then diverged in `drivers` and `root` at frame 6,780 while timing,
@@ -231,9 +230,11 @@ Result so far:
   same-commit i686 producer passes 16/16 tests and finalized report
   `ctr-025812` with all 24,232 frames and 81 checkpoints. The two clean
   reports match all eight components on every frame; the expanded transport
-  audit and game-generated save also match. The full trajectory is accepted,
-  while the two-process i686 and deliberate-mutation verification remains
-  open. Evidence is in
+  audit and game-generated save also match. The independent verifier then
+  completed two unchanged 24,232-frame i686 playbacks under distinct host/raw
+  checkpoint layouts and rejected the automatic frame-1,711 driver mutation
+  with exit 2 and `drivers` first. Finalize-only artifact verification exited
+  0. The full M1 gate is accepted. Evidence is in
   `docs/parity/2026-07-31-full-cross-width-acceptance.md`; rejected diagnostic
   routes remain in `docs/parity/2026-07-30-full-cross-width-result.md`.
 - `tools/extend-replay-input.mjs` can now promote a validated version-2 or
@@ -622,8 +623,9 @@ Result so far:
   pads, and VSync for every frame. The stricter transport audit also matches
   pad bytes, elapsed time, total VBlanks, raw blocks, and both expanded VBlank
   sequences on all 24,232 frames. This accepts the formal clean cross-width
-  pair; process-repeatability and deliberate-mutation verification are the
-  remaining M1 gate.
+  pair. The later alternate-layout verifier completed both unchanged
+  24,232-frame playbacks and rejected the automatic frame-1,711 mutation with
+  `drivers` first, completing the remaining M1 gate.
 - `tools/inspect-replay-lap-coverage.mjs` validates checkpoint checksums and
   resolves player lap/checkpoint fields for checkpoint versions 2 and 3 on
   ILP32 and LP64. It confirms both the historical version-2 report and fresh
@@ -735,13 +737,11 @@ Work:
   full-race manual keyboard play, physical MFi/Bluetooth/USB controllers,
   replays, and savestates.
 - Run sanitizers and the full parity gate under Apple Clang.
-- Run the two unchanged i686 processes and deliberate-mutation gate against
-  finalized all-eight-match report `ctr-025812`. The verifier accepts an
-  explicitly selected immutable binary and external toolchain manifest; its
-  `CTRPAD_REQUIRE_COVERAGE=0` mode omits only the manual coverage form when
-  structural coverage is cited separately, and cannot be labeled a full
-  golden-coverage pass. All pre-correction mismatched and partial reports
-  remain diagnostic inputs, not acceptance artifacts.
+- Retain the finalized `ctr-025812` cross-width and independent-process
+  evidence. `CTRPAD_REQUIRE_COVERAGE=0` remains specifically the
+  process-determinism/mutation proof; the separately accepted manual coverage
+  form supplies scenario coverage. All pre-correction mismatched and partial
+  reports remain diagnostic inputs, not acceptance artifacts.
 
 Acceptance:
 
@@ -847,9 +847,10 @@ Acceptance:
 
 ### M9 — Sandbox storage and retail-disc import
 
-**Status:** in progress; sandbox path split and Documents-priority retail
-startup landed, while fresh-install import UI, validation/error UX and full
-save persistence remain open; depends on M8
+**Status:** in progress; sandbox ownership, Files document-picker import,
+staged validation, same-process startup and Simulator relaunch have landed;
+physical Files/signing, live wrong-region coverage and full save persistence
+remain open; depends on M8
 
 Checkpoint `02a6623f80a0` establishes the storage ownership boundary without
 shipping retail data. On iOS, a valid raw image in
@@ -863,24 +864,37 @@ and rendered coherent textured pixels. Media-free storage coverage is CTest
 16. Detailed evidence and the deliberately open boundary are in
 `docs/parity/2026-07-31-ios-sandbox-storage.md`.
 
+Checkpoint `7872f7e61ad6` adds the fresh-install native UIKit screen and Files
+picker. It obtains a copy selection, coordinates security-scoped reading,
+stages it on the destination volume, distinguishes raw-image, region and
+required-content failures, and installs `ctr-u.bin` only after complete
+validation. The successful callback reselects the Documents asset and starts
+the existing runtime in the same process. A fresh iPad Simulator accepted
+cancel, invalid-format rejection, a 605,698,800-byte NTSC-U import, visible
+textured startup and cold relaunch without a staging leak or bundled retail
+data. Detailed evidence is in
+`docs/parity/2026-07-31-ios-files-import.md`.
+
 Work:
 
 - Retain the landed split between immutable bundle resources, imported retail
   media, user-visible Documents and private Application Support state.
-- Use an iOS document picker / Files integration to import or securely reference
-  the user's image.
-- Validate raw MODE2/2352 structure and NTSC-U identity with clear, actionable
-  errors; accept the current CloneCD image only after loader validation.
+- Retain the landed nonblocking iOS document picker, security-scoped coordinated
+  copy, same-volume staging and validate-before-replace contract.
+- Complete physical-device and live wrong-region/incomplete/inaccessible-file
+  coverage for the implemented distinct errors.
 - Persist memcards, settings, logs, and crash diagnostics in appropriate
   sandbox locations.
 
 Acceptance:
 
 - A fresh install with no asset presents an import flow, not a crash or terminal
-  log.
+  log. **Accepted on Simulator; physical device remains open.**
 - Importing a valid user-supplied image reaches the game without extraction.
+  **Accepted on Simulator through Files and same-process continuation.**
 - Cooked ISO, wrong-region, truncated, and inaccessible files receive distinct
-  errors.
+  errors. **Distinct branches are implemented; invalid-format is accepted live,
+  while the other negative branches remain to be exercised through Files.**
 - Saves persist across launch, backgrounding, app updates, and asset
   re-selection.
 - No retail byte is included in the application bundle or Git history.
@@ -961,7 +975,7 @@ timestamps are explicitly excluded from game-visible deterministic state.
 |---|---|---|
 | Guest-reference design expands into a full arena rewrite | Asset relocation writes host bases into 32-bit file slots; about 75 pinned pointer-bearing structs were estimated | M2 prototype on real assets before broad edits; preserve guest layout and centralize translation |
 | Existing replay/checkpoint tooling is not a sufficient parity oracle | Prior report found infrastructure but did not run or assess coverage (`docs/ctr-native-viability.md:471-474`) | Prove mutation sensitivity in M1 or build a state-hash harness |
-| Replay repeatability or mutation sensitivity fails after the accepted cross-width trace | Clean same-commit reports `ctr-215303` and `ctr-025812` finalize 24,232 frames and match all eight components plus expanded transport on every frame | Run two independent unchanged i686 processes under different host layouts and require an active-driver mutation to exit 2 with `drivers` as the first difference |
+| Replay repeatability or mutation sensitivity regresses after the accepted cross-width trace | Resolved baseline: `ctr-215303`/`ctr-025812` match all eight components and transport for 24,232 frames; two unchanged i686 playbacks completed under distinct layouts; frame-1,711 mutation exited 2 with `drivers` first | Retain the manifests and require replacement golden producers to pass the same cross-width, two-process, alternate-layout and mutation gates |
 | Current-format lap coverage could not be established from inherited input | Resolved: clean current-build version-4 report `ctr-223221` reaches `lapIndex=1` at frame 21,300; expanded promoted-seed/current VBlank sequences, elapsed times, and PSX pad transport match across all 24,232 frames | Retain the accepted report and rejected extensions A/B; require any replacement seed to pass the same structural and transport checks |
 | Upstream has moved since `2df55dc5a` | Viability report is commit-specific | Freeze a reproducible baseline, inspect current head, then rebase intentionally |
 | Reference documentation is stale | `ref/README.md` claims four clones that are absent | Derive documentation from actual remote/commit checks |
@@ -993,3 +1007,9 @@ timestamps are explicitly excluded from game-visible deterministic state.
   Full timing and recovery details are in
   `docs/history/PROGRESS-LOG.md` and
   `docs/history/ENGINEERING-JOURNAL.md`.
+- **2026-07-31 — Accept the naturally completed alternate-layout verifier.**
+  Both unchanged i686 processes completed 24,232 frames under distinct host
+  and raw-checkpoint layouts; the automatic frame-1,711 driver mutation exited
+  through the required parity-failure route with `drivers` first. Finalize-only
+  artifact verification exited 0. M1 is complete; broader M6 product evidence
+  remains open.

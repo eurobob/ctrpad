@@ -9158,3 +9158,288 @@ still zero bytes. Playback 2 had emitted ten 2,000-frame FPS windows, most
 recently 0.48 FPS, and its log had last changed at 10:18:13 CDT. These are
 progress observations only; completion, alternate-layout separation and the
 deliberate mutation remain unaccepted until the verifier writes final status.
+
+## 2026-07-31 — Fresh-install iOS Files import and same-process launch
+
+### Scope and prerequisite audit
+
+This slice began from clean, published storage checkpoint
+`02a6623f80a0f0999165f97f56c69a7cde64b4aa`. The iOS app could already create
+`Documents/CTRPad/assets`, keep private state in Application Support and launch
+from a manually placed retail image, but a fresh media-free install still
+returned after its console validation message. The goal required a usable
+first-launch import experience without weakening the production loader or
+placing retail bytes in the bundle.
+
+The audit followed three ownership problems before editing:
+
+1. SDL owns iOS process entry and UIKit's long-lived application loop, so the
+   picker cannot be implemented as a blocking call inside `SDL_main`.
+2. `NativeAssets_Init` and `NativeAssets_Validate` held the only complete
+   interpretation of raw sector format, disc identity and required content, so
+   the UI must call that path rather than reproduce a partial checker.
+3. `NativeDiscImage_Init` retained an open `FILE *`; a staged file cannot be
+   moved reliably until that handle has an explicit release boundary.
+
+The selected state machine split launch into asset selection and runtime
+startup. A valid startup still enters the same path immediately. A media-free
+iOS startup stores its launch options, creates a native coordinator, returns
+from `SDL_main`, and lets UIKit remain responsive. Import success reselects the
+now-installed Documents asset and calls the ordinary runtime startup routine;
+it does not relaunch the app or create a second game initialization path.
+
+### UIKit bridge and install transaction
+
+`platform/apple/native_ios_import.m` is compiled with ARC only for iOS and
+linked against UIKit and Uniform Type Identifiers. It creates a landscape
+onboarding window with a short ownership/format explanation, a blue **Choose
+CTR disc image** button, progress state, and stable accessibility identifiers.
+The picker requests one generic data file with `asCopy:YES` so the original is
+not modified.
+
+The bridge balances `startAccessingSecurityScopedResource` when access is
+granted and coordinates the Files read with `NSFileCoordinator`. Copy work is
+dispatched away from the main thread. The selected file first lands at:
+
+```text
+Documents/CTRPad/.ctrpad-import-<UUID>/assets/ctr-u.bin
+```
+
+That unique path is on the same volume as the final destination. C then opens
+the staged file through `NativeAssets_Init`, requires a readable raw image,
+checks `SCUS_944.26`, and runs the full asset validator. The new
+`NativeDiscImage_Shutdown` closes and clears the validation handle before the
+bridge installs the file. An invalid stage is deleted and the existing import
+is left unchanged. A valid first import is moved; a valid re-import uses
+`replaceItemAtURL`; either route removes the staging root. Copy, coordination,
+validation and final-install errors all return to an enabled chooser.
+
+The user-facing outcomes are intentionally distinct:
+
+```text
+cancel             no file selected; choose again when ready
+unreadable format  select raw MODE2/2352 BIN, not CUE/archive
+wrong region       report detected identity; require NTSC-U SCUS-94426
+incomplete image   required files missing; preserve existing import
+copy/install error retain the localized filesystem failure
+```
+
+Only cancel, invalid format and valid input were exercised live in this slice.
+The other implemented branches remain open rather than inheriting acceptance
+from code inspection.
+
+### Diagnostic Simulator interaction
+
+The previous evidence Simulator was shut down without deletion. A separate
+iPad Pro 13-inch (M5) Simulator named `CTRPad Import Validation`, UDID
+`1D19A61F-20B7-46B0-AB52-B3A3406952E2`, was created on iOS 26.5. Its first boot
+took 3 minutes 54 seconds because the Simulator performed first-use data
+migration. This setup delay is recorded so it is not misattributed to CTRPad.
+
+The first no-media launch visibly showed the navy onboarding view, white/yellow
+instructions and blue chooser. The raw screenshot surface initially appeared
+portrait-sized; rotating the Simulator produced a normal full landscape app
+view. This is useful UI evidence but does not accept physical orientation
+behavior. Computer Use selected the button and displayed the real Files picker.
+
+Cancelling returned the exact ready-to-retry status. A local-only 118-byte
+`not-a-disc.bin` fixture then exercised the invalid-format branch through
+Files. The app showed the raw-MODE2/2352 correction, installed no destination,
+and left no `.ctrpad-import-*` directory. A cold no-media relaunch returned to
+the onboarding screen.
+
+The ignored user source
+`ref/CTR/CTR - Crash Team Racing (USA).bin` was made available in Simulator
+Files without copying it into Git. It measured 605,698,800 bytes and SHA-256
+`f780bf2331476aabfc00772fa758b12dd95ebfbc907968132cbd3cdd4e2c07c0`.
+Selecting it through Files copied, staged, validated and installed the exact
+same byte count and hash. PID `93200` remained alive from the no-media view to
+the first game presentation; no relaunch or staging residue occurred. A later
+cold launch selected the installed image directly.
+
+Private runtime output identified a 1376-by-1032 surface, Apple Software
+Renderer, GLES 3 / GLSL ES 300, the four PSX shader modes, ready VRAM pipelines,
+the UIKit display loop and CoreAudio. Visible pixels were coherent. Simulator
+cadence remained approximately 5–9 FPS and is not extrapolated to hardware.
+
+### Implementation publication and exact rebuild
+
+Only the six intended implementation files were staged. A repository audit
+found no tracked disc/media extension, reference input, app package, screenshot
+or generated build product. Commit
+`7872f7e61ad658d1bdd941d0d8a8088740a61a12` was created at 11:07:21 CDT with
+message `feat: import iOS retail media through Files` and pushed immediately to
+`origin/codex/arm64-apple`. The draft PR remained the publication boundary and
+was not merged.
+
+The exact clean Simulator executable before signing had SHA-256
+`aac8ff1a3903cf1ee083c82e830685ce072c1d43459c41e3936349000bbfa6e1`.
+It was copied to `/private/tmp/ctrpad-ios-import-exact.N9bdqQ/CTRPad.app`,
+ad-hoc signed, passed strict/deep signature verification, and installed with
+signed executable SHA-256
+`44e66cfc1383852a33fa5af4962e80a6da6af4979a2fae637b008c0869de209a`.
+The installed product matched that hash, embedded `7872f7e61ad6`, was thin
+ARM64 and reported IOSSIMULATOR platform 7, iOS 15.0 minimum and SDK 26.5.
+
+Before exact import, the prior destination was preserved outside Git under a
+different filename. Installing the exact app migrated its data container to a
+UUID beginning `A62A57C4`. The exact onboarding and picker imported the retained
+user source. Destination size/hash matched, no staging root remained, and PID
+`99595` remained continuous into the first game view. The retained local-only
+2064-by-2752 capture visibly showed coherent checkered-flag texture and has
+SHA-256 `e83b12b1551a9f5e62915f6ed4e401433da0070fe11c1e556cfc609040be36d9`.
+Its portrait raw orientation is not a landscape/rotation acceptance claim.
+
+An exact cold console launch selected Documents and Application Support,
+reported build `7872f7e61ad6`, initialized the same GLES/VRAM/audio path, and
+emitted a 7.01-FPS first window. Ctrl-C bounded the console session; PID `1868`
+was confirmed absent afterward, so natural UIKit termination is not inferred.
+The Simulator was shut down without deleting its retained app data.
+
+The exact source matrix at this point was:
+
+```text
+macOS ARM64 app       20/20 in 0.72 s; strict/deep signature; SHA-256 f488dc74261d...53b7e
+ARM64 ASan + UBSan    20/20 in 3.88 s; no finding; SHA-256 c28e83e96807...36cb
+iOS Simulator ARM64  iOS 15 floor, SDK 26.5; signed; SHA-256 44e66cfc1383...209a
+iOS device ARM64     iOS 15 floor, SDK 26.5; unsigned/unrun; SHA-256 6350c11ca34a...eff
+```
+
+The normal Apple/iOS compilation repeated 32 established warnings. The
+Objective-C bridge introduced no new warning. The device executable is
+architecture/package evidence only. The independent optimized i686 producer
+was started in new ignored directory `build-linux-i686-import` with the source
+mounted read-only; it did not use or modify the protected baseline output or
+historical verifier.
+
+### Warnings, evidence limits and next dependency
+
+Simulator output retained the missing-scene-configuration and minimal-bundle
+`Assets.car` messages, the future `UIRequiresFullScreen` warning, two unbalanced
+appearance-transition warnings, and the WebCore/WebKit duplicate accessibility
+class warning. Files' `asCopy:YES` behavior also created its normal Inbox copy
+before CTRPad staged and installed the selection. None is concealed or treated
+as physical-device evidence.
+
+This checkpoint accepts fresh onboarding, picker presentation, cancellation,
+invalid-format rejection, a full valid production-loader import, validate-
+before-replace behavior, same-process startup, cold relaunch and visible
+Simulator textures. It does not accept physical Files/signing, interrupted or
+backgrounded import, live wrong-region/incomplete/inaccessible failures,
+game-created iOS memory cards, background save atomicity, hardware cadence,
+controller/device play, touch controls or sideloadable distribution. M9 is
+therefore still in progress. The next storage dependency is a game-driven iOS
+memory-card create/relaunch/background-persistence test.
+
+The independent optimized Linux i686 producer then completed. Configuration
+under amd64 emulation took 1,694.9 seconds because SDL compile-probed libc,
+math, CPU and platform facilities individually. The build used the existing
+`ctrpad-linux-i686:ubuntu-24.04` image but a new ignored
+`build-linux-i686-import` output directory and read-only source mount; it never
+touched the protected producer or its live container. All 20 tests passed in
+4.04 seconds. The result is an ELF32 Intel 80386 PIE with GNU Build ID
+`063a0ff1b696ce52a52333233d92b1cbdf4a6c7c`, embeds clean identity
+`7872f7e61ad6`, and has SHA-256
+`361d313ea607bc971dacda8da2661eea161d759780913b4b7599c5b85fabab12`.
+The compile repeated only the four established i686 warnings. Toolchain was
+GCC 13.3.0, CMake 3.28.3 and Ninja 1.11.1; the package manifest remains beside
+the ignored build.
+
+## 2026-07-31 — Historical alternate-layout verifier completed naturally
+
+### Completion appeared without intervention
+
+After the isolated import matrix finished, a read-only `docker inspect` for
+the protected container returned “No such object.” A complete `docker ps -a`
+also contained neither ID `ec58fcd7069c` nor name `exciting_gagarin`. No stop,
+pause, restart, rebuild, delete or termination command had been issued in this
+slice. The verifier used `docker run --rm`, so disappearance was consistent
+with normal shell completion but was not accepted until its machine-owned
+status and artifacts were inspected.
+
+The status path preserved when the original terminal watcher was attached was:
+
+```text
+/private/tmp/ctrpad-i686-cutscene-run-4hjAQW/debug/reports/
+  20260731/ctr-025812/container-exit-status.txt
+```
+
+It changed from the previously documented zero-byte file to exactly two bytes,
+`0\n`, at 12:05:03 CDT. `playback-1.log`, `playback-2.log`,
+`playback-mutated.log` and `mutation-frame.txt` all existed. This is the
+script's successful terminal state, not an inference from container absence.
+
+### Two unchanged processes and address-layout separation
+
+Both ordinary playback logs ended with
+`[CTR Replay] replay finished after 24232 frames` and a closed-log marker. The
+first process restored the same raw address-bearing checkpoint checksum as the
+recording. The copied i386 loader produced a different raw checksum and
+different host addresses:
+
+```text
+direct raw:     recorded=0xd4c950a8 restored=0xd4c950a8 equal=yes
+direct hosts:   sdata=0x403cd040 gGT=0x403d6bf4 mempack=0x408c8bc0
+
+alternate raw:  recorded=0xd4c950a8 restored=0x46478f61 equal=no
+alternate hosts:sdata=0x3efaf040 gGT=0x3efb8bf4 mempack=0x3f4aabc0
+```
+
+The distinct raw representation proves that playback 2 did not merely repeat
+the first process layout. Both still completed all canonical comparisons, so
+host address/raw-checkpoint differences remained excluded from game-visible
+parity as designed.
+
+The scripted mutation automatically selected the first frame with an active
+driver, frame 1,711. It changed `driver[0].posCurr.x` from `-165632` to
+`-165631`, reported divergence at exactly frame 1,711, and named
+`drivers mask=0x00000004` as the first canonical difference. Timing, RNG,
+world, allocation, pad checksum and VBlank packet semantics remained equal at
+that boundary. The internal verifier required that process to exit 2 before
+writing final status 0 for the full three-operation shell.
+
+### Finalize-only recovery verification
+
+The report intentionally lacked the manual coverage form because that scenario
+coverage was already accepted separately. The repository's
+`CTRPAD_FINALIZE_ONLY=1 CTRPAD_REQUIRE_COVERAGE=0` recovery path was therefore
+run from a clean detached `7872f7e61ad6` worktree with explicit immutable
+producer, copied loader, toolchain manifest, source commit and report paths.
+Finalize-only launched no game. It rechecked source/binary identity, 24,232
+frames, 81 checkpoints, status 0, two normal completions, distinct raw and host
+layouts, automatic mutation frame and `drivers`-first divergence. It exited 0:
+
+```text
+Replay process-determinism and mutation verification passed.
+```
+
+It then wrote only hashes/environment manifests into the ignored evidence
+directory. The temporary detached worktree was removed after success. Exact
+identity is:
+
+```text
+source commit           eee2a8df5b9605d27c7b20e943bba76174a4f6fc
+producer SHA-256        d2e6f06023ccaedae689f11b36b33e005cb30d7bbc70d2a5e3e036f57b276c8e
+alternate-loader SHA    eccfafa93226e52e32aff3f97f5f779e7d02306cda017eae6d9c358142d4278d
+playback-1 log SHA      26a801935f3b0ed3749c77047b982d9fa0a6f59c4fd9830e8bf7871b27589249
+playback-2 log SHA      a579d85653751c322a3232a73aa6d4785ca3ffd4525929f7ecf8ea2cee24f728
+mutated log SHA         affa27f8e1f1673dbff38d2f3a160b0948e0bbe5a255a0de2547fd64b1f02c8c
+evidence manifest SHA   19fce2859213c28f9cc5ad6c7a28981b6f9ac1c9db7abf0c52dffc3a54bfdcdf
+container image         sha256:633753dde557f377e580536a32acefb4d11ac6fc8621644602acbddc6f1c6cb5
+```
+
+This finally accepts the independent-process/layout and mutation portion of
+M1. Together with the already accepted manual coverage form and full
+same-commit ARM64/i686 all-eight-component match, M1 is complete. M6 remains
+open for broader human/audio/renderer/physical-controller/full-race,
+savestate, and natural-quit product evidence. Raw reports, retail bytes,
+memory-card contents and verifier logs remain local ignored evidence.
+
+### Elapsed-time ledger
+
+The previous published storage checkpoint ended at 158,249 goal seconds. The
+final import/matrix/verifier/documentation reading at 12:16:04 CDT was 164,821
+seconds, or 1 day, 21 hours, 47 minutes, 1 second cumulative. This checkpoint
+therefore added 6,572 seconds (1 hour, 49 minutes, 32 seconds). The elapsed
+figure is the Codex product-task timer requested for the repository's historical
+record; it is not a build benchmark, active CPU duration or labor estimate.

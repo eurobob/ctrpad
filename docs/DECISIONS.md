@@ -237,12 +237,46 @@ before any relative diagnostic writer runs (`platform/native_storage.c:67-168`,
 desktop writable root back to the selected asset base
 (`platform/native_storage.c:116-129`). iOS advertises Files access through
 `UIFileSharingEnabled` and `LSSupportsOpeningDocumentsInPlace`
-(`platform/apple/Info-iOS.plist.in:28-39`). This checkpoint creates and uses
-the import location; it does not yet implement the required fresh-install
-document-picker UI or distinct invalid-image error screens.
+(`platform/apple/Info-iOS.plist.in:28-39`). Checkpoint `02a6623f80a0` created
+and used the import location; checkpoint `7872f7e61ad6` subsequently added the
+fresh-install document picker and distinct format/region/content error paths.
 
 **Verification:** media-free CTest 16 checks normalized sandbox, writable,
 import, and portable path contracts (`platform/native_storage.c:171-210`,
 `CMakeLists.txt:292-295`). Live Simulator evidence is recorded separately in
 `docs/parity/2026-07-31-ios-sandbox-storage.md`; no retail byte or screenshot
 is committed.
+
+## 2026-07-31 — Validate a staged Files copy before replacing retail media
+
+**Decision:** when iOS starts without valid media, return from `SDL_main` and
+let a native UIKit coordinator own a nonblocking onboarding window and
+`UIDocumentPickerViewController`. Request a Files copy, coordinate the
+security-scoped read, copy it into a unique hidden directory beneath
+`Documents/CTRPad`, validate it through the production disc/asset loaders, and
+only then move or replace `assets/ctr-u.bin` on the same volume. After success,
+reselect the installed image and enter the ordinary runtime startup path in the
+same process (`main.c:312-486`, `main.c:635-656`,
+`platform/apple/native_ios_import.m:170-347`).
+
+**Why:** the 605 MB retail image cannot be trusted merely because Files returns
+a URL or filename. Validation before replacement preserves a previously good
+import, same-volume staging gives the final installation an atomic filesystem
+boundary, and returning control to UIKit avoids blocking the application event
+loop while the user browses. Using the production loader prevents the UI from
+inventing a weaker interpretation of MODE2/2352, NTSC-U identity, or required
+game contents.
+
+**Failure behavior:** cancellation returns to the chooser. Format, wrong-region
+and incomplete-content failures have distinct user-facing text; Files access,
+copy, staging and installation errors retain their underlying localized error.
+Every failure removes the unique staging directory. The explicit
+`NativeDiscImage_Shutdown` closes the staged image before the coordinator moves
+it (`platform/native_disc_image.c:407-418`).
+
+**Verification boundary:** a fresh iPad Simulator exercised cancellation,
+invalid-format rejection, successful import, same-PID game startup and cold
+relaunch. Physical-device access, interruption during a large copy, and the
+wrong-region/incomplete/inaccessible branches are not yet accepted. Exact
+evidence is in `docs/parity/2026-07-31-ios-files-import.md`; no retail byte,
+package or screenshot is committed.

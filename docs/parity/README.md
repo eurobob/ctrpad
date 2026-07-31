@@ -7,8 +7,9 @@ per-milestone results.
 A formal same-commit full cross-width pair now passes: clean ARM64 report
 `ctr-215303` and optimized i686 report `ctr-025812` match all eight
 state/transport components for all 24,232 frames. The separate two-process
-i686 and deliberate-mutation verification is still pending. Fresh
-current-build version-4 report `ctr-223221` structurally advances a lap.
+i686 verifier has also completed both unchanged layouts and rejected the
+deliberate active-driver mutation exactly as required. Fresh current-build
+version-4 report `ctr-223221` structurally advances a lap.
 
 Current evidence and procedures:
 
@@ -51,6 +52,10 @@ Current evidence and procedures:
   Support ownership split, Documents-priority retail startup, private log and
   memory-card roots, Files metadata, exact cross-target matrix, rejected
   incremental-install evidence, and deliberately open import/save UX gates.
+- `2026-07-31-ios-files-import.md` records the native fresh-install Files
+  chooser, security-scoped staged validation, cancel and invalid-format paths,
+  exact valid import with same-process startup, cold relaunch, cross-target
+  matrix, visible texture evidence, and deliberately open device/save gates.
 - `2026-07-31-macos-arm64-keyboard-tap.md` records the missing quick-tap root
   cause, one-snapshot press-edge transport, direct live PSX packet trace, and
   exact-commit ARM64/sanitizer/i686 validation plus live Time Trial
@@ -59,8 +64,9 @@ Current evidence and procedures:
   ownership, duplicate-add/removal/reconnect coverage, standardized
   button/axis translation, and rumble through an SDL virtual gamepad.
 - `2026-07-31-full-cross-width-acceptance.md` records the first complete clean
-  same-commit ARM64/i686 all-eight-component match and its exact report,
-  process, transport, save, and hash evidence.
+  same-commit ARM64/i686 all-eight-component match, the later independently
+  completed alternate-layout two-process/mutation gate, and their exact
+  report, process, transport, save, and hash evidence.
 
 The first task is to evaluate `platform/native_replay_scheduler.c`,
 `platform/native_checkpoint.c`, `platform/native_savestate.c`, and
