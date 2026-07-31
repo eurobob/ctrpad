@@ -860,7 +860,7 @@ memory-card replacement have landed; a clean frame-zero Simulator gameplay
 run created and preserved a retail memory-card profile across backgrounding;
 an explicit default-root seed was retained across app updates and cold-read;
 live Simulator wrong-region and incomplete-image failures are now accepted;
-reserved interrupted-import staging is recovered safely on the next launch;
+reserved interrupted-import staging is recovered safely on every launch;
 an actual Simulator Files import was killed after the full staged image became
 visible and recovered on relaunch; physical Files/signing/save behavior,
 inaccessible-provider coverage, and explicit asset re-selection remain open;
@@ -915,6 +915,18 @@ stage and no destination. The exact build removed it on launch, displayed the
 singular recovery message, and then cold-launched normally after the accepted
 destination was restored. This accepts Simulator process-death recovery during
 an import; inaccessible-provider and physical-device behavior remain open.
+
+Checkpoint `8c177e8327f3` closes a follow-up lifecycle hole found during
+contradiction review: if termination happened after the validated destination
+was installed but before the now-empty stage was removed, the next launch would
+bypass onboarding and never run its cleanup. iOS now exposes the same narrow
+recovery operation before ordinary runtime startup when the selected asset is
+already valid. An exact signed Simulator build launched with a valid BIN plus a
+seeded `.ctrpad-import-installed-destination-leftover` directory, removed that
+one stage, retained the nonmatching/bare-prefix/ordinary-file controls, kept the
+BIN and save at their original inodes and hashes, and visibly entered the game.
+A cold relaunch remained stage-free. This accepts both media-free and
+valid-installed-asset recovery paths without broadening the cleanup namespace.
 
 Checkpoint `4b078065ff03` replaces direct memory-card truncation with a hidden
 same-directory temporary-file transaction. It writes and flushes all bytes,

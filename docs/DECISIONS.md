@@ -407,19 +407,25 @@ the user's identity, profile and device.
 ## 2026-07-31 — Recover only reserved interrupted-import directories on launch
 
 **Decision:** use one shared `.ctrpad-import-` staging prefix for creation and
-recovery. Before presenting media-free onboarding, inspect only the direct
-children of `Documents/CTRPad` and remove an entry only when it is a directory,
-starts with that reserved prefix, and has a nonempty suffix. Leave ordinary
-files, the bare prefix, nonmatching entries, the installed asset and all private
-Application Support state untouched. Report the number removed in the existing
-status label and leave the chooser enabled (`platform/apple/native_ios_import.m:31-32,142-184,199-230,305-310`).
+recovery. Inspect only the direct children of `Documents/CTRPad` both before
+presenting media-free onboarding and before starting the runtime with an
+already-valid asset. Remove an entry only when it is a directory, starts with
+that reserved prefix, and has a nonempty suffix. Leave ordinary files, the bare
+prefix, nonmatching entries, the installed asset and all private Application
+Support state untouched. The onboarding path reports the number removed in the
+existing status label and leaves the chooser enabled; the valid-asset path logs
+the count and continues into the game
+(`platform/apple/native_ios_import.m:31-32,142-184,199-230,424-439`,
+`main.c:675-689`).
 
 **Why:** every handled copy/validation/install failure already deletes its
 unique stage, but a process kill or OS termination can prevent those handlers
 from running. The destination is not installed until validation succeeds, so a
-surviving stage is disposable on the next media-free launch. Restricting
-cleanup to the importer-owned directory namespace avoids treating Documents as
-a scratch area or deleting a similarly named user file.
+surviving stage is disposable on the next launch. Cleanup cannot be limited to
+media-free onboarding because termination after destination installation but
+before final stage removal can leave both a valid asset and an empty stage.
+Restricting cleanup to the importer-owned directory namespace avoids treating
+Documents as a scratch area or deleting a similarly named user file.
 
 **Verification boundary:** exact commit `c745390a55eb` first removed two
 isolated seeded stages and visibly reported both recoveries while preserving
@@ -430,5 +436,9 @@ sent `SIGKILL` to that exact app PID before validation/install, and the next
 launch removed the surviving stage while reporting one recovery. The retained
 image and 6,016-byte save preserved their inodes and hashes, and restoring the
 image produced a normal cold launch. This accepts Simulator process-death
-recovery during an import. It does not claim an inaccessible-provider callback,
-physical-iPad transfer interruption, or Apple signing.
+recovery during an import. Follow-up commit `8c177e8327f3` exposed the same
+narrow cleanup before runtime startup. An exact signed build launched with a
+valid image plus a seeded reserved stage, removed only that stage, preserved all
+three controls and the BIN/save identities, and visibly entered the game; a
+cold relaunch remained clean. It does not claim an inaccessible-provider
+callback, physical-iPad transfer interruption, or Apple signing.

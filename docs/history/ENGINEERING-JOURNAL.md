@@ -10659,3 +10659,141 @@ documentation reading was 187,126 seconds: 2 days, 3 hours, 58 minutes,
 46 seconds cumulative, adding 1,097 seconds (18 minutes, 17 seconds). It
 includes paused/resumed task lifetime and is not a build benchmark or
 person-hour estimate.
+
+## 2026-07-31 — Recovered interrupted stages even when the game was already installed
+
+**Implementation commit:** `8c177e8327f3a97068c6733bb57f57849b4e334c`
+
+### Contradiction review found a post-install lifecycle hole
+
+The real Files/SIGKILL checkpoint proved that a surviving importer stage is
+removed on the next media-free launch. Reviewing that conclusion against the
+startup call graph exposed a different ordering: cleanup lived inside
+`CTRPadImportCoordinator.start`, and `start` is reached only when
+`NativeApp_SelectAndValidateAssets` reports no valid asset. If iOS terminates
+the process after the validated destination is installed but before the now-
+empty unique stage is removed, the next launch selects that destination and
+starts the game without ever constructing the coordinator. The good asset is
+safe, but the importer-owned directory could remain indefinitely.
+
+This was not treated as a reason to broaden cleanup. The established matcher
+already accepts only direct child directories named
+`.ctrpad-import-<nonempty-suffix>`, preserves the bare prefix and ordinary
+files, and uses one shared constant for creation and recovery. The correction
+made that one operation callable from both startup branches.
+
+### Source change and build order
+
+`include/platform/native_ios_import.h` now declares
+`NativeIOSImport_RecoverStaleStages`. Its Objective-C implementation validates
+the supplied base path, creates a temporary coordinator with that path, and
+invokes the existing `removeStaleStagingDirectories` method
+(`platform/apple/native_ios_import.m:424-439`). After a valid asset selection,
+the iOS block in `main.c:675-687` calls it before
+`NativeApp_StartRuntime`. An inspection error is logged but does not reject a
+known-good game; a nonzero count is logged and flushed. The no-asset branch is
+unchanged and still enters the UIKit importer, which runs the same cleanup and
+can show its singular/plural retry message. The patch was 33 insertions across
+the header, main entry point and Objective-C importer.
+
+The first diagnostic matrix intentionally ran while the source was still
+dirty. Simulator and device products linked; the established 32 C warnings
+repeated, no new Objective-C warning appeared, and macOS passed 21/21 in 1.26
+seconds. The source was committed as `fix: recover iOS stages before runtime`
+and immediately rebuilt after explicit reconfiguration of every preset. This
+prevented a dirty or stale object from becoming acceptance evidence.
+
+The clean build identity embedded in every product was
+`SDL-3.4.10-beta-7.1-138-g8c177e832`:
+
+```text
+Simulator ARM64  e9cb3919afd182a0121fdc5218704eebcc1a9d3c1448cb34f7c2c7000d4dee96
+device ARM64     f747d24b4222fba575a4e23925b007426d310a79afca6bca210de94616008ab8
+macOS ARM64      02a834202b0ebef29a1168f86a2e01387c39c7938a0befefbaeaa1fed75d891b
+```
+
+All were thin `arm64`. `vtool` reported `IOSSIMULATOR`, `IOS`, and `MACOS`; the
+iOS outputs used deployment minimum 15.0 and SDK 26.5. The clean macOS suite
+passed 21/21 in 1.10 seconds. A uniquely named bundle copy under
+`/private/tmp/ctrpad-runtime-recovery.TeNnYn` matched the unsigned Simulator
+hash, was ad-hoc signed to executable SHA-256
+`c3e6a5d7b89bc0e032fe6e5ff2b8923a221cd60601279c2a4bb6691bc9b97033`,
+and passed `codesign --verify --deep --strict`. This is local Simulator signing,
+not Apple authorization.
+
+### Durable valid-asset fixture and installation migration
+
+The original `CTRPad Import Validation` device stayed booted with its accepted
+app/data untouched. Only the disposable `CTRPad Import Negatives` clone was
+mutated. Before boot, it held the valid destination at inode `111313696`, size
+605,698,800 and SHA-256 `f780bf23...07c0`; its memory card was inode
+`111309627`, size 6,016 and SHA-256 `6a01b0f5...619a`.
+
+One empty cleanup-positive fixture was added directly beneath
+`Documents/CTRPad`:
+
+```text
+.ctrpad-import-installed-destination-leftover  directory; inode 111345484
+```
+
+The earlier negative controls remained alongside it:
+
+```text
+.ctrpad-keep-control          directory; inode 111324482
+.ctrpad-import-               directory; inode 111324483
+.ctrpad-import-control-file   regular file; inode 111324489; 118 bytes
+```
+
+Boot-status/install commands took longer than the first bounded terminal yield,
+so their live session was polled instead of assuming completion. Installing the
+exact signed bundle migrated the data container from
+`E6915D41-574B-4380-9FCB-2EA255109A3D` to
+`41E2CACF-C11A-4D54-84D9-CC821820885B`. The new container and bundle paths were
+resolved with `simctl get_app_container`. Before launch, all fixture inodes were
+still present, the BIN/save identities were unchanged, and the installed
+executable matched the signed hash `c3e6a5d7...97033`. Evidence tied to the old
+container path would have been rejected.
+
+### Exact launch, narrow recovery and visible runtime
+
+PID `95815` launched the exact app. Five seconds later the positive fixture was
+absent. The nonmatching directory, bare-prefix directory, and same-prefix
+ordinary file retained their types and inodes. The installed BIN remained inode
+`111313696`, 605,698,800 bytes and `f780bf23...07c0`; the save remained inode
+`111309627`, 6,016 bytes and `6a01b0f5...619a`. The app did not present the
+chooser. A 1376-by-2064 framebuffer visibly showed the game plus the complete
+touch overlay, proving the valid-asset path continued into runtime. Local-only
+screenshot `/private/tmp/ctrpad-installed-asset-stage-recovery.png` has SHA-256
+`8ef2773bc7efa876e8ce973c008a8f4f03e7fc750903079ba86b6bdfc822d181`.
+
+The launch requested stdout and stderr redirection to unique `/private/tmp`
+paths. Simulator produced neither host file. Consequently the textual
+`Recovered 1 interrupted import before runtime startup` output is not claimed
+as observed evidence. The accepted basis is the exact installed executable,
+one positive deletion, three negative-control preservations, unchanged
+BIN/save identities, and visible runtime frame. This keeps a failed diagnostic
+route in the historical record rather than silently replacing it with an
+inference.
+
+The app was terminated and relaunched as PID `95992`. After five seconds the
+stage remained absent, so cleanup neither recreated it nor made startup depend
+on one-time transient state. The clone was terminated and shut down without
+deletion. The original validation app was brought to the foreground as its
+existing PID `93637`; before and after that action its source retail image
+remained inode `111131200`, 605,698,800 bytes and `f780bf23...07c0`, and its
+save remained inode `111222179`, 6,016 bytes and `6a01b0f5...619a`.
+
+Retail files, the fixture, temporary signed bundle, app containers and
+screenshot stayed outside the repository. Source commit `8c177e832` was pushed
+to `origin/codex/arm64-apple` before documentation editing so the functional
+checkpoint was already backed up. This accepts every-launch reserved-stage
+recovery for both media-free onboarding and a valid installed asset. A partial-
+byte provider transfer, inaccessible URL delivery, physical-iPad termination,
+Apple development signing, explicit active-image re-selection and full device
+play remain open. The goal continues.
+
+The preceding published timer was 187,126 seconds. The pre-publication
+documentation reading was 188,010 seconds: 2 days, 4 hours, 13 minutes,
+30 seconds cumulative, adding 884 seconds (14 minutes, 44 seconds). It includes
+paused/resumed task lifetime and is not a build benchmark or person-hour
+estimate.

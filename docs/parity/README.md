@@ -55,9 +55,10 @@ Current evidence and procedures:
 - `2026-07-31-ios-files-import.md` records the native fresh-install Files
   chooser, security-scoped staged validation, cancel, invalid-format,
   detected-PAL-region and truncated-NTSC-U paths, exact valid import with
-  same-process startup, cold relaunch, narrowly scoped next-launch recovery of
-  interrupted stages, preservation hashes, cross-target matrix, visible
-  evidence, and deliberately open device/provider gates.
+  same-process startup, cold relaunch, narrowly scoped every-launch recovery of
+  interrupted stages for both missing and already-valid assets, preservation
+  hashes, cross-target matrix, visible evidence, and deliberately open
+  device/provider gates.
 - `2026-07-31-ios-memory-card-atomicity.md` records same-directory durable
   temporary writes and atomic replacement, injected-failure preservation,
   exact cross-target validation, visible exact-app startup, the bounded iOS

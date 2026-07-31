@@ -1391,3 +1391,53 @@ documentation reading was 187,126 seconds: 2 days, 3 hours, 58 minutes,
 46 seconds cumulative, adding 1,097 seconds (18 minutes, 17 seconds). The timer
 is cumulative product-task time, including pauses, not a benchmark or labor
 estimate.
+
+### 2026-07-31 — Installed-asset interrupted-stage recovery
+
+- Contradiction review after the live `SIGKILL` acceptance found a narrower
+  lifecycle hole: termination after destination installation but before stage
+  removal leaves a valid BIN, so the next launch bypasses media-free onboarding
+  and its cleanup.
+- Commit `8c177e8327f3` exposes the existing direct-child, reserved-prefix
+  cleanup before ordinary iOS runtime startup. It does not add a second matcher
+  or scan recursively. Missing-media onboarding continues to use the same
+  helper and visible recovered-count message.
+- A pre-commit diagnostic matrix linked both thin ARM64 iOS products with no
+  new Objective-C warning and passed macOS 21/21 in 1.26 seconds. All presets
+  were then explicitly reconfigured for exact clean identity
+  `SDL-3.4.10-beta-7.1-138-g8c177e832`; the accepted macOS run passed 21/21 in
+  1.10 seconds.
+- Exact Simulator/device/macOS executable SHA-256 values are
+  `e9cb3919...dee96`, `f747d24b...ab8`, and `02a83420...891b`. All are thin
+  ARM64; iOS Simulator/device target their correct platforms, iOS 15.0 minimum
+  and SDK 26.5. The unique ad-hoc Simulator copy passed strict/deep verification
+  at signed hash `c3e6a5d7...97033`.
+- The disposable clone retained a valid BIN and save while an empty
+  `.ctrpad-import-installed-destination-leftover` positive fixture was added
+  beside the three earlier cleanup controls. Exact app installation migrated
+  the data-container UUID; the new path was resolved and every fixture/BIN/save
+  inode verified before launch.
+- Exact app PID `95815` removed only the positive fixture, preserved the
+  nonmatching directory, exact bare prefix, same-prefix regular file, valid BIN
+  and save, bypassed onboarding, and visibly rendered the game with the full
+  touch overlay. The retail/save hashes remained `f780bf23...07c0` and
+  `6a01b0f5...619a`.
+- Requested `simctl` stdout/stderr files were not produced, so no console-count
+  observation is claimed. Filesystem scope, preserved identities, exact
+  installed hash and the rendered frame are the accepted evidence. Cold
+  relaunch PID `95992` remained stage-free.
+- The clone was terminated and shut down. Original validation PID `93637`
+  remained in the foreground with source BIN/save inodes `111131200`/`111222179`
+  and exact hashes unchanged. Retail data, fixture, bundle and screenshot stayed
+  outside Git.
+- Source commit `8c177e832` was pushed to
+  `origin/codex/arm64-apple` before this documentation checkpoint. The goal
+  remains active for physical iPad signing/import, provider-specific partial
+  transfer behavior, hardware controls/keyboard, full touch race and device
+  timing/performance acceptance.
+
+The preceding published reading was 187,126 goal seconds. The pre-publication
+documentation reading was 188,010 seconds: 2 days, 4 hours, 13 minutes,
+30 seconds cumulative, adding 884 seconds (14 minutes, 44 seconds). The timer is
+cumulative product-task time, including pauses, not a benchmark or labor
+estimate.

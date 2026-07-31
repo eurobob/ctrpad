@@ -528,3 +528,76 @@ complete same-volume stage, durable residue, next-launch cleanup, visible retry
 and normal restoration. It does not accept a partial-byte provider transfer,
 an inaccessible URL delivered to the importer, physical-iPad background/
 termination behavior, or Apple signing. Those remain M9 gates.
+
+## Follow-up — recover a stage when a valid destination already exists
+
+Post-acceptance contradiction review found one state the media-free recovery
+path could not reach. A process can be killed after a validated image has moved
+to `assets/ctr-u.bin` but before removal of its now-empty staging directory. On
+the next launch, asset selection succeeds and bypasses the onboarding
+coordinator, so commit `c745390a5` would leave that importer-owned directory
+indefinitely.
+
+Commit `8c177e8327f3a97068c6733bb57f57849b4e334c` exposes the existing narrow
+cleanup as `NativeIOSImport_RecoverStaleStages`. After a valid iOS asset is
+selected and before runtime startup, `main.c` invokes it, reports an inspection
+failure without blocking the known-good game, and logs a nonzero recovered
+count. The missing-asset path still enters `NativeIOSImport_Begin`, where the
+same cleanup supplies the visible singular/plural onboarding message. No second
+directory-matching rule was introduced.
+
+The first diagnostic matrix ran before commit creation: both ARM64 iOS products
+linked with the established 32 C warnings and no new Objective-C warning, while
+macOS passed 21/21 in 1.26 seconds. After committing, every preset was explicitly
+reconfigured and rebuilt so all accepted binaries carried clean identity
+`SDL-3.4.10-beta-7.1-138-g8c177e832`:
+
+```text
+Simulator ARM64  e9cb3919afd182a0121fdc5218704eebcc1a9d3c1448cb34f7c2c7000d4dee96
+device ARM64     f747d24b4222fba575a4e23925b007426d310a79afca6bca210de94616008ab8
+macOS ARM64      02a834202b0ebef29a1168f86a2e01387c39c7938a0befefbaeaa1fed75d891b
+```
+
+`lipo` reported thin `arm64` for all three. `vtool` reported `IOSSIMULATOR`,
+`IOS`, and `MACOS`; both iOS outputs retained the 15.0 deployment floor and SDK
+26.5. The exact macOS suite passed 21/21 in 1.10 seconds. A unique temporary
+Simulator bundle copy matched the unsigned matrix hash, was ad-hoc signed to
+SHA-256 `c3e6a5d7b89bc0e032fe6e5ff2b8923a221cd60601279c2a4bb6691bc9b97033`,
+and passed strict/deep verification. No Apple-authorized signature is claimed.
+
+The disposable `CTRPad Import Negatives` clone was used again. With its valid
+605,698,800-byte destination still installed, an empty direct-child directory
+named `.ctrpad-import-installed-destination-leftover` was seeded at inode
+`111345484`. The three scope controls remained: nonmatching directory inode
+`111324482`, exact bare-prefix directory inode `111324483`, and 118-byte
+same-prefix ordinary file inode `111324489`. Before launch, the retail BIN was
+inode `111313696` with SHA-256 `f780bf23...07c0`; the 6,016-byte save was inode
+`111309627` with SHA-256 `6a01b0f5...619a`.
+
+Installing the exact signed app migrated the clone data-container UUID from
+`E6915D41-574B-4380-9FCB-2EA255109A3D` to
+`41E2CACF-C11A-4D54-84D9-CC821820885B`. The new path was resolved before launch,
+and all seeded inodes and hashes survived that migration. PID `95815` then
+launched the exact executable. The positive stage disappeared; all three
+controls, the valid BIN and the save retained their types, inodes, sizes and
+hashes. The app bypassed onboarding and visibly rendered the game with its full
+safe-area touch overlay. Local-only screenshot
+`/private/tmp/ctrpad-installed-asset-stage-recovery.png` is 1376 by 2064 pixels
+with SHA-256
+`8ef2773bc7efa876e8ce973c008a8f4f03e7fc750903079ba86b6bdfc822d181`.
+
+The launch requested `simctl` stdout/stderr redirection, but no host files were
+produced, so the console count is not claimed as observed evidence. The narrow
+filesystem result, preservation identities, exact installed executable hash,
+and rendered frame are the accepted observations. A terminate/relaunch to PID
+`95992` proved the stage stayed absent. The clone was then terminated and shut
+down without deletion.
+
+Finally, the original validation Simulator returned to foreground PID `93637`.
+Its source image remained inode `111131200`, size 605,698,800 and SHA-256
+`f780bf23...07c0`; its save remained inode `111222179`, size 6,016 and SHA-256
+`6a01b0f5...619a`. The retail files, signed bundle, seeded fixture, app
+containers and screenshot stayed outside Git. This accepts recovery on both
+missing-media onboarding and already-valid runtime startup. Partial-byte
+provider transfer, inaccessible URL delivery, physical-iPad termination, Apple
+signing and explicit active-image re-selection remain open.
