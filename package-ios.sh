@@ -75,6 +75,8 @@ done
 for command_name in cmake ditto file find grep lipo plutil security shasum strings unzip xcrun; do
     require_command "$command_name"
 done
+plist_buddy='/usr/libexec/PlistBuddy'
+[[ -x "$plist_buddy" ]] || fail "required tool not found: $plist_buddy"
 
 if [[ -n "$signing_identity" || -n "$profile_path" ]]; then
     [[ -n "$signing_identity" && -n "$profile_path" ]] || \
@@ -130,6 +132,7 @@ minimum_os="$(plutil -extract MinimumOSVersion raw -o - "$info_plist")"
 executable_path="$staged_app/$executable_name"
 
 [[ "$package_type" == "APPL" ]] || fail "unexpected CFBundlePackageType: $package_type"
+[[ "$bundle_id" =~ ^[A-Za-z0-9.-]+$ ]] || fail "bundle ID contains unsupported characters: $bundle_id"
 [[ -f "$executable_path" ]] || fail "bundle executable not found: $executable_path"
 [[ -z "$expected_bundle_id" || "$bundle_id" == "$expected_bundle_id" ]] || \
     fail "bundle ID $bundle_id does not match requested $expected_bundle_id"
@@ -194,15 +197,20 @@ if [[ -n "$signing_identity" ]]; then
 
     team_identifier="$(plutil -extract TeamIdentifier.0 raw -o - "$profile_plist")"
     application_prefix="$(plutil -extract ApplicationIdentifierPrefix.0 raw -o - "$profile_plist")"
+    [[ "$team_identifier" =~ ^[A-Za-z0-9]+$ ]] || \
+        fail "profile team identifier contains unsupported characters"
+    [[ "$application_prefix" =~ ^[A-Za-z0-9]+\.$ ]] || \
+        fail "profile application identifier prefix is malformed: $application_prefix"
     signed_application_id="${application_prefix}${bundle_id}"
     entitlements_plist="$tmp_dir/CTRPad.entitlements"
     plutil -create xml1 "$entitlements_plist"
-    plutil -insert application-identifier -string "$signed_application_id" "$entitlements_plist"
-    plutil -insert com.apple.developer.team-identifier -string "$team_identifier" "$entitlements_plist"
-    plutil -insert keychain-access-groups -json "[\"$signed_application_id\"]" "$entitlements_plist"
+    "$plist_buddy" -c "Add :application-identifier string $signed_application_id" "$entitlements_plist"
+    "$plist_buddy" -c "Add :com.apple.developer.team-identifier string $team_identifier" "$entitlements_plist"
+    "$plist_buddy" -c 'Add :keychain-access-groups array' "$entitlements_plist"
+    "$plist_buddy" -c "Add :keychain-access-groups:0 string $signed_application_id" "$entitlements_plist"
     get_task_allow="$(plutil -extract Entitlements.get-task-allow raw -o - "$profile_plist" 2>/dev/null || true)"
     if [[ "$get_task_allow" == "true" || "$get_task_allow" == "false" ]]; then
-        plutil -insert get-task-allow -bool "$get_task_allow" "$entitlements_plist"
+        "$plist_buddy" -c "Add :get-task-allow bool $get_task_allow" "$entitlements_plist"
     fi
 
     ditto --norsrc --noextattr --noqtn --noacl "$profile_path" "$staged_app/embedded.mobileprovision"
