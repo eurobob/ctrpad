@@ -289,6 +289,55 @@ It does **not** yet prove sanitizer cleanliness, on-screen VRAM upload,
 presentation timing, complete movie playback, or STR audio/video
 synchronization. Those boundaries remain open when work resumes.
 
+### 2026-07-31 — Second recoverable pause after automatic goal continuation
+
+**Pause request:** the user said they would pause the goal and asked the work
+to stop at a natural boundary.
+
+The still-preserved verifier had been automatically resumed when the active
+goal continued. Read-only inspection before stopping established:
+
+- playback 1 was still the active stage; playback 2 had not begun;
+- the immutable process remained
+  `ctr_native-cutscene-fix-producer-eee2a8df5b96`;
+- no divergence, process exit, or OOM had been observed;
+- the last durable replay marker remained frame 10,000 of 24,232;
+- `playback-1.log` was 49,349 bytes and last changed at
+  2026-07-31 02:41:55 CDT;
+- the runtime-flushed log was 2,424 bytes and last changed at
+  2026-07-31 01:44:39 CDT; and
+- playback 2 and mutation therefore remain unaccepted.
+
+At 2026-07-31 02:44:31 CDT, `docker pause exciting_gagarin` succeeded.
+Immediate verification reported:
+
+```text
+running=true
+paused=true
+oom=false
+status=paused
+CPU=0.00%
+memory=229.1 MiB
+```
+
+The current process, memory, alternate-loader configuration, bind-mounted
+input/evidence, and retail-image mount remain intact. This is a recoverable
+execution checkpoint, not a test result. Resume with:
+
+```sh
+docker unpause exciting_gagarin
+```
+
+The Codex goal API reported **1 day, 12 hours, 15 minutes, 35 seconds** of
+cumulative goal time immediately before this pause. That product timer is
+recorded separately from benchmark wall time and from CPU time. The goal
+remains active here so the user can pause it through the product control; it
+has not been marked complete or blocked.
+
+**Repository boundary at pause:** implementation and evidence are backed up on
+draft branch `codex/arm64-apple`; only viability documentation is merged into
+`main`. No merge was performed.
+
 ## Current open path to the requested product
 
 1. Finish independent-process/mutation acceptance for the existing full

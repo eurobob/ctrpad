@@ -7451,3 +7451,36 @@ cross-width RGB555 identity for ten frames. It does not establish:
 
 Those are resume tasks. No new long process, sanitizer build, renderer run, or
 movie-wide probe was started after the user requested the pause.
+
+## 2026-07-31 — Second pause checkpoint after goal continuation
+
+The product continued the active goal after the earlier recoverable pause, so
+the preserved verifier container was unpaused and allowed to continue the same
+immutable playback-1 process. It did not reach the next durable 2,000-frame
+marker before the user again asked to pause.
+
+The final read-only inspection found the direct-loader process still running,
+with the exact producer
+`ctr_native-cutscene-fix-producer-eee2a8df5b96`, no OOM, no divergence, and no
+`playback-2.log`. The authoritative flushed runtime log still ended at the
+frame-10,000 FPS marker. Redirected `playback-1.log` had grown to 49,349 bytes
+and was still receiving audio-stat output, but that is not sufficient evidence
+to infer a later replay frame.
+
+At 2026-07-31 02:44:31 CDT, the following bounded stop was taken:
+
+```text
+docker pause exciting_gagarin
+```
+
+Docker then reported `running=true`, `paused=true`, `oom=false`, and
+`status=paused`; a no-stream resource sample reported 0.00% CPU and
+229.1 MiB resident memory. No process was killed and no evidence file was
+removed. The same resume command and acceptance boundary from the first pause
+still apply.
+
+The product's goal API reported a cumulative elapsed time of
+1 day, 12 hours, 15 minutes, 35 seconds at this boundary. That number is logged
+as product metadata, not substituted for measured replay runtime. Playback 1,
+alternate-layout playback 2, and the deliberate mutation stage remain
+unaccepted until their scripted completion checks actually pass.

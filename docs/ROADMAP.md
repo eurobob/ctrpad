@@ -875,3 +875,10 @@ timestamps are explicitly excluded from game-visible deterministic state.
   not.
 - **2026-07-29 — Mac ARM64 retail parity is the iOS gate.** iOS complexity will
   not be used to debug unresolved 64-bit state corruption.
+- **2026-07-31 — Preserve long replay work across user pauses.** The active
+  independent-process verifier is frozen with `docker pause`, not killed or
+  promoted early. At the second pause (02:44:31 CDT), playback 1's last durable
+  marker remained frame 10,000; playback 2 and mutation were still unaccepted.
+  Full timing and recovery details are in
+  `docs/history/PROGRESS-LOG.md` and
+  `docs/history/ENGINEERING-JOURNAL.md`.
