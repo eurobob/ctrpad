@@ -1018,3 +1018,46 @@ the current replay does not redefine the final objective as complete.
   reading at 12:16 CDT was 164,821 seconds: 1 day, 21 hours, 47 minutes,
   1 second cumulative, adding 6,572 seconds (1 hour, 49 minutes, 32 seconds).
   This is the product's cumulative goal timer, not benchmark or labor time.
+
+### 2026-07-31 — Atomic saves and clean iOS game-driven persistence run
+
+- Commit `4b078065ff03b71e02ce7b8a5b03351a777e2830` replaces direct
+  final-save truncation with a hidden same-directory temporary write, durable
+  platform flush, close, and atomic replacement. All failure routes remove
+  temporary residue and preserve an existing final save.
+- New CTest 17 proves initial write, replacement, readback, no temporary leak,
+  injected open failure, preservation of the previous payload, and successful
+  retry. Clean macOS ARM64 and ASan/UBSan pass 21/21; exact i686 writer flags
+  compile cleanly; iOS Simulator and device ARM64 products link.
+- The implementation was committed and pushed immediately. Local HEAD and
+  `origin/codex/arm64-apple` matched at `4b078065ff03`; no retail media, app,
+  save, report, screenshot, or crash artifact entered Git.
+- The exact signed Simulator executable has SHA-256
+  `848c18d5692634413b47b553f5fb2e9887dba12ce8bf8e1474b7ca87684568ac`
+  and visibly renders coherent crate, title/menu and attract-mode textures
+  from the retained Documents import.
+- The requested practical keyboard controls remain published at
+  `2c10b00b34df`: `WASD`, `IJKL`, `Q/E`, `P`, and Tab. macOS automation and
+  live menu/race movement are accepted. Simulator hardware-keyboard options
+  were enabled, but temporary production-boundary logging showed Computer Use
+  key injection delivered zero SDL events; physical iPad keyboard acceptance
+  therefore remains open.
+- A checkpoint-74 shortcut was rejected because it used
+  `--replay-bypass-header` across different executable identities. It crashed
+  before any save at `VehBirth_SetStartlinePosition +172` through a stale low
+  address. This matches the documented non-portable checkpoint boundary and
+  is not counted as an atomic-save defect or current-source normal launch.
+- The replacement clean run started exact PID `36490` at 13:14:59 CDT with
+  `--record-from-replay`, consuming only the accepted 24,232-frame controller
+  stream from frame zero and creating fresh iOS-process checkpoints and a fresh
+  isolated memory card. At the intermediate entry it remained alive through
+  frame 900/checkpoint 3. The real save, suspend/resume, cold read, hashes, and
+  terminal duration remain in progress rather than inferred.
+- The previous published timer was 164,821 seconds. The continuation audit read
+  168,298 seconds: 1 day, 22 hours, 44 minutes, 58 seconds cumulative, adding
+  3,477 seconds (57 minutes, 57 seconds). A final timer is recorded when the
+  live run and publication checkpoint finish.
+
+Full implementation, build, visual, rejected-route, and live-run evidence is
+in `docs/parity/2026-07-31-ios-memory-card-atomicity.md` and the corresponding
+engineering-journal entry.

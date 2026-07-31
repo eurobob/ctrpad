@@ -9443,3 +9443,186 @@ seconds, or 1 day, 21 hours, 47 minutes, 1 second cumulative. This checkpoint
 therefore added 6,572 seconds (1 hour, 49 minutes, 32 seconds). The elapsed
 figure is the Codex product-task timer requested for the repository's historical
 record; it is not a build benchmark, active CPU duration or labor estimate.
+
+## 2026-07-31 — Atomic memory-card writes and clean iOS save campaign
+
+### Resumed from the published import/parity checkpoint
+
+The branch began this slice clean at pushed commit `5fc4237fe`. The user asked
+for continued work, frequent GitHub backup, complete process history, visible
+game status, and basic keyboard testing. The practical keyboard layout was
+already present at pushed commit `2c10b00b34df`: `WASD`, `IJKL`, `Q/E`, `P`
+and Tab supplement the original input map. README and the automated input
+oracle already describe the aliases, one-snapshot tap latch, and simultaneous
+`K+D+E` chord. No separate keyboard physics path exists.
+
+The next unclosed storage risk was not path ownership but update atomicity.
+`NativeMemcard_WriteSaveData` opened the final save with `"wb"`, wrote icon and
+payload, and then closed. That sequence truncated an earlier valid save before
+the new data was durable. Backgrounding or termination at the wrong point
+could therefore convert a recoverable old save into a partial or empty file.
+
+### Implemented an old-or-new replacement boundary
+
+The production writer now creates
+`.ctrpad-<final filename>.tmp` in the same directory as the final save. It
+writes icon and payload bytes, calls `fflush`, then uses:
+
+```text
+Apple       fcntl(F_FULLFSYNC), with fsync fallback
+POSIX       fsync
+Windows     _commit(_fileno)
+```
+
+After a successful close, POSIX uses `rename`; Windows uses
+`MoveFileExA(MOVEFILE_REPLACE_EXISTING | MOVEFILE_WRITE_THROUGH)`. Any open,
+write, flush, close, or replacement failure removes the temporary path and
+leaves the existing final path alone. Negative sizes, missing required
+buffers, invalid paths and temporary-path overflow fail before opening a file.
+Zero-length icon/data sections avoid passing null buffers to `fwrite`.
+
+CTest 17 owns an isolated memory-card root and performs initial write/read,
+replacement/read, no-temp verification, injected temporary-path open failure,
+old-payload preservation, fixture removal, successful retry, and full cleanup.
+The injected failure uses a directory at the exact temporary filename, so the
+production `fopen` returns `NATIVE_MEMCARD_OPEN_FAILED` while the final file is
+still readable. The required marker is:
+
+```text
+[CTR Memcard] atomic-write self-test passed: write=flushed replace=atomic failure=preserves-existing temp=clean retry=checked
+```
+
+The first draft selected SDL temporary/process helpers that are not in the
+vendored 3.4.10 API. That draft did not compile and was replaced with the
+platform primitives above. A later direct i686 compile found strict-C17 libc
+had hidden the `fileno` declaration. Adding the explicit non-Windows POSIX
+prototype made the exact flags pass with
+`-Werror=implicit-function-declaration`. Both corrections happened before the
+commit and remain documented rather than silently discarded.
+
+### Clean validation and publication
+
+The final matrix was:
+
+```text
+macOS ARM64             21/21 in 2.00 s
+ARM64 ASan + UBSan      21/21 in 10.63 s, fail-fast, no finding
+i686 writer compile     clean under exact optimized flags plus implicit-error
+iOS Simulator ARM64     linked, 32 established warnings
+iOS device ARM64        linked, 32 established warnings
+```
+
+The ordinary macOS compile repeated 32 established warnings and sanitizers
+repeated 59. No Windows compiler was installed, so only the Win32 API/source
+path was audited. A direct self-test run emitted the exact marker and left no
+root or temporary residue.
+
+The source audit contained only `CMakeLists.txt`,
+`include/platform/native_memcard.h`, `main.c`, and
+`platform/native_memcard.c`: 207 insertions and 6 deletions. Commit
+`4b078065ff03b71e02ce7b8a5b03351a777e2830` (`fix: write memory cards
+atomically`) was pushed immediately. Local HEAD and
+`origin/codex/arm64-apple` matched and the worktree was clean. A transient TLS
+handshake timeout affected one explicitly repository-scoped PR metadata read;
+it did not affect the push or mutate GitHub. An earlier unscoped `gh pr view 1`
+looked up an unrelated upstream closed PR and was discarded as context, not
+treated as the downstream review state.
+
+### Built and inspected the exact iOS product
+
+The clean Simulator product embedded `4b078065ff03`. Pre-sign executable
+SHA-256 was
+`e7e3faac7e0e719a0e4e2dbf823ca63212a2b41497fe048c84b5ac2c8655c83f`.
+The disposable app at
+`/private/tmp/ctrpad-ios-atomic.CR1jWC/CTRPad.app` was ad-hoc signed, passed
+strict/deep verification, and had signed executable SHA-256
+`848c18d5692634413b47b553f5fb2e9887dba12ce8bf8e1474b7ca87684568ac`.
+It was thin ARM64 and installed with the same executable hash. The retained
+Simulator data migrated between app-container UUIDs while preserving the
+605,698,800-byte imported BIN.
+
+Visible Computer Use inspection showed coherent Naughty Dog crate,
+checkered-flag, trophy/Crash title/menu and attract-mode frames. This directly
+answered the user's screen/texture question: exact-product presentation is
+working. Software-renderer cadence remained roughly 5–9 FPS and is not a
+physical-device performance claim.
+
+### Bounded the Simulator hardware-keyboard question
+
+Simulator's **Capture Keyboard** and **Connect Hardware Keyboard** options were
+enabled. System logging showed SDL/UIKit recognized a `Generic Keyboard`, and
+the bundle already set `UIApplicationSupportsIndirectInputEvents=true`.
+Computer Use sent aliases and originals (`S`, `K`, `P`, `C`, arrows and
+Return) to the Simulator and to its exact active application path. No menu or
+game response followed.
+
+A temporary iOS-only log in `Platform_PollHostEvents` then counted events at
+the production SDL boundary. The same key attempts produced zero diagnostic
+events. The log line was removed immediately, the exact clean package was
+reinstalled, and the worktree returned to clean. No diagnostic source or
+commit remains. This proves only that Computer Use host-key injection did not
+reach SDL in this environment. The mapping remains accepted through automated
+and live macOS evidence; physical-iPad keyboard delivery remains unaccepted.
+
+### Rejected the incompatible checkpoint shortcut
+
+The accepted clean ARM64 parity report has a checkpoint at frame 22,200, just
+before its game-created save at approximately frame 22,392. A local diagnostic
+copied that replay/checkpoint into the Simulator sandbox and attempted
+`--replay-start-checkpoint 74 --replay-bypass-header` to avoid waiting through
+the software renderer.
+
+The runtime explicitly logged a producer/live identity mismatch:
+
+```text
+producer build eee2a8df5b96
+live build     4b078065ff03
+checkpoint/native-state sizes equal
+identity and executable fingerprints different
+```
+
+It also reported raw checkpoint checksum `0x5c97bc36` versus restored-process
+checksum `0x8b45044a`. `docs/REPLAYS.md` already says header bypass is
+diagnostic-only and does not make address-bearing checkpoints portable across
+rebuilt binaries. The route was therefore outside acceptance before gameplay
+continued.
+
+The process then received `SIGSEGV` before any memory-card write. Crash report
+incident `68888543-7A98-49CE-9588-D153506B11B6` faulted at address
+`0x23be8dfc` in `VehBirth_SetStartlinePosition +172`, specifically the
+`level->DriverSpawn[spawnIndex].pos.x` read. That low old-process-shaped
+address is consistent with the forbidden checkpoint reuse. The local report
+path is
+`/Users/chrissotraidis/Library/Logs/DiagnosticReports/CTRPad-2026-07-31-131048.ips`
+and its SHA-256 is
+`929abb4dfaac6bee74989bff92d37c5bbcb7d24429f808bb4ca7a9db8594fd7c`.
+No playback memory-card file existed. This is a rejected shortcut, not a save
+failure or ordinary current-source iOS crash.
+
+### Started a clean frame-zero iOS save run
+
+The replacement uses `--record-from-replay`, which consumes only the accepted
+24,232-frame pad stream and generates fresh current-process checkpoints and a
+fresh isolated memory card. It restores no old checkpoint. At 13:14:59 CDT,
+exact PID `36490` started and created report
+`debug/reports/20260731/ctr-131503` inside private Application Support.
+Startup selected the retained Documents BIN, initialized a 1376-by-1032 UIKit
+surface, Apple Software Renderer, GLES 3.0 / GLSL ES 300, all four PSX shaders,
+VRAM pipelines and CoreAudio. It created empty `memcard.seed` and
+`memcard.recording` directories and fresh rolling checkpoints.
+
+At 13:17:35 CDT the process was still alive. Checkpoints 0 through 3 covered
+frames 0, 300, 600 and 900. Early cadence settled from 20 FPS during initial
+screens to roughly 6–9 FPS under the software renderer. The game-driven save,
+temporary-file residue check, background/foreground cycle, cold read, final
+hashes and process duration remain in progress at this intermediate journal
+entry. No completion is inferred from process liveness.
+
+### Elapsed-time intermediate reading
+
+The previous published timer was 164,821 seconds. The clean source/remote audit
+at the start of this continuation read 168,298 seconds: 1 day, 22 hours,
+44 minutes, 58 seconds cumulative, adding 3,477 seconds (57 minutes,
+57 seconds). The reading includes the paused/resumed task lifetime and is not
+a benchmark or person-hour estimate. A final reading follows the live run and
+documentation publication.

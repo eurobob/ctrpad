@@ -848,9 +848,10 @@ Acceptance:
 ### M9 — Sandbox storage and retail-disc import
 
 **Status:** in progress; sandbox ownership, Files document-picker import,
-staged validation, same-process startup and Simulator relaunch have landed;
-physical Files/signing, live wrong-region coverage and full save persistence
-remain open; depends on M8
+staged validation, same-process startup, Simulator relaunch, and atomic
+memory-card replacement have landed; a clean frame-zero Simulator
+gameplay/save run is in progress; physical Files/signing, live wrong-region
+coverage and complete save lifecycle acceptance remain open; depends on M8
 
 Checkpoint `02a6623f80a0` establishes the storage ownership boundary without
 shipping retail data. On iOS, a valid raw image in
@@ -875,6 +876,19 @@ textured startup and cold relaunch without a staging leak or bundled retail
 data. Detailed evidence is in
 `docs/parity/2026-07-31-ios-files-import.md`.
 
+Checkpoint `4b078065ff03` replaces direct memory-card truncation with a hidden
+same-directory temporary-file transaction. It writes and flushes all bytes,
+closes the temporary file, then atomically replaces the final save; every
+failure preserves the previous final file and removes temporary residue.
+CTest 17 explicitly injects an open failure and proves preservation plus
+successful retry. Clean macOS ARM64 and ASan/UBSan runs pass 21/21, the exact
+i686 source compile passes with implicit declarations promoted to errors, and
+both iOS ARM64 products link. A clean exact-app frame-zero replay-seeded
+recording is running toward the real game-created save transition without
+restoring an incompatible checkpoint. Complete implementation, build, visual,
+keyboard-delivery, rejected-shortcut, and eventual live-save evidence is in
+`docs/parity/2026-07-31-ios-memory-card-atomicity.md`.
+
 Work:
 
 - Retain the landed split between immutable bundle resources, imported retail
@@ -883,8 +897,11 @@ Work:
   copy, same-volume staging and validate-before-replace contract.
 - Complete physical-device and live wrong-region/incomplete/inaccessible-file
   coverage for the implemented distinct errors.
-- Persist memcards, settings, logs, and crash diagnostics in appropriate
-  sandbox locations.
+- Complete game-driven save creation, suspend/resume, cold relaunch, app-update
+  retention, and asset-reselection retention on iOS, then repeat the required
+  subset on physical hardware.
+- Retain atomic same-directory memory-card replacement and private Application
+  Support ownership for memcards, settings, logs, and crash diagnostics.
 
 Acceptance:
 

@@ -280,3 +280,28 @@ relaunch. Physical-device access, interruption during a large copy, and the
 wrong-region/incomplete/inaccessible branches are not yet accepted. Exact
 evidence is in `docs/parity/2026-07-31-ios-files-import.md`; no retail byte,
 package or screenshot is committed.
+
+## 2026-07-31 — Replace memory-card files only after a durable temporary write
+
+**Decision:** write each memory-card update to a hidden file in the final
+save's directory, flush it through the strongest available platform primitive,
+close it, and atomically replace the final path. Remove the temporary file on
+every failure and never open the existing final save for truncation before the
+replacement boundary (`platform/native_memcard.c`).
+
+**Why:** the earlier `fopen(path, "wb")` sequence destroyed the previous save
+before the new icon/profile bytes were complete. iOS can suspend or terminate
+an application between those operations. A same-directory transaction gives
+the filesystem an old-or-new final-name boundary and preserves the previous
+save when open, write, flush, close, or rename fails. Apple uses
+`F_FULLFSYNC` with `fsync` fallback; Windows uses `_commit` and write-through
+replacement; other POSIX targets use `fsync` and `rename`.
+
+**Verification boundary:** CTest 17 writes, replaces, reads back, injects a
+temporary-path open failure, proves the preceding final payload is unchanged,
+retries, and proves no temporary residue remains. Clean ARM64 Release and
+ASan/UBSan pass 21/21; exact i686 flags compile the writer cleanly; iOS
+Simulator and device ARM64 products link. Game-driven iOS save/relaunch and
+physical-flash behavior are separate product evidence and are not inferred
+from this unit oracle. Full evidence and rejected routes are in
+`docs/parity/2026-07-31-ios-memory-card-atomicity.md`.

@@ -56,6 +56,11 @@ Current evidence and procedures:
   chooser, security-scoped staged validation, cancel and invalid-format paths,
   exact valid import with same-process startup, cold relaunch, cross-target
   matrix, visible texture evidence, and deliberately open device/save gates.
+- `2026-07-31-ios-memory-card-atomicity.md` records same-directory durable
+  temporary writes and atomic replacement, injected-failure preservation,
+  exact cross-target validation, visible exact-app startup, the bounded iOS
+  keyboard audit, the rejected incompatible-checkpoint shortcut, and the
+  clean frame-zero game-driven iOS persistence run.
 - `2026-07-31-macos-arm64-keyboard-tap.md` records the missing quick-tap root
   cause, one-snapshot press-edge transport, direct live PSX packet trace, and
   exact-commit ARM64/sanitizer/i686 validation plus live Time Trial
