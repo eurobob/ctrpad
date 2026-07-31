@@ -8356,3 +8356,27 @@ OOM-killed. Its third and fourth fixed 2,000-frame windows reached frames
 at 6,959/7,012. `container-exit-status.txt` remained empty. Completion,
 captured exit zero, layout separation, and deliberate mutation therefore
 remain unaccepted.
+
+### Publication and corrected repository pin
+
+Implementation commit `87f8e7a05` and the first documentation commit
+`9ed75956c` were pushed to `origin/codex/arm64-apple`. Local and remote refs
+matched `9ed75956cf7078fa759bbb8189ac7f5c20fc5e94`.
+
+The first `gh pr view 1` validation did not pin a repository. Because this
+worktree also has an `upstream` remote, `gh` resolved unrelated closed PR #1
+in `CTR-tools/ctr-native`. That response is rejected as a repository-selection
+error. The corrected query explicitly used `-R chrissotraidis/ctrpad` and
+reported:
+
+```text
+PR:          https://github.com/chrissotraidis/ctrpad/pull/1
+state:       OPEN
+draft:       true
+merge state: CLEAN
+base/head:   main / codex/arm64-apple
+head OID:    9ed75956cf7078fa759bbb8189ac7f5c20fc5e94
+origin/main: 95417c723518407d6bfe3c81a37606294963efe2
+```
+
+No merge was attempted.

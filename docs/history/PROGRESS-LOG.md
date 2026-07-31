@@ -687,6 +687,9 @@ at frames 4,636/4,689, but not yet its 6,000-frame marker.
   `5382e363bd6c9872674d3a65077c47e7f23dbaf4e96a1f01e82f6b4ff1601dc6`,
   and i686
   `abc019636ca9e8f5081584b7fcc12b36b918299148df7118bc2bd0e07394ef48`.
+- Implementation commit `87f8e7a05` and documentation commit `9ed75956c`
+  were pushed; local HEAD, `origin/codex/arm64-apple`, and the repository-pinned
+  draft PR head all matched `9ed75956cf7078fa759bbb8189ac7f5c20fc5e94`.
 - This accepts deterministic SPU voice decode, panning, one-shot stop, and the
   Room wet tail. Subjective listening, representative retail mixes, other
   presets, broad XA transitions, long soak, and iOS audio remain open.
