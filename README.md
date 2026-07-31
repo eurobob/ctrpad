@@ -255,10 +255,13 @@ Quick keyboard and touch edges remain active for two host snapshots so an
 input update immediately before the next approximately 29.9 Hz retail pad
 poll cannot erase a tap. Simulator tests have navigated the main menu in both
 directions, selected Adventure, opened **Load**, and displayed a persisted
-profile using only the overlay. Physical-iPad ergonomics, performance, safe-
-area/aspect-ratio coverage, and repeated three-boost drift chains remain open;
-the current overlay is a functional first prototype, not the final control
-layout. See `docs/parity/2026-07-31-ios-touch-controls.md`.
+profile using only the overlay. A later touch-only run entered Time Trial,
+selected Crash and Crash Cove, skipped the fly-in, accelerated off the grid,
+paused, reflowed the controls after device rotation, and resumed. Physical-
+iPad ergonomics, performance, initial-orientation behavior, human simultaneous
+steering/acceleration, and repeated three-boost drift chains remain open; the
+current overlay is a functional prototype, not the final control layout. See
+`docs/parity/2026-07-31-ios-touch-controls.md`.
 
 ### Extracted Asset Override
 

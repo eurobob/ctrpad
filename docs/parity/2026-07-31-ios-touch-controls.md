@@ -6,14 +6,18 @@ Commits `c496c27f04c878fdd27af78749ed82ea3618341e` and
 `c783eda740c4cbfec538c276fa39220674810f64` add a native, safe-area-aware,
 multi-touch UIKit control overlay and compose it into player one's existing
 PS1-shaped input snapshot. The controls visibly navigate the exact Simulator
-game through Adventure -> Load and display a persisted profile using touch
-alone. Buttons, continuous analog steering, outer-ring D-pad menu directions,
-quick taps and controller-plus-touch composition have deterministic coverage.
+game through Adventure -> Load, display a persisted profile, and enter a Time
+Trial race using touch alone. Repeated Gas contacts visibly move Crash off the
+grid and beneath the start banner; Pause, device-rotation reflow and Resume
+also work. Buttons, continuous analog steering, outer-ring D-pad menu
+directions, quick taps and controller-plus-touch composition have deterministic
+coverage.
 
 This accepts the implementation and Simulator interaction boundary. It does
 not accept physical-iPad performance or ergonomics, rotation feel, Apple
 development/distribution signing, a complete touch-only race, or practical
-drift/boost execution.
+drift/boost execution. Desktop automation also cannot accept a human-held
+two-contact Gas-plus-steering gesture.
 
 ## User-facing layout
 
@@ -183,6 +187,83 @@ The log records GLES initialization, shader setup, CoreAudio and
 Software Renderer cadence remained roughly 6–9 FPS. That is a Simulator
 diagnostic and must not be extrapolated to a physical iPad.
 
+## Touch-only Time Trial and rotation follow-up
+
+The already exact signed `c783eda740c4` product was launched again with its
+retained retail image and save hashes unchanged. Every game selection in this
+route used the overlay: View advanced the presentation; a stick outer-ring
+Down selected Time Trial; Gas selected Time Trial, Crash, Crash Cove and No
+Ghost; and View skipped the race fly-in. The route reached Crash Cove's normal
+starting grid with lap 1/3, HUD and minimap intact.
+
+Desktop Computer Use exposes clicks and drags but no independent pointer-down
+and pointer-up pair for a human-length two-finger hold. Twelve Gas taps advanced
+the race timer without decisive displacement. Ten short in-button drags moved
+the kart slightly. A later 60-contact bounded sequence visibly advanced Crash
+from the grid to beneath the CTR banner: the timer changed from `0:44:53` to
+`1:02:13`, the world camera advanced and the minimap marker moved. Alternating
+Gas and right-stick contacts continued movement to `1:32:26`, but did not
+produce a visually decisive heading change. This accepts live acceleration and
+forward movement, not sustained steering, simultaneous input or lap
+completion.
+
+Pause opened the retail Pause menu on the first stable touch. The app had
+launched while the simulated device remained portrait, producing a 743-by-1018
+capture with a landscape game surface letterboxed inside it. Rotating the
+device while paused produced a full 932-by-768 landscape capture: game content
+filled the display and every safe-area control reflowed to the corresponding
+corner or top edge. Gas selected Resume and the live race continued.
+
+Local-only evidence is:
+
+```text
+portrait Pause       743x1018, 102560 bytes
+SHA-256              23a7f8d6944277c634d11879426fd6428abe69ba0d2a8c38d6c8de397cc6f2db
+landscape Pause      932x768, 148909 bytes
+SHA-256              41949c131a1ffb0c64f92bc6f7b290d3cd84b6b3730ceeb0764b6767dd5fed80
+forward movement     932x768, 185907 bytes, timer 1:02:13
+SHA-256              d63fc9d41d70c0ed1a489d8c0ceff79554d7e544b7f591a94c65324ba62b3646
+later moved frame    932x768, 177504 bytes, timer 1:32:26
+SHA-256              1d188f44b4bc8e4ecb40cc6df83b77094b29e66d464a37c6b09277231dc55a5f
+```
+
+An exact clean branch-tip rebuild embedded `da151bfefb18` after the run. Its
+unsigned Simulator executable SHA-256 was
+`476ccfca0b052f5c0a2f0b6a510d5b813807ee5e83f2214a8c65efe7ec45f8a6`;
+the disposable ad-hoc signed executable was
+`896a13d7f16ff0219730d8e319a9ef3a9585fbeddfce69870bc70bec5798457b`.
+The package passed strict/deep verification and the installed executable hash
+matched. Repeated app updates preserved the imported BIN and both default and
+report save inodes, sizes and SHA-256 values.
+
+LLDB attached to that exact clean runtime and broke on
+`Platform_InputTouchLeftStick`. A tap at the stick's right edge arrived on
+ARM64 as:
+
+```text
+w0 x       0x00007ffe = 32766
+w1 y       0x000000fa = 250
+w2 active  0x00000001
+release    x=0, y=0, active=0
+```
+
+This directly proves that UIKit turns a visible right-edge contact into a
+nearly full positive signed analog value and neutralizes it on release. The
+automation contact ended before a later host update could provide authoritative
+live steering/packet evidence; the deterministic oracle remains the proof that
+an active held stick writes those axes into the player-one snapshot.
+
+The portrait cold-launch observation prompted three bounded public-API
+experiments: a scene geometry request immediately before overlay attachment,
+the same request from `viewDidAppear`, and a `LandscapeRight`-only preference.
+All compiled for Simulator/device ARM64 with the established 32 warnings, all
+returned without an error callback, and none rotated the portrait cold launch.
+Every experimental source line was removed with `apply_patch`; `git diff` and
+`git status` returned clean before the exact rebuild. The rejected code and its
+dirty packages are not acceptance evidence. Manual rotation reflow is accepted;
+automatic initial landscape selection and physical-device orientation remain
+open.
+
 ## Correction and tooling history
 
 All rejected or corrected routes are retained here:
@@ -209,6 +290,9 @@ All rejected or corrected routes are retained here:
    mode was unsupported by that route and the repository's established C
    formatting also produced baseline differences. `git diff --check`, build,
    test, architecture and signature checks were used instead.
+7. Three public `requestGeometryUpdateWithPreferences:` variants returned no
+   error yet did not rotate a portrait cold launch. They were removed entirely;
+   manual rotation reflow is evidence, automatic initial orientation is not.
 
 ## Publication and evidence boundary
 

@@ -1128,3 +1128,51 @@ documentation reading was 176,394 seconds: 2 days, 0 hours, 59 minutes,
 54 seconds cumulative, adding 8,096 seconds (2 hours, 14 minutes, 56 seconds).
 The timer is cumulative product-task time, including pauses, not a benchmark
 or labor estimate.
+
+### 2026-07-31 — Touch-only race movement, rotation reflow and analog trace
+
+- Re-audited clean published branch tip `da151bfef`, exact installed touch
+  executable `60a1373d...29f3`, retained 605,698,800-byte BIN and 6,016-byte
+  save before live input. Local and remote branch identities matched and no
+  source edit was present.
+- Touch alone advanced the presentation, selected Time Trial through the
+  stick's outer ring, confirmed Crash, Crash Cove and No Ghost, skipped the
+  fly-in, and reached the normal lap-1 starting grid.
+- Twelve Gas taps advanced time but did not establish held acceleration. Ten
+  in-button drags produced slight movement. A longer bounded contact sequence
+  moved Crash off the grid and beneath the CTR banner by timer `1:02:13`; the
+  camera and minimap marker changed. A later alternating Gas/right-stick
+  sequence reached `1:32:26` but did not show decisive turning, so live
+  sustained steering is not claimed.
+- Pause opened the retail Pause menu. The initial portrait-device launch was
+  visibly letterboxed at 743 by 1018. Manual device rotation while paused
+  produced a full 932-by-768 landscape layout with every safe-area control
+  reflowed; Gas selected Resume and the race continued.
+- Three public scene-geometry request variants were tried to fix automatic
+  initial landscape: before overlay attachment, in `viewDidAppear`, and a
+  concrete LandscapeRight preference. All compiled for Simulator/device, all
+  returned without an error callback, and none changed the portrait cold
+  launch. Every experimental source line was reverted; no dead workaround was
+  committed.
+- After clean reconfiguration, an exact `da151bfefb18` Simulator build had
+  unsigned SHA-256 `476ccfca...f8a6` and signed SHA-256
+  `896a13d7...457b`; strict/deep verification and installed-hash comparison
+  passed. Repeated installs retained the BIN and saves byte-for-byte.
+- LLDB on that exact clean app observed a visible right-edge stick contact
+  enter `Platform_InputTouchLeftStick` as `(32766, 250, active=1)`, followed by
+  `(0, 0, active=0)` release. This directly accepts UIKit-to-native analog
+  delivery, while the deterministic oracle remains the simultaneous held-
+  snapshot proof.
+- Local-only screenshots record portrait Pause (`23a7f8d6...f2db`), landscape
+  Pause (`41949c13...ed80`), forward movement (`d63fc9d4...b3646`) and later
+  movement (`1d188f44...5a5f`). No screenshot or retail-derived artifact is
+  staged.
+- Automatic initial orientation, human-held Gas-plus-steering/drift, a full
+  touch-only lap/race and physical-iPad feel remain open. The goal remains
+  active.
+
+The preceding published reading was 176,394 goal seconds. The pre-publication
+documentation reading was 179,389 seconds: 2 days, 1 hour, 49 minutes,
+49 seconds cumulative, adding 2,995 seconds (49 minutes, 55 seconds). The
+timer is cumulative product-task time, including pauses, not a benchmark or
+labor estimate.

@@ -9843,3 +9843,152 @@ documentation reading was 176,394 seconds: 2 days, 0 hours, 59 minutes,
 54 seconds cumulative, adding 8,096 seconds (2 hours, 14 minutes, 56 seconds).
 It includes paused/resumed task lifetime and is not a build benchmark or
 person-hour estimate.
+
+## 2026-07-31 — Touch-only Time Trial, rotation and direct analog delivery
+
+### Re-established exact starting state
+
+The branch and remote-tracking branch both began at pushed documentation commit
+`da151bfefb180b575d8d99f3713f4ed31dc6ec0e`, with a clean worktree. The
+installed exact `c783eda740c4` touch executable still matched signed SHA-256
+`60a1373d13dcb66040b8ec504e6cd2970f7067f57c115ee116a1ecf7fab329f3`.
+Before UI work, the retained files were rehashed:
+
+```text
+retail BIN   605698800 bytes  f780bf2331476aabfc00772fa758b12dd95ebfbc907968132cbd3cdd4e2c07c0
+default save      6016 bytes  6a01b0f5562ed7a279d8f8e51e3b1874ac39a6120f55db4fe3873288950619a3
+report save       6016 bytes  6a01b0f5562ed7a279d8f8e51e3b1874ac39a6120f55db4fe3873288950619a3
+```
+
+The BIN and save inodes were `111131200`, `111222179` and `111221646`.
+Later package installations migrated the data-container UUID several times but
+preserved all three inode, size, timestamp and hash tuples.
+
+### Entered Crash Cove with the overlay only
+
+The exact app launched from the Simulator Home screen. View advanced the
+presentation. At the stable main menu, a downward outer-ring stick drag moved
+Adventure to Time Trial. The first two coordinate Gas clicks did not select;
+after refreshing accessibility state, the exact `ctrpad.touch.cross` AX button
+did. The same Gas control selected Crash, Crash Cove and No Ghost. View skipped
+the fly-in and the app reached the normal Crash Cove start with lap 1/3, timer,
+kart, HUD and minimap coherent.
+
+This correction is operationally important: stale/coordinate actions were not
+reported as input defects after a fresh AX press succeeded. Computer Use's AX
+indices were re-derived after state transitions as required.
+
+### Bounded acceleration rather than a fake human hold
+
+Computer Use supplies click and drag actions, not separate long-lived pointer
+down/up streams for two simultaneous human contacts. Twelve Gas AX taps took
+about 67 seconds of wall time under the software renderer and advanced the
+retail timer to `0:16:86`, but the kart remained close enough to the line that
+the result was rejected as held-acceleration evidence.
+
+Ten one-pixel in-button Gas drags advanced to `0:23:26` and moved the kart
+slightly. Thirty additional contacts advanced to `0:44:53`. A 60-contact
+bounded sequence then reached `1:02:13`; Crash had left the grid, the start
+banner had moved overhead/out of the original framing and the minimap marker
+had advanced. This is visually decisive forward movement through the real
+touch button.
+
+Twenty right-stick drags after the kart slowed did not show decisive heading
+change. Thirty cycles alternating Gas and right-stick contacts continued the
+world/minimap movement to `1:32:26`, but the final heading remained visually
+ambiguous. Sequential desktop gestures were therefore not promoted to
+simultaneous steering or drift evidence. The existing deterministic test is
+still authoritative for analog snapshot values and multi-button/controller
+composition.
+
+### Pause, rotation and resume
+
+The Pause AX button opened the retail Pause menu. The device had launched from
+a portrait Home screen, so the first paused screenshot was a 743-by-1018 frame
+with the 4:3 landscape game surface letterboxed inside portrait. The Simulator
+Rotate control was then invoked while paused. UIKit produced a 932-by-768
+landscape device; the game filled the screen and Auto Layout moved the stick,
+face cluster, drift shoulders and top controls to their correct safe-area
+edges. Gas selected the highlighted Resume entry and the timer continued.
+
+Evidence stayed local-only:
+
+```text
+portrait Pause      102560 bytes  23a7f8d6944277c634d11879426fd6428abe69ba0d2a8c38d6c8de397cc6f2db
+landscape Pause     148909 bytes  41949c131a1ffb0c64f92bc6f7b290d3cd84b6b3730ceeb0764b6767dd5fed80
+movement 1:02:13    185907 bytes  d63fc9d41d70c0ed1a489d8c0ceff79554d7e544b7f591a94c65324ba62b3646
+movement 1:32:26    177504 bytes  1d188f44b4bc8e4ecb40cc6df83b77094b29e66d464a37c6b09277231dc55a5f
+```
+
+### Rejected automatic-orientation experiments
+
+The plist already permits only LandscapeLeft/LandscapeRight, sets
+`UIInterfaceOrientationLandscapeRight`, requires full screen, and the platform
+sets SDL's orientation hint before video initialization. Because a portrait
+cold launch still letterboxed, a public UIKit helper was tested locally:
+
+1. `UIWindowSceneGeometryPreferencesIOS` with the landscape mask immediately
+   before attaching the overlay;
+2. the same request from overlay `viewDidAppear`; and
+3. the visible-stage request with only `UIInterfaceOrientationMaskLandscapeRight`.
+
+Each route called `setNeedsUpdateOfSupportedInterfaceOrientations`, used
+`requestGeometryUpdateWithPreferences:errorHandler:` on iOS 16+, and retained
+the public `attemptRotationToDeviceOrientation` fallback for iOS 15. Simulator
+and device ARM64 compiled each relevant variant with the 32 established
+warnings and no new warning. No error handler fired. None rotated the portrait
+cold launch.
+
+The entire helper, log include, call and lifecycle override were removed with
+`apply_patch`. `git diff --check`, empty `git diff` and empty `git status`
+proved exact source restoration before acceptance work continued. The dirty
+packages and public-API experiment are rejected evidence; only manual rotation
+reflow is accepted.
+
+### Exact rebuild and live analog callback
+
+The clean branch tip was explicitly reconfigured so generated identity did not
+retain a prior `-dirty` cache. The iOS Simulator build linked with 32
+established warnings. Its unsigned executable SHA-256 was
+`476ccfca0b052f5c0a2f0b6a510d5b813807ee5e83f2214a8c65efe7ec45f8a6`.
+A disposable app at
+`/private/tmp/ctrpad-ios-touch-race-exact.YmDYP2/CTRPad.app` passed ad-hoc
+strict/deep verification and had signed executable SHA-256
+`896a13d7f16ff0219730d8e319a9ef3a9585fbeddfce69870bc70bec5798457b`.
+The installed executable matched and embedded `da151bfefb18` without `dirty`.
+
+LLDB attached to exact PID `58958`. The first breakpoint command was
+misconfigured with only an automatic `continue`; its four hits were discarded.
+An interactive command list then printed ARM64 argument registers at the
+out-of-line `Platform_InputTouchLeftStick` entry. A center-origin drag showed a
+near-neutral active value and release. A click at the visible right edge gave:
+
+```text
+w0 x       0x00007ffe = 32766
+w1 y       0x000000fa = 250
+w2 active  0x00000001
+release    w0=0, w1=0, w2=0
+```
+
+An out-of-line `NativeInput_ApplyTouch` line breakpoint received zero hits
+because the optimized production update uses its inlined location. A later
+conditional inlined breakpoint did not overlap the automation's very short
+contact. Those routes are not packet evidence. The callback register trace is
+accepted only as UIKit-to-native analog delivery; the media-free oracle remains
+the held-contact-to-snapshot proof. LLDB detached after reporting one packet-
+read error and then `Process 58958 detached`; `simctl` terminated the exact app
+after installed/data hashes were rechecked.
+
+### Remaining boundary and elapsed time
+
+This slice accepts a complete touch-only path into an actual Time Trial,
+forward race movement, Pause, rotation reflow, Resume, and direct live analog
+callback values. It does not accept automatic initial orientation, human held
+Gas plus steering, a drift/boost chain, lap or race completion, performance on
+hardware, or physical-device signing. The goal remains active.
+
+The preceding published timer was 176,394 seconds. The pre-publication
+documentation reading was 179,389 seconds: 2 days, 1 hour, 49 minutes,
+49 seconds cumulative, adding 2,995 seconds (49 minutes, 55 seconds). It
+includes paused/resumed task lifetime and is not a build benchmark or
+person-hour estimate.

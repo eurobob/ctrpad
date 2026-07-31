@@ -955,6 +955,18 @@ opened Adventure → Load, and displayed persisted profile `A` using the touch
 overlay. Exact build, test, visual and rejected-route evidence is in
 `docs/parity/2026-07-31-ios-touch-controls.md`.
 
+A later touch-only live run entered Time Trial, selected Crash, Crash Cove and
+No Ghost, skipped the fly-in, accelerated from the grid to beneath the CTR
+banner, opened Pause, reflowed into a full 932-by-768 landscape layout after a
+device rotation, resumed with Gas, and continued moving. LLDB on an exact
+`da151bfefb18` rebuild observed a right-edge UIKit stick contact as signed
+analog `(32766, 250, active=1)` followed by neutral release. Desktop automation
+cannot sustain two independent contacts, so simultaneous human-held Gas plus
+steering/drift and a complete race remain unaccepted. Three public scene-
+geometry request variants failed silently to rotate a portrait cold launch and
+were fully reverted; initial orientation remains open rather than shipping an
+ineffective workaround.
+
 Work:
 
 - Retain the implemented touch peer in the platform input composition path so
@@ -972,8 +984,9 @@ Work:
 Acceptance:
 
 - Touch-only users can start the app, select content, race, pause, and save.
-- **Startup, menu navigation, selection and cold Load-screen access are
-  accepted on Simulator; a complete touch-only race/save is still open.**
+- **Startup, menu navigation, selection, cold Load-screen access, Time Trial
+  entry, forward race movement, Pause and post-rotation Resume are accepted on
+  Simulator; a complete human multi-touch race/save is still open.**
 - Steering remains continuously analog while accelerate and drift are held.
 - A tester can intentionally execute repeated three-boost drift chains in both
   turn directions without grip changes or missed simultaneous contacts.
