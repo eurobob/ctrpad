@@ -235,6 +235,60 @@ the first active-race frame and requires exit 2 with `drivers` as the first
 canonical difference. No result will be promoted before all three operations
 finish and their evidence is hashed.
 
+### 2026-07-31 — User-requested recoverable pause
+
+**Pause request:** the user asked to pause at a natural stopping point.
+
+**Verifier state**
+
+- pause command: `docker pause exciting_gagarin`;
+- pause observed: 2026-07-31 01:52:57 CDT;
+- container state: `running=true`, `paused=true`, `exit=0`,
+  `oomKilled=false`;
+- container start: 2026-07-31 00:38:33 CDT;
+- **derived active wall interval before pause:** approximately 1 hour,
+  14 minutes, 23 seconds;
+- last completed durable progress marker: frame 10,000 of 24,232;
+- latest 2,000-frame rate: 1.50 FPS;
+- divergence or runtime failure before pause: none observed.
+
+The pause freezes the existing process and memory instead of discarding the
+first playback's progress. The outer verifier session was still running when
+paused. Resume starts with:
+
+```sh
+docker unpause exciting_gagarin
+```
+
+After unpause, verify that the original outer verifier session still owns the
+container. If that host session did not survive the task pause, preserve and
+inspect playback 1's normal completion before deciding whether to restart the
+full orchestrated gate; do not silently label a manually continued subset as
+the scripted three-operation acceptance.
+
+**Natural code checkpoint completed before stopping**
+
+- Added `--probe-str-scrapbook N`, which validates the normal retail asset
+  source, opens `TEST.STR` through the production disc-image path, decodes
+  frames without GPU/window startup, and prints deterministic RGB555 hashes.
+- Source checkpoint: `1753edbc5`
+  (`test: add retail scrapbook STR decode probe`).
+- ARM64 Release built successfully and passed 16/16 existing CTests.
+- Optimized Linux i686 built successfully and passed 16/16 existing CTests.
+- Missing, zero, nonnumeric, and duplicate probe values all exited 1 with an
+  actionable error.
+- The first ten real retail frames were 512 by 208 on both architectures.
+- Per-frame hashes matched exactly; a strict filtered-output diff exited 0.
+- Shared ten-frame sequence hash: `60dcf4c65986a034`.
+- First-frame RGB555 hash: `cc257394fc1aa6bf`.
+- Retail files remained ignored and untracked.
+
+This checkpoint proves that the CPU parser/decoder is consuming actual
+user-owned NTSC-U scrapbook sectors deterministically across LP64 and ILP32.
+It does **not** yet prove sanitizer cleanliness, on-screen VRAM upload,
+presentation timing, complete movie playback, or STR audio/video
+synchronization. Those boundaries remain open when work resumes.
+
 ## Current open path to the requested product
 
 1. Finish independent-process/mutation acceptance for the existing full

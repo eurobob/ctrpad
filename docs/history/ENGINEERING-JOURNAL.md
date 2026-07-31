@@ -7345,3 +7345,109 @@ mutation must exit 2 with `drivers` as the first difference. The Git
 publication boundary is also unchanged: implementation and evidence are
 pushed on draft PR #1, while only the viability documentation is merged into
 `main`.
+
+## 2026-07-31 — Recoverable pause and retail STR decode checkpoint
+
+### Paused the expensive verifier without throwing away progress
+
+The user requested that the goal pause at a natural stopping point. The direct
+i686 playback had emitted the frame-10,000 FPS marker with no divergence; its
+latest 2,000-frame window measured 1.50 FPS. At
+2026-07-31 01:52:57 CDT:
+
+```text
+docker pause exciting_gagarin
+```
+
+reported the container name, and read-only inspection immediately confirmed:
+
+```text
+status=paused
+running=true
+paused=true
+exit=0
+oom=false
+started=2026-07-31T05:38:33.587291339Z
+```
+
+The approximately 1-hour-14-minute active interval is derived from those
+start/pause timestamps. The process was frozen rather than stopped, so its
+address layout and progress remain in memory. The resume command is:
+
+```text
+docker unpause exciting_gagarin
+```
+
+The outer verifier tool session was still live at pause time. On resume, that
+ownership must be checked before relying on automatic playback-2 and mutation
+sequencing.
+
+### Finished the already-started STR probe as the natural code boundary
+
+Before the pause request, work had started on the next M6 evidence tool. The
+bounded implementation was finished rather than left as an uncompiled
+worktree:
+
+```text
+1753edbc5
+test: add retail scrapbook STR decode probe
+```
+
+`--probe-str-scrapbook N` follows normal application startup through
+`NativeAssets_Init` and `NativeAssets_Validate`, then opens `TEST.STR` through
+`NativeSTR_StartScrapbook`. It reads and CPU-decodes real sectors without
+creating an SDL window or GL renderer. Each frame hash includes canonical
+little-endian width, height, and all decoded RGB555 pixels. The sequence hash
+includes probe index, dimensions, and each frame hash.
+
+The probe is evidence-only and commits no retail bytes or expected
+retail-derived frame contents.
+
+### Validation at the pause boundary
+
+ARM64 Release rebuilt successfully with the established compiler warnings and
+passed 16/16 CTests. The first ten retail frames produced:
+
+```text
+frame 0  cc257394fc1aa6bf
+frame 1  c75e60c5237e9883
+frame 2  1619948468f8d745
+frame 3  9a4c939a61ecb36d
+frame 4  6b4b54295b9aab26
+frame 5  d18440f9f8499972
+frame 6  d7af0dc8fe801a69
+frame 7  d91d3b4cd26382fa
+frame 8  6a711f4442d7ba8e
+frame 9  429eaab6a380c28f
+sequence 60dcf4c65986a034
+```
+
+Every frame reported 512 by 208 pixels. Optimized Linux i686 then rebuilt
+successfully, passed the same 16/16 CTests, and produced the same dimensions,
+ten frame hashes, and sequence hash. A strict diff over only `[CTR STR]`
+output exited 0.
+
+Four malformed CLI cases were also exercised: missing value, zero, nonnumeric
+value, and duplicate probe option. All exited 1 with:
+
+```text
+[CTR STR] --probe-str-scrapbook requires one positive frame count
+```
+
+`git diff --check` passed, both binaries had the intended Mach-O ARM64 and ELF
+i386 architectures, `git ls-files ref/CTR` remained empty, and no changed path
+had a retail-media extension.
+
+### What remains deliberately unaccepted
+
+This result establishes actual retail-sector parsing, CPU MDEC decode, and
+cross-width RGB555 identity for ten frames. It does not establish:
+
+- ASan/UBSan cleanliness for the new probe;
+- full 4,424-frame scrapbook decode;
+- VRAM upload and on-screen presentation;
+- retail presentation cadence; or
+- STR audio/video synchronization.
+
+Those are resume tasks. No new long process, sanitizer build, renderer run, or
+movie-wide probe was started after the user requested the pause.

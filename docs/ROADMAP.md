@@ -663,6 +663,13 @@ Result so far:
   host-only latch. The exact committed source passes 16/16 on ARM64 Release,
   ARM64 ASan/UBSan, and optimized i686; the signed app is a strict-verifiable
   thin ARM64 bundle. Broad manual keyboard/controller play remains open.
+- A headless retail scrapbook probe now reads `TEST.STR` through the production
+  disc-image path and hashes decoded RGB555 output without renderer startup.
+  ARM64 and optimized i686 produce identical dimensions and hashes for the
+  first ten 512-by-208 frames, including sequence hash
+  `60dcf4c65986a034`. This is decode/cross-width evidence only; sanitizer,
+  on-screen upload/presentation, complete movie coverage, and audio/video sync
+  remain open.
 - Red-beaker rain no longer reads per-player MVP translations out of widened
   instance function/thread pointers. Named draw-record fields preserve the
   retail depth/LOD byte alias, and a four-player cross-width test covers the
