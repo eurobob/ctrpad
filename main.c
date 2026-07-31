@@ -27,6 +27,7 @@
 #include "platform/native_guest_ref.h"
 #if defined(SDL_PLATFORM_IOS)
 #include "platform/native_ios_import.h"
+#include "platform/native_ios_touch.h"
 #endif
 #include "platform/native_log.h"
 #include "platform/native_memcard.h"
@@ -299,6 +300,7 @@ static void SDLCALL NativeIOS_DisplayIteration(void *userdata)
 	if (Platform_ShouldQuit() || (CTR_MainStep() == 0))
 	{
 		Platform_StopDisplayLoop();
+		NativeIOSTouch_End();
 		Platform_Shutdown();
 	}
 }
@@ -426,6 +428,14 @@ static int NativeApp_StartRuntime(const struct NativeLaunchOptions *options)
 		Platform_Shutdown();
 		return NativeConsole_Return(1);
 	}
+	if (!NativeIOSTouch_Begin())
+	{
+		Platform_LogError("[CTR Touch] Failed to attach the iOS touch overlay.\n");
+		Platform_StopDisplayLoop();
+		Platform_Shutdown();
+		return NativeConsole_Return(1);
+	}
+	Platform_Log("[CTR Touch] touch-first overlay active\n");
 	Platform_Log("[CTR Lifecycle] UIKit display loop active\n");
 	return NativeConsole_Return(0);
 #else

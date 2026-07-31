@@ -93,6 +93,16 @@ struct NativeInputStateSnapshot
 	struct NativeInputControllerStateSnapshot controllers[NATIVE_INPUT_MAX_CONTROLLERS];
 };
 
+struct NativeInputTouchState
+{
+	u16 heldButtons;
+	u16 latchedButtons;
+	s16 leftX;
+	s16 leftY;
+	s32 leftStickActive;
+	s32 enabled;
+};
+
 global_variable struct NativeInputControllerMapping s_controllerMapping;
 global_variable struct NativeInputKeyboardMapping s_keyboardMapping;
 global_variable s32 s_controllerToSlotMapping[NATIVE_INPUT_MAX_CONTROLLERS] = {-1, -1, -1, -1};
@@ -110,6 +120,10 @@ global_variable s32 s_submitNameKey;
 // Keep active-low button edges for exactly one snapshot so quick taps survive.
 // This is host input transport state and is intentionally not serialized.
 global_variable u16 s_keyboardLatchedButtons = 0xffff;
+// UIKit touch contacts are host transport state. Button-down edges are
+// retained for one retail snapshot so a quick tap is not lost between polls;
+// held contacts and the analog stick remain live until UIKit releases them.
+global_variable struct NativeInputTouchState s_touchState;
 
 extern s32 g_padCommEnable;
 
@@ -394,6 +408,75 @@ internal void NativeInput_ClearKeyboardLatch(void)
 	s_keyboardLatchedButtons = 0xffff;
 }
 
+internal void NativeInput_ResetTouchContacts(void)
+{
+	s_touchState.heldButtons = 0;
+	s_touchState.latchedButtons = 0;
+	s_touchState.leftX = 0;
+	s_touchState.leftY = 0;
+	s_touchState.leftStickActive = 0;
+}
+
+void Platform_InputTouchSetEnabled(int enabled)
+{
+	NativeInput_ResetTouchContacts();
+	s_touchState.enabled = enabled != 0;
+}
+
+void Platform_InputTouchButton(unsigned int buttonMask, int down)
+{
+	u16 mask = (u16)buttonMask;
+
+	if ((s_touchState.enabled == 0) || (buttonMask == 0) || (buttonMask > 0xffffu))
+	{
+		return;
+	}
+
+	if (down != 0)
+	{
+		s_touchState.heldButtons |= mask;
+		s_touchState.latchedButtons |= mask;
+	}
+	else
+	{
+		s_touchState.heldButtons &= (u16)~mask;
+	}
+}
+
+void Platform_InputTouchLeftStick(int x, int y, int active)
+{
+	if (s_touchState.enabled == 0)
+	{
+		return;
+	}
+
+	if (active == 0)
+	{
+		s_touchState.leftX = 0;
+		s_touchState.leftY = 0;
+		s_touchState.leftStickActive = 0;
+		return;
+	}
+
+	if (x < -32768)
+		x = -32768;
+	if (x > 32767)
+		x = 32767;
+	if (y < -32768)
+		y = -32768;
+	if (y > 32767)
+		y = 32767;
+
+	s_touchState.leftX = (s16)x;
+	s_touchState.leftY = (s16)y;
+	s_touchState.leftStickActive = 1;
+}
+
+void Platform_InputTouchReset(void)
+{
+	NativeInput_ResetTouchContacts();
+}
+
 void Platform_InputKeyboardEvent(int key, int down)
 {
 	u16 buttonBit;
@@ -453,6 +536,38 @@ internal u8 NativeInput_AxisToByte(s32 axis)
 	}
 
 	return (u8)value;
+}
+
+internal u16 NativeInput_ConsumeTouchButtons(void)
+{
+	u16 buttons = s_touchState.heldButtons | s_touchState.latchedButtons;
+
+	s_touchState.latchedButtons = 0;
+	return buttons;
+}
+
+internal void NativeInput_ApplyTouch(s32 slot, u16 touchButtons)
+{
+	struct PlatformInputPadSnapshot *snapshot;
+	u16 buttons;
+
+	if ((slot != 0) || (s_touchState.enabled == 0))
+	{
+		return;
+	}
+
+	snapshot = &s_controllers[slot].snapshot;
+	snapshot->connected = 1;
+	snapshot->status = 0;
+	snapshot->id = NATIVE_INPUT_PAD_ANALOG;
+	buttons = NativeInput_GetSnapshotButtons(snapshot);
+	NativeInput_SetSnapshotButtons(snapshot, buttons & (u16)~touchButtons);
+
+	if (s_touchState.leftStickActive != 0)
+	{
+		snapshot->analog[2] = NativeInput_AxisToByte(s_touchState.leftX);
+		snapshot->analog[3] = NativeInput_AxisToByte(s_touchState.leftY);
+	}
 }
 
 internal s32 NativeInput_AxisIsActive(s32 axis)
@@ -872,6 +987,7 @@ int Platform_InputInit(void)
 	s_keyboardState = SDL_GetKeyboardState(NULL);
 	s_submitNameKey = 0;
 	NativeInput_ClearKeyboardLatch();
+	NativeInput_ResetTouchContacts();
 
 	if (SDL_InitSubSystem(SDL_INIT_GAMEPAD | SDL_INIT_HAPTIC) == 0)
 	{
@@ -906,6 +1022,7 @@ void Platform_InputShutdown(void)
 	s_lastActiveControllerSlot = -1;
 	s_submitNameKey = 0;
 	NativeInput_ClearKeyboardLatch();
+	Platform_InputTouchSetEnabled(0);
 	memset(s_padSlotData, 0, sizeof(s_padSlotData));
 	s_keyboardState = NULL;
 }
@@ -913,6 +1030,7 @@ void Platform_InputShutdown(void)
 void Platform_InputUpdate(void)
 {
 	u16 keyboardButtons;
+	u16 touchButtons;
 	s32 slot;
 
 	if (s_inputInitialized == 0)
@@ -925,6 +1043,7 @@ void Platform_InputUpdate(void)
 		// NOTE(aalhendi): replay/state installs PSX-shaped pad bytes here;
 		// SDL host state is not serialized.
 		NativeInput_ClearKeyboardLatch();
+		NativeInput_ResetTouchContacts();
 		NativeInput_WriteInstalledSnapshots();
 		return;
 	}
@@ -932,11 +1051,15 @@ void Platform_InputUpdate(void)
 	if (g_padCommEnable == 0)
 	{
 		NativeInput_ClearKeyboardLatch();
+		// Keep current contacts like SDL's held keyboard state, but do not
+		// replay a tap edge accumulated while the retail pad bus was disabled.
+		s_touchState.latchedButtons = 0;
 		return;
 	}
 
 	SDL_PumpEvents();
 	keyboardButtons = NativeInput_ConsumeKeyboard();
+	touchButtons = NativeInput_ConsumeTouchButtons();
 	if (NativeInput_KeyboardSuppressed())
 	{
 		keyboardButtons = 0xffff;
@@ -947,6 +1070,7 @@ void Platform_InputUpdate(void)
 		NativeInput_ResetSnapshot(slot);
 		NativeInput_ApplyController(slot);
 		NativeInput_ApplyKeyboard(slot, keyboardButtons);
+		NativeInput_ApplyTouch(slot, touchButtons);
 		if (slot == s_keyboardControllerSlot)
 		{
 			NativeInput_SetSnapshotSubmitNameKey(&s_controllers[slot].snapshot, s_submitNameKey);
@@ -960,6 +1084,7 @@ void Platform_InputSuspend(void)
 	s32 slot;
 
 	NativeInput_ClearKeyboardLatch();
+	NativeInput_ResetTouchContacts();
 	s_submitNameKey = 0;
 
 	if (s_inputInitialized == 0)
@@ -982,6 +1107,7 @@ void Platform_InputResume(void)
 	// The next ordinary update samples current keyboard/gamepad state. Clear
 	// only transport edges accumulated before the foreground boundary.
 	NativeInput_ClearKeyboardLatch();
+	NativeInput_ResetTouchContacts();
 	s_submitNameKey = 0;
 }
 
@@ -1302,6 +1428,20 @@ internal s32 NativeInput_RunVirtualControllerSelfTest(void)
 		goto CLEANUP;
 	}
 
+	Platform_InputTouchSetEnabled(1);
+	Platform_InputTouchButton(PLATFORM_INPUT_TOUCH_SQUARE, 1);
+	Platform_InputTouchLeftStick(32767, -16384, 1);
+	NativeInput_ApplyTouch(0, NativeInput_ConsumeTouchButtons());
+	buttons = NativeInput_GetSnapshotButtons(&s_controllers[0].snapshot);
+	if ((buttons != 0x35ff) || (s_controllers[0].snapshot.analog[0] != 0x80) ||
+	    (s_controllers[0].snapshot.analog[1] != 0xff) || (s_controllers[0].snapshot.analog[2] != 0xff) ||
+	    (s_controllers[0].snapshot.analog[3] != 0x40))
+	{
+		failure = "touch and gamepad composition";
+		goto CLEANUP;
+	}
+	Platform_InputTouchSetEnabled(0);
+
 	Platform_InputPadVibrate(0, rumbleTable, sizeof(rumbleTable));
 	if ((rumbleProbe.callCount != 1) || (rumbleProbe.lowFrequency != 32640) || (rumbleProbe.highFrequency != 16320))
 	{
@@ -1324,6 +1464,7 @@ internal s32 NativeInput_RunVirtualControllerSelfTest(void)
 	}
 
 CLEANUP:
+	Platform_InputTouchSetEnabled(0);
 	for (slot = 0; slot < NATIVE_INPUT_MAX_CONTROLLERS; slot++)
 	{
 		NativeInput_CloseController(slot);
@@ -1372,12 +1513,14 @@ int Platform_InputRunSelfTest(void)
 	bool keyboardState[SDL_SCANCODE_COUNT];
 	u16 heldButtons;
 	u16 latchedButtons;
+	u16 touchButtons;
 	s32 slot;
 
 	memset(s_controllers, 0, sizeof(s_controllers));
 	NativeInput_DefaultMappings();
 	s_keyboardState = NULL;
 	NativeInput_ClearKeyboardLatch();
+	Platform_InputTouchSetEnabled(0);
 	s_keyboardControllerSlot = NATIVE_INPUT_DEFAULT_KEYBOARD_SLOT;
 	s_installedSnapshotsActive = 0;
 	for (slot = 0; slot < NATIVE_INPUT_MAX_CONTROLLERS; slot++)
@@ -1476,12 +1619,49 @@ int Platform_InputRunSelfTest(void)
 		fprintf(stderr, "[CTR Input] self-test failed: alias key-down tap was not latched\n");
 		return 1;
 	}
+
+	Platform_InputTouchSetEnabled(1);
+	Platform_InputTouchButton(PLATFORM_INPUT_TOUCH_CROSS, 1);
+	Platform_InputTouchButton(PLATFORM_INPUT_TOUCH_R1, 1);
+	Platform_InputTouchLeftStick(-32768, 16384, 1);
+	touchButtons = NativeInput_ConsumeTouchButtons();
+	NativeInput_ResetSnapshot(0);
+	NativeInput_ApplyTouch(0, touchButtons);
+	snapshot = &s_controllers[0].snapshot;
+	if ((snapshot->connected == 0) || (snapshot->id != NATIVE_INPUT_PAD_ANALOG) ||
+	    (NativeInput_GetSnapshotButtons(snapshot) != 0xb7ff) || (snapshot->analog[2] != 0x00) ||
+	    (snapshot->analog[3] != 0xc0))
+	{
+		fprintf(stderr, "[CTR Input] self-test failed: touch analog chord\n");
+		return 1;
+	}
+	Platform_InputTouchButton(PLATFORM_INPUT_TOUCH_CROSS, 0);
+	Platform_InputTouchButton(PLATFORM_INPUT_TOUCH_R1, 0);
+	Platform_InputTouchLeftStick(0, 0, 0);
+	if (NativeInput_ConsumeTouchButtons() != 0)
+	{
+		fprintf(stderr, "[CTR Input] self-test failed: released touch chord survived\n");
+		return 1;
+	}
+	Platform_InputTouchButton(PLATFORM_INPUT_TOUCH_CIRCLE, 1);
+	Platform_InputTouchButton(PLATFORM_INPUT_TOUCH_CIRCLE, 0);
+	if ((NativeInput_ConsumeTouchButtons() & PLATFORM_INPUT_TOUCH_CIRCLE) == 0)
+	{
+		fprintf(stderr, "[CTR Input] self-test failed: touch tap was not latched\n");
+		return 1;
+	}
+	if (NativeInput_ConsumeTouchButtons() != 0)
+	{
+		fprintf(stderr, "[CTR Input] self-test failed: touch tap survived more than one snapshot\n");
+		return 1;
+	}
+	Platform_InputTouchSetEnabled(0);
 	if (!NativeInput_RunVirtualControllerSelfTest())
 	{
 		return 1;
 	}
 
-	printf("[CTR Input] self-test passed: metadata-key=%d legacy-enter=%d migration-enter=%d live-start=retail tap-latch=c+right one-snapshot aliases=12 held=k+d+e alias-tap=k+d virtual-gamepad=buttons+axes+rumble+hotplug\n",
+	printf("[CTR Input] self-test passed: metadata-key=%d legacy-enter=%d migration-enter=%d live-start=retail tap-latch=c+right one-snapshot aliases=12 held=k+d+e alias-tap=k+d touch=analog+chord+tap+gamepad-peer virtual-gamepad=buttons+axes+rumble+hotplug\n",
 	       SDL_SCANCODE_A, SDL_SCANCODE_RETURN, SDL_SCANCODE_RETURN);
 	return 0;
 }
@@ -1576,6 +1756,7 @@ int Platform_InputRestoreState(const void *src, int srcSize)
 	}
 	s_submitNameKey = NativeInput_GetSnapshotSubmitNameKey(&s_controllers[s_keyboardControllerSlot].snapshot);
 	NativeInput_ClearKeyboardLatch();
+	NativeInput_ResetTouchContacts();
 	NativeInput_WritePadBus();
 
 	return 1;

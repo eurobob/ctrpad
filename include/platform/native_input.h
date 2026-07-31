@@ -5,6 +5,26 @@
 
 #define PLATFORM_INPUT_PAD_COUNT 4
 
+enum PlatformInputTouchButton
+{
+	PLATFORM_INPUT_TOUCH_SELECT = 0x0001,
+	PLATFORM_INPUT_TOUCH_L3 = 0x0002,
+	PLATFORM_INPUT_TOUCH_R3 = 0x0004,
+	PLATFORM_INPUT_TOUCH_START = 0x0008,
+	PLATFORM_INPUT_TOUCH_UP = 0x0010,
+	PLATFORM_INPUT_TOUCH_RIGHT = 0x0020,
+	PLATFORM_INPUT_TOUCH_DOWN = 0x0040,
+	PLATFORM_INPUT_TOUCH_LEFT = 0x0080,
+	PLATFORM_INPUT_TOUCH_L2 = 0x0100,
+	PLATFORM_INPUT_TOUCH_R2 = 0x0200,
+	PLATFORM_INPUT_TOUCH_L1 = 0x0400,
+	PLATFORM_INPUT_TOUCH_R1 = 0x0800,
+	PLATFORM_INPUT_TOUCH_TRIANGLE = 0x1000,
+	PLATFORM_INPUT_TOUCH_CIRCLE = 0x2000,
+	PLATFORM_INPUT_TOUCH_CROSS = 0x4000,
+	PLATFORM_INPUT_TOUCH_SQUARE = 0x8000,
+};
+
 struct PlatformInputPadSnapshot
 {
 	u8 status;
@@ -21,6 +41,10 @@ void Platform_InputUpdate(void);
 void Platform_InputSuspend(void);
 void Platform_InputResume(void);
 void Platform_InputKeyboardEvent(int key, int down);
+void Platform_InputTouchSetEnabled(int enabled);
+void Platform_InputTouchButton(unsigned int buttonMask, int down);
+void Platform_InputTouchLeftStick(int x, int y, int active);
+void Platform_InputTouchReset(void);
 void Platform_InputControllerAdded(int deviceIndex);
 void Platform_InputControllerRemoved(int instanceId);
 int Platform_InputCycleKeyboardController(void);

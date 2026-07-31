@@ -120,7 +120,10 @@ endif()
 
 add_executable(ctr_native ${CTR_NATIVE_EXECUTABLE_OPTIONS} main.c)
 if(IOS)
-    target_sources(ctr_native PRIVATE platform/apple/native_ios_import.m)
+    target_sources(ctr_native PRIVATE
+        platform/apple/native_ios_import.m
+        platform/apple/native_ios_touch.m
+    )
     target_compile_options(ctr_native PRIVATE "$<$<COMPILE_LANGUAGE:OBJC>:-fobjc-arc>")
 endif()
 set_target_properties(ctr_native PROPERTIES
