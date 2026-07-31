@@ -53,8 +53,9 @@ Current evidence and procedures:
   memory-card roots, Files metadata, exact cross-target matrix, rejected
   incremental-install evidence, and deliberately open import/save UX gates.
 - `2026-07-31-ios-files-import.md` records the native fresh-install Files
-  chooser, security-scoped staged validation, cancel and invalid-format paths,
-  exact valid import with same-process startup, cold relaunch, cross-target
+  chooser, security-scoped staged validation, cancel, invalid-format,
+  detected-PAL-region and truncated-NTSC-U paths, exact valid import with
+  same-process startup, cold relaunch, preservation hashes, cross-target
   matrix, visible texture evidence, and deliberately open device/save gates.
 - `2026-07-31-ios-memory-card-atomicity.md` records same-directory durable
   temporary writes and atomic replacement, injected-failure preservation,

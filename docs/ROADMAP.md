@@ -859,8 +859,9 @@ staged validation, same-process startup, Simulator relaunch, and atomic
 memory-card replacement have landed; a clean frame-zero Simulator gameplay
 run created and preserved a retail memory-card profile across backgrounding;
 an explicit default-root seed was retained across app updates and cold-read;
-physical Files/signing/save behavior and live wrong-region coverage remain
-open; depends on M8
+live Simulator wrong-region and incomplete-image failures are now accepted;
+physical Files/signing/save behavior, inaccessible/copy-interruption coverage,
+and explicit asset re-selection remain open; depends on M8
 
 Checkpoint `02a6623f80a0` establishes the storage ownership boundary without
 shipping retail data. On iOS, a valid raw image in
@@ -884,6 +885,17 @@ cancel, invalid-format rejection, a 605,698,800-byte NTSC-U import, visible
 textured startup and cold relaunch without a staging leak or bundled retail
 data. Detailed evidence is in
 `docs/parity/2026-07-31-ios-files-import.md`.
+
+A later isolated Files repeat used the exact signed `a37cdf2aa5af` runtime
+(later runtime changes were packaging-only) and closed two previously open
+branches. The real picker selected the archived PAL image and displayed its
+detected `SCES_021.05` identity, then selected a 40,000-sector truncated
+NTSC-U fixture and displayed the distinct required-content failure. Each
+rejection re-enabled the chooser, removed its staging root, and preserved the
+accepted 605,698,800-byte image and 6,016-byte memory card by inode and SHA-256.
+Selecting the full NTSC-U image then started the game in the original PID; a
+cold relaunch bypassed onboarding. The disposable clone was shut down and the
+original evidence Simulator was restored unchanged.
 
 Checkpoint `4b078065ff03` replaces direct memory-card truncation with a hidden
 same-directory temporary-file transaction. It writes and flushes all bytes,
@@ -909,8 +921,9 @@ Work:
   media, user-visible Documents and private Application Support state.
 - Retain the landed nonblocking iOS document picker, security-scoped coordinated
   copy, same-volume staging and validate-before-replace contract.
-- Complete physical-device and live wrong-region/incomplete/inaccessible-file
-  coverage for the implemented distinct errors.
+- Retain the live Simulator wrong-region and incomplete-image outcomes;
+  complete physical-device repetition plus inaccessible-file, coordinated-copy
+  interruption and background/termination-during-copy coverage.
 - Retain the accepted Simulator game-driven save, suspend/resume, app-update
   retention and cold retail Load-screen read; repeat the required subset on
   physical hardware and cover asset re-selection explicitly.
@@ -924,8 +937,9 @@ Acceptance:
 - Importing a valid user-supplied image reaches the game without extraction.
   **Accepted on Simulator through Files and same-process continuation.**
 - Cooked ISO, wrong-region, truncated, and inaccessible files receive distinct
-  errors. **Distinct branches are implemented; invalid-format is accepted live,
-  while the other negative branches remain to be exercised through Files.**
+  errors. **Invalid-format, detected wrong-region, and truncated/incomplete
+  outcomes are accepted through the real Simulator Files picker. Inaccessible
+  and interrupted-copy behavior plus physical hardware remain open.**
 - Saves persist across launch, backgrounding, app updates, and asset
   re-selection. **Save creation, backgrounding, update retention and cold read
   are accepted on Simulator; asset re-selection and physical hardware remain

@@ -11,10 +11,11 @@ NTSC-U raw MODE2/2352 BIN is copied, validated, installed and used to start the
 game without relaunching the process. A later cold launch selects the installed
 image directly.
 
-This is a Simulator acceptance result, not M9 completion. A physical iPad,
-development/distribution signing, live wrong-region/incomplete/inaccessible
-negative cases, import interruption/backgrounding, and game-driven memory-card
-persistence remain open.
+This is a Simulator acceptance result, not M9 completion. At this checkpoint a
+physical iPad, development/distribution signing, live wrong-region/incomplete/
+inaccessible negative cases, import interruption/backgrounding, and game-
+driven memory-card persistence remained open. Later reports accept the save
+path; the follow-up below accepts wrong-region and incomplete-image behavior.
 
 ## Starting boundary
 
@@ -213,8 +214,8 @@ Accepted on iPad Simulator:
 Still open:
 
 - signed installation and Files behavior on physical iPad hardware;
-- wrong-region, incomplete, inaccessible and copy-interruption paths exercised
-  through Files (their distinct branches are implemented);
+- inaccessible and copy-interruption paths exercised through Files; the later
+  follow-up below accepts wrong-region and incomplete-image behavior;
 - background/resume or termination during the 605 MB copy;
 - explicit re-import/settings UX beyond manual file replacement behavior;
 - game-driven iOS memory-card creation, reload, app-update persistence and
@@ -223,3 +224,99 @@ Still open:
 - touch-first controls and signed sideloadable distribution.
 
 M9 therefore advances materially but remains in progress.
+
+## Follow-up — live wrong-region and incomplete-image paths
+
+The two implemented validation outcomes that were still source-inspection-only
+above were later exercised through the real iOS 26.5 Files picker. This was an
+evidence-only continuation: no runtime change was made because both branches
+behaved correctly.
+
+### Isolation and exact runtime
+
+The accepted `CTRPad Import Validation` Simulator was shut down but never
+deleted. `simctl clone` created a disposable `CTRPad Import Negatives` device,
+UDID `26F3DEE8-8840-446D-85FE-C882009C9C06`. The clone initially reported the
+source device's absolute bundle/container URLs even though its own copied data
+existed. That metadata was rejected as ambiguous. Reinstalling a disposable
+copy of the exact signed app corrected the paths to the clone and migrated its
+data to container `FBB4DE38-856C-43D6-BC82-0D2D1777BAAE`.
+
+The installed app passed strict/deep signature verification and its executable
+SHA-256 was
+`ed53ba9f26eba0a8e501f1e02aaabead1016e3b729751ce97d34c0b28879c11c`.
+It embeds runtime source `a37cdf2aa5af`; the only later implementation commit
+changed the standalone package script's entitlement construction, so this is
+the exact current runtime rather than a claim about the later script.
+
+Before the negative selections, the disposable clone held:
+
+```text
+accepted BIN  inode 111309681   605698800 bytes   f780bf2331476aabfc00772fa758b12dd95ebfbc907968132cbd3cdd4e2c07c0
+memory card   inode 111309627        6016 bytes   6a01b0f5562ed7a279d8f8e51e3b1874ac39a6120f55db4fe3873288950619a3
+```
+
+The accepted BIN was renamed inside only the clone so startup entered the
+media-free coordinator. It remained present as
+`ctr-u.bin.accepted-before-negative`; this did not mutate the original evidence
+device. The ignored local picker inputs were:
+
+```text
+PAL CloneCD image       740179104 bytes   84aeb6f990954abb0eed4580fe2e4d2b17ce8a6cb266385b56b96440b523f41a
+truncated NTSC-U BIN     94080000 bytes   1c1fe7713840cf3e2c92dce9ef40016ba6faa98b2bff22a85d66718ce8067508
+```
+
+The incomplete fixture was the first 40,000 whole 2,352-byte sectors of the
+user's accepted image. It retained a readable raw filesystem and the expected
+NTSC-U identity but ended before all production assets, making the incomplete
+classification materially different from the earlier 118-byte invalid-format
+fixture. No fixture or retail byte entered Git.
+
+### Observed Files outcomes
+
+Computer Use opened the app's **Choose CTR disc image** control, navigated the
+real picker through **On My iPad → CTRPad**, and selected each input:
+
+1. The PAL image completed the coordinated copy and displayed `Wrong disc
+   region (SCES_021.05). CTRPad currently requires NTSC-U SCUS-94426.` The
+   chooser was immediately enabled again.
+2. The 40,000-sector NTSC-U image displayed `The disc image opened, but
+   required CTR files were missing or unreadable. The existing import was not
+   replaced.` The chooser was immediately enabled again.
+3. After both rejections, the full 605,698,800-byte NTSC-U source was selected
+   through the same picker. It installed at a new inode with the exact accepted
+   hash and entered the rendered Sony presentation/touch overlay without
+   relaunching.
+
+PID `77827` was unchanged from media-free launch through both failures and the
+successful game transition. A deliberate cold relaunch used PID `78515`,
+bypassed onboarding, and rendered the copyright screen with the touch overlay.
+
+After each rejection, the accepted backup and memory card retained their
+original inodes, sizes, and hashes, no destination named `ctr-u.bin` appeared,
+and no `.ctrpad-import-*` directory survived. After the successful selection,
+the new destination inode was `111313696`, with the same 605,698,800-byte size
+and `f780bf23...07c0` hash. The backup and memory card were still unchanged and
+there was still no staging residue.
+
+Local-only screenshots and SHA-256 values are:
+
+```text
+wrong region       9d3e631febddbeb24b09b2c7e233eef749c78bce776652edafcf09ec1e038e58
+incomplete image   86007e9248d066ad1c1b2208569dd6a2ed79a9f9ab7b52d62e33f6976ab5c791
+valid transition   9bd6c25460be52d6d578e9f2fc6c101e5535fe31e018608c971a2c88460ccb3c
+cold relaunch      5a4414b826d722a64a7789acf70da3d7878e758ce2e8afa9d717c6cdbf1059b8
+```
+
+The disposable clone was terminated and shut down, not deleted. The original
+`CTRPad Import Validation` Simulator was booted and relaunched. Its source BIN
+remained inode `111131200` and its save inode `111222179`, with the same exact
+accepted hashes. Thus the isolation procedure itself did not alter the durable
+evidence container.
+
+This follow-up accepts live Simulator wrong-region identification,
+incomplete-content rejection, retry, staging cleanup, valid recovery,
+same-process transition, and cold relaunch. It does not accept inaccessible
+Files providers, coordinated-copy interruption/background termination,
+explicit in-app re-import of an already active destination, or any physical-
+iPad behavior. Those remain M9 gates.

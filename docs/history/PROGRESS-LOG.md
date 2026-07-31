@@ -1278,3 +1278,35 @@ documentation reading was 183,956 seconds: 2 days, 3 hours, 5 minutes,
 56 seconds cumulative, adding 2,186 seconds (36 minutes, 26 seconds). The timer
 is cumulative product-task time, including pauses, not a benchmark or labor
 estimate.
+
+### 2026-07-31 — Live Files wrong-region and incomplete-image recovery
+
+- A disposable clone of the preserved iPadOS 26.5 evidence device exercised
+  two previously inspection-only import outcomes through the real Files picker.
+  The clone was used so the accepted source BIN/save container was never
+  renamed or edited.
+- The archived 740,179,104-byte PAL image produced the exact detected identity
+  `SCES_021.05`; a 94,080,000-byte/40,000-sector NTSC-U truncation reached the
+  distinct required-content error rather than invalid-format or wrong-region.
+- Both failures re-enabled the chooser, removed staging residue, created no
+  destination, and preserved the accepted BIN (`f780bf23...07c0`) and memory
+  card (`6a01b0f5...619a`) by inode, size, and SHA-256.
+- Selecting the full NTSC-U source afterward installed the exact accepted hash
+  and reached rendered game output in the original PID `77827`. A cold relaunch
+  used PID `78515`, bypassed onboarding, and rendered with the touch overlay.
+- The initial `simctl clone` metadata exposed stale absolute source-device
+  URLs. Those paths were rejected; reinstalling the exact signed app migrated
+  the clone to self-contained URLs before any evidence interaction.
+- The disposable device remains shut down, not deleted. The original evidence
+  Simulator was restored and its original BIN/save inodes and hashes remained
+  unchanged. Retail files, fixtures, screenshots, app bundles, and containers
+  remain local-only and ignored.
+- Inaccessible-provider/copy-interruption, termination during copy, explicit
+  active-image re-selection, physical Files behavior and signing remain open.
+  The goal remains active.
+
+The preceding published reading was 183,956 goal seconds. The pre-publication
+documentation reading was 185,118 seconds: 2 days, 3 hours, 25 minutes,
+18 seconds cumulative, adding 1,162 seconds (19 minutes, 22 seconds). The
+timer is cumulative product-task time, including pauses, not a benchmark or
+labor estimate.

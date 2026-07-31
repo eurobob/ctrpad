@@ -10306,3 +10306,99 @@ documentation reading was 183,956 seconds: 2 days, 3 hours, 5 minutes,
 56 seconds cumulative, adding 2,186 seconds (36 minutes, 26 seconds). It
 includes paused/resumed task lifetime and is not a build benchmark or
 person-hour estimate.
+
+## 2026-07-31 — Exercised live Files region/content failures and recovery
+
+**Starting source:** `2f3f24c6e6d1467c390fda442fcb998b75e62a63`
+
+This continuation targeted M9's remaining software-side negative import
+coverage. No runtime source was edited: the implemented branches behaved as
+designed, so the durable changes are evidence and roadmap corrections only.
+
+### Isolation and rejected clone metadata
+
+The accepted `CTRPad Import Validation` device was first terminated and shut
+down without deletion. Its source BIN was inode `111131200`, 605,698,800 bytes,
+SHA-256 `f780bf23...07c0`; its production save was inode `111222179`, 6,016
+bytes, SHA-256 `6a01b0f5...619a`.
+
+`simctl clone` created `CTRPad Import Negatives` at UDID
+`26F3DEE8-8840-446D-85FE-C882009C9C06`. Although the clone had its own files,
+`listapps` initially returned absolute bundle/data URLs under the source UDID.
+That result was rejected rather than treated as isolation. The exact signed app
+was copied to a unique temporary directory, passed strict/deep verification,
+and was installed onto the clone. The resulting URLs were rooted under the
+clone and its data migrated to container
+`FBB4DE38-856C-43D6-BC82-0D2D1777BAAE`. The migrated accepted BIN/save hashes
+and new clone inodes were verified before testing.
+
+The signed executable SHA-256 was
+`ed53ba9f26eba0a8e501f1e02aaabead1016e3b729751ce97d34c0b28879c11c`
+and embedded `a37cdf2aa5af`. The only later implementation changed standalone
+packaging entitlement construction, so runtime behavior was current. The app
+was not misreported as an Apple-signed device product.
+
+### Local fixtures and UI sequence
+
+The user's ignored archived PAL image was copied only into the clone's Files-
+visible Documents root. It measured 740,179,104 bytes and SHA-256
+`84aeb6f9...3f41a`. A second local-only fixture copied the first 40,000 complete
+raw sectors of the accepted NTSC-U image: 94,080,000 bytes, SHA-256
+`1c1fe771...67508`. This retained readable MODE2/2352 and `SCUS_944.26`
+identity data while truncating required production content. The accepted image
+inside only the clone was renamed to `ctr-u.bin.accepted-before-negative`,
+preserving inode `111309681` and its exact hash while allowing media-free
+onboarding.
+
+Computer Use observed the native onboarding, opened the real document picker,
+navigated **On My iPad → CTRPad**, and selected:
+
+1. the PAL image, which reported detected `SCES_021.05` and required
+   `SCUS-94426`;
+2. the truncated NTSC-U image, which reported required files missing/unreadable;
+3. the full NTSC-U image, which validated, installed, and entered the game.
+
+The initial accessibility action opened Files but the first state capture
+returned before its presentation completed. A subsequent coordinate click was
+therefore not accepted as the cause. The sequence was repeated with a fresh
+tree, a discrete accessibility click, a separate Files-state read, and then
+fresh screenshot-derived picker coordinates. Those are the actions retained as
+evidence.
+
+### Preservation and recovery evidence
+
+After the PAL and incomplete selections separately:
+
+```text
+accepted backup  inode 111309681   605698800 bytes   f780bf23...07c0
+memory card      inode 111309627        6016 bytes   6a01b0f5...619a
+destination      absent
+staging roots    zero
+chooser          enabled
+```
+
+The final full-image selection installed destination inode `111313696` with
+the exact 605,698,800-byte size and `f780bf23...07c0` SHA-256. PID `77827`
+remained continuous from onboarding through both rejected selections and the
+rendered Sony presentation. A cold relaunch at PID `78515` bypassed onboarding
+and visibly rendered the copyright screen and touch overlay. All four native
+screenshots and hashes are recorded in
+`docs/parity/2026-07-31-ios-files-import.md`; none was staged.
+
+The disposable app was terminated and its Simulator shut down without
+deletion. The original `CTRPad Import Validation` device was booted and
+relaunched. Its original BIN/save inodes, sizes and hashes were unchanged. Git
+remained clean throughout runtime testing; no retail or generated fixture was
+ever within the repository staging surface.
+
+This accepts live Simulator detected-region failure, expected-region but
+incomplete-content failure, cleanup, retry, valid recovery, same-process
+startup and cold relaunch. It does not accept inaccessible-provider/copy-
+interruption behavior, termination during the 605 MB copy, active-image
+re-selection UX, physical Files behavior, Apple signing, or device runtime.
+
+The preceding published timer was 183,956 seconds. The pre-publication
+documentation reading was 185,118 seconds: 2 days, 3 hours, 25 minutes,
+18 seconds cumulative, adding 1,162 seconds (19 minutes, 22 seconds). It
+includes paused/resumed task lifetime and is not a build benchmark or
+person-hour estimate.
