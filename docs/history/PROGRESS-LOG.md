@@ -338,6 +338,49 @@ has not been marked complete or blocked.
 draft branch `codex/arm64-apple`; only viability documentation is merged into
 `main`. No merge was performed.
 
+### 2026-07-31 — Resumed verifier and proved STR pixels reach the screen
+
+The user explicitly resumed the goal. The preserved verifier was checked
+before unpause: same immutable producer, same playback-1 process, no OOM,
+clean/synchronized branch, and unchanged bind-mounted evidence. It resumed at
+2026-07-31 02:48:43 CDT.
+
+At 03:01:23 CDT, the flushed runtime log emitted the frame-12,000 marker.
+Playback 1 therefore continues rather than being stuck; no divergence or OOM
+has appeared. Its reported 0.43 FPS includes both intentional Docker pauses and
+must not be treated as active throughput. Playback 1, alternate-layout
+playback 2, and mutation remain in progress/unaccepted.
+
+The lost host terminal exposed a recoverability gap even though Docker
+preserved the expensive process. Commit `69c4c9948` adds a finalize-only mode
+that requires a machine-captured container exit 0 and independently rechecks
+both normal completions, distinct address/raw-checkpoint layouts, mutation
+selection, divergence, and `drivers` as the first difference before hashing
+evidence. The current legacy container has two active `docker wait` observers;
+one writes its eventual status directly to the report.
+
+Commit `c44ea7810` adds an actual macOS presentation probe. Exact clean ARM64
+results:
+
+- headless ten-frame hash remained `60dcf4c65986a034`;
+- presented ten-frame hash was `e85a9203c966c801`;
+- decoded per-frame hashes matched the existing ARM64/i686 proof;
+- three runs produced byte-identical frame-9 BMP SHA-256
+  `e7366bc9ff8ea4054d7c45e16f0a0eb8539c3bfb0cb8b1bba1c1bc5b3f1888e3`;
+- frame 9 visibly showed a correctly oriented and colored Naughty Dog
+  scrapbook title;
+- six malformed CLI cases exited 1; and
+- exact clean ARM64 passed 16/16 CTests.
+
+The screenshot remains in `/private/tmp` and is not published because it is
+derived from the user's retail movie. Sanitizer compilation was resumed, then
+intentionally interrupted after 5/131 objects so the exact clean Release
+result could be produced without competing compilers. Sanitizer acceptance is
+still pending and will resume incrementally.
+
+Detailed evidence:
+`docs/parity/2026-07-31-scrapbook-str-presentation.md`.
+
 ## Current open path to the requested product
 
 1. Finish independent-process/mutation acceptance for the existing full

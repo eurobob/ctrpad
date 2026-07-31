@@ -7484,3 +7484,91 @@ The product's goal API reported a cumulative elapsed time of
 as product metadata, not substituted for measured replay runtime. Playback 1,
 alternate-layout playback 2, and the deliberate mutation stage remain
 unaccepted until their scripted completion checks actually pass.
+
+## 2026-07-31 — Goal resume, recoverable finalization, and STR presentation
+
+### Resumed the exact frozen process
+
+After the user explicitly asked to continue, inspection confirmed that
+`exciting_gagarin` still owned the original shell, Xvfb, and immutable
+`ctr_native-cutscene-fix-producer-eee2a8df5b96` process. The tracked worktree
+and remote branch both pointed at `ac6bd768b`. The container resumed at
+02:48:43 CDT with `running=true`, `paused=false`, `oom=false`.
+
+The outer terminal session that originally invoked the verifier had expired,
+but the complete playback-1 -> alternate-loader playback-2 -> mutation shell
+still lived inside Docker. Two non-mutating `docker wait exciting_gagarin`
+observers were attached. One streams the eventual numeric status directly to:
+
+```text
+/private/tmp/ctrpad-i686-cutscene-run-4hjAQW/
+  debug/reports/20260731/ctr-025812/container-exit-status.txt
+```
+
+The file remains empty while the container is active; no successful status was
+invented.
+
+At 03:01:23 CDT, `Crash Team Racing.log` grew from 2,424 to 2,466 bytes and
+emitted:
+
+```text
+[CTR Native] FPS: 0.43 (last 2000 frames)
+```
+
+That is the durable frame-12,000 marker. The low number includes both explicit
+Docker pause intervals because the FPS diagnostic uses host wall time. It is
+progress evidence, not active-speed evidence. No divergence or OOM was
+observed.
+
+### Made host evidence packaging recoverable
+
+Commit `69c4c9948` adds `CTRPAD_FINALIZE_ONLY=1` to
+`tools/verify-linux-i686-golden-replay.sh`. A normal run now writes `running`
+before Docker starts and replaces it with `0` only after the container's
+internal normal-playback/address-layout/mutation checks exit successfully.
+Finalize-only mode launches no game process. It requires that captured 0 and
+independently repeats every artifact-level invariant before producing
+`environment.txt` and `evidence.sha256`.
+
+The recovery mode rejected an invalid setting with exit 1, and `sh -n` plus
+`git diff --check` passed. This fixes terminal-session fragility without
+weakening the long verifier or changing its immutable binary.
+
+### Added a production renderer-backed scrapbook probe
+
+The headless STR probe did not call `LoadImage`, update the host VRAM texture,
+execute the direct-VRAM presentation shader, or inspect the framebuffer. The
+new command:
+
+```text
+--probe-str-scrapbook-present FRAME_COUNT OUTPUT.bmp
+```
+
+does all four. It reads the default framebuffer as `GL_RGBA`, restores the
+previous pack alignment, flips rows to top-left order, hashes the result, and
+saves the last frame through SDL. Retail-derived screenshots remain in
+`/private/tmp`.
+
+The first one-frame run produced the accepted decoded hash but a black image.
+Rather than promote a black lead-in as renderer proof, the probe was advanced
+to ten frames. Frame 9 visibly showed the coherent gray scrapbook cover, red
+Naughty Dog mark, `Scrapbook`, and `1994-1999`.
+
+Two pre-commit runs and exact clean commit `c44ea7810391` agreed on:
+
+```text
+decoded sequence:   60dcf4c65986a034
+presented sequence: e85a9203c966c801
+frame-9 BMP:        e7366bc9ff8ea4054d7c45e16f0a0eb8539c3bfb0cb8b1bba1c1bc5b3f1888e3
+```
+
+All ten decoded frame hashes remained identical to the optimized-i686 result.
+All three BMP files were byte-identical. Missing arguments/path, zero,
+nonnumeric, duplicate, and combined probe modes each exited 1. Exact clean
+ARM64 passed 16/16 CTests.
+
+The earlier sanitizer tree was resumed at low priority but remained slow under
+the i686 renderer. It was stopped deliberately after 5/131 objects, preserving
+incremental output, so the exact Release result could be rebuilt first.
+Sanitizer cleanliness, 4,424-frame completion, real-menu 15-fps cadence,
+STR XA synchronization, and iOS/GLES behavior remain unaccepted.

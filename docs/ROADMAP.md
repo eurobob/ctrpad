@@ -667,9 +667,16 @@ Result so far:
   disc-image path and hashes decoded RGB555 output without renderer startup.
   ARM64 and optimized i686 produce identical dimensions and hashes for the
   first ten 512-by-208 frames, including sequence hash
-  `60dcf4c65986a034`. This is decode/cross-width evidence only; sanitizer,
-  on-screen upload/presentation, complete movie coverage, and audio/video sync
-  remain open.
+  `60dcf4c65986a034`.
+- Exact clean ARM64 commit `c44ea7810391` now drives those ten frames through
+  production `LoadImage`, the host VRAM texture, the direct-VRAM presentation
+  shader, portable RGBA framebuffer readback, and BMP output. Three runs
+  produced identical presented sequence hash `e85a9203c966c801` and
+  byte-identical frame-9 BMP; visual inspection shows the coherent Naughty Dog
+  scrapbook title. Exact results are in
+  `docs/parity/2026-07-31-scrapbook-str-presentation.md`. Sanitizer, complete
+  movie coverage, real-menu cadence, and audio/video synchronization remain
+  open.
 - Red-beaker rain no longer reads per-player MVP translations out of widened
   instance function/thread pointers. Named draw-record fields preserve the
   retail depth/LOD byte alias, and a four-player cross-width test covers the
