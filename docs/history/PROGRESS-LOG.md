@@ -463,12 +463,66 @@ durable marker remained frame 14,000. Codex goal elapsed was
 1 day, 13 hours, 15 minutes, 21 seconds. Real-menu 15-fps cadence, interleaved
 STR XA synchronization, and menu entry/skip/teardown remain unaccepted.
 
+### 2026-07-31 — Real-menu Scrapbook playback and teardown
+
+**Outcome**
+
+- Added `tools/prepare-scrapbook-test-save.mjs`, which refuses in-place edits
+  and existing outputs, enables only Scrapbook bit 36 in a separate native
+  save, regenerates the retail CRC, and validates its own output.
+- The accepted source save remained byte-identical at SHA-256
+  `6a01b0f5562ed7a279d8f8e51e3b1874ac39a6120f55db4fe3873288950619a3`.
+  The ignored disposable output is checksum-valid at
+  `468c43b5b58b4ebe2eb6a207b166d02c36011b27e50b76e207d6009fca5521a4`.
+- Added diagnostic-only real-state-machine telemetry for start, exit reason,
+  uploaded-frame count, and XA lifetime.
+- Source commit `63b0a0773a00afb12e3fce9152ece4affbcfda68` was pushed to
+  `codex/arm64-apple` before the exact evidence run.
+- The exact app is a strict-verifiable signed ARM64 bundle, embeds build ID
+  `63b0a0773a00`, and passes 16/16 CTests.
+- Normal startup loaded the test card and visibly exposed the production
+  seven-row menu. Ordinary mapped input selected `SCRAPBOOK`, entered the real
+  movie player, showed multiple distinct coherent retail frames, accepted a
+  Start skip, ran the title transition, and returned to the intact menu.
+- The frozen log proves XA was active on channel 1 at start and after 674
+  uploaded frames, that the exit reason was `input-skip`, and that teardown
+  changed XA from active to inactive.
+
+The real menu route, selected four-vblank/15-fps scheduler, XA lifetime, input
+skip, and teardown are accepted. A screenshot cannot establish perceptual A/V
+synchronization, so independently measured or listened interleaved sync and a
+full natural-end menu run remain open. Retail screenshots, the test save, and
+the runtime log remain ignored/untracked; the detailed evidence record stores
+only descriptions and hashes.
+
+**Time ledger**
+
+- helper file written: 03:55:38 CDT;
+- disposable checksum-valid output written: 03:56:35 CDT;
+- source commit: 04:02:11 CDT;
+- exact committed app binary: 04:02:57 CDT;
+- inspected evidence captures: 04:03:38 through 04:05:12 CDT;
+- evidence run closed: 04:06:45 CDT;
+- measured helper-to-close interval: 11 minutes, 7 seconds;
+- measured commit-to-close interval: 4 minutes, 34 seconds; and
+- Codex goal elapsed at the 04:06 checkpoint: 1 day, 13 hours, 37 minutes,
+  56 seconds. This product timer is not labor or benchmark time.
+
+**Concurrent verifier status**
+
+The preserved i686 direct-loader playback remains running, unpaused, and not
+OOM-killed. Its flushed log now contains nine 2,000-frame FPS markers, making
+frame 18,000 the latest durable progress boundary. The redirected playback log
+was 82,117 bytes and changed at 04:05:48 CDT. The machine-captured exit-status
+file remains empty, so playback 1, alternate-layout playback 2, and mutation
+are still unaccepted.
+
 ## Current open path to the requested product
 
 1. Finish independent-process/mutation acceptance for the existing full
    cross-width trace.
-2. Close remaining macOS M6 runtime evidence, beginning with STR movie decode
-   and broader renderer/input coverage.
+2. Close remaining macOS M6 runtime evidence, including natural-end Scrapbook
+   A/V observation and broader renderer/input/manual-play coverage.
 3. Implement and validate the shared GLES 3 renderer.
 4. Add the iOS/iPadOS lifecycle, sandbox, display pacing, audio, and controller
    application shell.

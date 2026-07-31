@@ -419,7 +419,8 @@ development app bundle, direct Metal-backed visual inspection, corrected
 complete. Both observed cross-width emitter defects are corrected, the clean
 ARM64 report matches the prior i686 trajectory across all 24,232 frames, and a
 fresh current-build version-4 report structurally reaches `lapIndex=1`.
-Formal same-commit i686 finalization and complete manual play remain open.
+Formal same-commit i686 finalization, natural-end Scrapbook A/V observation,
+and complete manual play remain open.
 
 Result so far:
 
@@ -683,8 +684,13 @@ Result so far:
   in `docs/parity/2026-07-31-scrapbook-str-presentation.md`. Exact clean
   Release and sanitizer runs subsequently decoded, uploaded, presented, and
   read back all 4,424 frames with identical per-frame manifests and sequence
-  hashes. Complete probe coverage is accepted; real-menu cadence and
-  audio/video synchronization remain open.
+  hashes. Complete probe coverage is accepted. Exact ARM64 commit
+  `63b0a0773a00` then loaded a checksum-valid disposable save through normal
+  startup, exposed and entered the production Scrapbook row, uploaded 674
+  frames with XA channel 1 active and the four-vblank scheduler selected,
+  accepted a Start skip, changed XA from active to inactive during teardown,
+  and returned to the intact menu. Perceptual A/V synchronization and a
+  natural-end real-menu run remain open.
 - Red-beaker rain no longer reads per-player MVP translations out of widened
   instance function/thread pointers. Named draw-record fields preserve the
   retail depth/LOD byte alias, and a four-player cross-width test covers the
@@ -693,9 +699,9 @@ Result so far:
 
 Work:
 
-- Validate full-range audio mix/reverb/XA behavior, broader desktop renderer
-  and manual keyboard play, MFi/Bluetooth controller, replays, savestates,
-  and STR video.
+- Validate full-range audio mix/reverb/XA behavior, natural-end Scrapbook A/V,
+  broader desktop renderer and manual keyboard play, MFi/Bluetooth controller,
+  replays, and savestates.
 - Run sanitizers and the full parity gate under Apple Clang.
 - Run the two unchanged i686 processes and deliberate-mutation gate against
   finalized all-eight-match report `ctr-025812`. The verifier accepts an

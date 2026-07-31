@@ -8,8 +8,9 @@
 `75b09db17d1cabb91f2fece68a43edbf04662992`
 
 **Status:** all 4,424 production frames accepted through decode, macOS OpenGL
-presentation, and ASan/UBSan; real-menu cadence and A/V synchronization remain
-open
+presentation, and ASan/UBSan; the real menu route, configured 15-fps scheduler,
+XA lifetime, input skip, and teardown are accepted; perceptual A/V
+synchronization remains open
 
 ## Question
 
@@ -209,6 +210,89 @@ The four measured process times total 273.64 seconds. No ASan/UBSan diagnostic
 appeared. Logs, BMPs, and retail-derived pixels remain in `/private/tmp` and
 outside Git.
 
+## Real-menu route, XA lifetime, skip, and teardown
+
+Commit `63b0a0773a00afb12e3fce9152ece4affbcfda68` added two
+evidence-only facilities:
+
+- `tools/prepare-scrapbook-test-save.mjs` creates a separate, checksum-valid
+  test save with only `GAME_UNLOCK_BIT_SCRAPBOOK` enabled. It refuses in-place
+  editing and refuses to overwrite an existing output.
+- The production `MM_Scrapbook_PlayMovie` path logs start, exit reason,
+  uploaded-frame count, and XA active state before and after teardown. The
+  logging does not alter the decode, upload, input, VBlank, or audio paths.
+
+The helper read the previously accepted checksum-valid relaunch save:
+
+```text
+source SHA-256: 6a01b0f5562ed7a279d8f8e51e3b1874ac39a6120f55db4fe3873288950619a3
+output SHA-256: 468c43b5b58b4ebe2eb6a207b166d02c36011b27e50b76e207d6009fca5521a4
+unlock offset:  0x24c
+unlock word:    0x00000000 -> 0x00000010
+CRC remainder:  0x0
+```
+
+Independent `inspect-native-memcard-save.mjs` validation accepted the
+6,016-byte output, one-block icon wrapper, profile version `-18`, profile size
+`0x1600`, and zero CRC remainder. Same-path and existing-output negative tests
+both exited 1. A second SHA-256 check proved that the source save was
+unchanged. The disposable output lives under the ignored
+`build-macos-arm64-app/memcards/slot0` tree; neither save nor any other retail
+byte is tracked.
+
+The exact committed application then identified as:
+
+```text
+CTR Native 0.1.0-beta.7.1 (63b0a0773a00)
+Mach-O 64-bit executable arm64
+binary SHA-256 fe61f8531afd244d2f2d984124fc2e3dacb5b5c7a2a313b0002386d01f31b875
+```
+
+The bundle passed strict deep code-signature verification and 16/16 CTests.
+Normal app startup loaded the disposable card and exposed the seventh
+`SCRAPBOOK` row in the production main menu. Selecting that row with the
+ordinary keyboard-to-PSX input mapping entered the actual
+`MM_Scrapbook_PlayMovie` state machine. Successive desktop captures showed
+different coherent movie content, including character concept art and the
+E3-1996 display-wall scene. Start input then skipped playback, the title
+transition ran, and the complete seven-row menu returned.
+
+The frozen runtime log contains:
+
+```text
+[CTR Scrapbook] native playback started: xaActive=1 xaChannel=1 cadenceVBlanks=4
+[CTR Scrapbook] native playback ending: reason=input-skip framesUploaded=674 xaActive=1
+[CTR Scrapbook] native teardown: xaBefore=1 xaAfter=0
+```
+
+The frozen log SHA-256 is
+`7d83128ac83722dc1e3d47c4edd423e600b9abaf842db5efb6fd49984bdf75d3`.
+This proves that the real menu path selected the four-vblank movie scheduler,
+successfully prepared XA channel 1, kept XA active while 674 movie frames were
+uploaded, recognized an input skip, and closed XA during teardown. At the
+selected 15-fps cadence, 674 frames correspond to about 44.9 seconds of movie
+content; that arithmetic is not presented as a separate wall-clock
+measurement.
+
+Five Computer Use captures were inspected locally and retained only in the
+temporary service directory:
+
+| Local time | Observation | JPEG SHA-256 |
+|---|---|---|
+| 04:03:38 CDT | loaded seven-row main menu | `92237d7b26644e1cad6f10cfa4957f7d0df626071b6a8d1ce499d2e58817f140` |
+| 04:04:04 CDT | `SCRAPBOOK` selected | `bed04e5dd1e52c6f12d51e882df0c8e280450cd41312fac50dc8d70bac8dfc93` |
+| 04:04:23 CDT | coherent concept-art movie frame | `a0ca9c99ebd39c0564adb8a5142f91b4617261d83a52fb015e259600a4060532` |
+| 04:04:39 CDT | later E3-1996 display-wall frame | `4010aca4d7218034c6b1b6831a5375f1c9e6e2889eb5c58f8f95802ec867f395` |
+| 04:05:12 CDT | intact menu after skip/teardown | `372277afba69c35c2d181cbf1d7be0822c32094825f7cc37e0c2041b36a0cd08` |
+
+The retail-derived JPEGs and frozen runtime log are not committed. Their
+descriptions and hashes preserve an auditable observation without publishing
+the user's content. The helper implementation began at 03:55:38 CDT and the
+run was closed at 04:06:45 CDT, a measured 11-minute-7-second evidence
+interval. The exact source commit was created at 04:02:11 CDT; the exact
+binary was written at 04:02:57 CDT; and the commit-to-frozen-evidence interval
+was 4 minutes, 34 seconds.
+
 ## Acceptance boundary
 
 Accepted:
@@ -220,13 +304,19 @@ Accepted:
 - actual framebuffer readback and a coherent, repeatable visual artifact;
 - defined and compile-time-pinned OpenGL vertex attribute offsets; and
 - the complete headless/presentation path under ASan/UBSan, with the
-  renderer-only HID isolation described above.
+  renderer-only HID isolation described above;
+- production main-menu unlock/load and entry into the real Scrapbook state
+  machine;
+- the configured four-vblank/15-fps movie scheduler and an active XA channel
+  throughout observed playback; and
+- ordinary input skip, XA active-to-inactive teardown, title transition, and
+  intact menu return.
 
 Not accepted:
 
-- retail 15-fps presentation cadence during the real menu loop;
-- interleaved XA audio/video synchronization;
-- normal menu entry, skip, and teardown under broad manual play; or
+- perceptual or independently measured interleaved XA/video synchronization;
+- full natural-end playback through the real menu loop;
+- broad manual play beyond this focused menu route; or
 - GLES/iOS presentation.
 
 The Apple framework HID-enumeration fault under ASan remains a documented

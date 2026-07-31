@@ -7743,3 +7743,116 @@ frame-14,000 marker. The goal API reported cumulative elapsed
 Complete probe-based movie decode and host presentation are accepted. This
 does not establish the real menu's 15-fps scheduler, interleaved XA A/V sync,
 normal skip/teardown behavior, GLES, or iOS.
+
+## 2026-07-31 — Exercised the production Scrapbook route
+
+### Rejected the first unlock method without blaming the game
+
+The retail Scrapbook cheat requires holding L1+R1 while entering:
+
+```text
+Up, Up, Down, Right, Right, Left, Right, Triangle, Right
+```
+
+The native keyboard map assigns L1 and R1 to separate left/right Shift keys
+and Triangle to `Z`. Computer Use can send chords, but its key-pulse interface
+could not preserve both independent Shift holds across the full sequence. Two
+attempts left the six-row menu unchanged. This is retained as a UI-automation
+limitation, not a product failure and not acceptance evidence.
+
+### Built a reproducible disposable save instead
+
+The accepted relaunch save was inspected against
+`include/namespace_Memcard.h`. `MemcardProfile.gameProgress` begins at profile
+offset `0x144`; `GameProgress.unlocks` begins four bytes later; bit 36 is bit 4
+of unlock word 1. Including the native file's `0x100` icon wrapper, the target
+word is therefore at file offset `0x24c`.
+
+`tools/prepare-scrapbook-test-save.mjs` was added to make that operation
+auditable. It:
+
+1. requires a 6,016-byte one-block native save;
+2. validates `SC`, profile version `-18`, profile size `0x1600`, and a zero
+   retail CRC remainder;
+3. refuses identical source/output paths;
+4. sets only mask `0x10` in the little-endian word at `0x24c`;
+5. regenerates the two-byte retail checksum; and
+6. validates before writing with exclusive-create semantics.
+
+The helper changed the word from zero to `0x10`. The output passed the
+independent save inspector with CRC remainder zero. In-place and
+existing-output tests both exited 1, and the original save retained SHA-256
+`6a01b0f5562ed7a279d8f8e51e3b1874ac39a6120f55db4fe3873288950619a3`.
+The disposable output has SHA-256
+`468c43b5b58b4ebe2eb6a207b166d02c36011b27e50b76e207d6009fca5521a4`
+and remains under the ignored app-build memcard directory.
+
+### First visual run established the route but not audio
+
+The current signed ARM64 app was closed normally, relaunched, and advanced
+through the ordinary startup sequence. The loaded save exposed a seventh
+`SCRAPBOOK` row. Arrow-key pulses occasionally landed entirely between the
+retail polls, so screen state was refreshed after each bounded batch instead
+of assuming an input arrived. `Return` maps to Start; menu confirmation maps
+to PSX Circle on `V`.
+
+The real menu route showed multiple coherent movie scenes. Start skipped the
+movie, the title transition ran, and the intact seven-row menu returned. This
+was enough for visual entry/skip/return, but the log did not expose XA state.
+The run was therefore not promoted as audio-lifetime evidence.
+
+### Added narrow telemetry and repeated from an exact commit
+
+`MM_Scrapbook_PlayMovie` now records:
+
+- XA state, selected channel, and cadence at successful start;
+- exit reason, number of successful frame uploads, and XA state at exit; and
+- XA state before and after the existing stop calls.
+
+The counters and logs are observational. The existing
+`Platform_WaitUntilVBlank`, `NativeSTR_UploadNextFrame`,
+`NativeAudio_PlayXAFile`, input mask, and teardown order are unchanged.
+
+The helper and telemetry were committed and pushed as
+`63b0a0773a00afb12e3fce9152ece4affbcfda68`. CMake was regenerated so the app
+embedded exact build ID `63b0a0773a00`. The resulting 4,167,824-byte binary
+has SHA-256
+`fe61f8531afd244d2f2d984124fc2e3dacb5b5c7a2a313b0002386d01f31b875`,
+is thin ARM64, passed strict deep code-signature verification, and passed all
+16 CTests.
+
+The exact run repeated normal boot, save load, menu selection, movie playback,
+Start skip, title transition, and menu return. Captures at 04:04:23 and
+04:04:39 CDT showed clearly different coherent concept-art and E3-1996
+display-wall scenes. The frozen runtime evidence was:
+
+```text
+[CTR Scrapbook] native playback started: xaActive=1 xaChannel=1 cadenceVBlanks=4
+[CTR Scrapbook] native playback ending: reason=input-skip framesUploaded=674 xaActive=1
+[CTR Scrapbook] native teardown: xaBefore=1 xaAfter=0
+```
+
+This accepts the production menu route, selected four-vblank scheduler,
+successful XA preparation/lifetime, skip, and teardown. It does not prove that
+the human-perceived XA waveform was synchronized to a particular video frame,
+and the run intentionally skipped rather than reaching the movie's natural
+end. Those boundaries stay open.
+
+No retail screenshot, movie frame, save, disc byte, or runtime log was added
+to Git. The parity report records local screenshot descriptions and SHA-256
+values only.
+
+### Timing and concurrent verifier
+
+The helper was written at 03:55:38 CDT; the disposable save followed at
+03:56:35. Source commit `63b0a0773` was created at 04:02:11, the exact app was
+written at 04:02:57, and the evidence run closed at 04:06:45. The measured
+helper-to-close interval was 11 minutes, 7 seconds; commit-to-close was
+4 minutes, 34 seconds.
+
+The Codex goal API reported cumulative elapsed 1 day, 13 hours, 37 minutes,
+56 seconds at the 04:06 checkpoint. During this work the preserved i686
+direct-loader process stayed running, unpaused, and not OOM-killed. Its
+flushed log advanced to the ninth 2,000-frame marker, so frame 18,000 is now
+durable. The exit-status capture remains empty; playback 1, playback 2, and
+mutation remain unaccepted.
