@@ -285,3 +285,18 @@ optimized i686 translation-unit compile passes. The exact signed Simulator
 product visibly moves stable menus with outer-ring touch input. Full rationale,
 matrix, trace and physical-device boundary are in
 `2026-07-31-ios-touch-controls.md`.
+
+## Current-tip revalidation after the explicit keyboard request
+
+The user later reiterated that basic keyboard controls must be available for
+testing. The implementation remained present at published branch tip
+`8490b3126081f0cb012c6364e3e66690599d00e7`, so no duplicate source change was
+made. A clean `macos-arm64` reconfigure/build produced a thin ARM64 executable
+with SHA-256
+`46e70980e10de096472314fb4c641b8122d890271f9d183d6c3e6a61a94e6382`.
+
+The direct input oracle again passed `aliases=12`, held `K+D+E`, quick-tap
+`K+D`, two-host-snapshot edge retention, touch composition and virtual-gamepad
+composition. The full current-tip macOS ARM64 matrix passed 21/21. This
+revalidates the existing controls; it does not expand the earlier hardware-
+keyboard claim beyond macOS.

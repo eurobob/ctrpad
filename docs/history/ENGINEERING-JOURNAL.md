@@ -9992,3 +9992,53 @@ documentation reading was 179,389 seconds: 2 days, 1 hour, 49 minutes,
 49 seconds cumulative, adding 2,995 seconds (49 minutes, 55 seconds). It
 includes paused/resumed task lifetime and is not a build benchmark or
 person-hour estimate.
+
+## 2026-07-31 — Current-tip keyboard-controls revalidation
+
+The user explicitly requested basic keyboard controls for testing. An audit
+found that this requested capability was already implemented and published in
+commit `2c10b00b34df4f0eb61aa8b72cbe99588a930ed6`, rather than merely described
+in a plan. `NativeInput_DefaultMappings` defines the additive `WASD`, `IJKL`,
+`Q/E`, `P` and Tab layout while retaining the original map
+(`platform/native_input.c:308-341`). `NativeInput_KeyboardButtonBit` maps both
+layouts to the same active-low PS1 button bits
+(`platform/native_input.c:370-405`). The complete user-facing table and a basic
+race recipe are in `README.md:205-233`.
+
+To avoid relying only on the earlier accepted live run, the published branch
+tip `8490b3126081f0cb012c6364e3e66690599d00e7` was explicitly reconfigured
+with the `macos-arm64` preset and rebuilt. The compile completed with the 32
+already documented warnings and no error. The product was a thin ARM64 Mach-O:
+
+```text
+build-macos-arm64/ctr_native
+SHA-256 46e70980e10de096472314fb4c641b8122d890271f9d183d6c3e6a61a94e6382
+```
+
+The direct command `./build-macos-arm64/ctr_native --self-test-input` emitted
+the accepted marker containing:
+
+```text
+two-host-snapshots aliases=12 held=k+d+e alias-tap=k+d
+```
+
+The oracle checks every alias individually, a held accelerate-plus-right-plus-
+drift chord, a complete quick accelerate-plus-right down/up pair, and the
+shared controller/touch composition path (`platform/native_input.c:1607-1707`).
+The complete macOS ARM64 CTest matrix then passed 21/21 in 0.82 seconds with
+zero failure.
+
+No source line was changed. Adding a second copy or changing the accepted map
+would have created conflicting controls without additional capability. This
+checkpoint instead establishes that the requested implementation exists on the
+current GitHub branch, builds, and remains covered. Earlier live macOS evidence
+already accepted stable-menu navigation, Time Trial entry, acceleration and
+steering with these keys. Simulator host-key injection still does not reach
+SDL, and no physical iPad is connected, so hardware-keyboard acceptance on
+iPadOS remains an explicit open boundary.
+
+The preceding published timer was 179,389 seconds. The pre-publication
+documentation reading was 179,718 seconds: 2 days, 1 hour, 55 minutes,
+18 seconds cumulative, adding 329 seconds (5 minutes, 29 seconds). It includes
+paused/resumed task lifetime and is not a build benchmark or person-hour
+estimate.

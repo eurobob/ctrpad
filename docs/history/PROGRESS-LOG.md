@@ -1176,3 +1176,31 @@ documentation reading was 179,389 seconds: 2 days, 1 hour, 49 minutes,
 49 seconds cumulative, adding 2,995 seconds (49 minutes, 55 seconds). The
 timer is cumulative product-task time, including pauses, not a benchmark or
 labor estimate.
+
+### 2026-07-31 — Keyboard-controls request revalidated at current tip
+
+- The requested basic keyboard controls were already present in published
+  source commit `2c10b00b34df`: `WASD` maps the D-pad, `IJKL` maps the four
+  face buttons, `Q/E` maps L1/R1, `P` maps Start and Tab maps Select. Original
+  Arrow, `Z/X/C/V`, Shift, Ctrl, bracket, Return and Space bindings remain
+  additive (`platform/native_input.c:308-341`).
+- The map and a short race recipe are visible to testers in
+  `README.md:205-233`; no hidden keyboard-only physics path exists.
+- Reconfigured and rebuilt current published tip `8490b3126081` for macOS
+  ARM64. The build succeeded with the 32 established warnings and produced a
+  thin ARM64 Mach-O with SHA-256
+  `46e70980e10de096472314fb4c641b8122d890271f9d183d6c3e6a61a94e6382`.
+- The direct input self-test passed all 12 aliases, a held `K+D+E` chord, a
+  quick `K+D` tap across two host snapshots, and controller/touch composition
+  (`platform/native_input.c:1607-1707`). The complete macOS ARM64 suite passed
+  21/21 with zero failure.
+- No source edit was made for this request because duplicating or remapping an
+  already accepted implementation would regress existing testers. The exact
+  current-tip validation is the new work. macOS keyboard play remains
+  accepted; physical-iPad hardware-keyboard delivery remains open.
+
+The preceding published reading was 179,389 goal seconds. The pre-publication
+documentation reading was 179,718 seconds: 2 days, 1 hour, 55 minutes,
+18 seconds cumulative, adding 329 seconds (5 minutes, 29 seconds). The timer is
+cumulative product-task time, including pauses, not a benchmark or labor
+estimate.
