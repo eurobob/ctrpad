@@ -16,10 +16,12 @@ This is the working source of truth for the port. Milestone status changes only
 after its acceptance evidence has been recorded. A successful compile is
 evidence, not completion.
 
-The complete chronological implementation record is maintained in
-`docs/history/ENGINEERING-JOURNAL.md`. It records commands, evidence, failures,
-decisions, validation, and remaining limitations so the project can be
-reconstructed historically rather than only understood from its final state.
+The human-readable running status and elapsed-time ledger is
+`docs/history/PROGRESS-LOG.md`. The complete chronological implementation
+record is maintained in `docs/history/ENGINEERING-JOURNAL.md`; it records
+commands, evidence, failures, decisions, validation, and remaining limitations
+so the project can be reconstructed historically rather than only understood
+from its final state.
 
 ## Non-negotiable constraints
 

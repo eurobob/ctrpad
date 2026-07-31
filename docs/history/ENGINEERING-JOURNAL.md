@@ -7256,3 +7256,92 @@ directly.
 
 This preserves and sharpens the process-independence gate without changing
 the immutable game binary, replay, checkpoint, or canonical comparison.
+
+## 2026-07-31 — Running project-time checkpoint and active process gate
+
+### Added a separate progress and time ledger
+
+The user requested a transparent running historical document that records
+progress and the time it took. The detailed journal already retained the full
+technical process, but it was not an efficient status or duration index.
+`docs/history/PROGRESS-LOG.md` now provides that front door while this journal
+remains the command-, failure-, and evidence-level reconstruction record.
+
+Time sources are labeled rather than blended:
+
+- the user reported a Codex goal timer of
+  `1 day, 11 hours, 48 minutes, 20 seconds`;
+- Docker/process wall time is measured independently;
+- accumulated renderer-worker CPU time is not described as person-hours; and
+- an active run is recorded as in progress, not accepted.
+
+The goal timer is a product-level elapsed value and can include tool waits and
+background validation. It is not evidence of uninterrupted active labor.
+
+### Captured the active immutable playback without perturbing it
+
+The corrected verifier was launched from pushed clean branch head
+`e3a7e79fa4638497094deb912c1bc9c234e7714f`. Playback uses the earlier exact
+immutable producer at source commit
+`eee2a8df5b9605d27c7b20e943bba76174a4f6fc`; documenting the run does not
+change that binary, replay, checkpoint, or container.
+
+Docker recorded the container start as
+`2026-07-31T05:38:33.587291339Z`, or 2026-07-31 00:38:33 CDT. At
+2026-07-31 01:36:44 CDT:
+
+```text
+process elapsed: 00:58:11
+multi-worker CPU: 05:36:46
+state: running
+OOM-killed: false
+latest race-active marker: replay frame 9173 of 24232
+```
+
+The direct playback restored the same raw address-bearing checkpoint bytes as
+the recording:
+
+```text
+sdata=0x403cd040
+gGT=0x403d6bf4
+mempack=0x408c8bc0
+recorded=0xd4c950a8
+restored-process=0xd4c950a8
+equal=yes
+```
+
+That equality is expected for playback 1. Playback 2 is configured to invoke
+the same producer through the copied i386 loader and must restore at the
+alternate mapping proved earlier.
+
+### Distinguished stdout buffering from a game stall
+
+The verifier's redirected stdout ended partway through an audio-stat line and
+did not update for several minutes. Process inspection showed the game thread
+waiting on eight CPU-active llvmpipe workers rather than sleeping or exiting.
+More importantly, redirected stdout is block-buffered while the runtime-owned
+`Crash Team Racing.log` is flushed after each `Platform_Log` message.
+
+The flushed log proved forward progress and the same transition sequence as
+the accepted recording:
+
+```text
+race active:             1711
+race inactive / active:  3017 / 3070
+race inactive / active:  3920 / 3973
+race inactive / active:  4636 / 4689
+race inactive / active:  6959 / 7012
+race inactive / active:  8107 / 8160
+race inactive / active:  9120 / 9173
+```
+
+The 8,000-frame FPS marker eventually appeared at 2.42 FPS. The slow section
+was therefore not promoted merely from high CPU utilization; frame markers
+and expected game-state transitions established actual progress.
+
+The run remains active and unaccepted. Playback 1 must finish normally,
+playback 2 must finish normally under the alternate layout, and deliberate
+mutation must exit 2 with `drivers` as the first difference. The Git
+publication boundary is also unchanged: implementation and evidence are
+pushed on draft PR #1, while only the viability documentation is merged into
+`main`.
