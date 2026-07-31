@@ -8932,9 +8932,9 @@ detailed matrix, complete hashes and deliberately open gates are in
 `docs/parity/2026-07-31-ios-lifecycle-display-loop.md`.
 
 Source commit `afb5463cc511` was pushed to `origin/codex/arm64-apple` and draft
-PR #1. It was not merged. The final documentation commit and remote-head audit
-are recorded in the following progress checkpoint after the i686 producer
-finishes.
+PR #1. It was not merged. Documentation publication is evidenced by the Git
+commit history and the PR head after this journal entry, avoiding a circular
+attempt to embed a documentation commit's own hash inside itself.
 
 ### Elapsed time and protected verifier
 
