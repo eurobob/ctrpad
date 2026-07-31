@@ -167,9 +167,21 @@ cmake --build --preset ios-simulator-arm64
 
 cmake --preset ios-device-arm64
 cmake --build --preset ios-device-arm64
+
+# Validate and create a retail-free unsigned IPA under dist/.
+./package-ios.sh
 ```
 
-The generated `CTRPad.app` contains no retail data. On a first launch with no
+`package-ios.sh --build` combines the device build and packaging steps. It can
+also validate a user-supplied Apple identity/profile and emit a signed IPA;
+without them it emits an unsigned IPA for a compatible user-side re-signing
+tool. The packager enforces thin ARM64/iOS metadata, the standard
+`Payload/CTRPad.app` layout, byte-reproducible archive timestamps, legal/source
+installation resources, and retail/runtime-data exclusion. See
+`docs/INSTALL-IOS.md` for signing, direct-device, and AltStore-style sideload
+instructions.
+
+The generated `CTRPad.app` and IPA contain no retail data. On a first launch with no
 media, CTRPad presents a native **Choose CTR disc image** screen. Select your
 own NTSC-U single-track raw MODE2/2352 BIN through Files. CTRPad copies the
 selection to `Documents/CTRPad/assets/ctr-u.bin`, validates its disc identity
@@ -188,9 +200,10 @@ save, background/foreground survival, app-update retention, and a later cold
 read of that profile through the retail Load screen after explicitly seeding
 the accepted report bytes into the default private root. Wrong-region live UI,
 physical-device Files/save behavior, distribution signing, and the final
-sideloadable package remain roadmap work. See
+sideloaded-device acceptance remain roadmap work. See
 `docs/parity/2026-07-31-ios-files-import.md` and
-`docs/parity/2026-07-31-ios-memory-card-atomicity.md` for the exact boundaries.
+`docs/parity/2026-07-31-ios-memory-card-atomicity.md` for the runtime boundaries,
+and `docs/parity/2026-07-31-ios-sideload-package.md` for exact packaging evidence.
 
 For development builds run from `build/`, put the same `assets/ctr-u.bin` next to the source tree:
 

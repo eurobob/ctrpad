@@ -10173,3 +10173,136 @@ documentation reading was 181,770 seconds: 2 days, 2 hours, 29 minutes,
 30 seconds cumulative, adding 2,052 seconds (34 minutes, 12 seconds). It
 includes paused/resumed task lifetime and is not a build benchmark or
 person-hour estimate.
+
+## 2026-07-31 — Built a reproducible iOS sideload package and guarded signing path
+
+**Commits:** `6db6116fe67a8cd09d0067c4e8d75e0158db488e`,
+`a37cdf2aa5af460c20cd4950f450ab133248077c`, and
+`207121134a057e83189a192de5f35706868e03da`
+
+### Gap audit and design
+
+The device preset already produced `CTRPad.app`, but that bundle was not a
+release artifact: it had only the executable and generated plist, no embedded
+license/notices/Installation Information, no reproducible IPA wrapper, and no
+validated late-signing route. CMake now embeds `LICENSE`,
+`THIRD_PARTY_NOTICES.md`, and `docs/INSTALL-IOS.md` in Apple bundles
+(`CMakeLists.txt:117-132`). The checked-in guide documents source availability,
+unsigned and signed builds, direct device installation, compatible user-side
+re-signing, retail import, update persistence, and the remaining hardware
+acceptance boundary (`docs/INSTALL-IOS.md:1-134`).
+
+The retained packager keeps credentials late-bound. It pairs identity/profile
+arguments, optionally builds the device preset, stages only the supplied app,
+and removes any inherited signature/profile (`package-ios.sh:81-123`). It then
+requires an `APPL`, thin ARM64 Mach-O with an iOS build command, verifies all
+three distribution resources, and rejects retail-like files and runtime data
+directories (`package-ios.sh:125-163`). Unsigned mode stops there. Signed mode
+validates the current keychain identity, CMS profile, iOS platform, expiry,
+exact/wildcard App ID, optional UDID, team and application prefix; it constructs
+minimal app/team/keychain/`get-task-allow` entitlements, embeds the profile,
+requests DER entitlements, strictly verifies the bundle, and reads the signed
+application identifier back (`package-ios.sh:165-226`). The script never
+exports or copies a signing private key.
+
+Apple TN3125 was used for the provisioning-profile boundary, Apple's current
+signature-format guidance for DER entitlements, and Apple's registered-device
+distribution documentation for the direct install route. AltStore Classic's
+official documentation was used only to describe the alternative user-side
+re-signing route and its current constraints. The resulting workflow remains
+sideload-only; it does not plan App Store distribution.
+
+### Iterations that were rejected or corrected
+
+1. An exploratory signing-disabled Xcode-generator configure entered slow,
+   one-by-one SDL compiler feature probes and had not completed by the `atan`
+   check after several minutes. It was interrupted without a source change.
+   The working Ninja device preset plus explicit late signing remained the
+   reproducible route.
+2. The first packaging implementation passed its input checks but created an
+   archive rooted at `CTRPad.app/`. Its own post-package verifier rejected it
+   because `Payload/CTRPad.app/Info.plist` did not exist. Adding `ditto
+   --keepParent` at `package-ios.sh:255-266` preserved the mandatory top-level
+   `Payload/` directory.
+3. Two corrected-layout archives contained the same files but `cmp` differed
+   at byte 11. Inspection isolated the difference to temporary `Payload/`
+   mtimes. Commit `a37cdf2aa5af` normalizes every staged inode to
+   `SOURCE_DATE_EPOCH`, defaulting to the current Git commit time and then a
+   2000-01-01 non-Git fallback, while rejecting invalid/pre-ZIP values
+   (`package-ios.sh:228-239`). The subsequent independent archives were
+   byte-identical.
+4. A disposable app containing an empty `ctr-u.bin` was rejected. A call with
+   an identity but no profile was also rejected. Neither negative-test artifact
+   was retained or staged.
+5. The first local DER-entitlement probe failed before signing because `plutil`
+   treated `com.apple.developer.team-identifier` as a nested key path. Commit
+   `207121134a05` uses `/usr/libexec/PlistBuddy` for literal dotted keys and
+   validates the substituted identifier characters first
+   (`package-ios.sh:198-214`). The failed probe was not counted as acceptance.
+6. `shellcheck` was not installed. `bash -n`, positive and negative behavioral
+   probes, exact target builds, archive extraction, `git diff --check`, and
+   direct plist/signature readback are the recorded checks; no shell-linter
+   result is claimed.
+
+### Exact clean artifact evidence
+
+After the fixes were committed, the device preset was explicitly reconfigured
+and rebuilt so its generated version identity was exact. Commit
+`207121134a05` produced:
+
+```text
+device executable  build-ios-device-arm64/CTRPad.app/CTRPad
+SHA-256             62e8148d0e32697d09f8f59d40ab34a477ca4cc05df0530c4a1fc264e7e64be9
+architecture        thin arm64
+platform/minimum    IOS / 15.0
+SDK                  26.5
+build identity       207121134a05; no dirty suffix
+```
+
+Two packaging commands targeting different output filenames produced identical
+archives; `cmp` succeeded and both SHA-256 values were:
+
+```text
+78b93b01ae92ebb79fb6e92e1b3b29d9cae5984fa7fa5980a96ff0489abe0c63
+```
+
+`unzip -t` passed. The archive contained exactly the `Payload/` and
+`Payload/CTRPad.app/` directories plus the executable, plist, license, notices,
+and Installation Information. The three resources compared byte-for-byte with
+their source files. No retail-like extension, `Documents`, `Application
+Support`, `memcards`, `_CodeSignature`, or `embedded.mobileprovision` appeared.
+The ignored IPAs and SHA sidecars remained local.
+
+Because no valid Apple identity/profile was available, signed-mode structure
+was tested only with a disposable ad-hoc Simulator app and artificial
+`TESTTEAM` values. The corrected run passed strict/deep verification, emitted
+CodeDirectory v20400, and read back the exact app, team, keychain-group, and
+`get-task-allow=true` entitlement values. `TeamIdentifier=not set` correctly
+proved it was not an Apple signature. This accepts local construction and
+readback plumbing only—not device authorization or installability.
+
+An exact Simulator parent build at `a37cdf2aa5af` installed and launched at the
+retail copyright screen with the touch overlay intact; its local screenshot
+SHA-256 was `dff60f6d...be3da8d`. The Simulator changed the data-container UUID
+but preserved the imported 605,698,800-byte BIN and 6,016-byte memory card by
+inode and exact SHA-256. The exact current-tip macOS ARM64 binary at
+`9e90e9ad...fb246` passed all 21 CTests in 1.17 seconds.
+
+The full artifact inventory and hashes are retained in
+`docs/parity/2026-07-31-ios-sideload-package.md`. All three source commits were
+pushed to `origin/codex/arm64-apple` and draft PR #1; none is merged to `main`.
+
+### Remaining boundary and elapsed time
+
+This checkpoint accepts the complete non-secret, reproducible package path. It
+does not accept an Apple-authorized signature, physical-iPad install, real
+Files import/update persistence, iPad hardware-keyboard delivery, natural
+simultaneous touch steering/Gas/drift/boost, a full touch-only race, cadence,
+thermal behavior, or performance. Those require the user's connected iPad and
+matching identity/profile. The goal remains active.
+
+The preceding published timer was 181,770 seconds. The pre-publication
+documentation reading was 183,956 seconds: 2 days, 3 hours, 5 minutes,
+56 seconds cumulative, adding 2,186 seconds (36 minutes, 26 seconds). It
+includes paused/resumed task lifetime and is not a build benchmark or
+person-hour estimate.

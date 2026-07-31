@@ -371,3 +371,35 @@ fault. Thin ARM64 Simulator and device products linked, and the macOS ARM64
 suite passed 21/21. This accepts the adaptive Simulator layout and generated
 configuration; real-iPad window management, rotation feel and signing remain
 physical-device gates.
+
+## 2026-07-31 — Package a retail-free reproducible IPA and keep signing user-owned
+
+**Decision:** build the thin device bundle with the existing CMake/Ninja preset,
+embed the GPL, third-party notices and iOS Installation Information as bundle
+resources, and package it through `package-ios.sh`. Normalize all staged mtimes
+to `SOURCE_DATE_EPOCH` (the source commit time by default), reject retail-like
+files and runtime containers, and refuse to overwrite an existing output. When
+the user supplies both an identity and profile, validate the profile and sign
+with a minimal exact entitlement set; otherwise produce an explicitly unsigned
+IPA for a compatible re-signing tool.
+
+**Why:** a generated `.app` is not yet a reproducible or GPL-complete release
+artifact, and Apple credentials must never enter Git or a generic release
+archive. Apple's provisioning model binds the signer, App ID, devices, expiry
+and allowed entitlements. The user's profile and keychain identity therefore
+remain late-bound inputs while the source-controlled workflow proves every
+non-secret part of the artifact. See Apple's
+[TN3125](https://developer.apple.com/documentation/technotes/tn3125-inside-code-signing-provisioning-profiles?changes=_5)
+and
+[current signature-format guidance](https://developer.apple.com/documentation/xcode/using-the-latest-code-signature-format).
+
+**Verification boundary:** exact commit `207121134a05` produced a device ARM64
+executable at SHA-256 `62e8148d...64be9` and two byte-identical unsigned IPAs
+at `78b93b01...e0c63`. Archive extraction proved the seven-member
+`Payload/CTRPad.app` tree, exact legal/install resources, iOS 15.0 minimum,
+SDK 26.5, thin ARM64, and absence of a signature, profile, retail-like file or
+runtime directory. An injected `ctr-u.bin` was rejected. A local-only ad-hoc
+probe proved CodeDirectory v20400 and the four intended DER entitlements after
+a dotted-key construction bug was corrected. This does not prove that an Apple
+profile authorizes the app or that a real iPad installs/runs it; those require
+the user's identity, profile and device.

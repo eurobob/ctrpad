@@ -1003,7 +1003,24 @@ Acceptance:
 
 ### M11 — Retail parity, signing, and GPL-compliant release
 
-**Status:** pending; depends on all prior milestones
+**Status:** in progress; reproducible retail-free unsigned IPA packaging,
+profile-aware DER signing preparation, embedded legal/install resources and
+direct/AltStore-style installation information have landed; user-owned Apple
+signing, physical-iPad install and final device acceptance remain open; depends
+on all prior milestones
+
+Checkpoints `6db6116fe67a`, `a37cdf2aa5af` and `207121134a05` add a guarded
+device packager and its corrections. The script verifies the ARM64/iOS bundle,
+requires GPL/notices/Installation Information, rejects known retail and runtime
+data, packages the standard `Payload/CTRPad.app` tree, and normalizes every
+archive timestamp to `SOURCE_DATE_EPOCH`. Two exact current-tip runs produced
+byte-identical unsigned IPAs. The optional signed path validates the profile's
+platform, expiry, App ID and optional device, constructs minimal exact
+application/team/keychain entitlements, requests DER entitlements, and strictly
+verifies the result. A real Apple identity/profile was unavailable, so the
+physical signature/install gate remains open rather than inferred from an
+ad-hoc Simulator signature. Exact evidence is in
+`docs/parity/2026-07-31-ios-sideload-package.md`.
 
 Work:
 

@@ -1240,3 +1240,41 @@ documentation reading was 181,770 seconds: 2 days, 2 hours, 29 minutes,
 30 seconds cumulative, adding 2,052 seconds (34 minutes, 12 seconds). The timer
 is cumulative product-task time, including pauses, not a benchmark or labor
 estimate.
+
+### 2026-07-31 — Reproducible retail-free iOS package and signing-readiness
+
+- Commits `6db6116fe67a`, `a37cdf2aa5af`, and `207121134a05` add the
+  source-controlled iOS packaging path. Apple bundles now embed `LICENSE`,
+  `THIRD_PARTY_NOTICES.md`, and `INSTALL-IOS.md`; `package-ios.sh` validates a
+  thin ARM64/iOS app and emits a standard `Payload/CTRPad.app` IPA.
+- Unsigned mode deliberately removes signatures and profiles for later
+  user-side re-signing. Signed mode accepts a user-owned identity/profile,
+  validates platform, expiry, App ID and optional device, constructs minimal
+  app/team/keychain entitlements, requests DER entitlements, and strictly
+  verifies/read-backs the signature. No private key or credential is copied.
+- Exact tip `207121134a05` produced a thin device executable at SHA-256
+  `62e8148d...64be9`. Two independent unsigned IPA runs were byte-identical at
+  SHA-256 `78b93b01...e0c63`; extraction showed exactly seven members, exact
+  legal/install resources, and no retail-like file, runtime directory,
+  provisioning profile, or code signature. An injected `ctr-u.bin` was
+  rejected.
+- The exact macOS ARM64 regression product at SHA-256 `9e90e9ad...fb246`
+  passed 21/21 CTests in 1.17 seconds. A Simulator update/launch retained the
+  imported BIN and save by inode, byte size, and SHA-256.
+- Four rejected/corrected routes remain in the permanent record: an
+  impractically slow Xcode-generator configure, an IPA missing the top-level
+  `Payload/` directory, ZIP nondeterminism from temporary mtimes, and dotted
+  entitlement keys misconstructed by `plutil`. `shellcheck` was unavailable,
+  so only `bash -n` and the recorded behavioral/build/archive gates are
+  claimed.
+- All source commits are pushed to `origin/codex/arm64-apple` and draft PR #1.
+  They are not merged to `main`. A real Apple identity/profile, a connected
+  iPad, signed installation, on-device import/update persistence, physical
+  multi-touch feel, drift/boost, a full race, cadence, thermal and performance
+  acceptance remain open. The goal remains active.
+
+The preceding published reading was 181,770 goal seconds. The pre-publication
+documentation reading was 183,956 seconds: 2 days, 3 hours, 5 minutes,
+56 seconds cumulative, adding 2,186 seconds (36 minutes, 26 seconds). The timer
+is cumulative product-task time, including pauses, not a benchmark or labor
+estimate.

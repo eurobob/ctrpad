@@ -67,6 +67,10 @@ Current evidence and procedures:
   direct live packet trace, two-host-snapshot cadence correction, exact matrix,
   touch-only menu/save-reader evidence, the iPadOS 26 adaptive-orientation
   correction, and remaining physical-iPad gates.
+- `2026-07-31-ios-sideload-package.md` records the reproducible retail-free IPA
+  workflow, embedded GPL/notices/Installation Information, profile and DER
+  signing guards, rejected archive/signing bugs, exact artifact hashes, and the
+  deliberately open user-owned Apple signature/device-install gate.
 - `2026-07-31-macos-arm64-keyboard-tap.md` records the missing quick-tap root
   cause, historical one-snapshot press-edge transport, its later two-snapshot
   supersession, direct live PSX packet traces, and exact-commit
