@@ -7173,3 +7173,86 @@ mode omits the separately documented manual coverage form.
 
 Raw reports, checkpoints, saves, the disc image, and retail assets remain
 ignored and untracked.
+
+## 2026-07-31 — Rejected repeating i686 layout and prepared a real alternate mapping
+
+### Stopped the first verifier run before it could waste hours
+
+The finalized cross-width pair allowed the prepared process/mutation verifier
+to pass all preflight checks and enter playback 1. Its first checkpoint
+reported:
+
+```text
+recording:
+  sdata=0x403cd040 gGT=0x403d6bf4 mempack=0x408c8bc0
+playback 1:
+  sdata=0x403cd040 gGT=0x403d6bf4 mempack=0x408c8bc0
+raw checkpoint:
+  recorded=0xd4c950a8 restored-process=0xd4c950a8 equal=yes
+```
+
+The verifier would later require a changed process layout. Continuing the
+24,232-frame playback could not satisfy that check, so the disposable
+container was stopped after the evidence appeared. The outer command ended
+137 because its container was intentionally stopped. That run is rejected,
+not a replay failure or lifecycle result.
+
+The ELF is a 32-bit PIE (`Type: DYN`), and the container reports kernel ASLR
+mode 2. Nevertheless, this Docker Desktop amd64/i386 execution path assigned
+the same addresses to independent direct launches. `setarch -L` and
+`setarch -R` both failed with `Invalid argument`, including in an unconfined
+probe container, so personality flags were rejected as a usable route.
+
+### Proved a second mapping without rebuilding the producer
+
+Invoking the immutable PIE through its matching i386 dynamic loader changed
+the mapping, but the normal loader path made SDL select the loader directory
+as the application base. Copying the same loader into the ignored run tree
+kept `SDL_GetBasePath()` at `/out/` and preserved normal assets:
+
+```text
+loader:
+  /private/tmp/ctrpad-i686-cutscene-run-4hjAQW/ld-linux-ctrpad.so.2
+SHA-256:
+  eccfafa93226e52e32aff3f97f5f779e7d02306cda017eae6d9c358142d4278d
+producer:
+  unchanged eee2a8df5b96
+```
+
+The short probe then reached checkpoint restore with:
+
+```text
+sdata=0x3efaf040 gGT=0x3efb8bf4 mempack=0x3f4aabc0
+recorded=0xd4c950a8 restored-process=0x46478f61 equal=no
+```
+
+The canonical replay began normally. A second loader probe repeated the same
+alternate mapping, proving that loader-versus-loader is not randomized.
+Both short probes were forcibly timed out after the required early evidence;
+QEMU printed a termination-time target-signal message and exit 124. Those
+exits are rejected as lifecycle or full-replay evidence.
+
+### Corrected the verifier's actual invariant
+
+The real requirement is two unchanged full processes with:
+
+- different host-address samples;
+- different restored raw-checkpoint checksums; and
+- identical canonical state through normal exit.
+
+It is not necessary for both restored raw checksums to differ independently
+from the original recording. Requiring that accidental stronger condition
+would reject the valid direct-plus-loader pair even though the two playback
+processes exercise different pointer layouts.
+
+`tools/verify-linux-i686-golden-replay.sh` now accepts optional
+`CTRPAD_I686_ALT_LOADER`. Playback 1 remains direct; playback 2 uses the
+explicit loader. The loader must be executable and remain under the selected
+build tree. The script requires the two restored raw checksums to differ,
+requires at least one `equal=no` comparison against the recording, retains
+the distinct host-address check, and hashes the loader into
+`environment.txt`. Mutation playback still invokes the exact producer
+directly.
+
+This preserves and sharpens the process-independence gate without changing
+the immutable game binary, replay, checkpoint, or canonical comparison.

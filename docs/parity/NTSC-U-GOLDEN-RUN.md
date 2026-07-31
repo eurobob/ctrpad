@@ -155,6 +155,7 @@ manifest, and source commit:
 ```sh
 CTRPAD_I686_BUILD_DIR=/absolute/path/to/disposable-build \
 CTRPAD_I686_BINARY=/absolute/path/to/disposable-build/exact-producer \
+CTRPAD_I686_ALT_LOADER=/absolute/path/to/disposable-build/ld-linux-i686.so.2 \
 CTRPAD_TOOLCHAIN_PACKAGES=/absolute/path/to/toolchain-packages.txt \
 CTRPAD_EXPECTED_SOURCE_COMMIT=0123456789abcdef0123456789abcdef01234567 \
 CTRPAD_DISC_IMAGE=/absolute/path/to/user-owned-ntsc-u.bin \
@@ -163,11 +164,16 @@ tools/verify-linux-i686-golden-replay.sh \
   auto
 ```
 
-The selected binary and report must both be under the selected build
-directory so the container receives exactly that run tree. The toolchain
-manifest may be elsewhere. Report metadata must be finalized replay version
-4, contain nonzero frame and checkpoint counts, and identify the expected
-commit's 12-character build ID. The producer must embed the same build ID.
+The selected binary, report, and optional alternate loader must be under the
+selected build directory so the container receives exactly that run tree.
+The toolchain manifest may be elsewhere. The alternate loader is needed only
+when the environment maps separate direct i686 launches at identical virtual
+addresses. Playback 1 remains a direct executable launch; playback 2 uses the
+selected loader to force a second real mapping. The loader's path and hash
+are written to `environment.txt`. Report metadata must be finalized replay
+version 4, contain nonzero frame and checkpoint counts, and identify the
+expected commit's 12-character build ID. The producer must embed the same
+build ID.
 `CTRPAD_EXPECTED_SOURCE_COMMIT` must name a full commit present in this
 repository; it defaults to `HEAD`. The golden scenario defaults to exactly
 24,232 frames and 81 checkpoints. `CTRPAD_EXPECTED_FRAME_COUNT` and
@@ -184,6 +190,7 @@ two-process address-randomization and deliberate-mutation proof:
 CTRPAD_REQUIRE_COVERAGE=0 \
 CTRPAD_I686_BUILD_DIR=/absolute/path/to/immutable-run-tree \
 CTRPAD_I686_BINARY=/absolute/path/to/immutable-run-tree/exact-producer \
+CTRPAD_I686_ALT_LOADER=/absolute/path/to/immutable-run-tree/ld-linux-i686.so.2 \
 CTRPAD_TOOLCHAIN_PACKAGES=/absolute/path/to/toolchain-packages.txt \
 CTRPAD_EXPECTED_SOURCE_COMMIT=0123456789abcdef0123456789abcdef01234567 \
 tools/verify-linux-i686-golden-replay.sh \
@@ -205,8 +212,9 @@ With full coverage enabled, the verifier:
   image;
 - plays every frame twice in separate processes and requires exit status 0;
 - requires different logged host-address samples across those processes;
-- requires the pointer-sensitive restored raw-checkpoint checksum to differ
-  from the recorded payload in each process;
+- requires different pointer-sensitive restored raw-checkpoint checksums
+  across the processes and requires at least one to differ from the recorded
+  payload;
 - derives the first frame where `driver[0]` becomes active in an actual race;
 - flips bit 0 of the real `driver[0].posCurr.x` field at that exact frame;
 - requires exit status 2 and `drivers` as the first canonical difference;

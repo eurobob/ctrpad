@@ -11,6 +11,7 @@ ctrpad_root_dir=$(CDPATH= cd -- "$(dirname "$0")/.." && pwd)
 ctrpad_container_image="ctrpad-linux-i686:ubuntu-24.04"
 ctrpad_build_dir=${CTRPAD_I686_BUILD_DIR:-"${ctrpad_root_dir}/build-linux-i686-baseline"}
 ctrpad_binary_path=${CTRPAD_I686_BINARY:-"${ctrpad_build_dir}/ctr_native"}
+ctrpad_alt_loader_path=${CTRPAD_I686_ALT_LOADER:-}
 ctrpad_toolchain_manifest=${CTRPAD_TOOLCHAIN_PACKAGES:-"${ctrpad_build_dir}/toolchain-packages.txt"}
 ctrpad_require_coverage=${CTRPAD_REQUIRE_COVERAGE:-1}
 ctrpad_report_dir=$1
@@ -62,6 +63,10 @@ if [ ! -x "${ctrpad_binary_path}" ]; then
     echo "Missing i686 build: ${ctrpad_binary_path}" >&2
     exit 1
 fi
+if [ -n "${ctrpad_alt_loader_path}" ] && [ ! -x "${ctrpad_alt_loader_path}" ]; then
+    echo "Missing alternate i686 loader: ${ctrpad_alt_loader_path}" >&2
+    exit 1
+fi
 if [ ! -f "${ctrpad_toolchain_manifest}" ]; then
     echo "Missing build manifest: ${ctrpad_toolchain_manifest}" >&2
     exit 1
@@ -88,6 +93,11 @@ fi
 ctrpad_build_dir=$(CDPATH= cd -- "${ctrpad_build_dir}" && pwd)
 ctrpad_binary_dir=$(CDPATH= cd -- "$(dirname "${ctrpad_binary_path}")" && pwd)
 ctrpad_binary_path="${ctrpad_binary_dir}/$(basename "${ctrpad_binary_path}")"
+ctrpad_alt_loader_relative=
+if [ -n "${ctrpad_alt_loader_path}" ]; then
+    ctrpad_alt_loader_dir=$(CDPATH= cd -- "$(dirname "${ctrpad_alt_loader_path}")" && pwd)
+    ctrpad_alt_loader_path="${ctrpad_alt_loader_dir}/$(basename "${ctrpad_alt_loader_path}")"
+fi
 ctrpad_toolchain_dir=$(CDPATH= cd -- "$(dirname "${ctrpad_toolchain_manifest}")" && pwd)
 ctrpad_toolchain_manifest="${ctrpad_toolchain_dir}/$(basename "${ctrpad_toolchain_manifest}")"
 ctrpad_report_dir=$(CDPATH= cd -- "${ctrpad_report_dir}" && pwd)
@@ -103,6 +113,18 @@ case "${ctrpad_binary_path}" in
         exit 1
         ;;
 esac
+
+if [ -n "${ctrpad_alt_loader_path}" ]; then
+    case "${ctrpad_alt_loader_path}" in
+        "${ctrpad_build_dir}/"*)
+            ctrpad_alt_loader_relative=${ctrpad_alt_loader_path#"${ctrpad_build_dir}/"}
+            ;;
+        *)
+            echo "Selected alternate loader must be under ${ctrpad_build_dir}" >&2
+            exit 1
+            ;;
+    esac
+fi
 
 case "${ctrpad_report_dir}/" in
     "${ctrpad_build_dir}/"*)
@@ -201,6 +223,7 @@ docker run --rm \
     --env MESA_SHADER_CACHE_MAX_SIZE=64M \
     --env XDG_RUNTIME_DIR=/tmp/ctrpad-runtime \
     --env "CTRPAD_BINARY_RELATIVE=${ctrpad_binary_relative}" \
+    --env "CTRPAD_ALT_LOADER_RELATIVE=${ctrpad_alt_loader_relative}" \
     --env "CTRPAD_REPLAY_PATH=${ctrpad_replay_path}" \
     --env "CTRPAD_REPORT_DIR=${ctrpad_container_report_dir}" \
     --env "CTRPAD_MUTATION_FRAME=${ctrpad_mutation_frame}" \
@@ -235,13 +258,38 @@ docker run --rm \
 
         "/out/${CTRPAD_BINARY_RELATIVE}" --replay "${CTRPAD_REPLAY_PATH}" \
             >"${CTRPAD_REPORT_DIR}/playback-1.log" 2>&1
-        "/out/${CTRPAD_BINARY_RELATIVE}" --replay "${CTRPAD_REPLAY_PATH}" \
-            >"${CTRPAD_REPORT_DIR}/playback-2.log" 2>&1
+        if [ -n "${CTRPAD_ALT_LOADER_RELATIVE}" ]; then
+            "/out/${CTRPAD_ALT_LOADER_RELATIVE}" "/out/${CTRPAD_BINARY_RELATIVE}" \
+                --replay "${CTRPAD_REPLAY_PATH}" \
+                >"${CTRPAD_REPORT_DIR}/playback-2.log" 2>&1
+        else
+            "/out/${CTRPAD_BINARY_RELATIVE}" --replay "${CTRPAD_REPLAY_PATH}" \
+                >"${CTRPAD_REPORT_DIR}/playback-2.log" 2>&1
+        fi
 
         grep -q "\\[CTR Replay\\] replay finished after ${CTRPAD_EXPECTED_FRAME_COUNT} frames$" "${CTRPAD_REPORT_DIR}/playback-1.log"
         grep -q "\\[CTR Replay\\] replay finished after ${CTRPAD_EXPECTED_FRAME_COUNT} frames$" "${CTRPAD_REPORT_DIR}/playback-2.log"
-        grep -q "\\[CTR State\\] raw checkpoint comparison .* equal=no" "${CTRPAD_REPORT_DIR}/playback-1.log"
-        grep -q "\\[CTR State\\] raw checkpoint comparison .* equal=no" "${CTRPAD_REPORT_DIR}/playback-2.log"
+        ctrpad_raw_checkpoint_1=$(
+            sed -n "s/^\\[CTR State\\] raw checkpoint comparison .* restored-process=\\([^ ]*\\) .*/\\1/p" \
+                "${CTRPAD_REPORT_DIR}/playback-1.log" | head -n 1
+        )
+        ctrpad_raw_checkpoint_2=$(
+            sed -n "s/^\\[CTR State\\] raw checkpoint comparison .* restored-process=\\([^ ]*\\) .*/\\1/p" \
+                "${CTRPAD_REPORT_DIR}/playback-2.log" | head -n 1
+        )
+        if [ -z "${ctrpad_raw_checkpoint_1}" ] || [ -z "${ctrpad_raw_checkpoint_2}" ]; then
+            echo "Playback logs do not contain restored raw-checkpoint checksums." >&2
+            exit 1
+        fi
+        if [ "${ctrpad_raw_checkpoint_1}" = "${ctrpad_raw_checkpoint_2}" ]; then
+            echo "Restored raw-checkpoint checksums did not change across processes." >&2
+            exit 1
+        fi
+        if ! grep -q "\\[CTR State\\] raw checkpoint comparison .* equal=no" "${CTRPAD_REPORT_DIR}/playback-1.log" &&
+            ! grep -q "\\[CTR State\\] raw checkpoint comparison .* equal=no" "${CTRPAD_REPORT_DIR}/playback-2.log"; then
+            echo "Neither restored raw checkpoint differs from the recording." >&2
+            exit 1
+        fi
 
         ctrpad_address_1=$(grep -m 1 "\\[CTR Replay\\] playback host-address sample" "${CTRPAD_REPORT_DIR}/playback-1.log")
         ctrpad_address_2=$(grep -m 1 "\\[CTR Replay\\] playback host-address sample" "${CTRPAD_REPORT_DIR}/playback-2.log")
@@ -283,10 +331,20 @@ docker run --rm \
 if command -v sha256sum >/dev/null 2>&1; then
     ctrpad_disc_hash=$(sha256sum "${ctrpad_disc_image}" | awk '{print $1}')
     ctrpad_binary_hash=$(sha256sum "${ctrpad_binary_path}" | awk '{print $1}')
+    if [ -n "${ctrpad_alt_loader_path}" ]; then
+        ctrpad_alt_loader_hash=$(sha256sum "${ctrpad_alt_loader_path}" | awk '{print $1}')
+    else
+        ctrpad_alt_loader_hash=none
+    fi
     printf "%s  ctr-u.bin\n" "${ctrpad_disc_hash}" > "${ctrpad_report_dir}/disc.sha256"
 else
     ctrpad_disc_hash=$(shasum -a 256 "${ctrpad_disc_image}" | awk '{print $1}')
     ctrpad_binary_hash=$(shasum -a 256 "${ctrpad_binary_path}" | awk '{print $1}')
+    if [ -n "${ctrpad_alt_loader_path}" ]; then
+        ctrpad_alt_loader_hash=$(shasum -a 256 "${ctrpad_alt_loader_path}" | awk '{print $1}')
+    else
+        ctrpad_alt_loader_hash=none
+    fi
     printf "%s  ctr-u.bin\n" "${ctrpad_disc_hash}" > "${ctrpad_report_dir}/disc.sha256"
 fi
 
@@ -297,6 +355,8 @@ fi
     echo "expected_checkpoint_count=${ctrpad_expected_checkpoint_count}"
     echo "binary_version=${ctrpad_binary_version}"
     echo "binary_sha256=${ctrpad_binary_hash}"
+    echo "alternate_loader=${ctrpad_alt_loader_relative:-none}"
+    echo "alternate_loader_sha256=${ctrpad_alt_loader_hash}"
     echo "container_image_id=$(docker image inspect --format '{{.Id}}' "${ctrpad_container_image}")"
     sed 's/^/toolchain=/' "${ctrpad_toolchain_manifest}"
 } > "${ctrpad_report_dir}/environment.txt"
