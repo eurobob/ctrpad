@@ -6418,3 +6418,153 @@ rate is the established i386 plus llvmpipe emulation cost, not a stall.
 M6 remains open until this same-commit report finalizes all 24,232 frames and
 passes the complete comparison. The finalized ARM64 result is a major
 correction checkpoint, not permission to skip the remaining clean-pair gate.
+
+## 2026-07-30 — Reproduced current-format lap coverage
+
+### Why the first extension was not enough
+
+The inherited version-4 input and steering extension A both reached
+`maxCheckpoint=77` but `maxLap=0`. To keep this from becoming an informal
+"the kart looked close" judgment, `tools/extend-replay-input.mjs` was added
+in commit `0e524c0c0`. It validates replay layout, record order, pad and
+record checksums, packet bounds, VSync totals, and every generated output
+record. It refuses to overwrite output and states in its source that copied
+state digests are not acceptance evidence.
+
+Trial B extended the automation to 36,000 frames, using trial A as the pad
+source and the clean current version-4 report as the timing source:
+
+```text
+seed:
+  build-macos-arm64/debug/reports/20260730/ctr-215303/input-lap-extension-b.ctrreplay
+SHA-256:
+  2c98ea3c327770d3d90ba7eed09fd52be13f2b703b344c9cec5102091ac674b6
+fresh report:
+  build-macos-arm64/debug/reports/20260730/ctr-221412
+```
+
+The structural inspector showed lap 0/checkpoint 56 at frame 21,300 and the
+same values through frame 28,800. After 7,550 frames without progress, the
+process was stopped at frame 28,850. It had 97 recorded checkpoints and had
+previously reached checkpoint 77, but never advanced a lap. Although the
+shutdown path finalized the file headers, the metadata also records a
+36,000-frame input seed and only 28,850 output frames. The run is explicitly
+rejected as interrupted and incomplete. Its four retained report hashes are
+recorded in `docs/parity/2026-07-30-full-cross-width-result.md`.
+
+### Isolating input from timing
+
+The older finalized i686 version-2 report `ctr-225420` reaches `lapIndex=1`
+at frame 21,300. A byte audit found that the historical and inherited current
+inputs have identical game-visible PSX pad transport on all 24,232 frames:
+for all four pads, bytes 0 through 8 contain the same status, ID, buttons,
+analog axes, and connected flag. Only the three reserved bytes differ. In
+contrast, per-frame VBlank totals differ on 412 frames, starting at frame
+zero.
+
+This rejected the controller-script hypothesis and identified timing
+transport as the trajectory-changing variable. Replay version 2 has the
+historical in-frame VSync packets and elapsed time, but predates version 4's
+pre-frame boundary marker.
+
+Commit `a269843a2` made the extension tool promote validated version-2 and
+version-3 sources. It retains the source records and in-frame timing after
+frame zero, changes the output header to version 4, and requires an independent
+complete version-4 bootstrap. It copies frame zero's entire VSync block and
+elapsed time from that bootstrap, recomputes the record checksum, and validates
+the entire output under version-4 rules. Missing option values are rejected
+rather than being interpreted as paths.
+
+The exact inputs were historical report `ctr-225420` and clean current-format
+report `ctr-215303`. The resulting promoted seed is:
+
+```text
+build-linux-i686-baseline/debug/reports/20260729/ctr-225420/input-promoted-v4.ctrreplay
+version/frames:
+  4 / 24232
+SHA-256:
+  80522b7675089f4bddd6c3d04e09a86c41eb5524e6661b5e65f63d886405fcea
+```
+
+The full derivation command is recorded in the parity report.
+
+### Fresh current-build result
+
+Clean ARM64 producer `eee2a8df5b96` recorded from the promoted seed. This was
+a real replay-seeded execution, not a header rewrite of the historical output:
+
+```text
+report:
+  build-macos-arm64/debug/reports/20260730/ctr-223221
+frames/checkpoints/finalized/exit:
+  24232 / 81 / 1 / 0
+```
+
+The typed LP64 checkpoint inspector reports 80 active records,
+`maxCheckpoint=77`, and `maxLap=1`. The transition is structural:
+
+```text
+frame 21000 lap 0 checkpoint 72
+frame 21300 lap 1 checkpoint 1
+frame 21600 lap 0 checkpoint 0
+```
+
+The state reset after the race does not invalidate the captured lap-advance
+checkpoint. Hashes for the accepted input, state, metadata, and log are
+recorded in the parity report.
+
+### Making the transport proof rerunnable
+
+The initial semantic transport comparison was a disposable analysis command.
+That was insufficient for the requested historical record, so it was replaced
+by checked-in `tools/compare-replay-transport-semantics.mjs`. The tool
+validates both complete replay files and compares:
+
+- the nine game-visible bytes of every pad snapshot;
+- end-of-frame `elapsedTimeMS`;
+- VBlank totals;
+- RLE-expanded pre-frame VSync sequences; and
+- RLE-expanded in-frame VSync sequences.
+
+Comparing the promoted seed with fresh report `ctr-223221` yields zero
+mismatches in all five semantic components across all 24,232 frames. The raw
+VBlank storage block differs on 23,836 frames because the fresh recorder
+run-length-encodes repeated equal packets; after expansion, both pre-frame
+and in-frame sequences match on every frame.
+
+This closes the missing current-build version-4 lap-coverage task. It does
+not close the formal cross-width gate: clean same-commit i686 report
+`ctr-025812` still has to finalize and match all eight state/transport
+components before the two-process and deliberate-mutation gates run.
+
+At the final documentation check, that container was still healthy and had
+advanced from frame 9,300/checkpoint 32 to frame 9,900/checkpoint 34:
+
+```text
+finalized=0
+build_id=eee2a8df5b96
+frame_count=9900
+checkpoint_count=34
+```
+
+This is continued progress under slow i386 plus llvmpipe emulation, not a
+stalled game.
+
+### GitHub/main distinction
+
+The implementation is published on `codex/arm64-apple` through draft PR #1,
+but it has not been merged to `main`. At this checkpoint:
+
+```text
+origin/main:
+  95417c723518407d6bfe3c81a37606294963efe2
+origin/codex/arm64-apple before this documentation commit:
+  a269843a2ded81c355f19c2948ae650859c0dddd
+PR:
+  https://github.com/chrissotraidis/ctrpad/pull/1
+state:
+  OPEN / draft
+```
+
+That distinction is intentional while M6 is open, but it must always be
+reported plainly: "backed up on GitHub" does not mean "merged to main."

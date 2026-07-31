@@ -570,12 +570,178 @@ Its first 1,879 complete frame records match the clean ARM64 report on all
 eight required components. The full report must still finalize and match all
 24,232 frames before M6 can be accepted.
 
+## Current-build version-4 lap coverage
+
+### Rejected extension B
+
+Commit `0e524c0c0` added `tools/extend-replay-input.mjs` so replay extensions
+are validated and reproducible. It validates source, optional pad source, and
+every output record; copies pad snapshots only when explicitly requested;
+recomputes checksums; and refuses to overwrite its output. Copied state
+digests are automation input, not parity evidence. Only a fresh recording
+from the generated seed can be evaluated.
+
+Extension B used a 36,000-frame version-4 seed, retained trial A's controller
+transport, and retained clean version-4 VSync transport:
+
+```text
+seed:
+  build-macos-arm64/debug/reports/20260730/ctr-215303/input-lap-extension-b.ctrreplay
+frames/version:
+  36000 / 4
+SHA-256:
+  2c98ea3c327770d3d90ba7eed09fd52be13f2b703b344c9cec5102091ac674b6
+```
+
+Clean producer `eee2a8df5b96` recorded report `ctr-221412`. The process was
+stopped deliberately at frame 28,850 after the structural checkpoint had
+remained at lap 0/checkpoint 56 from frame 21,300 onward: 7,550 frames with
+no further course progress. The run had previously reached checkpoint 77 but
+never a lap advance.
+
+```text
+report:
+  build-macos-arm64/debug/reports/20260730/ctr-221412
+frames/checkpoints/finalized/input-seed-frames:
+  28850 / 97 / 1 / 36000
+
+input.ctrreplay:
+  ab5b4944d82f1fb3f9551805c278337fa7b6f3f4bf69756f49bf92657f579018
+state.ctrstates:
+  ee71a230587e9ffb2696854a86741296bc7751e6d31aea100bf025a9d12d428f
+metadata.txt:
+  7f55d2fb496156a01012651adf8ab6ef7ad9ed9849816ab46bc629d693834d35
+ctr-native.log:
+  5047232712cfa5e10c8d8777f453f23ae451086d8a09a491667dadac7f2f5cf8
+```
+
+`finalized=1` means the interrupt closed the report headers; it does not turn
+28,850 recorded frames into the requested 36,000-frame normal completion.
+Extension B is retained and explicitly rejected.
+
+### Historical timing discovery
+
+The finalized historical i686 report
+`build-linux-i686-baseline/debug/reports/20260729/ctr-225420` is replay
+version 2 and reaches lap 1 at frame 21,300. Comparing its records with the
+inherited clean version-4 input established:
+
+- the first nine bytes of each 12-byte pad snapshot—the status, ID, buttons,
+  analog axes, and connected state actually transported to the PSX pad
+  bus—match for all four pads on all 24,232 frames;
+- the three reserved bytes differ because later replay versions use them for
+  legacy submit-name migration state and are not pad-bus transport; and
+- per-frame VBlank totals differ on 412 frames, beginning at frame zero.
+
+The controller script was therefore not the cause of the changed trajectory.
+The current inherited version-4 timing was. Version 2 already records each
+in-frame VSync packet and end-of-frame elapsed time, but it has no way to mark
+the pre-frame timing boundary introduced in version 4.
+
+Commit `a269843a2` extended `tools/extend-replay-input.mjs` to accept validated
+version-2 and version-3 sources. Promotion preserves the historical records
+and in-frame timing after frame zero, changes the header to version 4, and
+requires a complete version-4 bootstrap replay. Frame zero's entire VSync
+block and end-of-frame elapsed time are taken from that bootstrap so the
+otherwise-unrecorded initial boundary is complete. The tool rejects promotion
+without that independent boundary.
+
+The exact promotion was:
+
+```sh
+node tools/extend-replay-input.mjs \
+  --frames 24232 \
+  --bootstrap-from \
+    build-macos-arm64/debug/reports/20260730/ctr-215303/input.ctrreplay \
+  build-linux-i686-baseline/debug/reports/20260729/ctr-225420/input.ctrreplay \
+  build-linux-i686-baseline/debug/reports/20260729/ctr-225420/input-promoted-v4.ctrreplay
+```
+
+The promoted seed validates as version 4 with 24,232 records:
+
+```text
+build-linux-i686-baseline/debug/reports/20260729/ctr-225420/input-promoted-v4.ctrreplay
+SHA-256:
+80522b7675089f4bddd6c3d04e09a86c41eb5524e6661b5e65f63d886405fcea
+```
+
+### Accepted fresh ARM64 coverage report
+
+Clean current producer `eee2a8df5b96` recorded from the promoted input and
+reached normal process exit:
+
+```sh
+cd build-macos-arm64
+./ctr_native-cutscene-fix-producer-eee2a8df5b96 \
+  --record-from-replay \
+  ../build-linux-i686-baseline/debug/reports/20260729/ctr-225420/input-promoted-v4.ctrreplay
+```
+
+```text
+report:
+  build-macos-arm64/debug/reports/20260730/ctr-223221
+frames/checkpoints/finalized/exit:
+  24232 / 81 / 1 / 0
+build ID:
+  eee2a8df5b96
+
+input.ctrreplay:
+  d6a5c0340513ba14ed4c95fe3d074ba4de971ecc9ee537b8aacf3cffb6bab2c7
+state.ctrstates:
+  63f48fe6b60b3a145084cfcf908cc854447f155f7df8b75d0befda3867d3b23c
+metadata.txt:
+  4f997c9773fbb7d6bb25f13e0161f850a630015fd87b0465a8f511222dd5fcb1
+ctr-native.log:
+  04412d5d0305919e2025d6bb70c479e3403650d83084e22903b630fac7c9caa3
+```
+
+The typed checkpoint inspector reports:
+
+```text
+checkpointVersion=3 pointerSize=8 activeRecords=80
+frame 21000 lap 0 checkpoint 72
+frame 21300 lap 1 checkpoint 1
+frame 21600 lap 0 checkpoint 0
+maxLap=1 maxCheckpoint=77 lapAdvanced=yes
+```
+
+The later lap-zero state is the scenario's post-race reset; it does not erase
+the observed lap transition. This fresh version-4 report supplies the
+structural current-build coverage that extensions A and B did not.
+
+### Reproducible transport audit
+
+`tools/compare-replay-transport-semantics.mjs` validates both replay files and
+compares the game-visible pad bytes, end-of-frame elapsed time, VBlank total,
+and fully expanded pre-frame and in-frame VSync sequences. It treats raw
+packet encoding differences as informational because version 4 may
+run-length-encode repeated equal packets.
+
+```sh
+node tools/compare-replay-transport-semantics.mjs \
+  build-linux-i686-baseline/debug/reports/20260729/ctr-225420/input-promoted-v4.ctrreplay \
+  build-macos-arm64/debug/reports/20260730/ctr-223221/input.ctrreplay
+```
+
+```text
+padTransport:             equal=24232 mismatched=0
+elapsedTime:              equal=24232 mismatched=0
+vblankTotal:              equal=24232 mismatched=0
+rawVblankBlock:           equal=396   mismatched=23836
+expandedPreFrameVblank:   equal=24232 mismatched=0
+expandedInFrameVblank:    equal=24232 mismatched=0
+```
+
+The 23,836 raw-block differences are the expected RLE representation change;
+the expanded sequences are identical. This audit proves that the fresh report
+consumed the promoted timing and input transport exactly. It does not compare
+copied seed state digests and does not replace the still-running formal
+same-commit i686 parity report.
+
 ## Required next work
 
 1. Allow clean i686 report `ctr-025812` to finalize.
 2. Require all eight components to match the finalized clean ARM64 report for
    all 24,232 frames before running
    the two-process i686 and deliberate-mutation gates.
-3. Record or derive a version-4 coverage input that structurally reaches
-   `lapIndex >= 1`.
-4. Keep M6 and all dependent iOS milestones open until these gates pass.
+3. Keep M6 and all dependent iOS milestones open until these gates pass.
