@@ -41,7 +41,11 @@ extern SDL_Window *g_window;
 #define MAX_NUM_VERTEX_BUFFERS          (2)
 #define PSX_SCREEN_ASPECT               (240.0f / 320.0f) // PSX screen is mapped always to this aspect
 
-#if defined(CTR_INTERNAL)
+#if defined(CTR_INTERNAL) && !defined(CTR_NATIVE_RENDERER_GLES)
+#define CTR_NATIVE_GPU_TIMERS 1
+#endif
+
+#if defined(CTR_NATIVE_GPU_TIMERS)
 #ifndef GL_TIME_ELAPSED
 #define GL_TIME_ELAPSED 0x88BF
 #endif
@@ -59,6 +63,74 @@ global_variable u32 s_gpuTimerFrameIndex;
 global_variable s32 s_gpuTimerNextQuery;
 global_variable b32 s_gpuTimerSupported;
 global_variable b32 s_gpuTimerActive;
+#endif
+
+struct NativeRendererDialect
+{
+	int contextMajor;
+	int contextMinor;
+	int contextProfile;
+	const char *apiName;
+	const char *profileName;
+	const char *shaderName;
+	const char *loaderName;
+	const char *vertexShaderHeader;
+	const char *fragmentShaderHeader;
+	b32 wireframeEnabled;
+	b32 debugLabelsEnabled;
+	b32 gpuTimerEnabled;
+};
+
+#if defined(CTR_NATIVE_RENDERER_GLES)
+global_variable const struct NativeRendererDialect s_rendererDialect = {
+    3,
+    0,
+    SDL_GL_CONTEXT_PROFILE_ES,
+    "gles",
+    "es",
+    "300es",
+    "sdl-proc",
+    "\t#version 300 es\n"
+    "\tprecision mediump int;\n"
+    "\tprecision highp float;\n"
+    "\t#define varying   out\n"
+    "\t#define attribute in\n"
+    "\t#define texture2D texture\n",
+    "\t#version 300 es\n"
+    "\tprecision mediump int;\n"
+    "\tprecision highp float;\n"
+    "\t#define varying     in\n"
+    "\t#define texture2D   texture\n"
+    "\tout vec4 fragColor;\n",
+    false,
+    false,
+    false,
+};
+#else
+global_variable const struct NativeRendererDialect s_rendererDialect = {
+    3,
+    3,
+    SDL_GL_CONTEXT_PROFILE_CORE,
+    "gl",
+    "core",
+    "140",
+    "native-gl",
+    "\t#version 140\n"
+    "\tprecision lowp  int;\n"
+    "\tprecision highp float;\n"
+    "\t#define varying   out\n"
+    "\t#define attribute in\n"
+    "\t#define texture2D texture\n",
+    "\t#version 140\n"
+    "\tprecision lowp  int;\n"
+    "\tprecision highp float;\n"
+    "\t#define varying     in\n"
+    "\t#define texture2D   texture\n"
+    "\tout vec4 fragColor;\n",
+    true,
+    true,
+    true,
+};
 #endif
 
 global_variable BlendMode s_previousBlendMode = BM_NONE;
@@ -158,7 +230,7 @@ internal void NativeRenderer_EnsureRenderTarget(struct NativeRenderTarget *targe
 internal void NativeRenderer_BindMainRenderTarget(void);
 internal void NativeRenderer_DrawVRAMRegion(int x, int y, int width, int height);
 internal void NativeRenderer_LoadRenderTargetFromVRAM(struct NativeRenderTarget *target, int x, int y);
-#if defined(CTR_INTERNAL)
+#if defined(CTR_NATIVE_GPU_TIMERS)
 internal void NativeRenderer_ResolveGpuMeasurements(b32 waitForResults);
 #endif
 
@@ -173,64 +245,80 @@ global_variable GLuint s_glVramFramebuffer;
 internal int NativeRenderer_InitialiseGLContext(char *windowName, int fullscreen)
 {
 	SDL_WindowFlags windowFlags = SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE;
+	int minorVersion = s_rendererDialect.contextMinor;
 
 	if (fullscreen)
 	{
 		windowFlags |= SDL_WINDOW_FULLSCREEN;
 	}
 
+	// Cocoa chooses CGL or EGL window setup while creating the window, so the
+	// requested profile must be visible before SDL_CreateWindow.
+	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, s_rendererDialect.contextMajor);
+	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, minorVersion);
+	SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, s_rendererDialect.contextProfile);
+
 	g_window = SDL_CreateWindow(windowName, g_windowWidth, g_windowHeight, windowFlags);
 
 	if (g_window == NULL)
 	{
-		NATIVE_RENDERER_ERROR("%s\n", "Failed to initialise SDL window!");
+		NATIVE_RENDERER_ERROR("Failed to initialise SDL window: %s\n", SDL_GetError());
 		return 0;
 	}
 
-	int major_version = 3;
-	int minor_version = 3;
-	int profile = SDL_GL_CONTEXT_PROFILE_CORE;
-
-	// find best OpenGL version
+	// Desktop GL retains the established 3.x minor fallback. GLES is pinned to
+	// 3.0 because vertex arrays and read-framebuffer/pack-row-length behavior
+	// are required by the shared renderer and are unavailable in ES 2.
 	do
 	{
-		SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, major_version);
-		SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, minor_version);
-		SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, profile);
+		SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, minorVersion);
 
 		if (SDL_GL_CreateContext(g_window))
 		{
-			break;
+			return 1;
 		}
 
-		minor_version--;
+		minorVersion--;
 
-	} while (minor_version >= 0);
+	} while (minorVersion >= 0);
 
-	if (minor_version == -1)
-	{
-		NATIVE_RENDERER_ERROR("%s\n", "Failed to initialise - OpenGL 3.x is not supported. Please update video drivers.");
-		return 0;
-	}
-
-	return 1;
+	NATIVE_RENDERER_ERROR("Failed to initialise - %s %d.x is not supported: %s\n", s_rendererDialect.apiName,
+	                      s_rendererDialect.contextMajor, SDL_GetError());
+	return 0;
 }
 
 internal int NativeRenderer_InitialiseGLExt(void)
 {
-	GLenum err = gladLoadGL();
+#if defined(CTR_NATIVE_RENDERER_GLES)
+	const int status = gladLoadGLLoader((GLADloadproc)SDL_GL_GetProcAddress);
+#else
+	const int status = gladLoadGL();
+#endif
 
-	if (err == 0)
+	if (status == 0)
 	{
 		return 0;
 	}
+
+#if defined(CTR_NATIVE_RENDERER_GLES)
+	// The checked-in glad GL loader recognizes the "OpenGL ES " version
+	// prefix and loads shared GL/ES 3 entry points. Fail at this boundary if a
+	// platform resolver does not supply the specific contract we consume.
+	if (!GLAD_GL_VERSION_3_0 || (glBindVertexArray == NULL) || (glGenVertexArrays == NULL) ||
+	    (glDeleteVertexArrays == NULL) || (glBindFramebuffer == NULL) || (glReadPixels == NULL) ||
+	    (glPixelStorei == NULL))
+	{
+		NATIVE_RENDERER_ERROR("%s\n", "OpenGL ES 3.0 loader contract is incomplete");
+		return 0;
+	}
+#endif
 
 	const char *rend = (const char *)glGetString(GL_RENDERER);
 	const char *vendor = (const char *)glGetString(GL_VENDOR);
 	NATIVE_RENDERER_LOG("*Video adapter: %s by %s\n", rend, vendor);
 
 	const char *versionStr = (const char *)glGetString(GL_VERSION);
-	NATIVE_RENDERER_LOG("*OpenGL version: %s\n", versionStr);
+	NATIVE_RENDERER_LOG("*%s version: %s\n", s_rendererDialect.apiName, versionStr);
 
 	const char *glslVersionStr = (const char *)glGetString(GL_SHADING_LANGUAGE_VERSION);
 	NATIVE_RENDERER_LOG("*GLSL version: %s\n", glslVersionStr);
@@ -284,7 +372,7 @@ void NativeRenderer_Shutdown(void)
 	glDeleteBuffers(1, &s_vramQuadVBO);
 }
 
-#if defined(CTR_INTERNAL)
+#if defined(CTR_NATIVE_GPU_TIMERS)
 internal void NativeRenderer_ResolveGpuMeasurements(b32 waitForResults)
 {
 	for (s32 i = 0; i < NATIVE_GPU_TIMER_QUERY_COUNT; i++)
@@ -320,7 +408,7 @@ void NativeRenderer_UpdateSwapIntervalState(int swapInterval)
 
 void NativeRenderer_BeginScene(void)
 {
-#if defined(CTR_INTERNAL)
+#if defined(CTR_NATIVE_GPU_TIMERS)
 	NativeRenderer_ResolveGpuMeasurements(false);
 	const u32 gpuFrameIndex = s_gpuTimerFrameIndex++;
 	if (s_gpuTimerSupported && NativePerf_IsEnabled())
@@ -367,7 +455,7 @@ void NativeRenderer_BeginScene(void)
 
 void NativeRenderer_EndGpuFrame(void)
 {
-#if defined(CTR_INTERNAL)
+#if defined(CTR_NATIVE_GPU_TIMERS)
 	if (s_gpuTimerActive)
 	{
 		glEndQuery(GL_TIME_ELAPSED);
@@ -378,7 +466,7 @@ void NativeRenderer_EndGpuFrame(void)
 
 void NativeRenderer_FinishGpuMeasurements(void)
 {
-#if defined(CTR_INTERNAL)
+#if defined(CTR_NATIVE_GPU_TIMERS)
 	NativeRenderer_EndGpuFrame();
 	if (!s_gpuTimerSupported)
 	{
@@ -920,19 +1008,8 @@ internal int NativeRenderer_Shader_CheckProgramStatus(GLuint program)
 
 internal ShaderID NativeRenderer_Shader_Compile(const char *source, bool isPsxShader)
 {
-	const char *GLSL_HEADER_VERT = "	#version 140\n"
-	                               "	precision lowp  int;\n"
-	                               "	precision highp float;\n"
-	                               "	#define varying   out\n"
-	                               "	#define attribute in\n"
-	                               "	#define texture2D texture\n";
-
-	const char *GLSL_HEADER_FRAG = "	#version 140\n"
-	                               "	precision lowp  int;\n"
-	                               "	precision highp float;\n"
-	                               "	#define varying     in\n"
-	                               "	#define texture2D   texture\n"
-	                               "	out vec4 fragColor;\n";
+	const char *GLSL_HEADER_VERT = s_rendererDialect.vertexShaderHeader;
+	const char *GLSL_HEADER_FRAG = s_rendererDialect.fragmentShaderHeader;
 
 	char extra_vs_defines[1024];
 	char extra_fs_defines[1024];
@@ -1178,7 +1255,7 @@ int NativeRenderer_InitialisePSX(void)
 	NativeRenderer_InitVRAMPipelines();
 	NATIVE_RENDERER_LOG("%s", "*VRAM pipelines ready\n");
 
-#if defined(CTR_INTERNAL)
+#if defined(CTR_NATIVE_GPU_TIMERS)
 	GLint glMajor = 0;
 	GLint glMinor = 0;
 	glGetIntegerv(GL_MAJOR_VERSION, &glMajor);
@@ -2295,6 +2372,10 @@ internal void NativeRenderer_SetViewPort(int x, int y, int width, int height)
 
 internal void NativeRenderer_SetWireframe(int enable)
 {
+	if (!s_rendererDialect.wireframeEnabled)
+	{
+		return;
+	}
 	glPolygonMode(GL_FRONT_AND_BACK, enable ? GL_LINE : GL_FILL);
 }
 
@@ -2325,7 +2406,7 @@ void NativeRenderer_DrawTriangles(int start_vertex, int triangles)
 
 void NativeRenderer_PushDebugLabel(const char *label)
 {
-	if (!GLAD_GL_KHR_debug)
+	if (!s_rendererDialect.debugLabelsEnabled || !GLAD_GL_KHR_debug)
 	{
 		return;
 	}
@@ -2334,9 +2415,43 @@ void NativeRenderer_PushDebugLabel(const char *label)
 
 void NativeRenderer_PopDebugLabel(void)
 {
-	if (!GLAD_GL_KHR_debug)
+	if (!s_rendererDialect.debugLabelsEnabled || !GLAD_GL_KHR_debug)
 	{
 		return;
 	}
 	glPopDebugGroup();
+}
+
+int NativeRenderer_RunDialectSelfTest(void)
+{
+#if defined(CTR_NATIVE_RENDERER_GLES)
+	const b32 valid = (s_rendererDialect.contextMajor == 3) && (s_rendererDialect.contextMinor == 0) &&
+	                  (s_rendererDialect.contextProfile == SDL_GL_CONTEXT_PROFILE_ES) &&
+	                  (strstr(s_rendererDialect.vertexShaderHeader, "#version 300 es") != NULL) &&
+	                  (strstr(s_rendererDialect.fragmentShaderHeader, "precision mediump int") != NULL) &&
+	                  !s_rendererDialect.wireframeEnabled && !s_rendererDialect.debugLabelsEnabled &&
+	                  !s_rendererDialect.gpuTimerEnabled;
+#else
+	const b32 valid = (s_rendererDialect.contextMajor == 3) && (s_rendererDialect.contextMinor == 3) &&
+	                  (s_rendererDialect.contextProfile == SDL_GL_CONTEXT_PROFILE_CORE) &&
+	                  (strstr(s_rendererDialect.vertexShaderHeader, "#version 140") != NULL) &&
+	                  (strstr(s_rendererDialect.fragmentShaderHeader, "#version 140") != NULL) &&
+	                  s_rendererDialect.wireframeEnabled && s_rendererDialect.debugLabelsEnabled &&
+	                  s_rendererDialect.gpuTimerEnabled;
+#endif
+
+	if (!valid)
+	{
+		fprintf(stderr, "[CTR Renderer] dialect self-test failed\n");
+		return 1;
+	}
+
+	printf("[CTR Renderer] dialect self-test passed: api=%s context=%d.%d profile=%s shader=%s loader=%s "
+	       "wireframe=%s debug-labels=%s gpu-timer=%s\n",
+	       s_rendererDialect.apiName, s_rendererDialect.contextMajor, s_rendererDialect.contextMinor,
+	       s_rendererDialect.profileName, s_rendererDialect.shaderName, s_rendererDialect.loaderName,
+	       s_rendererDialect.wireframeEnabled ? "enabled" : "disabled",
+	       s_rendererDialect.debugLabelsEnabled ? "enabled" : "disabled",
+	       s_rendererDialect.gpuTimerEnabled ? "enabled" : "disabled");
+	return 0;
 }

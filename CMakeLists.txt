@@ -5,6 +5,15 @@ include(CheckCCompilerFlag)
 set(CTR_NATIVE_VERSION "0.1.0-beta.7.1")
 option(CTR_NATIVE_MACOS_BUNDLE "Build CTR Native as a macOS application bundle" OFF)
 
+set(CTR_NATIVE_RENDERER_GLES_DEFAULT OFF)
+if(ANDROID OR IOS)
+    set(CTR_NATIVE_RENDERER_GLES_DEFAULT ON)
+endif()
+option(CTR_NATIVE_RENDERER_GLES
+    "Build the native renderer for an OpenGL ES 3.0 context"
+    ${CTR_NATIVE_RENDERER_GLES_DEFAULT}
+)
+
 if(CTR_NATIVE_MACOS_BUNDLE AND NOT APPLE)
     message(FATAL_ERROR "CTR_NATIVE_MACOS_BUNDLE is supported only on Apple platforms.")
 endif()
@@ -88,7 +97,7 @@ set(SDL_DIALOG OFF CACHE BOOL "" FORCE)
 set(SDL_TRAY OFF CACHE BOOL "" FORCE)
 set(SDL_POWER OFF CACHE BOOL "" FORCE)
 set(SDL_VULKAN OFF CACHE BOOL "" FORCE)
-set(SDL_OPENGLES OFF CACHE BOOL "" FORCE)
+set(SDL_OPENGLES ${CTR_NATIVE_RENDERER_GLES} CACHE BOOL "" FORCE)
 set(SDL_OFFSCREEN OFF CACHE BOOL "" FORCE)
 set(SDL_SNDIO OFF CACHE BOOL "" FORCE)
 set(SDL_SNDIO_SHARED OFF CACHE BOOL "" FORCE)
@@ -140,6 +149,9 @@ target_compile_definitions(ctr_native PRIVATE
     CTR_NATIVE_VERSION=\"${CTR_NATIVE_VERSION}\"
     CTR_NATIVE_BUILD_ID=\"${CTR_NATIVE_BUILD_ID}\"
 )
+if(CTR_NATIVE_RENDERER_GLES)
+    target_compile_definitions(ctr_native PRIVATE CTR_NATIVE_RENDERER_GLES=1)
+endif()
 if(CTR_NATIVE_MSVC_FRONTEND)
     target_compile_options(ctr_native PRIVATE
         /W4 #TODO(aalhendi): fix warnings
@@ -245,6 +257,16 @@ if(BUILD_TESTING)
     set_tests_properties(ctr_native_audio_mixer PROPERTIES PASS_REGULAR_EXPRESSION
         "^\\[CTR AudioMixer\\] self-test passed: adpcm=streamed pan=left reverb=tail dry=0x132e19d77167fb3d wet=0x4bdedc91d1293ad8 tail-frames=6905"
     )
+    add_test(NAME ctr_native_renderer_dialect COMMAND $<TARGET_FILE:ctr_native> --self-test-renderer-dialect)
+    if(CTR_NATIVE_RENDERER_GLES)
+        set_tests_properties(ctr_native_renderer_dialect PROPERTIES PASS_REGULAR_EXPRESSION
+            "^\\[CTR Renderer\\] dialect self-test passed: api=gles context=3.0 profile=es shader=300es loader=sdl-proc wireframe=disabled debug-labels=disabled gpu-timer=disabled"
+        )
+    else()
+        set_tests_properties(ctr_native_renderer_dialect PROPERTIES PASS_REGULAR_EXPRESSION
+            "^\\[CTR Renderer\\] dialect self-test passed: api=gl context=3.3 profile=core shader=140 loader=native-gl wireframe=enabled debug-labels=enabled gpu-timer=enabled"
+        )
+    endif()
     add_test(NAME ctr_native_checkpoint_pointer_validation COMMAND $<TARGET_FILE:ctr_native> --self-test-checkpoint-pointer-validation)
     set_tests_properties(ctr_native_checkpoint_pointer_validation PROPERTIES PASS_REGULAR_EXPRESSION
         "^\\[CTR State\\] pointer-validation self-test passed: scalar=ignored relocated=reversion-checked overlap-idempotence=checked pool-allocation=free-list-complement camera-quad=checked"
