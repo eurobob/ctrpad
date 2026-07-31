@@ -1,5 +1,11 @@
 # Full Cross-Width Parity Result — 2026-07-30
 
+> **Follow-up:** clean same-commit i686 report `ctr-025812` later finalized and
+> matched clean ARM64 report `ctr-215303` on all eight required components for
+> all 24,232 frames. The accepted result is
+> `2026-07-31-full-cross-width-acceptance.md`. This document remains the
+> historical record of the rejected pre-correction reports and diagnoses.
+
 ## Result
 
 The corrected 24,232-frame ARM64 and optimized i686 reports do **not** pass

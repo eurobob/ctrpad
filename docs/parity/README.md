@@ -4,11 +4,11 @@ This directory will contain the deterministic baseline definition, scripted
 input fixtures that contain no retail data, comparison-tool documentation, and
 per-milestone results.
 
-No formal same-commit full acceptance pair has passed yet. Both cross-width
-emitter defects are corrected: clean ARM64 report `ctr-215303` matches the
-earlier immutable i686 trajectory on all eight state/transport components for
-24,232 frames, and the clean current i686 regeneration is still running.
-Fresh current-build version-4 report `ctr-223221` structurally advances a lap.
+A formal same-commit full cross-width pair now passes: clean ARM64 report
+`ctr-215303` and optimized i686 report `ctr-025812` match all eight
+state/transport components for all 24,232 frames. The separate two-process
+i686 and deliberate-mutation verification is still pending. Fresh
+current-build version-4 report `ctr-223221` structurally advances a lap.
 
 Current evidence and procedures:
 
@@ -34,6 +34,9 @@ Current evidence and procedures:
 - `2026-07-31-macos-arm64-keyboard-tap.md` records the missing quick-tap root
   cause, one-snapshot press-edge transport, direct live PSX packet trace, and
   exact-commit ARM64/sanitizer/i686 validation.
+- `2026-07-31-full-cross-width-acceptance.md` records the first complete clean
+  same-commit ARM64/i686 all-eight-component match and its exact report,
+  process, transport, save, and hash evidence.
 
 The first task is to evaluate `platform/native_replay_scheduler.c`,
 `platform/native_checkpoint.c`, `platform/native_savestate.c`, and

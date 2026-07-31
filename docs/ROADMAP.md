@@ -7,8 +7,8 @@ timing.
 
 **Roadmap status:** active
 
-**Current milestone:** M6 — macOS ARM64 runtime stabilization, while the M1
-cross-architecture parity trace remains open
+**Current milestone:** M6 — macOS ARM64 runtime stabilization; the M1 full
+cross-architecture trace matches and its process/mutation gate remains open
 
 **Last updated:** 2026-07-31
 
@@ -140,7 +140,8 @@ Acceptance:
 
 ### M1 — Reproducible upstream baseline and parity gate
 
-**Status:** in progress; M0 completed
+**Status:** in progress; full same-commit cross-width trace accepted,
+process/mutation verification pending
 
 Result so far:
 
@@ -225,11 +226,14 @@ Result so far:
   earlier i686 report now matches timing, RNG, drivers, world, allocation,
   root, pads, and VSync for every frame, proving both old mismatch ranges are
   gone while the byte-preserving i686 semantics remain unchanged. The clean
-  same-commit i686 producer passes 16/16 tests and its first 1,879 recorded
-  frames match all eight components; its full emulated report remains in
-  progress, so M1/M6 are not yet accepted. Evidence and rejected diagnostic
-  routes are in
-  `docs/parity/2026-07-30-full-cross-width-result.md`.
+  same-commit i686 producer passes 16/16 tests and finalized report
+  `ctr-025812` with all 24,232 frames and 81 checkpoints. The two clean
+  reports match all eight components on every frame; the expanded transport
+  audit and game-generated save also match. The full trajectory is accepted,
+  while the two-process i686 and deliberate-mutation verification remains
+  open. Evidence is in
+  `docs/parity/2026-07-31-full-cross-width-acceptance.md`; rejected diagnostic
+  routes remain in `docs/parity/2026-07-30-full-cross-width-result.md`.
 - `tools/extend-replay-input.mjs` can now promote a validated version-2 or
   version-3 replay to version 4 while preserving its historical in-frame
   packet timing after frame zero. It requires an independent complete
@@ -610,8 +614,13 @@ Result so far:
   ARM64 Release, ARM64 ASan/UBSan, and optimized i686 pass 16/16. Clean ARM64
   report `ctr-215303` then matched the earlier immutable i686 trajectory on
   all eight components across all 24,232 frames. Clean same-commit i686 report
-  `ctr-025812` is running and matches all eight components through its first
-  1,879 records; formal clean-pair acceptance waits for its full finalization.
+  `ctr-025812` finalized 24,232 frames and 81 checkpoints with process exit 0.
+  It matches `ctr-215303` on timing, RNG, drivers, world, allocation, root,
+  pads, and VSync for every frame. The stricter transport audit also matches
+  pad bytes, elapsed time, total VBlanks, raw blocks, and both expanded VBlank
+  sequences on all 24,232 frames. This accepts the formal clean cross-width
+  pair; process-repeatability and deliberate-mutation verification are the
+  remaining M1 gate.
 - `tools/inspect-replay-lap-coverage.mjs` validates checkpoint checksums and
   resolves player lap/checkpoint fields for checkpoint versions 2 and 3 on
   ILP32 and LP64. It confirms both the historical version-2 report and fresh
@@ -664,11 +673,9 @@ Work:
   and manual keyboard play, MFi/Bluetooth controller, replays, savestates,
   and STR video.
 - Run sanitizers and the full parity gate under Apple Clang.
-- Allow clean optimized-i686 version-4 report `ctr-025812` to finalize after
-  both typed emitter corrections. Require all eight components to match clean
-  ARM64 report `ctr-215303` across all 24,232 frames, then repeat the
-  two-process and mutation gates. The verifier now accepts an explicitly
-  selected immutable binary and external toolchain manifest; its
+- Run the two unchanged i686 processes and deliberate-mutation gate against
+  finalized all-eight-match report `ctr-025812`. The verifier accepts an
+  explicitly selected immutable binary and external toolchain manifest; its
   `CTRPAD_REQUIRE_COVERAGE=0` mode omits only the manual coverage form when
   structural coverage is cited separately, and cannot be labeled a full
   golden-coverage pass. All pre-correction mismatched and partial reports
@@ -834,7 +841,7 @@ timestamps are explicitly excluded from game-visible deterministic state.
 |---|---|---|
 | Guest-reference design expands into a full arena rewrite | Asset relocation writes host bases into 32-bit file slots; about 75 pinned pointer-bearing structs were estimated | M2 prototype on real assets before broad edits; preserve guest layout and centralize translation |
 | Existing replay/checkpoint tooling is not a sufficient parity oracle | Prior report found infrastructure but did not run or assess coverage (`docs/ctr-native-viability.md:471-474`) | Prove mutation sensitivity in M1 or build a state-hash harness |
-| Full NTSC-U cross-width trace diverges | Both typed-emitter corrections pass 16/16 tests across ARM64, sanitizers, and i686. Clean ARM64 report `ctr-215303` matches the immutable prior i686 trajectory on all eight components for all 24,232 frames; the clean same-commit i686 report also matches its first 1,879 frames but is still running | Finalize same-commit i686 report `ctr-025812`, require the all-frame match, then run two-process/mutation verification |
+| Replay repeatability or mutation sensitivity fails after the accepted cross-width trace | Clean same-commit reports `ctr-215303` and `ctr-025812` finalize 24,232 frames and match all eight components plus expanded transport on every frame | Run two independent unchanged i686 processes under different host layouts and require an active-driver mutation to exit 2 with `drivers` as the first difference |
 | Current-format lap coverage could not be established from inherited input | Resolved: clean current-build version-4 report `ctr-223221` reaches `lapIndex=1` at frame 21,300; expanded promoted-seed/current VBlank sequences, elapsed times, and PSX pad transport match across all 24,232 frames | Retain the accepted report and rejected extensions A/B; require any replacement seed to pass the same structural and transport checks |
 | Upstream has moved since `2df55dc5a` | Viability report is commit-specific | Freeze a reproducible baseline, inspect current head, then rebase intentionally |
 | Reference documentation is stale | `ref/README.md` claims four clones that are absent | Derive documentation from actual remote/commit checks |

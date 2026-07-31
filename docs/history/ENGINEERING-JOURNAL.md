@@ -7088,3 +7088,88 @@ checkpoint 73 of the expected 81, with `finalized=0`. Rebuilding `/out` for
 the input test did not alter that capture's copied immutable `/run` producer.
 The full parity result remains pending rather than being inferred from its
 continued progress.
+
+## 2026-07-31 — Accepted the first full same-commit ARM64/i686 trajectory
+
+### Monitored the immutable i686 capture to normal finalization
+
+Report `ctr-025812` used the immutable optimized-i686 producer:
+
+```text
+/private/tmp/ctrpad-i686-cutscene-run-4hjAQW/ctr_native-cutscene-fix-producer-eee2a8df5b96
+SHA-256 d2e6f06023ccaedae689f11b36b33e005cb30d7bbc70d2a5e3e036f57b276c8e
+```
+
+Docker inspection confirmed that exact file was invoked under `/run`, the
+source input was mounted read-only, and the user's disc image was mounted
+read-only. The run began at 2026-07-30 21:58:11 -0500. Intermediate metadata
+and checkpoint markers advanced normally rather than remaining at one frame.
+
+Read-only prefix comparisons were deliberately labeled partial:
+
+```text
+frame 22491: all eight equal, zero mismatched
+frame 23143: all eight equal, zero mismatched
+```
+
+Neither partial result was promoted. At 2026-07-31 00:21:14 -0500 the process
+finished with:
+
+```text
+frame_count=24232
+checkpoint_count=81
+finalized=1
+recording_status=finalized
+container exitCode=0
+oomKilled=false
+```
+
+The final log recorded checkpoint 80 at frame 24,000, the expected
+24,232-frame finish marker, and `LOG CLOSED`.
+
+### Required all-frame comparison passed
+
+`tools/compare-replay-state-components.mjs` compared i686 report `ctr-025812`
+against clean ARM64 report `ctr-215303`, requiring:
+
+```text
+timing,rng,drivers,world,allocation,root,pads,vsync
+```
+
+All eight reported `equal=24232 mismatched=0 ranges=none`; the comparator
+exited 0. `tools/compare-replay-transport-semantics.mjs` independently found
+24,232 equal and zero mismatched for pad transport, elapsed time, VBlank
+total, raw VBlank blocks, expanded pre-frame VBlanks, and expanded in-frame
+VBlanks.
+
+Both reports embed build ID `eee2a8df5b96`, finalize 81 checkpoints, contain
+the scripted powerslide marker, and produce the same 6,016-byte save:
+
+```text
+6a01b0f5562ed7a279d8f8e51e3b1874ac39a6120f55db4fe3873288950619a3
+```
+
+The i686 report evidence hashes are:
+
+```text
+input.ctrreplay  2c1d72d8b545982a7293ea02f32addfee909c92aac59794ab822e82c2f58adb1
+state.ctrstates  4311a1d1d508cbf13b0d707fdf4849cd9e16911e79638ec5e50716d5607d3664
+metadata.txt     e23368c84849fe33dadd81bcea32ff71f3a033a7b4b4c9f96a86ac09677d36d2
+ctr-native.log   9f5231a844fe720f0112b31dd747e57cf932046bad67da6ab0714a56624463cc
+```
+
+The complete result is recorded in
+`docs/parity/2026-07-31-full-cross-width-acceptance.md`.
+
+### Kept the remaining gate separate
+
+This accepts the full clean cross-width trajectory; it does not silently
+accept the broader M1 gate. Two independent unchanged i686 processes still
+must restore under different host address layouts and match all frames, and
+an automatically selected active-driver mutation must exit 2 with `drivers`
+as the first canonical difference. Those operations are intentionally
+described as process-determinism/mutation verification because their prepared
+mode omits the separately documented manual coverage form.
+
+Raw reports, checkpoints, saves, the disc image, and retail assets remain
+ignored and untracked.
