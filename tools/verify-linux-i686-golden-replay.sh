@@ -14,6 +14,7 @@ ctrpad_binary_path=${CTRPAD_I686_BINARY:-"${ctrpad_build_dir}/ctr_native"}
 ctrpad_alt_loader_path=${CTRPAD_I686_ALT_LOADER:-}
 ctrpad_toolchain_manifest=${CTRPAD_TOOLCHAIN_PACKAGES:-"${ctrpad_build_dir}/toolchain-packages.txt"}
 ctrpad_require_coverage=${CTRPAD_REQUIRE_COVERAGE:-1}
+ctrpad_finalize_only=${CTRPAD_FINALIZE_ONLY:-0}
 ctrpad_report_dir=$1
 ctrpad_mutation_frame=$2
 ctrpad_disc_image=${CTRPAD_DISC_IMAGE:-"${ctrpad_root_dir}/assets/ctr-u.bin"}
@@ -55,6 +56,15 @@ case "${ctrpad_require_coverage}" in
         ;;
     *)
         echo "CTRPAD_REQUIRE_COVERAGE must be 0 or 1." >&2
+        exit 1
+        ;;
+esac
+
+case "${ctrpad_finalize_only}" in
+    0|1)
+        ;;
+    *)
+        echo "CTRPAD_FINALIZE_ONLY must be 0 or 1." >&2
         exit 1
         ;;
 esac
@@ -214,24 +224,26 @@ esac
 
 mkdir -p "${ctrpad_build_dir}/mesa-cache"
 
-docker run --rm \
-    --platform linux/amd64 \
-    --user "${ctrpad_host_uid}:${ctrpad_host_gid}" \
-    --env DISPLAY=:99 \
-    --env SDL_AUDIODRIVER=dummy \
-    --env MESA_SHADER_CACHE_DIR=/out/mesa-cache \
-    --env MESA_SHADER_CACHE_MAX_SIZE=64M \
-    --env XDG_RUNTIME_DIR=/tmp/ctrpad-runtime \
-    --env "CTRPAD_BINARY_RELATIVE=${ctrpad_binary_relative}" \
-    --env "CTRPAD_ALT_LOADER_RELATIVE=${ctrpad_alt_loader_relative}" \
-    --env "CTRPAD_REPLAY_PATH=${ctrpad_replay_path}" \
-    --env "CTRPAD_REPORT_DIR=${ctrpad_container_report_dir}" \
-    --env "CTRPAD_MUTATION_FRAME=${ctrpad_mutation_frame}" \
-    --env "CTRPAD_EXPECTED_FRAME_COUNT=${ctrpad_expected_frame_count}" \
-    --volume "${ctrpad_build_dir}:/out" \
-    --volume "${ctrpad_disc_image}:/out/assets/ctr-u.bin:ro" \
-    "${ctrpad_container_image}" \
-    sh -euxc '
+if [ "${ctrpad_finalize_only}" -eq 0 ]; then
+    printf "running\n" > "${ctrpad_report_dir}/container-exit-status.txt"
+    docker run --rm \
+        --platform linux/amd64 \
+        --user "${ctrpad_host_uid}:${ctrpad_host_gid}" \
+        --env DISPLAY=:99 \
+        --env SDL_AUDIODRIVER=dummy \
+        --env MESA_SHADER_CACHE_DIR=/out/mesa-cache \
+        --env MESA_SHADER_CACHE_MAX_SIZE=64M \
+        --env XDG_RUNTIME_DIR=/tmp/ctrpad-runtime \
+        --env "CTRPAD_BINARY_RELATIVE=${ctrpad_binary_relative}" \
+        --env "CTRPAD_ALT_LOADER_RELATIVE=${ctrpad_alt_loader_relative}" \
+        --env "CTRPAD_REPLAY_PATH=${ctrpad_replay_path}" \
+        --env "CTRPAD_REPORT_DIR=${ctrpad_container_report_dir}" \
+        --env "CTRPAD_MUTATION_FRAME=${ctrpad_mutation_frame}" \
+        --env "CTRPAD_EXPECTED_FRAME_COUNT=${ctrpad_expected_frame_count}" \
+        --volume "${ctrpad_build_dir}:/out" \
+        --volume "${ctrpad_disc_image}:/out/assets/ctr-u.bin:ro" \
+        "${ctrpad_container_image}" \
+        sh -euxc '
         mkdir -p /tmp/.X11-unix /tmp/ctrpad-runtime
         chmod 700 /tmp/ctrpad-runtime
         Xvfb :99 -screen 0 1280x720x24 -nolisten tcp >/tmp/ctrpad-xvfb.log 2>&1 &
@@ -327,6 +339,88 @@ docker run --rm \
         grep -q "\\[CTR Replay\\] first canonical state difference: drivers " \
             "${CTRPAD_REPORT_DIR}/playback-mutated.log"
     '
+    printf "0\n" > "${ctrpad_report_dir}/container-exit-status.txt"
+fi
+
+if [ ! -f "${ctrpad_report_dir}/container-exit-status.txt" ]; then
+    echo "Playback evidence is incomplete: missing ${ctrpad_report_dir}/container-exit-status.txt" >&2
+    exit 1
+fi
+ctrpad_container_exit_status=$(
+    tr -d '[:space:]' < "${ctrpad_report_dir}/container-exit-status.txt"
+)
+if [ "${ctrpad_container_exit_status}" != "0" ]; then
+    echo "Playback container does not have a captured successful exit status: ${ctrpad_container_exit_status:-missing}" >&2
+    exit 1
+fi
+
+for ctrpad_playback_log in playback-1.log playback-2.log playback-mutated.log; do
+    if [ ! -f "${ctrpad_report_dir}/${ctrpad_playback_log}" ]; then
+        echo "Playback evidence is incomplete: missing ${ctrpad_report_dir}/${ctrpad_playback_log}" >&2
+        exit 1
+    fi
+done
+
+grep -q "\\[CTR Replay\\] replay finished after ${ctrpad_expected_frame_count} frames$" "${ctrpad_report_dir}/playback-1.log"
+grep -q "\\[CTR Replay\\] replay finished after ${ctrpad_expected_frame_count} frames$" "${ctrpad_report_dir}/playback-2.log"
+
+ctrpad_raw_checkpoint_1=$(
+    sed -n 's/^\[CTR State\] raw checkpoint comparison .* restored-process=\([^ ]*\) .*/\1/p' \
+        "${ctrpad_report_dir}/playback-1.log" | head -n 1
+)
+ctrpad_raw_checkpoint_2=$(
+    sed -n 's/^\[CTR State\] raw checkpoint comparison .* restored-process=\([^ ]*\) .*/\1/p' \
+        "${ctrpad_report_dir}/playback-2.log" | head -n 1
+)
+if [ -z "${ctrpad_raw_checkpoint_1}" ] || [ -z "${ctrpad_raw_checkpoint_2}" ]; then
+    echo "Playback logs do not contain restored raw-checkpoint checksums." >&2
+    exit 1
+fi
+if [ "${ctrpad_raw_checkpoint_1}" = "${ctrpad_raw_checkpoint_2}" ]; then
+    echo "Restored raw-checkpoint checksums did not change across processes." >&2
+    exit 1
+fi
+if ! grep -q "\\[CTR State\\] raw checkpoint comparison .* equal=no" "${ctrpad_report_dir}/playback-1.log" &&
+    ! grep -q "\\[CTR State\\] raw checkpoint comparison .* equal=no" "${ctrpad_report_dir}/playback-2.log"; then
+    echo "Neither restored raw checkpoint differs from the recording." >&2
+    exit 1
+fi
+
+ctrpad_address_1=$(grep -m 1 "\\[CTR Replay\\] playback host-address sample" "${ctrpad_report_dir}/playback-1.log")
+ctrpad_address_2=$(grep -m 1 "\\[CTR Replay\\] playback host-address sample" "${ctrpad_report_dir}/playback-2.log")
+if [ "${ctrpad_address_1}" = "${ctrpad_address_2}" ]; then
+    echo "Playback host-address samples did not change across processes." >&2
+    exit 1
+fi
+
+if [ ! -f "${ctrpad_report_dir}/mutation-frame.txt" ]; then
+    echo "Playback evidence is incomplete: missing ${ctrpad_report_dir}/mutation-frame.txt" >&2
+    exit 1
+fi
+ctrpad_recorded_mutation_frame=$(tr -d '[:space:]' < "${ctrpad_report_dir}/mutation-frame.txt")
+case "${ctrpad_recorded_mutation_frame}" in
+    ""|*[!0-9]*)
+        echo "Playback evidence has an invalid or missing mutation frame." >&2
+        exit 1
+        ;;
+esac
+if [ "${ctrpad_mutation_frame}" = "auto" ]; then
+    ctrpad_expected_mutation_frame=$(
+        sed -n 's/^\[CTR Replay\] race driver\[0\] became active at replay frame \([0-9][0-9]*\)$/\1/p' \
+            "${ctrpad_report_dir}/playback-1.log" | head -n 1
+    )
+else
+    ctrpad_expected_mutation_frame=${ctrpad_mutation_frame}
+fi
+if [ -z "${ctrpad_expected_mutation_frame}" ] ||
+    [ "${ctrpad_recorded_mutation_frame}" != "${ctrpad_expected_mutation_frame}" ]; then
+    echo "Mutation frame does not match the selected unchanged-playback frame." >&2
+    exit 1
+fi
+grep -q "\\[CTR Replay\\] divergence at replay frame ${ctrpad_recorded_mutation_frame}$" \
+    "${ctrpad_report_dir}/playback-mutated.log"
+grep -q "\\[CTR Replay\\] first canonical state difference: drivers " \
+    "${ctrpad_report_dir}/playback-mutated.log"
 
 if command -v sha256sum >/dev/null 2>&1; then
     ctrpad_disc_hash=$(sha256sum "${ctrpad_disc_image}" | awk '{print $1}')
@@ -353,6 +447,7 @@ fi
     echo "coverage_requirement=${ctrpad_require_coverage}"
     echo "expected_frame_count=${ctrpad_expected_frame_count}"
     echo "expected_checkpoint_count=${ctrpad_expected_checkpoint_count}"
+    echo "playback_container_exit_status=${ctrpad_container_exit_status}"
     echo "binary_version=${ctrpad_binary_version}"
     echo "binary_sha256=${ctrpad_binary_hash}"
     echo "alternate_loader=${ctrpad_alt_loader_relative:-none}"
@@ -378,7 +473,7 @@ fi
 if command -v sha256sum >/dev/null 2>&1; then
     (
         cd "${ctrpad_report_dir}"
-        sha256sum input.ctrreplay state.ctrstates metadata.txt ctr-native.log disc.sha256 environment.txt mutation-frame.txt \
+        sha256sum input.ctrreplay state.ctrstates metadata.txt ctr-native.log disc.sha256 environment.txt container-exit-status.txt mutation-frame.txt \
             memcard-seed.sha256 memcard-recording.sha256 playback-1.log playback-2.log playback-mutated.log
         if [ "${ctrpad_require_coverage}" -eq 1 ]; then
             sha256sum coverage.txt
@@ -387,7 +482,7 @@ if command -v sha256sum >/dev/null 2>&1; then
 else
     (
         cd "${ctrpad_report_dir}"
-        shasum -a 256 input.ctrreplay state.ctrstates metadata.txt ctr-native.log disc.sha256 environment.txt mutation-frame.txt \
+        shasum -a 256 input.ctrreplay state.ctrstates metadata.txt ctr-native.log disc.sha256 environment.txt container-exit-status.txt mutation-frame.txt \
             memcard-seed.sha256 memcard-recording.sha256 playback-1.log playback-2.log playback-mutated.log
         if [ "${ctrpad_require_coverage}" -eq 1 ]; then
             shasum -a 256 coverage.txt

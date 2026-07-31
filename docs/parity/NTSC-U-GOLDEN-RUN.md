@@ -205,6 +205,34 @@ the manual coverage-form requirement and labels its result as replay
 process-determinism/mutation verification. It must never be reported as a
 full golden-coverage pass.
 
+### Recover host-side finalization after an interrupted terminal
+
+The verifier writes `container-exit-status.txt` only after its container
+completes both unchanged playbacks and the mutation checks with exit 0. If the
+host terminal is interrupted after Docker finishes but before evidence hashing,
+rerun the exact command with:
+
+```sh
+CTRPAD_FINALIZE_ONLY=1 \
+CTRPAD_REQUIRE_COVERAGE=0 \
+CTRPAD_I686_BUILD_DIR=/absolute/path/to/immutable-run-tree \
+CTRPAD_I686_BINARY=/absolute/path/to/immutable-run-tree/exact-producer \
+CTRPAD_I686_ALT_LOADER=/absolute/path/to/immutable-run-tree/ld-linux-i686.so.2 \
+CTRPAD_TOOLCHAIN_PACKAGES=/absolute/path/to/toolchain-packages.txt \
+CTRPAD_EXPECTED_SOURCE_COMMIT=0123456789abcdef0123456789abcdef01234567 \
+tools/verify-linux-i686-golden-replay.sh \
+  /absolute/path/to/immutable-run-tree/debug/reports/YYYYMMDD/ctr-HHMMSS \
+  auto
+```
+
+Finalize-only mode does not launch the game. It requires the captured status
+to be exactly 0, then independently rechecks both normal-completion markers,
+distinct restored raw checksums and host-address samples, the selected mutation
+frame, the mutation divergence, and `drivers` as the first canonical
+difference before writing the environment and evidence hashes. Never create or
+change `container-exit-status.txt` by hand; without a captured successful
+Docker exit, the run is incomplete and must not be promoted.
+
 With full coverage enabled, the verifier:
 
 - requires the finalized version-4 report, coverage note, clean source tree,
