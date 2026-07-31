@@ -13,8 +13,16 @@ also work. Buttons, continuous analog steering, outer-ring D-pad menu
 directions, quick taps and controller-plus-touch composition have deterministic
 coverage.
 
-This accepts the implementation and Simulator interaction boundary. It does
-not accept physical-iPad performance or ergonomics, rotation feel, Apple
+Checkpoint `db45004f909d` resolves the later portrait-launch question as an
+iPadOS 26 compatibility requirement rather than a failed rotation hint. The
+iPad target now declares every iPad orientation and ignores the deprecated
+full-screen compatibility key starting with version 26, while retaining the
+landscape preference for iPhone and older full-screen iPadOS. Exact portrait
+and landscape Simulator scenes both render coherently and reflow the controls.
+
+This accepts the implementation, adaptive iPadOS 26 Simulator layout and
+Simulator interaction boundary. It does not accept physical-iPad performance
+or ergonomics, real-device rotation feel, Apple
 development/distribution signing, a complete touch-only race, or practical
 drift/boost execution. Desktop automation also cannot accept a human-held
 two-contact Gas-plus-steering gesture.
@@ -253,16 +261,58 @@ automation contact ended before a later host update could provide authoritative
 live steering/packet evidence; the deterministic oracle remains the proof that
 an active held stick writes those axes into the player-one snapshot.
 
-The portrait cold-launch observation prompted three bounded public-API
+The portrait cold-launch observation first prompted three bounded public-API
 experiments: a scene geometry request immediately before overlay attachment,
 the same request from `viewDidAppear`, and a `LandscapeRight`-only preference.
 All compiled for Simulator/device ARM64 with the established 32 warnings, all
 returned without an error callback, and none rotated the portrait cold launch.
 Every experimental source line was removed with `apply_patch`; `git diff` and
 `git status` returned clean before the exact rebuild. The rejected code and its
-dirty packages are not acceptance evidence. Manual rotation reflow is accepted;
-automatic initial landscape selection and physical-device orientation remain
-open.
+dirty packages are not acceptance evidence.
+
+The Simulator runtime then supplied the missing platform explanation:
+`UIRequiresFullScreen` will be ignored and all orientations will be required.
+Apple's current
+[UIRequiresFullScreen reference](https://developer.apple.com/documentation/bundleresources/information-property-list/uirequiresfullscreen)
+describes iPadOS 26 windowing and dynamic resizing and notes that an interface-
+orientation update may not visually rotate a scene. Apple's
+[TN3192 migration note](https://developer.apple.com/documentation/technotes/tn3192-migrating-your-app-from-the-deprecated-uirequiresfullscreen-key?changes=_3_3)
+documents all-orientation support and the versioned compatibility key. The
+earlier experiments were therefore rejected for assuming that landscape must
+be forced, not because portrait was a broken renderer state.
+
+Commit `db45004f909d` adds
+`UIRequiresFullScreenIgnoredStartingWithVersion=26` and all four entries under
+`UISupportedInterfaceOrientations~ipad`. It keeps the phone orientation list,
+`UIRequiresFullScreen`, and SDL landscape hint so pre-iPadOS-26 full-screen
+behavior retains its preference. No scene-geometry request was added.
+
+The exact post-commit evidence is:
+
+| Build | Result | Executable SHA-256 |
+|---|---|---|
+| iOS Simulator ARM64, unsigned | linked with the 32 established warnings; embeds `db45004f909d` without a dirty suffix | `4898a9af1b028d4bc75e8e9be11bd3a23131851bb255389aca5c1ef314b2beb0` |
+| iOS Simulator ARM64, ad-hoc signed | strict/deep verification passed; installed executable matched | `408514002b4ae26c749c66be24d72c2925047dfd20364e995f4ce3cd8f9a0b96` |
+| iOS device ARM64, unsigned | thin ARM64 linked with the 32 established warnings; generated plist contains the versioned key and all iPad orientations | `483ae8c6f21943a01153c4746c25371a1518147878dd7fe423e202b74d74fff0` |
+| macOS ARM64 Release | thin ARM64; 21/21 CTests in 1.66 s | `404528725455bcb52ffa12d1337b23758fa5e19549194a3ffe8a92387633fca1` |
+
+The exact app cold-launched in a 743-by-1018 portrait Simulator view with a
+centered 4:3 game surface and all controls inside the safe area. Rotation
+produced a full 932-by-768 landscape view with the shoulder, system, stick and
+face controls reflowed; rotating back restored the portrait composition. A
+post-launch query of `com.apple.runtime-issues` returned no configuration
+fault. Local-only portrait evidence has SHA-256
+`a09a91713d1e007ba116d3a314583a2289b5e8eef6e2d13a70517b265e27d4b3`;
+the landscape capture has
+`af3c031496b2d5db973a4f43a71a68f4462e3bc2fa36b4b21c250de0bf77ff2a`.
+Neither screenshot entered Git.
+
+The exact reinstall preserved the 605,698,800-byte retail BIN at SHA-256
+`f780bf2331476aabfc00772fa758b12dd95ebfbc907968132cbd3cdd4e2c07c0`
+and the 6,016-byte save at
+`6a01b0f5562ed7a279d8f8e51e3b1874ac39a6120f55db4fe3873288950619a3`.
+Adaptive Simulator orientation is accepted; physical-device windowing,
+rotation feel and performance remain open.
 
 ## Correction and tooling history
 
@@ -292,15 +342,25 @@ All rejected or corrected routes are retained here:
    test, architecture and signature checks were used instead.
 7. Three public `requestGeometryUpdateWithPreferences:` variants returned no
    error yet did not rotate a portrait cold launch. They were removed entirely;
-   manual rotation reflow is evidence, automatic initial orientation is not.
+   later Apple platform evidence showed that forcing landscape was the wrong
+   iPadOS 26 contract.
+8. One exact rebuild wrapper returned before Ninja started, and a retry began
+   a duplicate identical build. Process inspection distinguished the two; only
+   the newer duplicate PIDs were terminated, and the original completed.
+9. A stale accessibility-tree index referred to the in-game Pause control
+   after a state change instead of the Simulator Rotate control. The mistaken
+   click was discarded; the accessibility tree was refreshed before exact
+   portrait/landscape evidence was captured.
 
 ## Publication and evidence boundary
 
 The base implementation was committed and pushed as `c496c27f04c8`
 (`feat: add native iOS touch controls`). The menu/cadence correction was
 committed and pushed as `c783eda740c4` (`fix: make touch menu gestures
-reliable`). Local HEAD and `origin/codex/arm64-apple` matched immediately after
-the second push. Both remain in draft pull request
+reliable`). Adaptive iPadOS 26 scene support was committed and pushed as
+`db45004f909d` (`feat: adapt iPad layout for iPadOS 26`). Local HEAD and
+`origin/codex/arm64-apple` matched immediately after each push. All remain in
+draft pull request
 [#1](https://github.com/chrissotraidis/ctrpad/pull/1); they are not merged to
 `main`.
 

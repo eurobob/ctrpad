@@ -258,10 +258,13 @@ directions, selected Adventure, opened **Load**, and displayed a persisted
 profile using only the overlay. A later touch-only run entered Time Trial,
 selected Crash and Crash Cove, skipped the fly-in, accelerated off the grid,
 paused, reflowed the controls after device rotation, and resumed. Physical-
-iPad ergonomics, performance, initial-orientation behavior, human simultaneous
-steering/acceleration, and repeated three-boost drift chains remain open; the
-current overlay is a functional prototype, not the final control layout. See
-`docs/parity/2026-07-31-ios-touch-controls.md`.
+iPad ergonomics, performance, human simultaneous steering/acceleration, and
+repeated three-boost drift chains remain open. On iPadOS 26 the app supports
+all scene orientations and dynamic resizing: portrait and landscape cold
+launches are valid, and the renderer plus touch overlay reflow to the current
+safe-area bounds. iPhone and older full-screen iPadOS builds retain the
+landscape preference. The current overlay is a functional prototype, not the
+final control layout. See `docs/parity/2026-07-31-ios-touch-controls.md`.
 
 ### Extracted Asset Override
 

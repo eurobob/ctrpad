@@ -964,8 +964,14 @@ analog `(32766, 250, active=1)` followed by neutral release. Desktop automation
 cannot sustain two independent contacts, so simultaneous human-held Gas plus
 steering/drift and a complete race remain unaccepted. Three public scene-
 geometry request variants failed silently to rotate a portrait cold launch and
-were fully reverted; initial orientation remains open rather than shipping an
-ineffective workaround.
+were fully reverted. Apple runtime diagnostics and current platform
+documentation subsequently established that iPadOS 26 supports resizable
+windowed scenes and no longer treats a forced landscape full-screen launch as
+the correct product contract. Checkpoint `db45004f909d` supports all four iPad
+orientations from iPadOS 26 while retaining the older landscape/full-screen
+preference. Exact portrait and landscape Simulator runs reflowed the renderer
+and every safe-area control with no runtime configuration fault. Physical-
+device orientation and feel remain open.
 
 Work:
 

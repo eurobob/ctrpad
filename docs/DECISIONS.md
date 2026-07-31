@@ -342,3 +342,32 @@ Simulator build visibly navigates Adventure -> Load and displays saved profile
 development/distribution signing, full touch-only race completion and
 drift/boost feel remain separate device acceptance. Full evidence is in
 `docs/parity/2026-07-31-ios-touch-controls.md`.
+
+## 2026-07-31 — Adapt to iPadOS 26 scenes instead of forcing landscape
+
+**Decision:** retain `UIRequiresFullScreen` and the SDL landscape hint for
+iPhone and older full-screen iPadOS behavior, add
+`UIRequiresFullScreenIgnoredStartingWithVersion=26`, and declare all four iPad
+orientations. On iPadOS 26 and later, let the existing renderer resize to the
+scene and let the UIKit touch overlay reflow through safe-area Auto Layout
+(`platform/apple/Info-iOS.plist.in`, `platform/native_platform.c`).
+
+**Why:** the iPadOS 26 Simulator explicitly reported that
+`UIRequiresFullScreen` will be ignored and all orientations will be required.
+Apple documents the key as deprecated because current iPad scenes support
+windowing and dynamic resizing; a scene may not visually rotate when its
+interface-orientation preference changes. The correct compatibility contract
+is therefore an adaptive scene, not a private or repeatedly ineffective
+geometry-forcing workaround. See Apple's
+[UIRequiresFullScreen reference](https://developer.apple.com/documentation/bundleresources/information-property-list/uirequiresfullscreen)
+and
+[TN3192 migration note](https://developer.apple.com/documentation/technotes/tn3192-migrating-your-app-from-the-deprecated-uirequiresfullscreen-key?changes=_3_3).
+
+**Verification boundary:** exact commit `db45004f909d` cold-launched in a
+portrait iPadOS 26 Simulator scene with a coherent centered 4:3 game surface
+and safe-area controls, then reflowed to fill a 932-by-768 landscape scene and
+back to portrait. The runtime-issues subsystem reported no configuration
+fault. Thin ARM64 Simulator and device products linked, and the macOS ARM64
+suite passed 21/21. This accepts the adaptive Simulator layout and generated
+configuration; real-iPad window management, rotation feel and signing remain
+physical-device gates.

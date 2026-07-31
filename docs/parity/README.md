@@ -65,7 +65,8 @@ Current evidence and procedures:
 - `2026-07-31-ios-touch-controls.md` records the safe-area-aware multi-touch
   overlay, player-one peer composition, analog plus outer-ring menu input,
   direct live packet trace, two-host-snapshot cadence correction, exact matrix,
-  touch-only menu/save-reader evidence and remaining physical-iPad gates.
+  touch-only menu/save-reader evidence, the iPadOS 26 adaptive-orientation
+  correction, and remaining physical-iPad gates.
 - `2026-07-31-macos-arm64-keyboard-tap.md` records the missing quick-tap root
   cause, historical one-snapshot press-edge transport, its later two-snapshot
   supersession, direct live PSX packet traces, and exact-commit

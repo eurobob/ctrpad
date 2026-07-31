@@ -10042,3 +10042,134 @@ documentation reading was 179,718 seconds: 2 days, 1 hour, 55 minutes,
 18 seconds cumulative, adding 329 seconds (5 minutes, 29 seconds). It includes
 paused/resumed task lifetime and is not a build benchmark or person-hour
 estimate.
+
+## 2026-07-31 — Reframed iPadOS 26 orientation as adaptive scene support
+
+The touch-only race checkpoint deliberately left automatic initial orientation
+open after three public `requestGeometryUpdateWithPreferences:` variants did
+not rotate a portrait cold launch. This continuation did not retry those
+variants. It queried the Simulator's unified log and found the decisive runtime
+instruction: update the plist because `UIRequiresFullScreen` will soon be
+ignored and all orientations will soon be required.
+
+Apple's current `UIRequiresFullScreen` reference says that iPadOS 26 supports
+windowing and dynamic resizing, deprecates the full-screen requirement, and may
+leave a scene visually unrotated after an interface-orientation preference
+change. TN3192 says to support all orientations and identifies
+`UIRequiresFullScreenIgnoredStartingWithVersion` as the compatibility boundary.
+These primary sources changed the product interpretation: portrait is a valid
+scene geometry, not proof that CTR's renderer or SDL orientation hint failed.
+
+The minimal implementation was:
+
+1. retain `UIRequiresFullScreen=true` for older behavior;
+2. add `UIRequiresFullScreenIgnoredStartingWithVersion` with string value
+   `26`;
+3. retain the two iPhone landscape orientations;
+4. declare portrait, portrait-upside-down and both landscapes in the iPad list;
+5. retain the SDL landscape hint, but correct its comment to state that
+   iPadOS 26 scenes may be portrait or dynamically resized.
+
+The result was committed and pushed as `db45004f909db645863c99b90fc161db68342f37`
+(`feat: adapt iPad layout for iPadOS 26`). No renderer or touch-coordinate
+special case was necessary: SDL's window-size path already resizes the game
+surface, and the overlay already uses safe-area Auto Layout.
+
+### Live layout and runtime validation
+
+A pre-commit signed Simulator build first established that the existing layout
+was actually flexible. In a 743-by-1018 portrait app view it kept the 4:3 game
+surface centered with shoulder/system controls above and stick/face controls
+below. In a 932-by-768 landscape app view the game filled the available scene
+and every control moved to its safe-area anchor. A runtime-issues query after
+the plist change returned zero configuration rows; the earlier
+`UIRequiresFullScreen` warning was gone.
+
+The branch was then committed before the acceptance rebuild so generated
+version identity could be exact. The clean iOS Simulator ARM64 product linked
+with the 32 established warnings. Its unsigned executable was:
+
+```text
+SHA-256 4898a9af1b028d4bc75e8e9be11bd3a23131851bb255389aca5c1ef314b2beb0
+identity db45004f909d; no dirty suffix
+```
+
+The disposable ad-hoc signed copy at
+`/private/tmp/ctrpad-ipados26-exact.yveFiC/CTRPad.app` passed strict/deep
+verification. Signing changed the executable SHA-256 to
+`408514002b4ae26c749c66be24d72c2925047dfd20364e995f4ce3cd8f9a0b96`;
+the installed executable matched that value. The exact app repeated coherent
+portrait cold launch, landscape reflow and return to portrait. A process-
+scoped `com.apple.runtime-issues` query returned only its header.
+
+Local-only native-resolution captures were recorded, inspected and excluded
+from Git:
+
+```text
+portrait   2064x2752   988250 bytes   a09a91713d1e007ba116d3a314583a2289b5e8eef6e2d13a70517b265e27d4b3
+landscape  2064x2752  1129467 bytes   af3c031496b2d5db973a4f43a71a68f4462e3bc2fa36b4b21c250de0bf77ff2a
+```
+
+The landscape native screenshot retained the Simulator framebuffer's portrait
+pixel dimensions while its content was rotated. A separate accessibility-
+driven 932-by-768 capture was used to inspect the human-facing landscape
+composition; the fixed native dimensions were not misreported as device
+geometry.
+
+### Cross-target exact matrix and preservation check
+
+The exact device ARM64 product linked with the same 32 established warnings,
+was thin ARM64, embedded `db45004f909d` without a dirty suffix, and had SHA-256
+`483ae8c6f21943a01153c4746c25371a1518147878dd7fe423e202b74d74fff0`.
+Its generated plist contained the version-26 compatibility key, the two phone
+landscapes and all four iPad orientations. It was not signed or installed;
+physical identity/profile/device availability remains unchanged.
+
+The exact macOS ARM64 product reported
+`CTR Native 0.1.0-beta.7.1 (db45004f909d)`, was a thin ARM64 Mach-O at
+SHA-256 `404528725455bcb52ffa12d1337b23758fa5e19549194a3ffe8a92387633fca1`,
+and passed all 21 CTests in 1.66 seconds. This repeats input, lifecycle,
+storage, durable memory-card and renderer regressions after the plist/comment
+change.
+
+The final installed Simulator container retained the original retail BIN inode
+`111131200`, size `605698800` and SHA-256
+`f780bf2331476aabfc00772fa758b12dd95ebfbc907968132cbd3cdd4e2c07c0`.
+The memory card retained inode `111222179`, size `6016` and SHA-256
+`6a01b0f5562ed7a279d8f8e51e3b1874ac39a6120f55db4fe3873288950619a3`.
+Thus exact install/launch/rotation evidence did not overwrite the user's import
+or persistence state.
+
+### Corrections and evidence hygiene
+
+The first exact-build wrapper returned control before its Ninja child began.
+A retry accidentally started a second identical build. Process IDs and parent
+relationships distinguished them; only the newer duplicate was terminated and
+the original completed. This was a scheduling correction, not a build failure.
+
+During Simulator rotation, an accessibility element index captured before the
+game tree changed was reused after Pause controls appeared. That stale index
+clicked the in-game Pause control rather than the Simulator Rotate toolbar.
+The observation was discarded, the tree was refreshed, and only the refreshed
+toolbar action plus resulting view geometry entered the evidence record.
+
+An exact portrait accessibility screenshot showed a white region below the
+app because the desktop Simulator window extended beyond that capture route's
+bounds. The native `simctl io screenshot` image showed the complete device
+content and was used for portrait acceptance. No white cropping was attributed
+to the application.
+
+### Remaining boundary and elapsed time
+
+This checkpoint accepts adaptive portrait/landscape Simulator scene layout and
+removes the obsolete forced-landscape question from the software gate. It does
+not accept a real iPad's windowing/rotation feel, thermal/performance behavior,
+Apple signing, hardware-keyboard delivery, natural simultaneous Gas/steering/
+drift contacts, a repeated boost chain or a complete touch-only race. The goal
+remains active.
+
+The preceding published timer was 179,718 seconds. The pre-publication
+documentation reading was 181,770 seconds: 2 days, 2 hours, 29 minutes,
+30 seconds cumulative, adding 2,052 seconds (34 minutes, 12 seconds). It
+includes paused/resumed task lifetime and is not a build benchmark or
+person-hour estimate.

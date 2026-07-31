@@ -1204,3 +1204,39 @@ documentation reading was 179,718 seconds: 2 days, 1 hour, 55 minutes,
 18 seconds cumulative, adding 329 seconds (5 minutes, 29 seconds). The timer is
 cumulative product-task time, including pauses, not a benchmark or labor
 estimate.
+
+### 2026-07-31 — iPadOS 26 adaptive scene correction and exact acceptance
+
+- Simulator runtime diagnostics explained the portrait cold launch: on
+  iPadOS 26, `UIRequiresFullScreen` is deprecated/ignored and applications
+  must support all orientations and dynamic scene resizing. Apple documentation
+  confirmed that scene interface-orientation updates may not visually rotate a
+  window. This supersedes the earlier assumption that portrait meant the SDL
+  landscape hint had failed.
+- Commit `db45004f909d` adds
+  `UIRequiresFullScreenIgnoredStartingWithVersion=26` and all four iPad
+  orientations while retaining the older full-screen and phone landscape
+  preference. The native platform comment now states the actual compatibility
+  boundary; no private or ineffective scene-forcing code was added.
+- An exact clean signed Simulator build embedded `db45004f909d`, passed
+  strict/deep verification, cold-launched coherently in portrait, reflowed to a
+  full 932-by-768 landscape view and back, and emitted no runtime configuration
+  fault. Unsigned/signed executable SHA-256 values were
+  `4898a9af...beb0` and `40851400...b96`.
+- The exact thin device ARM64 product linked at SHA-256
+  `483ae8c6...ff0`; it remains unsigned because no physical iPad, development
+  identity or provisioning profile is available. The exact macOS ARM64 build
+  passed 21/21 CTests in 1.66 seconds at SHA-256 `40452872...ca1`.
+- The final Simulator install preserved the 605,698,800-byte retail BIN
+  (`f780bf23...07c0`) and 6,016-byte save (`6a01b0f5...619a`) byte-for-byte.
+  Screenshots, the retail image, save, packages and logs stayed local-only.
+- The requested keyboard controls remain published and accepted on macOS:
+  `WASD`, `IJKL`, `Q/E`, `P` and Tab, plus the original aliases. Physical-iPad
+  keyboard delivery, human multi-touch/drift play, a full race, signing and
+  device performance remain open. The active goal continues.
+
+The preceding published reading was 179,718 goal seconds. The pre-publication
+documentation reading was 181,770 seconds: 2 days, 2 hours, 29 minutes,
+30 seconds cumulative, adding 2,052 seconds (34 minutes, 12 seconds). The timer
+is cumulative product-task time, including pauses, not a benchmark or labor
+estimate.
