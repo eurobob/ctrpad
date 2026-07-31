@@ -8234,3 +8234,125 @@ At 05:46:33 CDT the goal API reported 141,439 elapsed seconds: 1 day,
 15 hours, 17 minutes, 19 seconds. Docker still reported the preserved verifier
 running, unpaused, and not OOM-killed. Playback 2 had observed driver
 transitions at 4,636/4,689; no frame-6,000 FPS marker or exit status existed.
+
+## 2026-07-31 — Added a deterministic production SPU mixer/reverb oracle
+
+### Audit boundary
+
+The existing macOS audio evidence accepted the real CoreAudio open, ordinary
+non-silent PCM, zero short-run output transport deltas, and initial retail XA
+load/decode. Its explicit open list still included representative mixer and
+reverb behavior. A source search found only the audio snapshot-alignment
+self-test; there was no media-free PCM oracle.
+
+The selected seam is inside `platform/native_audio.c`, which owns both the
+public SPU API and the implementation under test. This permits a synthetic
+ADPCM block to cross the real upload, Key On, streaming decoder, Gaussian
+interpolation, volume, reverb, and render paths without SDL device timing or
+retail bytes.
+
+### First implementation and observation phase
+
+`NativeAudio_MixerSelfTestStartVoice` authors one 16-byte ADPCM block at SPU
+address `0x2000`, uploads it through `NativeAudio_SpuSetTransferStartAddr` and
+`NativeAudio_SpuWrite`, assigns voice 0 through
+`NativeAudio_SpuSetVoiceAttr`, optionally assigns the reverb send, and calls
+`NativeAudio_SpuSetKey(SPU_ON, ...)`. The test stabilizes the already-keyed
+voice at unity sustain so the measured output isolates decode, pitch,
+interpolation, panning, termination, and reverb.
+
+The dry phase uses Loop Start + Loop End + Repeat, master `0x7fff/0x7fff`,
+voice volume `0x6000/0x2000`, pitch `0x1000`, and 4,096 rendered frames. It
+requires nonzero stereo PCM and left absolute energy greater than twice right.
+
+The wet phase resets state, chooses Room + Clear Work Area at depth
+`0x7fff/0x7fff`, enables voice 0's send, and renders a centered one-shot block
+for 24,000 frames. Voice 0 must be inactive at completion and output after
+frame 256 must be nonzero.
+
+The initial CTest regex intentionally allowed printed hexadecimal values while
+the implementation was observed on independent targets. Results were
+identical:
+
+```text
+dry=0x132e19d77167fb3d
+wet=0x4bdedc91d1293ad8
+tail-frames=6905
+```
+
+Ordinary ARM64, combined ASan/UBSan ARM64, and optimized i686 all emitted
+those values. The values were then promoted to compiled expected constants
+and an exact CTest regex. This ordering avoids declaring an ARM64-only first
+observation to be a cross-width oracle.
+
+### Pre-commit fixed-oracle gates
+
+The fixed gate passed 17/17 ordinary ARM64 tests in 0.95 seconds and 17/17
+sanitizer tests in 3.58 seconds. The targeted normal and sanitizer runs emitted
+the exact oracle. `git diff --check` passed. The four source/build files were
+committed as:
+
+```text
+87f8e7a052c29aa8c01eb76263162e24cf2c5d00
+test: lock cross-width audio mixer oracle
+```
+
+### Exact clean-commit matrix
+
+The source identity change was not assumed irrelevant. All producers were
+rebuilt after the commit:
+
+```text
+signed macOS ARM64 app
+  build ID: 87f8e7a052c2
+  CTest: 17/17 in 0.57 seconds
+  strict signature/plist: passed
+  architecture: Mach-O 64-bit arm64
+  SHA-256: 85c03b1a557ad379a869ded940b1ed37879c918d96401a7c6f860d99e7611d93
+
+combined ASan/UBSan ARM64
+  build ID: 87f8e7a052c2
+  CTest: 17/17 in 3.96 seconds
+  finding: none
+  SHA-256: 5382e363bd6c9872674d3a65077c47e7f23dbaf4e96a1f01e82f6b4ff1601dc6
+
+optimized Linux i686
+  build ID: 87f8e7a052c2
+  CTest: 17/17 in 3.74 seconds
+  architecture: ELF 32-bit LSB PIE, Intel 80386
+  interpreter: /lib/ld-linux.so.2
+  GNU Build ID: eb4975f6df60b41738c657827bbe5ed38038e54a
+  SHA-256: abc019636ca9e8f5081584b7fcc12b36b918299148df7118bc2bd0e07394ef48
+```
+
+The normal and sanitizer Apple compiles repeated 32 and 59 established
+warnings. GCC repeated the established two format-security and two
+maybe-uninitialized warnings. The audio test introduced no new warning.
+
+The i686 build used the existing disposable cached tree at
+`/private/tmp/ctrpad-i686-controller-gXAeRV`, pinned image
+`ctrpad-linux-i686:ubuntu-24.04`, read-only `/src`, read/write `/out`, Release,
+testing enabled, and `-m32` compile/link flags. The protected historical
+baseline and the executable inside the preserved long verifier were not
+rebuilt.
+
+### Acceptance boundary and elapsed time
+
+This test contains authored synthetic sample nibbles and creates no audio
+file. It accepts deterministic cross-width SPU ADPCM decode, left/right
+panning, nonrepeat termination, the Room reverb send/processing path, and its
+wet tail. It does not accept subjective quality, retail multi-voice balance,
+all reverb presets, broad XA transition behavior, long device soak, or iOS
+audio lifecycle.
+
+The audit ran approximately 05:50–06:24 CDT. The goal API advanced from
+141,675 to 143,697 seconds, ending this checkpoint at 1 day, 15 hours,
+54 minutes, 57 seconds. The product timer is not an audio benchmark or labor
+estimate.
+
+Concurrent alternate-layout playback 2 remained running, unpaused, and not
+OOM-killed. Its third and fourth fixed 2,000-frame windows reached frames
+6,000 and 8,000 at 1.06 and 1.40 FPS; driver 0 transitioned inactive/active
+at 6,959/7,012. `container-exit-status.txt` remained empty. Completion,
+captured exit zero, layout separation, and deliberate mutation therefore
+remain unaccepted.

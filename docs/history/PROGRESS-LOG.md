@@ -666,6 +666,38 @@ was 1 day, 15 hours, 17 minutes, 19 seconds at 05:46:33 CDT. The concurrent
 alternate-loader verifier remained healthy and had crossed driver transitions
 at frames 4,636/4,689, but not yet its 6,000-frame marker.
 
+### 2026-07-31 — Locked a cross-width SPU mixer and Room-reverb oracle
+
+- Added `--self-test-audio-mixer` and a seventeenth CTest with no retail-media
+  dependency.
+- The test uploads a synthetic 16-byte PS1 ADPCM block through the production
+  SPU API, keys the real streaming decoder, and renders a left-panned looping
+  voice. It then renders a centered one-shot voice through the Room reverb and
+  requires wet output after the voice becomes inactive.
+- The first exploratory matrix printed the values without accepting them as
+  constants. Ordinary ARM64, ASan/UBSan ARM64, and optimized i686 agreed, so
+  the final gate now requires dry digest `132e19d77167fb3d`, wet digest
+  `4bdedc91d1293ad8`, and exactly 6,905 wet-tail frames.
+- Exact clean commit `87f8e7a052c2` passes 17/17 on all three targets. The
+  signed app passes strict signature/plist checks and is thin ARM64. ASan and
+  UBSan report no finding. The optimized i686 binary is ELF32 Intel 80386.
+- Exact executable hashes are ARM64 app
+  `85c03b1a557ad379a869ded940b1ed37879c918d96401a7c6f860d99e7611d93`,
+  sanitizer
+  `5382e363bd6c9872674d3a65077c47e7f23dbaf4e96a1f01e82f6b4ff1601dc6`,
+  and i686
+  `abc019636ca9e8f5081584b7fcc12b36b918299148df7118bc2bd0e07394ef48`.
+- This accepts deterministic SPU voice decode, panning, one-shot stop, and the
+  Room wet tail. Subjective listening, representative retail mixes, other
+  presets, broad XA transitions, long soak, and iOS audio remain open.
+
+The audit ran approximately 05:50–06:24 CDT. Goal elapsed advanced from
+141,675 to 143,697 seconds and stood at 1 day, 15 hours, 54 minutes,
+57 seconds at the checkpoint. The preserved alternate-layout verifier crossed
+its frame-6,000 and frame-8,000 markers and remained running, unpaused, and
+not OOM-killed. Its status file was still empty; completion and mutation were
+not accepted.
+
 ## Current open path to the requested product
 
 1. Finish independent-process/mutation acceptance for the existing full

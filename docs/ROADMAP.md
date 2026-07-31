@@ -658,6 +658,17 @@ Result so far:
   4,032 source frames before interpolation/mixing. The device/open/output and
   initial XA decode boundaries are accepted; listening quality, broad
   mix/reverb/track coverage, STR synchronization, and iOS routes remain open.
+- Clean commit `87f8e7a052c2` adds a media-free production-path audio oracle.
+  A synthetic PS1 ADPCM block crosses SPU upload, Key On, streaming decode,
+  interpolation, stereo volume, master volume, mixing, and frame rendering;
+  a one-shot copy then feeds the Room reverb. Signed ARM64, ASan/UBSan ARM64,
+  and optimized i686 pass 17/17 with exact dry/wet digests
+  `132e19d77167fb3d` / `4bdedc91d1293ad8` and 6,905 post-voice wet-tail
+  frames. Deterministic cross-width voice decode, panning, one-shot stop, and
+  Room reverb are accepted. Human listening, representative retail mixes,
+  other presets, broad XA transitions, long CoreAudio soak, and iOS routes
+  remain open. Exact evidence is in
+  `docs/parity/2026-07-31-macos-arm64-audio-mixer-oracle.md`.
 - Mapped macOS keyboard press edges now survive a complete key-down/key-up
   pair between retail polls and are consumed for exactly one snapshot.
   Replay, disabled-pad, init/shutdown, and state-restore boundaries clear the
@@ -719,7 +730,8 @@ Result so far:
 
 Work:
 
-- Validate full-range audio mix/reverb/XA listening, broader desktop renderer,
+- Validate retail-asset and human audio listening, broader reverb/XA
+  transitions, broader desktop renderer,
   full-race manual keyboard play, physical MFi/Bluetooth/USB controllers,
   replays, and savestates.
 - Run sanitizers and the full parity gate under Apple Clang.

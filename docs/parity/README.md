@@ -31,6 +31,9 @@ Current evidence and procedures:
 - `2026-07-30-macos-arm64-audio-output.md` records the exact-producer
   CoreAudio open, non-silent PCM capture, zero short-run transport faults,
   and direct initial XA-sector decode.
+- `2026-07-31-macos-arm64-audio-mixer-oracle.md` records the media-free
+  production SPU decode/panning/Room-reverb oracle, exact ARM64/i686 PCM
+  digests, sanitizer result, and wet-tail boundary.
 - `2026-07-31-macos-arm64-keyboard-tap.md` records the missing quick-tap root
   cause, one-snapshot press-edge transport, direct live PSX packet trace, and
   exact-commit ARM64/sanitizer/i686 validation plus live Time Trial
