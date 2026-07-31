@@ -12,6 +12,7 @@
 @property(nonatomic, strong) UIView *knob;
 @property(nonatomic, strong) UILabel *label;
 @property(nonatomic, assign) BOOL trackingTouch;
+@property(nonatomic, assign) unsigned int directionMask;
 @end
 
 @interface CTRPadTouchOverlayViewController : UIViewController
@@ -85,6 +86,7 @@ static CTRPadTouchOverlayViewController *s_touchOverlayController;
 	CGFloat dy = point.y - center.y;
 	CGFloat length = hypot(dx, dy);
 	CGFloat radius = MAX(1.0, MIN(self.bounds.size.width, self.bounds.size.height) * 0.5 - self.knob.bounds.size.width * 0.5 - 4.0);
+	unsigned int directionMask = 0;
 	if (length > radius)
 	{
 		dx = dx * radius / length;
@@ -92,6 +94,27 @@ static CTRPadTouchOverlayViewController *s_touchOverlayController;
 	}
 	self.knob.center = CGPointMake(center.x + dx, center.y + dy);
 	Platform_InputTouchLeftStick((int)lrint(dx * 32767.0 / radius), (int)lrint(dy * 32767.0 / radius), 1);
+
+	// Preserve the full analog range for racing. The outer ring additionally
+	// publishes retail D-pad edges so brief menu gestures are never dependent
+	// on the game's optional analog-to-button setting.
+	CGFloat directionThreshold = radius * 0.68;
+	if (dx <= -directionThreshold)
+		directionMask |= PLATFORM_INPUT_TOUCH_LEFT;
+	if (dx >= directionThreshold)
+		directionMask |= PLATFORM_INPUT_TOUCH_RIGHT;
+	if (dy <= -directionThreshold)
+		directionMask |= PLATFORM_INPUT_TOUCH_UP;
+	if (dy >= directionThreshold)
+		directionMask |= PLATFORM_INPUT_TOUCH_DOWN;
+
+	unsigned int releasedDirections = self.directionMask & ~directionMask;
+	unsigned int pressedDirections = directionMask & ~self.directionMask;
+	if (releasedDirections != 0)
+		Platform_InputTouchButton(releasedDirections, 0);
+	if (pressedDirections != 0)
+		Platform_InputTouchButton(pressedDirections, 1);
+	self.directionMask = directionMask;
 }
 
 - (void)touchesBegan:(NSSet<UITouch *> *)touches withEvent:(UIEvent *)event
@@ -120,6 +143,11 @@ static CTRPadTouchOverlayViewController *s_touchOverlayController;
 {
 	self.trackingTouch = NO;
 	self.knob.center = CGPointMake(CGRectGetMidX(self.bounds), CGRectGetMidY(self.bounds));
+	if (self.directionMask != 0)
+	{
+		Platform_InputTouchButton(self.directionMask, 0);
+		self.directionMask = 0;
+	}
 	Platform_InputTouchLeftStick(0, 0, 0);
 }
 

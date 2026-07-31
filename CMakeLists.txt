@@ -259,7 +259,7 @@ if(BUILD_TESTING)
     )
     add_test(NAME ctr_native_input COMMAND $<TARGET_FILE:ctr_native> --self-test-input)
     set_tests_properties(ctr_native_input PROPERTIES PASS_REGULAR_EXPRESSION
-        "^\\[CTR Input\\] self-test passed: metadata-key=4 legacy-enter=40 migration-enter=40 live-start=retail tap-latch=c\\+right one-snapshot"
+        "^\\[CTR Input\\] self-test passed: metadata-key=4 legacy-enter=40 migration-enter=40 live-start=retail tap-latch=c\\+right two-host-snapshots"
     )
     add_test(NAME ctr_native_collision_scratch COMMAND $<TARGET_FILE:ctr_native> --self-test-collision-scratch)
     set_tests_properties(ctr_native_collision_scratch PROPERTIES PASS_REGULAR_EXPRESSION

@@ -97,6 +97,7 @@ struct NativeInputTouchState
 {
 	u16 heldButtons;
 	u16 latchedButtons;
+	u16 latchedButtonsNext;
 	s16 leftX;
 	s16 leftY;
 	s32 leftStickActive;
@@ -117,12 +118,15 @@ global_variable s32 s_keyboardControllerSlot = NATIVE_INPUT_DEFAULT_KEYBOARD_SLO
 global_variable s32 s_lastActiveControllerSlot = -1;
 global_variable s32 s_submitNameKey;
 // SDL can deliver key-down and key-up between two ~29.9 Hz retail pad polls.
-// Keep active-low button edges for exactly one snapshot so quick taps survive.
+// Keep active-low button edges for two host snapshots so quick taps survive a
+// host input update that occurs immediately before the next retail pad poll.
 // This is host input transport state and is intentionally not serialized.
 global_variable u16 s_keyboardLatchedButtons = 0xffff;
+global_variable u16 s_keyboardLatchedButtonsNext = 0xffff;
 // UIKit touch contacts are host transport state. Button-down edges are
-// retained for one retail snapshot so a quick tap is not lost between polls;
-// held contacts and the analog stick remain live until UIKit releases them.
+// retained for two host snapshots so a quick tap is not lost between a host
+// update and the next retail poll; held contacts and the analog stick remain
+// live until UIKit releases them.
 global_variable struct NativeInputTouchState s_touchState;
 
 extern s32 g_padCommEnable;
@@ -406,12 +410,14 @@ internal u16 NativeInput_KeyboardButtonBit(s32 key)
 internal void NativeInput_ClearKeyboardLatch(void)
 {
 	s_keyboardLatchedButtons = 0xffff;
+	s_keyboardLatchedButtonsNext = 0xffff;
 }
 
 internal void NativeInput_ResetTouchContacts(void)
 {
 	s_touchState.heldButtons = 0;
 	s_touchState.latchedButtons = 0;
+	s_touchState.latchedButtonsNext = 0;
 	s_touchState.leftX = 0;
 	s_touchState.leftY = 0;
 	s_touchState.leftStickActive = 0;
@@ -436,6 +442,7 @@ void Platform_InputTouchButton(unsigned int buttonMask, int down)
 	{
 		s_touchState.heldButtons |= mask;
 		s_touchState.latchedButtons |= mask;
+		s_touchState.latchedButtonsNext |= mask;
 	}
 	else
 	{
@@ -490,6 +497,7 @@ void Platform_InputKeyboardEvent(int key, int down)
 	if (buttonBit != 0)
 	{
 		s_keyboardLatchedButtons &= (u16)~buttonBit;
+		s_keyboardLatchedButtonsNext &= (u16)~buttonBit;
 	}
 }
 
@@ -542,7 +550,8 @@ internal u16 NativeInput_ConsumeTouchButtons(void)
 {
 	u16 buttons = s_touchState.heldButtons | s_touchState.latchedButtons;
 
-	s_touchState.latchedButtons = 0;
+	s_touchState.latchedButtons = s_touchState.latchedButtonsNext;
+	s_touchState.latchedButtonsNext = 0;
 	return buttons;
 }
 
@@ -775,7 +784,8 @@ internal u16 NativeInput_ConsumeKeyboard(void)
 {
 	u16 buttons = NativeInput_ReadKeyboard();
 
-	NativeInput_ClearKeyboardLatch();
+	s_keyboardLatchedButtons = s_keyboardLatchedButtonsNext;
+	s_keyboardLatchedButtonsNext = 0xffff;
 	return buttons;
 }
 
@@ -1054,6 +1064,7 @@ void Platform_InputUpdate(void)
 		// Keep current contacts like SDL's held keyboard state, but do not
 		// replay a tap edge accumulated while the retail pad bus was disabled.
 		s_touchState.latchedButtons = 0;
+		s_touchState.latchedButtonsNext = 0;
 		return;
 	}
 
@@ -1581,9 +1592,15 @@ int Platform_InputRunSelfTest(void)
 		fprintf(stderr, "[CTR Input] self-test failed: key-down tap was not latched\n");
 		return 1;
 	}
+	latchedButtons = NativeInput_ConsumeKeyboard();
+	if (((latchedButtons & 0x4000) != 0) || ((latchedButtons & 0x20) != 0))
+	{
+		fprintf(stderr, "[CTR Input] self-test failed: key-down tap missed its second host snapshot\n");
+		return 1;
+	}
 	if (NativeInput_ConsumeKeyboard() != 0xffff)
 	{
-		fprintf(stderr, "[CTR Input] self-test failed: quick tap survived more than one snapshot\n");
+		fprintf(stderr, "[CTR Input] self-test failed: quick tap survived more than two host snapshots\n");
 		return 1;
 	}
 
@@ -1619,24 +1636,44 @@ int Platform_InputRunSelfTest(void)
 		fprintf(stderr, "[CTR Input] self-test failed: alias key-down tap was not latched\n");
 		return 1;
 	}
+	latchedButtons = NativeInput_ConsumeKeyboard();
+	if (((latchedButtons & 0x4000) != 0) || ((latchedButtons & 0x20) != 0))
+	{
+		fprintf(stderr, "[CTR Input] self-test failed: alias tap missed its second host snapshot\n");
+		return 1;
+	}
+	if (NativeInput_ConsumeKeyboard() != 0xffff)
+	{
+		fprintf(stderr, "[CTR Input] self-test failed: alias tap survived more than two host snapshots\n");
+		return 1;
+	}
 
 	Platform_InputTouchSetEnabled(1);
 	Platform_InputTouchButton(PLATFORM_INPUT_TOUCH_CROSS, 1);
 	Platform_InputTouchButton(PLATFORM_INPUT_TOUCH_R1, 1);
+	Platform_InputTouchButton(PLATFORM_INPUT_TOUCH_DOWN, 1);
 	Platform_InputTouchLeftStick(-32768, 16384, 1);
 	touchButtons = NativeInput_ConsumeTouchButtons();
 	NativeInput_ResetSnapshot(0);
 	NativeInput_ApplyTouch(0, touchButtons);
 	snapshot = &s_controllers[0].snapshot;
 	if ((snapshot->connected == 0) || (snapshot->id != NATIVE_INPUT_PAD_ANALOG) ||
-	    (NativeInput_GetSnapshotButtons(snapshot) != 0xb7ff) || (snapshot->analog[2] != 0x00) ||
+	    (NativeInput_GetSnapshotButtons(snapshot) != 0xb7bf) || (snapshot->analog[2] != 0x00) ||
 	    (snapshot->analog[3] != 0xc0))
 	{
 		fprintf(stderr, "[CTR Input] self-test failed: touch analog chord\n");
 		return 1;
 	}
+	touchButtons = NativeInput_ConsumeTouchButtons();
+	if ((touchButtons & (PLATFORM_INPUT_TOUCH_CROSS | PLATFORM_INPUT_TOUCH_R1 | PLATFORM_INPUT_TOUCH_DOWN)) !=
+	    (PLATFORM_INPUT_TOUCH_CROSS | PLATFORM_INPUT_TOUCH_R1 | PLATFORM_INPUT_TOUCH_DOWN))
+	{
+		fprintf(stderr, "[CTR Input] self-test failed: touch chord missed its second host snapshot\n");
+		return 1;
+	}
 	Platform_InputTouchButton(PLATFORM_INPUT_TOUCH_CROSS, 0);
 	Platform_InputTouchButton(PLATFORM_INPUT_TOUCH_R1, 0);
+	Platform_InputTouchButton(PLATFORM_INPUT_TOUCH_DOWN, 0);
 	Platform_InputTouchLeftStick(0, 0, 0);
 	if (NativeInput_ConsumeTouchButtons() != 0)
 	{
@@ -1650,9 +1687,14 @@ int Platform_InputRunSelfTest(void)
 		fprintf(stderr, "[CTR Input] self-test failed: touch tap was not latched\n");
 		return 1;
 	}
+	if ((NativeInput_ConsumeTouchButtons() & PLATFORM_INPUT_TOUCH_CIRCLE) == 0)
+	{
+		fprintf(stderr, "[CTR Input] self-test failed: touch tap missed its second host snapshot\n");
+		return 1;
+	}
 	if (NativeInput_ConsumeTouchButtons() != 0)
 	{
-		fprintf(stderr, "[CTR Input] self-test failed: touch tap survived more than one snapshot\n");
+		fprintf(stderr, "[CTR Input] self-test failed: touch tap survived more than two host snapshots\n");
 		return 1;
 	}
 	Platform_InputTouchSetEnabled(0);
@@ -1661,7 +1703,7 @@ int Platform_InputRunSelfTest(void)
 		return 1;
 	}
 
-	printf("[CTR Input] self-test passed: metadata-key=%d legacy-enter=%d migration-enter=%d live-start=retail tap-latch=c+right one-snapshot aliases=12 held=k+d+e alias-tap=k+d touch=analog+chord+tap+gamepad-peer virtual-gamepad=buttons+axes+rumble+hotplug\n",
+	printf("[CTR Input] self-test passed: metadata-key=%d legacy-enter=%d migration-enter=%d live-start=retail tap-latch=c+right two-host-snapshots aliases=12 held=k+d+e alias-tap=k+d touch=analog+dpad+chord+tap+gamepad-peer virtual-gamepad=buttons+axes+rumble+hotplug\n",
 	       SDL_SCANCODE_A, SDL_SCANCODE_RETURN, SDL_SCANCODE_RETURN);
 	return 0;
 }
