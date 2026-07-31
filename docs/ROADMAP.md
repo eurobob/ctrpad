@@ -666,7 +666,10 @@ Result so far:
   thin ARM64 bundle. Commit `2c10b00b34df` adds documented `WASD`, `IJKL`,
   `Q/E`, `P`, and Tab aliases without removing the original map. The exact
   app passed 16/16 and visibly accepted `K`, `S`, and `W` through normal boot
-  and main-menu navigation. Full-race keyboard and controller play remain
+  and main-menu navigation. A later clean-tip signed-app run entered Time
+  Trial and visibly moved the Crash Cove kart with dense `K` acceleration and
+  `K+D` steering input. A sequential automation stream cannot prove a live
+  simultaneous drift chord, and a natural human-held lap/full race remains
   open.
 - SDL controller slots now record the resolved joystick instance ID after a
   successful open and return the mapping to `-1` on close. This prevents a

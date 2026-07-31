@@ -8187,3 +8187,50 @@ separation, and deliberate mutation remain unaccepted.
 The goal API then reported 140,855 elapsed seconds: 1 day, 15 hours,
 7 minutes, 35 seconds. This remains cumulative task time rather than labor or
 benchmark time.
+
+## 2026-07-31 — Drove the signed app with the new keyboard aliases
+
+The clean-tip signed app `359e8d5a0f07` was launched through direct desktop
+control. SCEA presentation text, the Naughty Dog crate, CTR title animation,
+and the seven-row main menu all rendered coherently. No debugger, replay,
+installed snapshot, or internal self-test was active.
+
+The first attempt used `S` to highlight Time Trial and a single `K` to
+confirm. It did not enter the selection state and the normal attract/story
+sequence began. An early hypothesis that this screen required Circle was
+rejected after source inspection: the character and track selection paths
+accept both Cross and Circle. The actual evidence is only that the attempted
+single tap did not land in an accepting menu state. `L` returned to the title;
+bounded `S` then `L` entered Time Trial. Repeated bounded Cross input selected
+Crash and the no-ghost row, leading to Crash Cove.
+
+The first stable track capture showed timer `0:12:21`, lap 1/3, and the kart
+stationary beneath the CTR banner. Forty-five isolated automated `K` presses
+advanced the timer to `0:35:80` but did not sustain acceleration; this route
+is rejected because the UI controller pressed and released too sparsely.
+
+Sending 500 dense `K` characters through the same focused app event path
+moved the kart off the line, visibly into the left cliff/tree area, and moved
+the minimap marker by `1:05:66`. A dense alternating `K+D` stream changed the
+kart's heading/location by `1:23:95`. A dense sequential `K+D+E` stream then
+moved it away from the wall toward the exposed rock/ocean section by
+`1:40:48`.
+
+This proves the live alias path can drive acceleration and steering during
+real Time Trial physics. The text automation serializes events, so it does not
+prove all three inputs were held simultaneously or that R1 produced a visible
+hop/powerslide. The media-free test's synthetic held state is still the
+authoritative simultaneous `K+D+E` result. No lap/full-race claim is made.
+
+The final capture was created at 05:45:21 CDT by the desktop observation
+service. It is a 139,137-byte JPEG with SHA-256
+`e6e97000036efe26b162cba3022d3a6e3842656c2c63a488b322b3dc532f0644`.
+It remained in the service's temporary directory and was not copied into the
+repository because it contains retail-derived pixels. The window close button
+then closed the app normally; application enumeration reported
+`io.github.chrissotraidis.ctrpad` with `isRunning=false`.
+
+At 05:46:33 CDT the goal API reported 141,439 elapsed seconds: 1 day,
+15 hours, 17 minutes, 19 seconds. Docker still reported the preserved verifier
+running, unpaused, and not OOM-killed. Playback 2 had observed driver
+transitions at 4,636/4,689; no frame-6,000 FPS marker or exit status existed.

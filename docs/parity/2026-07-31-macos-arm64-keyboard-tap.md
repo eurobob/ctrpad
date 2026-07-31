@@ -204,3 +204,56 @@ checkpoint; that timer is not benchmark or labor time.
 This accepts a documented, practical desktop keyboard test layout and its
 main-menu behavior. A complete human-driven race, gamepad coverage, touch
 input, and iOS/iPadOS input remain separate acceptance tasks.
+
+## Live Time Trial acceleration and steering follow-up
+
+After controller ownership validation, the later clean-tip signed app
+`359e8d5a0f07` was launched again through the ordinary retail path. Its
+executable SHA-256 was
+`c97953dddfe682962732aea7a2d2e8ebde6f8083a2add1eb7ef47388924ae446`.
+The visible sequence included the SCEA presentation, coherent Naughty Dog
+crate animation, textured seven-row main menu, Time Trial character and ghost
+selection, Crash Cove intro, and the normal kart/HUD/minimap race view.
+
+The first route is rejected as race evidence. `S` visibly highlighted Time
+Trial, but a single `K` confirmation arrived while the menu was not accepting
+it and the game entered its normal attract/story sequence. Code inspection
+confirmed that both Cross and Circle are valid on the relevant selection
+screens; the issue was the attempted state/timing boundary, not a different
+binding. `L` returned to the title/menu, then bounded `S` plus `L` input
+entered Time Trial. Bounded repeated Cross input selected Crash and no ghost.
+
+At the first stable race observation, the timer read `0:12:21`, lap 1/3, and
+the kart was stationary below the CTR start banner. Forty-five sparse
+automation taps advanced the timer to `0:35:80` but left the kart at the line.
+That attempt is rejected as held-acceleration evidence: the desktop automation
+pressed and released too slowly to maintain CTR's held Cross state.
+
+A dense stream through the same ordinary keyboard event path then produced
+these visible changes:
+
+- dense `K` advanced the kart from the line to the left cliff/tree area and
+  moved the minimap marker by timer `1:05:66`;
+- dense alternating `K+D` changed heading/location and advanced the minimap
+  marker by `1:23:95`; and
+- dense `K+D+E` input moved the kart out from the wall to the exposed
+  rock/ocean section by `1:40:48`.
+
+The final inspected capture is local-only at SHA-256
+`e6e97000036efe26b162cba3022d3a6e3842656c2c63a488b322b3dc532f0644`
+(139,137-byte JPEG, captured 05:45:21 CDT). It shows coherent Crash Cove
+geometry, sky/ocean, kart, HUD, minimap, and the moved player marker. The
+capture remains outside Git and contains retail-derived pixels.
+
+The dense automation emits sequential key events; it cannot prove that
+`K+D+E` overlapped in one retail poll. The deterministic input test remains
+the authoritative simultaneous-chord proof. This live follow-up accepts
+normal-startup Time Trial entry plus basic keyboard acceleration and steering.
+It does not accept a natural human-held full lap, powerslide/boost execution,
+or full-race completion. The app closed through its window control and the OS
+reported CTRPad no longer running.
+
+Goal elapsed at the 05:46:33 CDT close checkpoint was 1 day, 15 hours,
+17 minutes, 19 seconds. The preserved alternate-loader i686 verifier remained
+running, unpaused, and not OOM-killed; it had passed driver transitions at
+frames 4,636/4,689 but had not yet reached its next 6,000-frame marker.

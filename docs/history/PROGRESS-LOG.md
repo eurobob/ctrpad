@@ -642,6 +642,30 @@ OOM-killed; its machine-captured status file remains empty, so completion and
 mutation are still unaccepted. Goal elapsed at 05:36:44 CDT was 1 day,
 15 hours, 7 minutes, 35 seconds.
 
+### 2026-07-31 — Live keyboard Time Trial movement
+
+- Exact signed app `359e8d5a0f07` launched through normal retail startup and
+  visibly rendered SCEA/Naughty Dog presentation, the seven-row menu, Time
+  Trial setup, and coherent Crash Cove race geometry, kart, HUD, and minimap.
+- An initial single-tap route fell into the attract sequence and is rejected;
+  the corrected bounded `S`/`L` route entered Time Trial and selected Crash.
+- Sparse automation taps did not maintain held acceleration and left the kart
+  at the line; that attempt is also rejected.
+- Dense ordinary `K` input moved the kart from the start, and dense `K+D`
+  input changed its heading/location. A later sequential `K+D+E` stream moved
+  it farther, but cannot prove that all three keys overlapped in one poll.
+- The final local-only screenshot is 139,137 bytes with SHA-256
+  `e6e97000036efe26b162cba3022d3a6e3842656c2c63a488b322b3dc532f0644`.
+  It is not tracked because it contains retail-derived pixels.
+- The app closed normally and the OS reported it no longer running.
+
+Basic live keyboard menu navigation, acceleration, and steering are accepted.
+The deterministic self-test remains the simultaneous `K+D+E` proof; a
+human-held powerslide, clean lap, and complete race remain open. Goal elapsed
+was 1 day, 15 hours, 17 minutes, 19 seconds at 05:46:33 CDT. The concurrent
+alternate-loader verifier remained healthy and had crossed driver transitions
+at frames 4,636/4,689, but not yet its 6,000-frame marker.
+
 ## Current open path to the requested product
 
 1. Finish independent-process/mutation acceptance for the existing full

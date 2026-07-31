@@ -33,7 +33,8 @@ Current evidence and procedures:
   and direct initial XA-sector decode.
 - `2026-07-31-macos-arm64-keyboard-tap.md` records the missing quick-tap root
   cause, one-snapshot press-edge transport, direct live PSX packet trace, and
-  exact-commit ARM64/sanitizer/i686 validation.
+  exact-commit ARM64/sanitizer/i686 validation plus live Time Trial
+  acceleration and steering with the practical aliases.
 - `2026-07-31-macos-arm64-controller-hotplug.md` records controller-slot
   ownership, duplicate-add/removal/reconnect coverage, standardized
   button/axis translation, and rumble through an SDL virtual gamepad.
