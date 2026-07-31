@@ -1226,7 +1226,7 @@ internal s32 NativeInput_RunVirtualControllerSelfTest(void)
 	s_inputInitialized = 1;
 	Platform_InputControllerAdded(virtualId);
 	if ((s_controllers[0].controller == NULL) || (s_controllers[0].instanceId != virtualId) ||
-	    (s_controllerToSlotMapping[0] != virtualId) || (s_keyboardControllerSlot != 1))
+	    ((SDL_JoystickID)s_controllerToSlotMapping[0] != virtualId) || (s_keyboardControllerSlot != 1))
 	{
 		failure = "virtual gamepad slot ownership";
 		goto CLEANUP;
@@ -1287,7 +1287,7 @@ internal s32 NativeInput_RunVirtualControllerSelfTest(void)
 	}
 
 	Platform_InputControllerAdded(virtualId);
-	if ((s_controllers[0].controller == NULL) || (s_controllerToSlotMapping[0] != virtualId))
+	if ((s_controllers[0].controller == NULL) || ((SDL_JoystickID)s_controllerToSlotMapping[0] != virtualId))
 	{
 		failure = "virtual gamepad reconnect";
 		goto CLEANUP;
