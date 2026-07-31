@@ -861,9 +861,10 @@ run created and preserved a retail memory-card profile across backgrounding;
 an explicit default-root seed was retained across app updates and cold-read;
 live Simulator wrong-region and incomplete-image failures are now accepted;
 reserved interrupted-import staging is recovered safely on the next launch;
-physical Files/signing/save behavior, inaccessible-provider/live-transfer
-interruption coverage, and explicit asset re-selection remain open; depends on
-M8
+an actual Simulator Files import was killed after the full staged image became
+visible and recovered on relaunch; physical Files/signing/save behavior,
+inaccessible-provider coverage, and explicit asset re-selection remain open;
+depends on M8
 
 Checkpoint `02a6623f80a0` establishes the storage ownership boundary without
 shipping retail data. On iOS, a valid raw image in
@@ -907,9 +908,13 @@ without disabling retry. A clean exact Simulator build removed two seeded
 stale stages while preserving a nonmatching directory, the exact bare prefix,
 a same-prefix ordinary file, the retained 605,698,800-byte image and the
 6,016-byte save. After restoring the valid destination, the same build cold-
-launched rendered CTR output with the touch overlay. This accepts next-launch
-recovery from the durable state left by process termination; a live provider
-failure or real termination during the 605 MB transfer remains open.
+launched rendered CTR output with the touch overlay. A later real Files
+selection created a full 605,698,800-byte stage with the accepted hash; an
+event-driven diagnostic sent `SIGKILL` before validation/install, leaving that
+stage and no destination. The exact build removed it on launch, displayed the
+singular recovery message, and then cold-launched normally after the accepted
+destination was restored. This accepts Simulator process-death recovery during
+an import; inaccessible-provider and physical-device behavior remain open.
 
 Checkpoint `4b078065ff03` replaces direct memory-card truncation with a hidden
 same-directory temporary-file transaction. It writes and flushes all bytes,
@@ -936,9 +941,9 @@ Work:
 - Retain the landed nonblocking iOS document picker, security-scoped coordinated
   copy, same-volume staging and validate-before-replace contract.
 - Retain the live Simulator wrong-region and incomplete-image outcomes;
-  retain narrowly scoped next-launch interrupted-stage recovery; complete
-  physical-device repetition plus inaccessible-file and actual coordinated-
-  copy/background/termination-during-copy coverage.
+  retain the accepted real Files/`SIGKILL`/next-launch recovery; complete
+  physical-device repetition plus inaccessible-file and device background/
+  termination-during-copy coverage.
 - Retain the accepted Simulator game-driven save, suspend/resume, app-update
   retention and cold retail Load-screen read; repeat the required subset on
   physical hardware and cover asset re-selection explicitly.
@@ -954,9 +959,9 @@ Acceptance:
 - Cooked ISO, wrong-region, truncated, and inaccessible files receive distinct
   errors. **Invalid-format, detected wrong-region, and truncated/incomplete
   outcomes are accepted through the real Simulator Files picker. Recovery of
-  reserved stale stages on next launch is accepted from isolated seeded state.
-  Inaccessible-provider and live interrupted-copy behavior plus physical
-  hardware remain open.**
+  reserved stale stages is accepted from both isolated seeded state and an
+  actual Files import killed after its full stage became visible.
+  Inaccessible-provider behavior and physical hardware remain open.**
 - Saves persist across launch, backgrounding, app updates, and asset
   re-selection. **Save creation, backgrounding, update retention and cold read
   are accepted on Simulator; asset re-selection and physical hardware remain

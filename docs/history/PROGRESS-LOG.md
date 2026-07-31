@@ -1351,3 +1351,43 @@ documentation reading was 186,029 seconds: 2 days, 3 hours, 40 minutes,
 29 seconds cumulative, adding 911 seconds (15 minutes, 11 seconds). The timer
 is cumulative product-task time, including pauses, not a benchmark or labor
 estimate.
+
+### 2026-07-31 — Real Files import `SIGKILL` and recovery
+
+- The disposable clone exercised the actual process-death path after the prior
+  seeded-state acceptance. Its accepted BIN/save were isolated under the same
+  preserved inodes and hashes; the original validation Simulator was shut down
+  before mutation.
+- An initial blank document-provider sheet logged File Provider error `-1002`.
+  Dismissal returned to the enabled cancel state, and a fresh picker presentation
+  loaded the real **On My iPad → CTRPad** hierarchy. No inaccessible-file
+  callback is claimed from that provider UI failure.
+- A first `simctl terminate` attempt was rejected as interruption evidence: the
+  app completed and installed the exact accepted 605,698,800-byte image before
+  the graceful termination finished. A shell-polling attempt then missed the
+  short-lived local APFS stage and was explicitly stopped.
+- A local-only cleanly compiled ARM64 `kqueue` helper watched the import base and
+  full staged asset. Its source/binary hashes were `5483b6a5...67d3f` and
+  `22940c2f...f8970`; neither artifact entered Git or the app.
+- The real Files picker selected the full NTSC-U source. The helper observed
+  stage UUID `77A87CDE-A75D-4FC7-93D2-F0480E7F4075`, full asset inode
+  `111335815`, accepted size/hash, then sent uncatchable `SIGKILL` to exact app
+  PID `93005` before validation/install.
+- After death, the full stage survived, PID `93005` and the final destination
+  were absent, and the retained BIN/save were unchanged. Relaunch PID `93222`
+  removed that exact stage, preserved all three cleanup controls, left no
+  destination, and visibly reported one recovered import.
+- Restoring accepted clone inode `111313696` and cold-launching PID `93310`
+  rendered the retail Sony presentation with the complete touch overlay. The
+  clone was shut down; original validation PID `93637` relaunched with original
+  BIN/save inodes `111131200`/`111222179` and exact hashes intact.
+- This accepts actual Simulator Files-process death and next-launch recovery.
+  Partial-byte provider interruption, inaccessible URL delivery, physical-iPad
+  termination, Apple signing and explicit active-image re-selection remain
+  open. The goal remains active.
+
+The preceding published reading was 186,029 goal seconds. The pre-publication
+documentation reading was 187,126 seconds: 2 days, 3 hours, 58 minutes,
+46 seconds cumulative, adding 1,097 seconds (18 minutes, 17 seconds). The timer
+is cumulative product-task time, including pauses, not a benchmark or labor
+estimate.

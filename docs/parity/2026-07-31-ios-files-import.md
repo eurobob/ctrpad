@@ -209,18 +209,19 @@ Accepted on iPad Simulator:
 - same-process transition into the game;
 - cold relaunch from Documents;
 - next-launch cleanup of importer-owned stale stages with visible retry status;
+- recovery after an actual Files import process was killed with a full stage;
 - coherent visible geometry/textures; and
 - exact ARM64 macOS/Simulator/device builds plus sanitizer coverage.
 
 Still open:
 
 - signed installation and Files behavior on physical iPad hardware;
-- inaccessible-provider and actual copy-interruption paths exercised through
-  Files; the follow-ups below accept wrong-region/incomplete validation and the
-  next-launch recovery state;
-- live background/resume or termination during the 605 MB copy;
+- an inaccessible URL delivered to the importer and a partial-byte provider
+  transfer interruption; the follow-ups below accept wrong-region/incomplete
+  validation and full-stage process-death recovery;
+- physical-device background/resume or termination during the 605 MB copy;
 - explicit re-import/settings UX beyond manual file replacement behavior;
-- game-driven iOS memory-card creation, reload, app-update persistence and
+- physical-device memory-card creation, reload, app-update persistence and
   background save atomicity;
 - device controller/audio/renderer cadence acceptance; and
 - touch-first controls and signed sideloadable distribution.
@@ -429,8 +430,101 @@ and SHA-256 values. The original evidence device is therefore still the active
 Simulator and the disposable clone remains recoverable but shut down.
 
 This accepts narrow next-launch cleanup, retry messaging, preservation of
-similarly named non-owned entries, and normal startup after recovery. The
-staging state was seeded to reproduce the post-kill durable condition; a live
-Files-provider failure or actual background/termination event during the 605 MB
-copy was not performed and remains open, as do physical-iPad import and Apple
-signing.
+similarly named non-owned entries, and normal startup after recovery. This
+first staging state was seeded to reproduce the post-kill durable condition;
+the live `SIGKILL` follow-up below subsequently reproduced a real surviving
+Files stage. Inaccessible-provider handling, physical-iPad import and Apple
+signing remain open.
+
+## Follow-up — real Files import killed before validation/install
+
+The preceding seeded state proved cleanup scope but deliberately did not claim
+that a process had actually died during a Files operation. A second isolated
+continuation closed that Simulator evidence gap without changing production
+source or touching the preserved validation device.
+
+### Corrected attempts before the accepted interruption
+
+The disposable clone's accepted destination was renamed to
+`ctr-u.bin.accepted-before-live-termination`, retaining inode `111313696`,
+605,698,800 bytes and SHA-256 `f780bf23...07c0`. The clone save remained inode
+`111309627`, 6,016 bytes and SHA-256 `6a01b0f5...619a`. The original validation
+Simulator was shut down before any clone mutation.
+
+The first picker presentation showed an empty white document-service sheet.
+Simulator logs recorded a local File Provider `NSFileProviderErrorDomain`
+`-1002` retry. Dismissing that sheet returned the app to its normal enabled
+cancel state. A second presentation loaded the real **On My iPad → CTRPad**
+hierarchy. This is useful provider-state evidence, but it is not counted as an
+inaccessible-file callback because no URL reached the importer.
+
+A shell monitor then saw the UUID stage at size zero and requested `simctl
+terminate`. The importer nevertheless completed and installed a new inode
+`111333984` with the exact accepted size/hash before termination finished. That
+was retained as a successful full import, not misreported as interruption.
+Another shell polling attempt missed the stage entirely because the local APFS
+copy/validation/install interval was shorter than polling; the monitor was
+explicitly stopped before further testing.
+
+### Event-driven kill and durable post-kill state
+
+A local-only 155-line C diagnostic used `kqueue` on the clone's import base,
+then busy-waited only after the UUID stage appeared. It compiled cleanly as an
+ARM64 helper with SHA-256
+`22940c2ff0626d72caea7876287bd734f0278ea405ef49da0d6f77f2eecf8970`;
+its source SHA-256 was
+`5483b6a5e63cc408cbf02c7cc077eb2c53bab64fbba4a7694a65499a7b467d3f`.
+Neither artifact entered Git or the app bundle.
+
+The real Files picker selected the clone's full NTSC-U source while this helper
+watched exact app PID `93005`. The helper observed:
+
+```text
+stage .ctrpad-import-77A87CDE-A75D-4FC7-93D2-F0480E7F4075
+asset inode 111335815
+asset size  605698800
+asset hash  f780bf2331476aabfc00772fa758b12dd95ebfbc907968132cbd3cdd4e2c07c0
+signal      SIGKILL to PID 93005
+```
+
+After the uncatchable signal, PID `93005` was absent, the full staged asset and
+UUID directory still existed, and the final `assets/ctr-u.bin` destination was
+absent. The retained accepted backup and save had their original clone inodes,
+sizes and hashes. This proves the kill preceded validation/install cleanup
+rather than merely stopping an already running game.
+
+### Recovery and restoration
+
+Exact app PID `93222` launched against that durable post-kill state. The UUID
+stage and its full 605,698,800-byte file were gone afterward; the destination
+remained absent, all three earlier cleanup controls remained, and the retained
+BIN/save were unchanged. The enabled chooser visibly displayed the singular
+message:
+
+```text
+Recovered an interrupted import. No partial image was installed; choose your
+NTSC-U raw BIN to retry.
+```
+
+The local-only 2064-by-2752 screenshot
+`/private/tmp/ctrpad-live-sigkill-recovery.png` has SHA-256
+`9f2af441f34b154ea6a447b5c90b352aac04f376d4bdbeb64b54b4e3f6b213a6`.
+
+The app was terminated, the original accepted clone inode moved back to
+`assets/ctr-u.bin`, and PID `93310` cold-launched the retail Sony presentation
+with the complete touch overlay. No staging root remained. The local-only
+screenshot `/private/tmp/ctrpad-after-live-sigkill-normal.png` has SHA-256
+`e6026c03225e97c1b5fd7098676b0d7e2ebe4f2ce658a903974c7af2d21d07b5`.
+
+The clone was shut down without deletion. The original validation Simulator
+was restored and relaunched at PID `93637`; its original retail image remained
+inode `111131200` and its save inode `111222179`, with exact hashes
+`f780bf23...07c0` and `6a01b0f5...619a`. The two completed control imports,
+event helper, app bundles, picker inputs, app containers and screenshots remain
+local-only.
+
+This accepts actual Simulator process death after the real Files picker and a
+complete same-volume stage, durable residue, next-launch cleanup, visible retry
+and normal restoration. It does not accept a partial-byte provider transfer,
+an inaccessible URL delivered to the importer, physical-iPad background/
+termination behavior, or Apple signing. Those remain M9 gates.

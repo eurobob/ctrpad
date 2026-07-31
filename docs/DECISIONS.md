@@ -421,11 +421,14 @@ surviving stage is disposable on the next media-free launch. Restricting
 cleanup to the importer-owned directory namespace avoids treating Documents as
 a scratch area or deleting a similarly named user file.
 
-**Verification boundary:** exact commit `c745390a55eb` removed two isolated
-seeded stages and visibly reported both recoveries while preserving three
-controls: a nonmatching directory, the exact bare-prefix directory, and a
-same-prefix ordinary file. The accepted 605,698,800-byte image and 6,016-byte
-save retained their inodes and SHA-256 values; restoring the image produced a
-normal cold launch. This accepts recovery from the durable state an interrupted
-copy can leave. It does not claim a live Files-provider fault, background kill,
-or physical-iPad transfer interruption.
+**Verification boundary:** exact commit `c745390a55eb` first removed two
+isolated seeded stages and visibly reported both recoveries while preserving
+three controls: a nonmatching directory, the exact bare-prefix directory, and
+a same-prefix ordinary file. A later real Files selection produced a complete
+605,698,800-byte stage with the accepted hash; an event-driven local diagnostic
+sent `SIGKILL` to that exact app PID before validation/install, and the next
+launch removed the surviving stage while reporting one recovery. The retained
+image and 6,016-byte save preserved their inodes and hashes, and restoring the
+image produced a normal cold launch. This accepts Simulator process-death
+recovery during an import. It does not claim an inaccessible-provider callback,
+physical-iPad transfer interruption, or Apple signing.

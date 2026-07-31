@@ -10542,3 +10542,120 @@ documentation reading was 186,029 seconds: 2 days, 3 hours, 40 minutes,
 29 seconds cumulative, adding 911 seconds (15 minutes, 11 seconds). It includes
 paused/resumed task lifetime and is not a build benchmark or person-hour
 estimate.
+
+## 2026-07-31 — Killed a real Files import and accepted next-launch recovery
+
+**Starting source:** `dab6ef3d3074124465cb505368a0509c3400861a`
+
+The preceding checkpoint intentionally accepted cleanup from a seeded durable
+state and left actual process termination open. This continuation used the
+same exact `c745390a5` Simulator runtime and disposable clone to close that
+software-side evidence gap. Production source did not change.
+
+### Isolation and provider warm-up
+
+The original `CTRPad Import Validation` Simulator was terminated and shut down
+before the clone changed. In the clone, accepted destination inode `111313696`
+was renamed to `ctr-u.bin.accepted-before-live-termination`; it retained
+605,698,800 bytes and SHA-256 `f780bf23...07c0`. Save inode `111309627`
+remained 6,016 bytes and `6a01b0f5...619a`. The three cleanup-scope controls
+from the prior acceptance also remained in place.
+
+Computer Use was required because the experiment had to traverse the actual
+iOS document picker. The first presentation produced an empty white sheet
+rather than a file hierarchy. Simulator logs showed the document-service scene
+reach ready state, then File Provider local storage report
+`NSFileProviderErrorDomain -1002` and retry. No URL was delivered to the app.
+The sheet was dismissed through its accessibility dismiss region, and the
+importer returned to `No file selected` with the chooser enabled. A fresh
+presentation then displayed the expected **On My iPad → CTRPad** files. This
+sequence documents provider flakiness and app cancellation recovery, but it is
+not counted as the distinct inaccessible-file importer outcome.
+
+### Attempts rejected as interruption evidence
+
+The first bounded shell monitor polled for a reserved stage and called `simctl
+terminate` when it saw one. It detected the UUID directory while the asset size
+was still zero. However, `simctl terminate` was cooperative enough that the app
+finished the copy, validation and install before stopping. The next launch
+found a new destination inode `111333984`, 605,698,800 bytes and the exact
+accepted hash. This was a successful import followed by termination, so it was
+explicitly rejected as process-death evidence and preserved under
+`ctr-u.bin.completed-graceful-attempt` inside only the clone.
+
+A second shell monitor removed its sleep and tried to observe the staged file.
+The local Files/APFS path completed too quickly for directory polling, the game
+started normally, and no stage observation was produced. That result was also
+rejected. The still-running monitor was sent Control-C before any subsequent
+test, and the completed destination was retained as
+`ctr-u.bin.completed-fast-attempt`. Neither output was treated as recovery.
+
+### Event-driven diagnostic
+
+To remove polling latency without altering production source, a local-only C
+helper registered `EVFILT_VNODE`/`NOTE_WRITE` events through `kqueue` on the
+clone's `Documents/CTRPad`. Once a nonempty-suffix importer directory appeared,
+it busy-waited only inside the disposable helper for
+`assets/ctr-u.bin`, printed the size/inode, and sent `SIGKILL` to the one exact
+app PID. It had a 120-second outer deadline and a 15-second asset deadline.
+
+The 155-line helper compiled with `clang -std=c11 -Wall -Wextra -Werror` as a
+native ARM64 Mach-O. Its local-only identities were:
+
+```text
+source SHA-256  5483b6a5e63cc408cbf02c7cc077eb2c53bab64fbba4a7694a65499a7b467d3f
+binary SHA-256  22940c2ff0626d72caea7876287bd734f0278ea405ef49da0d6f77f2eecf8970
+```
+
+The helper was not linked into CTRPad, copied into an app bundle, or staged in
+Git. It exists only under `/private/tmp` as reproducible test instrumentation.
+
+### Accepted kill, durable state and recovery
+
+The clone launched media-free at PID `93005`, and Computer Use selected the
+full NTSC-U source through the real picker. The event-driven helper observed
+reserved stage `.ctrpad-import-77A87CDE-A75D-4FC7-93D2-F0480E7F4075`, then
+asset inode `111335815` at the full 605,698,800-byte size. It immediately sent
+uncatchable `SIGKILL` to PID `93005`; a read after the signal still found the
+same staged inode and size.
+
+Independent post-kill checks proved PID `93005` absent, the UUID directory and
+full stage still present, and final `assets/ctr-u.bin` absent. Hashing the stage
+produced exact accepted SHA-256 `f780bf23...07c0`. The retained backup and save
+still had clone inodes `111313696`/`111309627`, original sizes and hashes. This
+distinguishes a kill before validation/install cleanup from a stop after the
+game had already started.
+
+Exact app PID `93222` then launched. It removed the full UUID stage, left the
+final destination absent, preserved the nonmatching directory, bare-prefix
+directory and same-prefix ordinary file, and retained the accepted backup/save
+identities. The enabled onboarding screen visibly reported the singular
+recovery message. Local screenshot
+`/private/tmp/ctrpad-live-sigkill-recovery.png` is 2064 by 2752 pixels and has
+SHA-256 `9f2af441...213a6`.
+
+After terminating the importer, the original clone backup was moved to the
+normal destination without changing inode. PID `93310` cold-launched the Sony
+presentation and complete touch overlay with no stage. Local screenshot
+`/private/tmp/ctrpad-after-live-sigkill-normal.png` has SHA-256
+`e6026c03...07b5`; the restored BIN/save still had exact accepted hashes.
+
+The disposable clone was terminated and shut down without deletion. The
+original validation device was booted and relaunched at PID `93637`. Its retail
+image remained inode `111131200`, 605,698,800 bytes and `f780bf23...07c0`; its
+save remained inode `111222179`, 6,016 bytes and `6a01b0f5...619a`. The clone's
+two successful control-import files, helper, picker inputs, screenshots, app
+bundles and containers remain local-only and outside the repository.
+
+This closes the actual Simulator process-death and next-launch recovery gate
+for a full same-volume Files stage. The local APFS copy exposed the staged file
+at full size rather than a partial byte count, so partial-byte provider transfer
+interruption is not claimed. An inaccessible URL delivered to the importer,
+physical-iPad background/termination, Apple signing and explicit in-app active-
+image re-selection remain open. The goal stays active.
+
+The preceding published timer was 186,029 seconds. The pre-publication
+documentation reading was 187,126 seconds: 2 days, 3 hours, 58 minutes,
+46 seconds cumulative, adding 1,097 seconds (18 minutes, 17 seconds). It
+includes paused/resumed task lifetime and is not a build benchmark or
+person-hour estimate.
