@@ -223,3 +223,91 @@ profile/signature, install the resulting app, import the user's retail image,
 verify an update preserves it and the save, then complete natural multi-touch,
 drift/boost, full-race, cadence, thermal and performance acceptance. The active
 goal is not complete until those hardware results exist.
+
+## Current published implementation revalidation after import recovery
+
+The original package report predates later touch, adaptive-scene, Files failure,
+live process-death, and every-launch stage-recovery checkpoints. A fresh audit
+therefore rebuilt and packaged published implementation tip
+`560f6dd20963dbb7f5fa160de6cd91a9910be6d0`; the older package hash was not
+silently treated as evidence for newer source.
+
+Before building, the working tree matched `origin/codex/arm64-apple`. Local
+authorization state was inspected again. `security find-identity -v -p
+codesigning` reported zero valid identities, the standard provisioning-profile
+directory contained no files, and `xcrun devicectl list devices --timeout 10`
+reported `No devices found`. No identity, profile, UDID, or physical install was
+invented. The only honest output mode remained unsigned.
+
+All three presets were explicitly reconfigured in parallel and rebuilt with
+clean identity `SDL-3.4.10-beta-7.1-139-g560f6dd20`. Both iOS products linked
+with the established 32 C warnings and no new Objective-C warning. macOS passed
+21/21 CTests in 1.11 seconds. Exact executable SHA-256 values were:
+
+```text
+Simulator ARM64  a84eb77d9f170372e732a44f3e752acaeb14eac65ae80ecc61d61677a891a4b3
+device ARM64     667048abf37ccfdb079fde1e859256b6ec71973088447ff7a9b0abb7d751c712
+macOS ARM64      82c911c86bb170d9b14677e9e00f6060b44877529442fcf0285b9365786a4521
+```
+
+Two independent packager invocations used the exact device app and separate
+new output names beneath `/private/tmp/ctrpad-current-package.XB9p3b`. Both
+1,433,744-byte archives had SHA-256
+`ad8736cd1d1ae82714f3f9be8fec106295696dedcc36862686bb74ea61d8d3fa`,
+and `cmp` returned success. Their seven members were:
+
+```text
+Payload/
+Payload/CTRPad.app/
+Payload/CTRPad.app/LICENSE
+Payload/CTRPad.app/THIRD_PARTY_NOTICES.md
+Payload/CTRPad.app/INSTALL-IOS.md
+Payload/CTRPad.app/CTRPad
+Payload/CTRPad.app/Info.plist
+```
+
+Internal ZIP timestamps normalized to the source commit timestamp
+`1785541371` rather than the two different outer IPA file mtimes. `unzip -t`
+passed. The executable and all three distribution resources compared exactly
+with their build/source inputs. The extracted executable was thin `arm64`, had
+platform `IOS`, minimum iOS 15.0, SDK 26.5, and embedded identity `560f6dd20`.
+It matched the device-build SHA-256 above. Scans found no known retail-like
+extension and no Documents, Application Support, or memcards directory. Neither
+`embedded.mobileprovision` nor `_CodeSignature` existed; strict verification
+failed with the expected `code object is not signed at all`, so installability
+is not claimed.
+
+Four fresh negative probes failed before producing output as intended:
+
+```text
+injected ctr-u.bin       retail-like file found in bundle
+identity without profile --identity and --profile must be supplied together
+device without signing   --device requires --identity and --profile
+existing output path     output already exists; choose a new --output path
+```
+
+For runtime correlation, the exact Simulator sibling was copied to unique path
+`/private/tmp/ctrpad-current-runtime.t4ME9r`, ad-hoc signed, and verified
+strict/deep. Its unsigned/signed executable hashes were
+`a84eb77d...a4b3` and `df2d6249...41ee`. Only the disposable `CTRPad Import
+Negatives` clone was updated. Installation migrated its data-container UUID
+from `41E2CACF-C11A-4D54-84D9-CC821820885B` to
+`1F53906D-0653-4C99-A0A8-EF38A69CA3E4`; the installed app hash matched the
+signed source before launch.
+
+PID `97960` visibly rendered the retail copyright screen and complete touch
+overlay. Local-only screenshot `/private/tmp/ctrpad-current-package-runtime.png`
+has SHA-256 `dff60f6d43e36aff4c252c6848030df2065bd29a20ce407da39484c27be3da8d`.
+Before and after launch, the clone BIN remained inode `111313696`, 605,698,800
+bytes and `f780bf23...07c0`; its save remained inode `111309627`, 6,016 bytes
+and `6a01b0f5...619a`. The clone was terminated and shut down. Original
+validation PID `93637` stayed foreground with source BIN/save inodes
+`111131200`/`111222179` and the same hashes.
+
+The two IPAs, sidecars, extracted tree, signed Simulator copy, negative fixtures
+and screenshot remain ignored/local-only. This accepts reproducible current-
+source unsigned packaging, validation failures, exact source-to-archive
+identity, and a same-source Simulator update/runtime regression. It still does
+not accept Apple-authorized signing, direct iPad installation, on-device Files
+and update persistence, physical touch/keyboard behavior, a complete race, or
+device cadence/thermal/performance.

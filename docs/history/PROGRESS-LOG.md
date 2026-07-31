@@ -1441,3 +1441,42 @@ documentation reading was 188,010 seconds: 2 days, 4 hours, 13 minutes,
 30 seconds cumulative, adding 884 seconds (14 minutes, 44 seconds). The timer is
 cumulative product-task time, including pauses, not a benchmark or labor
 estimate.
+
+### 2026-07-31 — Current-tip iPad package revalidation
+
+- Rechecked the actual branch and external signing state before packaging.
+  Local/remote tip was `560f6dd20`; the keychain exposed zero valid code-signing
+  identities, the normal provisioning-profile location contained no profile
+  files, and `devicectl` found no connected device.
+- Explicitly reconfigured and rebuilt macOS, Simulator ARM64 and device ARM64 in
+  parallel. Every product embedded clean identity
+  `SDL-3.4.10-beta-7.1-139-g560f6dd20`; macOS passed 21/21 tests in 1.11
+  seconds. Exact Simulator/device/macOS hashes were `a84eb77d...a4b3`,
+  `667048ab...c712`, and `82c911c8...4521`.
+- Two independent unsigned package runs produced byte-identical 1,433,744-byte
+  IPAs at SHA-256 `ad8736cd...d3fa`. The archive held exactly seven expected
+  app/legal/install members with source-normalized internal timestamps.
+- Extraction passed integrity, architecture/platform/minimum-OS/identity checks
+  and exact executable/resource comparisons. Retail-like files, runtime data
+  directories, a profile, and a signature were absent. The expected unsigned
+  `codesign` failure was retained as evidence rather than reported as a pass.
+- Current-tip negative probes rejected an injected `ctr-u.bin`, identity without
+  profile, device without signing inputs, and attempted output overwrite; none
+  created a package.
+- The exact Simulator sibling was ad-hoc signed only for local execution and
+  installed on the disposable clone. PID `97960` rendered the retail copyright
+  frame and full touch overlay while preserving the clone BIN/save inodes,
+  sizes, and hashes. The clone was shut down afterward.
+- Original validation PID `93637` remained in front with original BIN/save
+  inodes `111131200`/`111222179` and hashes unchanged. IPAs, fixtures, app copy,
+  containers and screenshot remained outside Git.
+- The unsigned package path is current and reproducible, but the signed
+  sideloadable deliverable still requires a user-owned Apple identity/profile
+  plus target iPad. Physical Files/update persistence, multi-touch/full-race,
+  keyboard and performance gates remain open; the goal remains active.
+
+The preceding published reading was 188,010 goal seconds. The pre-publication
+documentation reading was 188,683 seconds: 2 days, 4 hours, 24 minutes,
+43 seconds cumulative, adding 673 seconds (11 minutes, 13 seconds). The timer is
+cumulative product-task time, including pauses, not a benchmark or labor
+estimate.

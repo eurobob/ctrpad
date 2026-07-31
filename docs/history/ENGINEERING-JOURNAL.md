@@ -10797,3 +10797,142 @@ documentation reading was 188,010 seconds: 2 days, 4 hours, 13 minutes,
 30 seconds cumulative, adding 884 seconds (14 minutes, 44 seconds). It includes
 paused/resumed task lifetime and is not a build benchmark or person-hour
 estimate.
+
+## 2026-07-31 — Revalidated the complete iPad package at the published implementation tip
+
+**Exact implementation tip:** `560f6dd20963dbb7f5fa160de6cd91a9910be6d0`
+
+### Why the original package evidence was no longer sufficient
+
+The deterministic packager was accepted at `207121134a05`, but later commits
+changed adaptive scene metadata, touch behavior, live Files failure/recovery,
+and iOS startup cleanup. The packaging script itself had not regressed, yet its
+old IPA hash could not prove that the current published app still assembled,
+excluded retail data, and launched. This continuation tested the actual branch
+tip rather than treating a historical package as transitively valid.
+
+No production source change was presumed necessary. The worktree matched
+`origin/codex/arm64-apple` at `560f6dd20`. Before starting, three external gates
+were read directly:
+
+```text
+security find-identity -v -p codesigning  -> 0 valid identities found
+standard provisioning-profile directory  -> no profile files
+xcrun devicectl list devices --timeout 10 -> No devices found
+```
+
+Therefore a true signed-device package was impossible from current local state.
+The unsigned/late-signing contract remained actionable, and no example identity,
+synthetic profile, ad-hoc device claim, or Simulator signature was substituted
+for Apple authorization.
+
+### Parallel exact build matrix
+
+The macOS, iOS Simulator and iOS device presets were explicitly reconfigured
+and built in separate build directories concurrently. All configuration output
+reported clean SDL/source identity
+`SDL-3.4.10-beta-7.1-139-g560f6dd20`. Both iOS builds linked with the established
+32 C warnings and no new Objective-C warning. The macOS suite passed 21/21 in
+1.11 seconds. Exact executable hashes were:
+
+```text
+Simulator ARM64  a84eb77d9f170372e732a44f3e752acaeb14eac65ae80ecc61d61677a891a4b3
+device ARM64     667048abf37ccfdb079fde1e859256b6ec71973088447ff7a9b0abb7d751c712
+macOS ARM64      82c911c86bb170d9b14677e9e00f6060b44877529442fcf0285b9365786a4521
+```
+
+The device app reported bundle ID `io.github.chrissotraidis.ctrpad`, version
+0.1.0 (1), platform `IOS`, thin `arm64`, iOS 15.0 minimum and SDK 26.5.
+
+### Reproducible package and direct extraction audit
+
+Two independent `package-ios.sh` invocations wrote new names beneath unique
+directory `/private/tmp/ctrpad-current-package.XB9p3b`. Each reported unsigned
+mode, excluded retail media, and required LICENSE, notices and Installation
+Information. Both outer files were 1,433,744 bytes and had exact SHA-256:
+
+```text
+ad8736cd1d1ae82714f3f9be8fec106295696dedcc36862686bb74ea61d8d3fa
+```
+
+`cmp` returned success. The two outer file mtimes differed because the commands
+ran separately, but all seven internal entries normalized to source commit
+epoch `1785541371` (2026-07-31 23:42 UTC). That distinction was inspected rather
+than assuming equal archive hashes proved the intended timestamp source.
+
+`unzip -t` accepted every member. The extracted tree contained only:
+
+```text
+Payload/
+Payload/CTRPad.app/
+Payload/CTRPad.app/LICENSE
+Payload/CTRPad.app/THIRD_PARTY_NOTICES.md
+Payload/CTRPad.app/INSTALL-IOS.md
+Payload/CTRPad.app/CTRPad
+Payload/CTRPad.app/Info.plist
+```
+
+Direct `cmp` checks proved the executable and each legal/install resource equal
+to their input files. `lipo`, `vtool`, `strings`, `plutil`, and SHA-256 readback
+proved the extracted executable was the exact device build with current
+identity. Case-insensitive scans found no retail-like extension and no
+Documents, Application Support, or memcards directory. No
+`embedded.mobileprovision` or `_CodeSignature` existed. `codesign --verify`
+failed with `code object is not signed at all`, the required observable result
+for this unsigned package rather than a verification success.
+
+Four negative routes were repeated against current source. A disposable app
+copy with LICENSE mechanically copied to the retail-like name `ctr-u.bin` was
+rejected before an IPA existed. Supplying only `--identity`, supplying
+`--device` without identity/profile, and selecting the already-existing first
+output path were also rejected with their specific contract messages. Every
+negative output remained absent. The injected file contained GPL text, not
+retail data.
+
+### Same-source Simulator runtime correlation
+
+The device IPA cannot run in Simulator, so runtime evidence used the exact
+Simulator sibling from the same configuration identity. A unique copied app at
+`/private/tmp/ctrpad-current-runtime.t4ME9r` matched unsigned hash
+`a84eb77d...a4b3`, was ad-hoc signed to `df2d6249...41ee`, and passed strict/
+deep local verification. This signature is explicitly not device authorization.
+
+Only the disposable `CTRPad Import Negatives` clone was updated. Before install,
+its BIN remained inode `111313696`, 605,698,800 bytes and
+`f780bf23...07c0`; its save remained inode `111309627`, 6,016 bytes and
+`6a01b0f5...619a`. The clone boot took 66 seconds to reach terminal status, so
+the yielded terminal session was polled to completion rather than treating the
+first 30-second return as an install. Exact installation migrated the data
+container from `41E2CACF-C11A-4D54-84D9-CC821820885B` to
+`1F53906D-0653-4C99-A0A8-EF38A69CA3E4` and the app bundle to
+`E17AB993-3224-4DCE-8825-5C173ABD312B`. The new paths were resolved, the
+installed executable matched signed hash `df2d6249...41ee`, and strict/deep
+verification passed before launch.
+
+PID `97960` launched and visibly rendered the retail copyright presentation
+with the complete safe-area touch overlay. Local-only screenshot
+`/private/tmp/ctrpad-current-package-runtime.png` has SHA-256
+`dff60f6d43e36aff4c252c6848030df2065bd29a20ce407da39484c27be3da8d`.
+The clone BIN/save retained their inodes, sizes and hashes after launch. The app
+was terminated and the clone shut down without deletion.
+
+Finally, the untouched `CTRPad Import Validation` Simulator returned to the
+foreground as its existing PID `93637`. Its original image remained inode
+`111131200`, 605,698,800 bytes and `f780bf23...07c0`; its save remained inode
+`111222179`, 6,016 bytes and `6a01b0f5...619a`. The IPAs and SHA sidecars,
+extraction tree, negative fixtures, signed Simulator app, containers, retail
+files, save and screenshot all stayed outside the repository.
+
+This checkpoint accepts current-published-source build, deterministic unsigned
+packaging, direct archive/source identity, retail/runtime exclusion, negative
+contract behavior, and same-source Simulator update/runtime preservation. It
+does not turn an unsigned IPA into a sideloadable signed deliverable. A real
+identity/profile and connected target iPad are still required, followed by
+on-device import/update/save, physical touch/keyboard, full-race and performance
+acceptance. The goal remains active.
+
+The preceding published timer was 188,010 seconds. The pre-publication
+documentation reading was 188,683 seconds: 2 days, 4 hours, 24 minutes,
+43 seconds cumulative, adding 673 seconds (11 minutes, 13 seconds). It includes
+paused/resumed task lifetime and is not a build benchmark or person-hour
+estimate.

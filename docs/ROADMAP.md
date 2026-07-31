@@ -1070,6 +1070,19 @@ physical signature/install gate remains open rather than inferred from an
 ad-hoc Simulator signature. Exact evidence is in
 `docs/parity/2026-07-31-ios-sideload-package.md`.
 
+Published implementation tip `560f6dd20963` was revalidated after the later
+touch/import/recovery work rather than relying only on the original packaging
+checkpoint. Two fresh packages were byte-identical at SHA-256
+`ad8736cd...d3fa`, contained exactly the seven expected app/legal/install
+members, and embedded thin ARM64/iOS executable identity `560f6dd20`. Extraction
+proved no retail-like file, runtime directory, provisioning profile, or code
+signature. The exact Simulator sibling launched from an update install,
+rendered the copyright screen and full touch overlay, and retained the cloned
+BIN/save identities. A fresh local audit still found zero code-signing
+identities, no provisioning-profile files, and no connected devices, so this
+strengthens current-source package readiness without claiming the physical
+signature/install gate.
+
 Work:
 
 - Run the complete cross-architecture parity suite and prolonged playtesting.
