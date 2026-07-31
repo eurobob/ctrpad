@@ -8718,3 +8718,240 @@ exact-build matrix producer and was not changed. Docker reported it running,
 unpaused and not OOM-killed. Its machine-owned exit-status file remained zero
 bytes. No alternate playback completion, process exit, layout separation or
 deliberate mutation is inferred.
+
+## 2026-07-31 — UIKit lifecycle/display-loop implementation and exact live audit
+
+### Scope and source boundary
+
+This slice began at clean commit `cbdd58435173d4ba7786599973eea8278a54607c`.
+The requested dependency was M8's application lifecycle: the previous iPad
+Simulator package launched and rendered, but `CTR_Main` then owned an endless
+loop, normal SDL quit called `exit(0)`, and background/foreground had no
+explicit input, audio or timing boundary.
+
+Retail execution continued to use the user's ignored file at
+`ref/CTR/CTR - Crash Team Racing (USA).bin`. It was copied only into temporary
+packages beneath `/private/tmp`; it was never staged. The repository status
+was checked before source work and again before publication.
+
+### Event-delivery investigation
+
+The first proposed implementation polled mobile lifecycle events from the
+retail host event loop. That was rejected after reading SDL's event contract:
+will/did background, will/did foreground, low-memory and terminating events
+are sent synchronously to event watches and are not added to the ordinary
+queue. A queue-only implementation could therefore look correct in a unit
+test and still miss every real UIKit transition.
+
+`platform/native_platform.c` now installs `SDL_AddEventWatch` immediately
+after SDL initialization and removes it before `SDL_Quit`. The watch reduces
+each notification into a small lifecycle phase/action result. The reducer is
+explicitly idempotent for paired `will`/`did`, duplicate notifications and
+direct recovery events; host actions execute only when the reduction requests
+them (`platform/native_platform.c:124-257,488-495,535-542`).
+
+### Returning control to UIKit
+
+`game/MAIN/MainMain.c` was separated at the existing native loop boundary:
+
+```text
+CTR_MainStep  one unchanged retail state-loop iteration
+CTR_Main      desktop loop that repeatedly calls CTR_MainStep
+iOS callback  one CTR_MainStep per SDL/UIKit animation callback
+```
+
+These boundaries are `game/MAIN/MainMain.c:58-99,512-527`,
+`main.c:269-288` and `platform/native_platform.c:800-823`.
+
+`main.c` installs the callback with `SDL_SetiOSAnimationCallback`, returns
+from standard iOS `main`, pumps while inactive and stops the callback when a
+cooperative quit is observed. Desktop behavior remains a native loop. This is
+accurately described as a display-driven outer loop: `VSync` may still wait
+synchronously inside one retail step, so a fully continuation-based scheduler
+is not claimed.
+
+The old SDL quit and window-close `exit(0)` calls were replaced with a
+`quitRequested` flag. A desktop diagnostic received Ctrl-C, unwound through
+the native loop, closed the log and exited 0. Exact deterministic coverage is
+provided by the lifecycle self-test rather than by treating the dirty launch
+as final evidence.
+
+### Suspension invariants
+
+The background action performs these host-only changes:
+
+1. pause the SDL audio-stream device;
+2. lock and clear queued PCM rendered before suspension;
+3. clear quick-key and name-entry transport edges;
+4. publish released active-low PSX snapshots, including centered axes; and
+5. flush the platform log.
+
+Foreground clears stale output again, clears transient input edges, rebases
+the absolute host VBlank deadline and resumes audio. The game-visible VBlank
+counter, callbacks, retail timers, emulated SPU/XA state and all retail state
+remain unchanged. The next ordinary input poll resamples current keyboard and
+gamepad state, preventing a pre-background hold from sticking while still
+allowing a physically held control to become active again after resume.
+The concrete audio and input boundaries are
+`platform/native_audio.c:2436-2472` and
+`platform/native_input.c:958-992`.
+
+### Pacing audit and second spin discovery
+
+The first implementation made the explicit iOS final spin window zero. A
+second source audit followed the resulting delay call into SDL and found that
+`SDL_DelayPrecise` sleeps only to the last sub-millisecond interval, then
+busy-spins to its target. Merely setting the project spin constant to zero did
+not satisfy the battery/host-cooperation objective.
+
+The final iOS branch calls `SDL_DelayNS`, yielding for the complete remaining
+interval. Desktop keeps the accepted `SDL_DelayPrecise` and bounded-spin path.
+The rational NTSC deadline, late-frame catch-up rules and game-visible VBlank
+model were not changed (`platform/native_platform.c:830-945`).
+
+### Deterministic tests
+
+CTest 19, `ctr_native_lifecycle`, exercises paired, duplicate and direct
+background/foreground transitions, low memory, termination, refusal to resume
+after termination, cooperative quit, paired audio actions and deadline rebase
+with a preserved synthetic game-visible count. Its exact successful marker is:
+
+```text
+[CTR Lifecycle] self-test passed: background=idempotent foreground=rebase quit=cooperative audio=paired low-memory=flush
+```
+
+The established keyboard test was audited again in response to the request
+for basic keyboard controls. No second input path was added: commit
+`2c10b00b34df4f0eb61aa8b72cbe99588a930ed6` already maps the additive
+two-hand layout into the production PS1 packet path
+(`platform/native_input.c:290-389,583-696`):
+
+```text
+W/A/S/D    D-pad                 I/J/K/L    Triangle/Square/Cross/Circle
+Q/E        L1/R1                 P          Start
+Tab        Select                Ctrl/[ ]   L2/R2/L3/R3 as documented
+```
+
+The current `--self-test-input` checks all 12 additive aliases, held `K+D+E`
+as Cross + Right + R1, and a complete `K+D` press/release latched into exactly
+one retail snapshot. The earlier exact signed macOS run visibly moved the main
+menu with `S`/`W`, accelerated with `K` and changed steering with `K+D`.
+Therefore the requested basic keyboard function already existed and was
+retained; the root README remains its user-facing map.
+
+The current `afb5463cc511` ARM64 app then ran `--self-test-input` directly and
+printed the complete `aliases=12 held=k+d+e alias-tap=k+d
+virtual-gamepad=buttons+axes+rumble+hotplug` marker. The focused CTest repeated
+1/1 in 1.44 seconds. README now calls out window focus and Simulator hardware
+keyboard capture while keeping real-iPad keyboard acceptance explicitly open.
+
+### Dirty live runs and rejected diagnostics
+
+The first dirty Simulator build identified as `cbdd58435173-dirty` completed
+two full Home/resume cycles before the hidden SDL spin was removed. A second
+dirty build using the final yielding wait completed one full cycle and one
+rapid transition in which UIKit sent will-background directly followed by
+did-foreground. The reducer recovered once, matching its direct-transition
+test.
+
+LLDB attach stalled and left the app suspended; the orphaned debugger was
+terminated and the process resumed. Two later `sample` attempts also blocked
+without producing a report. No lifecycle or performance conclusion uses those
+attempts.
+
+The yielding diagnostic package was run with `--perf`. Its console-bound
+process ended while CSV row 325 was being written, before a shutdown summary.
+That incomplete row and the absent summary were rejected. Analysis used only
+the 324 complete rows:
+
+```text
+average total                         119.983 ms (8.335 FPS)
+average work                          109.354 ms
+average renderer_draw_triangles_ms    105.157 ms
+average VBlank wait                    10.629 ms
+average swap                            3.364 ms
+average framebuffer store               4.857 ms
+maximum total                         519.623 ms
+```
+
+This assigns the Simulator miss to Apple Software Renderer's CPU triangle
+submission rather than to the yielding wait. It is a diagnosis, not device
+acceptance. The complete-row CSV remains local-only with SHA-256
+`d0f1e10eb90de0696e74def5cf0cf789a49276147c0430b247ca04958d2fdd7a`.
+
+### Exact clean Simulator process
+
+Implementation commit `afb5463cc5115073be9427658df424a5d9c14092` was
+created and pushed before exact-product validation. The exact Simulator app
+was copied to `/private/tmp/ctrpad-ios-lifecycle-exact-cNF1CU/CTRPad.app`,
+received a temporary retail copy and local ad-hoc signature, passed strict
+deep signature verification, installed, and launched as
+`io.github.chrissotraidis.ctrpad` on iPad Pro 13-inch (M5) Simulator
+`D80E9862-C29A-4D69-B8E5-D81D396C17D5` running iOS 26.5.
+
+It reported build `afb5463cc511`, a 1376-by-1032 UIKit surface, presentation
+framebuffer/renderbuffer 1, Apple Software Renderer, GLES 3 / GLSL ES 3,
+four PSX shaders plus VRAM pipelines, and 44.1-kHz stereo CoreAudio. Computer
+Use drove two complete Home/background/foreground cycles. Each log sequence
+was will-background, did-background, will-foreground, did-foreground with
+audio suspended then active. After resume, live inspection showed first the
+Crash/N. Tropy kart intro and then the Crash/trophy/checkered title scene;
+geometry, colors, alpha and textures remained coherent without a black frame.
+
+The 27-line exact lifecycle log remains outside Git with SHA-256
+`30f5b5ec516ffae64f05dc23e4570b438cdadb15858189439749572c7d021ec3`.
+The locally signed app executable hash is
+`bffddcaf98a990c50d67f0b97457af15b271e69f73d3ab660c0b32a13114bb23`.
+The final process was stopped with `simctl`; natural terminating-event delivery
+is not inferred.
+
+The same two `SDL_uikitviewcontroller` unbalanced appearance-transition
+warnings repeated. A WebCore/WebKit duplicate accessibility-bundle warning was
+classified as Simulator-runtime output, not an app finding. Rotation and
+view-controller acceptance remain open.
+
+### Exact source matrix and publication
+
+Every exact producer was explicitly reconfigured after commit and embeds
+`afb5463cc511`:
+
+```text
+macOS ARM64 desktop GL    19/19 in 1.07 s; strict deep signature; SHA-256 0804b67d...b697ec
+macOS ARM64 GLES config  19/19 in 0.65 s; expected no-ANGLE exit 1; SHA-256 bf60b666...edcf6
+ARM64 ASan + UBSan       19/19 in 6.28 s; no finding; SHA-256 6efa286e...7401
+iOS Simulator ARM64      iOS 15 floor, SDK 26.5; pre-sign SHA-256 b1161f25...7c84
+iOS device ARM64         iOS 15 floor, SDK 26.5; unsigned/unrun; SHA-256 8364ec5c...1546
+optimized Linux i686     19/19 in 10.34 s; ELF32 Intel 80386; SHA-256 5f1f8b06...abdc65
+```
+
+The normal Apple/iOS compiles repeated 32 established warnings and the
+sanitizer compile repeated 59. The i686 compile repeated four established
+warnings and produced GNU Build ID
+`d032b695e7957142bc16a754a8af8a2946dab2b5`. No new warning was accepted. The
+detailed matrix, complete hashes and deliberately open gates are in
+`docs/parity/2026-07-31-ios-lifecycle-display-loop.md`.
+
+Source commit `afb5463cc511` was pushed to `origin/codex/arm64-apple` and draft
+PR #1. It was not merged. The final documentation commit and remote-head audit
+are recorded in the following progress checkpoint after the i686 producer
+finishes.
+
+### Elapsed time and protected verifier
+
+The previous documented checkpoint ended at 150,887 goal seconds. Exact
+validation was read at 154,273 seconds: 1 day, 18 hours, 51 minutes, 13 seconds
+cumulative and 3,386 seconds (56 minutes, 26 seconds) later. This timer is
+cumulative task time, not a benchmark or labor estimate.
+
+The pre-publication documentation, focused keyboard and optimized i686 audit
+ended at 155,756 seconds (1 day, 19 hours, 15 minutes, 56 seconds). That
+follow-up consumed 1,483 seconds (24 minutes, 43 seconds), making the whole
+checkpoint 4,869 seconds (1 hour, 21 minutes, 9 seconds) after the preceding
+150,887-second record.
+
+The pre-existing alternate-loader i686 verifier in container
+`ec58fcd7069c` was not paused, restarted, rebuilt or terminated. It remained
+running and not OOM-killed; its machine-owned status file was zero bytes. The
+latest playback log had crossed nine 2,000-frame windows, but completion,
+independent-process/layout separation and deliberate mutation remain
+unaccepted until that verifier writes its own final status.

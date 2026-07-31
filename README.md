@@ -193,6 +193,11 @@ to brake, tap `L` for an item, and use `Q` or `E` to hop/drift. Keyboard
 presses are translated to the same PS1-shaped pad packets as a controller;
 no keyboard-only physics path is used.
 
+Click the game window before testing. In iOS Simulator, also enable its
+hardware-keyboard capture for the running app. macOS keyboard play is accepted;
+Simulator delivery has been observed but remains less consistent, and a
+physical keyboard on a real iPad has not yet passed the device acceptance gate.
+
 ### Extracted Asset Override
 
 You do not need extracted assets for normal play.

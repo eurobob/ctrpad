@@ -800,8 +800,9 @@ Acceptance:
 
 ### M8 — iOS/iPadOS application with controller input
 
-**Status:** in progress; reproducible app-shell and Simulator launch slice
-landed; physical-device/controller/lifecycle acceptance depends on M6 and M7
+**Status:** in progress; reproducible app shell, Simulator launch and
+background/resume checkpoint landed; physical-device/controller/full-lifecycle
+acceptance depends on M6 and M7
 
 Checkpoint `98ae2c6d86fe` adds ARM64 Simulator/device presets, credential-free
 iPhone/iPad metadata, landscape declarations, SDL's iOS-owned entry point,
@@ -811,16 +812,29 @@ opens audio. The generated physical-device binary is unsigned and has not run
 on hardware. Simulator logs still report unbalanced UIKit appearance
 transitions, so lifecycle acceptance remains explicitly open.
 
+Checkpoint `afb5463cc511` adds a synchronous SDL/UIKit lifecycle reducer,
+cooperative quit, paired audio/input suspension, host-only VBlank deadline
+rebasing, and a `CADisplayLink` callback that returns to UIKit between retail
+steps. An exact locally signed Simulator package completed two full Home and
+foreground cycles with live textured rendering and resumed CoreAudio. The iOS
+wait now yields completely instead of entering either the project spin window
+or `SDL_DelayPrecise`'s final sub-millisecond spin. Simulator performance is
+not accepted: a 324-frame diagnostic averaged 8.335 FPS and attributed
+105.157 ms of 119.983 ms per frame to software-renderer triangle submission.
+The repeated UIKit appearance-transition warning also remains. Detailed
+evidence is in `docs/parity/2026-07-31-ios-lifecycle-display-loop.md`.
+
 Work:
 
 - Retain the completed device/simulator presets, bundle metadata and
   credential-free signing configuration; add final launch artwork only when
   it can be distributed without retail content.
-- Retain SDL's iOS-owned entry point and finish the UIKit lifecycle rather
-  than treating launch alone as lifecycle acceptance.
-- Replace direct process exit with suspend/resume-safe state transitions.
-- Replace battery-hostile spin pacing with an iOS-appropriate display-driven
-  mechanism while retaining retail timing.
+- Retain the landed SDL-owned entry point, display callback, lifecycle reducer
+  and cooperative quit; finish rotation, natural termination, low-memory and
+  background-save behavior on physical hardware.
+- Retain the fully yielding iOS wait and exact NTSC host deadline; measure
+  hardware cadence/energy and decide whether the remaining synchronous retail
+  step must become a fully nonblocking scheduler.
 - Bring up audio, GLES, and MFi/Bluetooth controllers on a real iPad.
 
 Acceptance:

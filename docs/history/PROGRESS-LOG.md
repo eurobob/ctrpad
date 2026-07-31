@@ -799,6 +799,73 @@ rebuilt or terminated. Docker still reported running, unpaused and not
 OOM-killed, and its machine status file remained empty. Completion, alternate
 layout and deliberate mutation remain unaccepted.
 
+### 2026-07-31 — Cooperative UIKit lifecycle and display-loop checkpoint
+
+- Started from clean source `cbdd58435173`; the user's NTSC-U BIN remained in
+  ignored `ref/CTR/` and was copied only into disposable local test packages.
+- Source inspection established that SDL mobile lifecycle notifications are
+  delivered synchronously to event watches rather than queued for the retail
+  poll loop. The app now installs an idempotent lifecycle reducer at that
+  boundary.
+- Split one native retail loop iteration into `CTR_MainStep`. Desktop retains
+  its loop; iOS schedules one step with SDL's UIKit animation callback and
+  returns from standard `main`, allowing UIKit to regain control between
+  retail frames.
+- Backgrounding now pauses audio, clears stale queued PCM, clears transient
+  keyboard/name-entry transport and publishes released PSX pad packets.
+  Foregrounding rebases only the host VBlank deadline, preserves the
+  game-visible count, and resumes audio. SDL quit/window-close paths are now
+  cooperative.
+- A first pacing correction removed the project's explicit 200-us iOS spin.
+  A subsequent source audit found a second final sub-millisecond spin inside
+  `SDL_DelayPrecise`, so iOS now uses the fully yielding `SDL_DelayNS` path.
+- CTest 19 covers paired, duplicate and direct background/foreground events,
+  low memory, termination, audio pairing, cooperative quit and VBlank rebase.
+  Exact desktop GL, GLES-configured and ASan/UBSan ARM64 runs passed 19/19;
+  sanitizers reported no finding. The exact optimized i686 producer also
+  passed 19/19 in 10.34 seconds and emitted an ELF32 Intel 80386 binary with
+  GNU Build ID `d032b695e7957142bc16a754a8af8a2946dab2b5` and SHA-256
+  `5f1f8b06ceacbd4d4bd80e2c0e62f056faaddac0e1d81a48c67f6c9d80abdc65`.
+- An exact clean, locally ad-hoc-signed iPad Simulator package identified as
+  `afb5463cc511` completed two full Home/background/foreground cycles. Both
+  restored CoreAudio and coherent animated retail textures without a black or
+  stale frame. The process was later stopped with `simctl`, so natural
+  termination is not claimed.
+- Exact ARM64 product hashes, lifecycle-log hash and package details are in
+  `docs/parity/2026-07-31-ios-lifecycle-display-loop.md`. No package,
+  screenshot, disc byte, memory card or raw media output entered Git.
+- Simulator cadence remains rejected. Five short windows ranged from 7.04 to
+  9.56 FPS. A 324-complete-frame diagnostic averaged 119.983 ms per frame and
+  attributed 105.157 ms to renderer triangle submission on Apple's software
+  GLES renderer. The partial 325th row and absent shutdown summary were
+  excluded.
+- LLDB attach and two `sample` attempts stalled without usable reports; they
+  were terminated and support no claim. Two recurring unbalanced UIKit
+  appearance-transition warnings also remain open.
+- The source checkpoint was committed as `afb5463cc511` and pushed to
+  `origin/codex/arm64-apple`; the draft pull request remains the publication
+  boundary and is not merged.
+- A follow-up keyboard audit confirmed that the requested basic test controls
+  were already present in commit `2c10b00b34df`: `WASD`, `IJKL`, `Q/E`, `P`
+  and Tab are additive aliases for D-pad, face buttons, shoulders, Start and
+  Select. The current input self-test requires all 12 aliases, one-snapshot
+  quick taps and a simultaneous `K+D+E` chord, while the prior exact signed
+  macOS run visibly proved menu navigation, acceleration and steering. The
+  current `afb5463cc511` ARM64 app repeated the focused CTest successfully:
+  1/1 in 1.44 seconds, with the complete alias/tap/gamepad marker.
+
+The previous documented reading was 150,887 goal seconds. Exact lifecycle
+validation was recorded at 154,273 seconds: 1 day, 18 hours, 51 minutes,
+13 seconds cumulative and an interval of 3,386 seconds (56 minutes,
+26 seconds). This is cumulative task time, not a performance or labor metric.
+The final pre-publication keyboard, documentation and i686 audit reading was
+155,756 seconds (1 day, 19 hours, 15 minutes, 56 seconds), adding 1,483 seconds
+(24 minutes, 43 seconds) and making the full checkpoint interval 4,869 seconds
+(1 hour, 21 minutes, 9 seconds).
+The protected historical i686 verifier remained running, unpaused and not
+OOM-killed with an empty machine status file; its independent completion and
+mutation gates remain unaccepted.
+
 ## Current open path to the requested product
 
 1. Finish independent-process/mutation acceptance for the existing full
@@ -807,8 +874,8 @@ layout and deliberate mutation remain unaccepted.
    listening, renderer, controller, and full-race manual-play coverage.
 3. Continue live GLES 3 runtime, frame-capture, parity, and cadence validation
    from the landed shared renderer dialect.
-4. Add the iOS/iPadOS lifecycle, sandbox, display pacing, audio, and controller
-   application shell.
+4. Continue the landed iOS/iPadOS lifecycle/display loop with rotation,
+   physical-hardware cadence, sandbox audio/saves, and controller acceptance.
 5. Add document-picker import and persistent sandbox storage for the user's raw
    NTSC-U image and saves.
 6. Build and iterate genuinely playable, simultaneous analog touch controls.
