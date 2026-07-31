@@ -21,6 +21,7 @@ const VBLANK_TOTAL_OFFSET = 296;
 const VBLANK_PACKET_COUNT_OFFSET = 300;
 const VBLANK_PACKETS_OFFSET = 304;
 const VBLANK_PACKET_CAP = 64;
+const END_ELAPSED_TIME_MS_OFFSET = 144;
 const PAD_CHECKSUM_OFFSET = 432;
 const RECORD_CHECKSUM_OFFSET = 436;
 const FNV_OFFSET = 2166136261;
@@ -30,6 +31,7 @@ function usage() {
   console.error(
     "usage: tools/extend-replay-input.mjs --frames COUNT " +
       "[--repeat-from FRAME] [--pads-from REPLAY] " +
+      "[--bootstrap-from V4_REPLAY] " +
       "source.ctrreplay output.ctrreplay",
   );
 }
@@ -130,6 +132,7 @@ function validateFrame(buffer, frame, replayVersion) {
 
 function parseArgs(argv) {
   let frameCountText;
+  let bootstrapFromPath;
   let padsFromPath;
   let repeatFromText;
   const paths = [];
@@ -137,10 +140,24 @@ function parseArgs(argv) {
   for (let index = 2; index < argv.length; index += 1) {
     if (argv[index] === "--frames") {
       frameCountText = argv[++index];
+      if (frameCountText === undefined) {
+        fail("missing --frames value");
+      }
+    } else if (argv[index] === "--bootstrap-from") {
+      bootstrapFromPath = argv[++index];
+      if (bootstrapFromPath === undefined) {
+        fail("missing --bootstrap-from value");
+      }
     } else if (argv[index] === "--pads-from") {
       padsFromPath = argv[++index];
+      if (padsFromPath === undefined) {
+        fail("missing --pads-from value");
+      }
     } else if (argv[index] === "--repeat-from") {
       repeatFromText = argv[++index];
+      if (repeatFromText === undefined) {
+        fail("missing --repeat-from value");
+      }
     } else if (argv[index].startsWith("--")) {
       fail(`unknown option: ${argv[index]}`);
     } else {
@@ -154,6 +171,7 @@ function parseArgs(argv) {
   }
 
   return {
+    bootstrapFromPath,
     outputFrameCount: parseUnsigned(frameCountText, "frame count"),
     padsFromPath,
     repeatFromText,
@@ -178,8 +196,9 @@ try {
   if (source.readUInt32LE(0) !== FILE_MAGIC) {
     fail("invalid replay file magic");
   }
-  if (source.readUInt32LE(4) !== REPLAY_VERSION) {
-    fail(`source must use replay version ${REPLAY_VERSION}`);
+  const sourceVersion = source.readUInt32LE(4);
+  if (sourceVersion < 2 || sourceVersion > REPLAY_VERSION) {
+    fail(`source replay version ${sourceVersion} cannot be promoted`);
   }
   if (
     source.readUInt32LE(8) !== HEADER_SIZE ||
@@ -196,15 +215,21 @@ try {
         `file has ${source.length} bytes`,
     );
   }
-  if (options.outputFrameCount <= sourceFrameCount) {
+  if (options.outputFrameCount < sourceFrameCount) {
     fail(
-      `output frame count ${options.outputFrameCount} must exceed ` +
+      `output frame count ${options.outputFrameCount} is smaller than ` +
         `source frame count ${sourceFrameCount}`,
+    );
+  }
+  if (sourceVersion < REPLAY_VERSION && options.bootstrapFromPath === undefined) {
+    fail(
+      `promoting replay version ${sourceVersion} requires ` +
+        "--bootstrap-from with a complete version-4 timing boundary",
     );
   }
 
   for (let frame = 0; frame < sourceFrameCount; frame += 1) {
-    validateFrame(source, frame, REPLAY_VERSION);
+    validateFrame(source, frame, sourceVersion);
   }
 
   const repeatFrom =
@@ -222,7 +247,47 @@ try {
     HEADER_SIZE + options.outputFrameCount * FRAME_SIZE,
   );
   source.copy(output);
+  output.writeUInt32LE(REPLAY_VERSION, 4);
   output.writeUInt32LE(options.outputFrameCount, FRAME_COUNT_OFFSET);
+
+  if (options.bootstrapFromPath !== undefined) {
+    const bootstrap = fs.readFileSync(options.bootstrapFromPath);
+    if (
+      bootstrap.length < HEADER_SIZE + FRAME_SIZE ||
+      bootstrap.readUInt32LE(0) !== FILE_MAGIC ||
+      bootstrap.readUInt32LE(4) !== REPLAY_VERSION ||
+      bootstrap.readUInt32LE(8) !== HEADER_SIZE ||
+      bootstrap.readUInt32LE(12) !== FRAME_SIZE
+    ) {
+      fail("bootstrap replay is not a complete version-4 replay");
+    }
+    validateFrame(bootstrap, 0, REPLAY_VERSION);
+
+    const frameZeroOffset = HEADER_SIZE;
+    bootstrap.copy(
+      output,
+      frameZeroOffset + VBLANK_TOTAL_OFFSET,
+      frameZeroOffset + VBLANK_TOTAL_OFFSET,
+      frameZeroOffset + PAD_CHECKSUM_OFFSET,
+    );
+    bootstrap.copy(
+      output,
+      frameZeroOffset + END_ELAPSED_TIME_MS_OFFSET,
+      frameZeroOffset + END_ELAPSED_TIME_MS_OFFSET,
+      frameZeroOffset + END_ELAPSED_TIME_MS_OFFSET + 4,
+    );
+    output.writeUInt32LE(0, frameZeroOffset + RECORD_CHECKSUM_OFFSET);
+    output.writeUInt32LE(
+      fnv1a(
+        output,
+        frameZeroOffset,
+        FRAME_SIZE,
+        frameZeroOffset + RECORD_CHECKSUM_OFFSET,
+        4,
+      ),
+      frameZeroOffset + RECORD_CHECKSUM_OFFSET,
+    );
+  }
 
   if (options.padsFromPath !== undefined) {
     const padsFrom = fs.readFileSync(options.padsFromPath);
@@ -308,9 +373,11 @@ try {
   fs.writeFileSync(outputPath, output, { flag: "wx" });
   console.log(
     `[CTR ReplayExtend] source=${options.sourcePath} ` +
-      `sourceFrames=${sourceFrameCount} output=${options.outputPath} ` +
+      `sourceVersion=${sourceVersion} sourceFrames=${sourceFrameCount} ` +
+      `output=${options.outputPath} ` +
       `outputFrames=${options.outputFrameCount} repeatFrom=${repeatFrom} ` +
-      `padsFrom=${options.padsFromPath ?? "(source)"}`,
+      `padsFrom=${options.padsFromPath ?? "(source)"} ` +
+      `bootstrapFrom=${options.bootstrapFromPath ?? "(source)"}`,
   );
 } catch (error) {
   console.error(`[CTR ReplayExtend] ${error.message}`);
