@@ -55,7 +55,7 @@ static struct NativeReplaySchedulerFrameInfo MainReplayScheduler_FrameInfo(struc
 
 // NOTE(aalhendi): PSX path ASM-verified NTSC-U 926 0x8003c58c-0x8003cf7c.
 #ifdef CTR_NATIVE
-u32 CTR_Main(void)
+u32 CTR_MainStep(void)
 #else
 u32 main(void)
 #endif
@@ -83,6 +83,20 @@ u32 main(void)
 
 	do
 	{
+#ifdef CTR_NATIVE
+		// Desktop repeats this step in CTR_Main. UIKit invokes one step from its
+		// display-link callback so the application returns control to the iOS
+		// run loop between retail frames.
+		if (Platform_ShouldQuit())
+		{
+			return 0;
+		}
+		if (!Platform_IsHostActive())
+		{
+			Platform_PollHostEvents();
+			return 1;
+		}
+#endif
 #ifndef CTR_NATIVE
 		// wont happen under normal conditions
 		if (sdata->mainGameState == 5)
@@ -494,8 +508,24 @@ u32 main(void)
 			sdata->mainGameState = 0;
 #endif
 		}
-	} while (true);
+	}
+#ifdef CTR_NATIVE
+	while (false);
+	return 1;
+#else
+	while (true);
+#endif
 }
+
+#ifdef CTR_NATIVE
+u32 CTR_Main(void)
+{
+	while (CTR_MainStep() != 0)
+	{
+	}
+	return 0;
+}
+#endif
 
 // NOTE(aalhendi): Source split of retail main's state-0 body
 // 0x8003c614-0x8003c984.

@@ -33,6 +33,8 @@ void NativeAudio_SetDeterministicRenderMode(int enabled);
 int NativeAudio_IsDeterministicRenderMode(void);
 int NativeAudio_QueueRenderedFrames(const s16 *frames, int frameCount);
 void NativeAudio_ClearOutputQueue(void);
+int NativeAudio_SuspendOutput(void);
+int NativeAudio_ResumeOutput(void);
 void NativeAudio_Shutdown(void);
 #ifdef CTR_INTERNAL
 void NativeAudio_GetOutputStats(int *underrunFrames, int *overflowFrames, int *queuedFrames);

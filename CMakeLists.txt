@@ -285,6 +285,10 @@ if(BUILD_TESTING)
             "^\\[CTR Renderer\\] dialect self-test passed: api=gl context=3.3 profile=core shader=140 loader=native-gl wireframe=enabled debug-labels=enabled gpu-timer=enabled shutdown=preinit-safe"
         )
     endif()
+    add_test(NAME ctr_native_lifecycle COMMAND $<TARGET_FILE:ctr_native> --self-test-lifecycle)
+    set_tests_properties(ctr_native_lifecycle PROPERTIES PASS_REGULAR_EXPRESSION
+        "^\\[CTR Lifecycle\\] self-test passed: background=idempotent foreground=rebase quit=cooperative audio=paired low-memory=flush"
+    )
     add_test(NAME ctr_native_checkpoint_pointer_validation COMMAND $<TARGET_FILE:ctr_native> --self-test-checkpoint-pointer-validation)
     set_tests_properties(ctr_native_checkpoint_pointer_validation PROPERTIES PASS_REGULAR_EXPRESSION
         "^\\[CTR State\\] pointer-validation self-test passed: scalar=ignored relocated=reversion-checked overlap-idempotence=checked pool-allocation=free-list-complement camera-quad=checked"

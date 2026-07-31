@@ -955,6 +955,36 @@ void Platform_InputUpdate(void)
 	NativeInput_WritePadBus();
 }
 
+void Platform_InputSuspend(void)
+{
+	s32 slot;
+
+	NativeInput_ClearKeyboardLatch();
+	s_submitNameKey = 0;
+
+	if (s_inputInitialized == 0)
+	{
+		return;
+	}
+
+	// Publish a released snapshot before UIKit removes CPU time. This prevents
+	// a key, button, or axis held at the resign-active boundary from sticking
+	// in the PSX-shaped pad bus across foreground restoration.
+	for (slot = 0; slot < NATIVE_INPUT_MAX_CONTROLLERS; slot++)
+	{
+		NativeInput_ResetSnapshot(slot);
+	}
+	NativeInput_WritePadBus();
+}
+
+void Platform_InputResume(void)
+{
+	// The next ordinary update samples current keyboard/gamepad state. Clear
+	// only transport edges accumulated before the foreground boundary.
+	NativeInput_ClearKeyboardLatch();
+	s_submitNameKey = 0;
+}
+
 void Platform_InputControllerAdded(int deviceIndex)
 {
 	s32 slot;

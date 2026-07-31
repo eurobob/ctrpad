@@ -210,6 +210,11 @@ static int NativeArg_IsRendererDialectSelfTest(const char *arg)
 	return (arg != NULL) && (strcmp(arg, "--self-test-renderer-dialect") == 0);
 }
 
+static int NativeArg_IsLifecycleSelfTest(const char *arg)
+{
+	return (arg != NULL) && (strcmp(arg, "--self-test-lifecycle") == 0);
+}
+
 static int NativeArg_IsCheckpointPointerValidationSelfTest(const char *arg)
 {
 	return (arg != NULL) && (strcmp(arg, "--self-test-checkpoint-pointer-validation") == 0);
@@ -260,6 +265,28 @@ static int NativeArg_ParseScrapbookSTRProbeFrames(const char *text, s32 *frameCo
 	*frameCount = (s32)value;
 	return 1;
 }
+
+#if defined(SDL_PLATFORM_IOS)
+static void SDLCALL NativeIOS_DisplayIteration(void *userdata)
+{
+	(void)userdata;
+
+	if (!Platform_IsInitialized())
+	{
+		return;
+	}
+	if (!Platform_IsHostActive())
+	{
+		Platform_PollHostEvents();
+		return;
+	}
+	if (Platform_ShouldQuit() || (CTR_MainStep() == 0))
+	{
+		Platform_StopDisplayLoop();
+		Platform_Shutdown();
+	}
+}
+#endif
 
 int main(int argc, char *argv[])
 {
@@ -325,6 +352,10 @@ int main(int argc, char *argv[])
 		if (NativeArg_IsRendererDialectSelfTest(argv[argIndex]))
 		{
 			return NativeRenderer_RunDialectSelfTest();
+		}
+		if (NativeArg_IsLifecycleSelfTest(argv[argIndex]))
+		{
+			return Platform_RunLifecycleSelfTest();
 		}
 		if (NativeArg_IsCheckpointPointerValidationSelfTest(argv[argIndex]))
 		{
@@ -459,6 +490,16 @@ int main(int argc, char *argv[])
 	(void)argv;
 #endif
 
+#if defined(SDL_PLATFORM_IOS)
+	if (!Platform_StartDisplayLoop(NativeIOS_DisplayIteration, NULL))
+	{
+		Platform_LogError("[CTR Native] Failed to start iOS display loop: %s\n", SDL_GetError());
+		Platform_Shutdown();
+		return NativeConsole_Return(1);
+	}
+	Platform_Log("[CTR Lifecycle] UIKit display loop active\n");
+	return NativeConsole_Return(0);
+#else
 	const int result = CTR_Main();
 
 	Platform_Shutdown();
@@ -470,4 +511,5 @@ int main(int argc, char *argv[])
 	}
 #endif
 	return NativeConsole_Return(result);
+#endif
 }

@@ -2433,6 +2433,40 @@ void NativeAudio_ClearOutputQueue(void)
 	NativeAudio_UnlockOutput();
 }
 
+int NativeAudio_SuspendOutput(void)
+{
+	if (s_audio.output.stream == NULL)
+	{
+		return 1;
+	}
+
+	if (!SDL_PauseAudioStreamDevice(s_audio.output.stream))
+	{
+		return 0;
+	}
+
+	NativeAudio_LockOutput();
+	NativeAudio_ClearOutputQueueNoLock();
+	NativeAudio_UnlockOutput();
+	return 1;
+}
+
+int NativeAudio_ResumeOutput(void)
+{
+	if (s_audio.output.stream == NULL)
+	{
+		return 1;
+	}
+
+	// Never replay PCM queued before a suspension boundary. Emulated SPU/XA
+	// state remains authoritative and the callback renders fresh output.
+	NativeAudio_LockOutput();
+	NativeAudio_ClearOutputQueueNoLock();
+	NativeAudio_UnlockOutput();
+
+	return SDL_ResumeAudioStreamDevice(s_audio.output.stream) ? 1 : 0;
+}
+
 void NativeAudio_SetDeterministicRenderMode(int enabled)
 {
 	NativeAudio_LockOutput();
