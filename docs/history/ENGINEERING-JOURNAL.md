@@ -5827,3 +5827,31 @@ and next steps are preserved in
 `docs/parity/2026-07-30-full-cross-width-result.md`. The roadmap and parity
 index were updated at the same checkpoint. M6 remains open, and iOS remains
 gated.
+
+### GitHub publication checkpoint
+
+The inspector, full rejection report, roadmap correction, parity-index
+correction, and this chronological record were committed and pushed as:
+
+```text
+57cfd653319b93d9f9cf50a40485c608ee885b88
+test: archive full cross-width parity rejection
+```
+
+Post-push verification independently reported:
+
+```text
+local HEAD:
+  57cfd653319b93d9f9cf50a40485c608ee885b88
+origin/codex/arm64-apple:
+  57cfd653319b93d9f9cf50a40485c608ee885b88
+draft PR #1 head:
+  57cfd653319b93d9f9cf50a40485c608ee885b88
+PR state:
+  OPEN, draft
+base:
+  main
+```
+
+This publishes and backs up the work on the draft implementation branch. It
+does not merge the known parity failure to `main`.
