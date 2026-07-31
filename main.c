@@ -428,6 +428,10 @@ int main(int argc, char *argv[])
 	printf("[CTR Native] 4:3\n");
 	Platform_Init("Crash Team Racing", 800, 600);
 #endif
+	if (!Platform_IsInitialized())
+	{
+		return NativeConsole_Return(1);
+	}
 
 #if defined(CTR_INTERNAL)
 	if (NativePerf_ConfigureFromArgs(argc, argv) != 0)

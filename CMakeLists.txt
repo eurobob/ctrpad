@@ -260,11 +260,11 @@ if(BUILD_TESTING)
     add_test(NAME ctr_native_renderer_dialect COMMAND $<TARGET_FILE:ctr_native> --self-test-renderer-dialect)
     if(CTR_NATIVE_RENDERER_GLES)
         set_tests_properties(ctr_native_renderer_dialect PROPERTIES PASS_REGULAR_EXPRESSION
-            "^\\[CTR Renderer\\] dialect self-test passed: api=gles context=3.0 profile=es shader=300es loader=sdl-proc wireframe=disabled debug-labels=disabled gpu-timer=disabled"
+            "^\\[CTR Renderer\\] dialect self-test passed: api=gles context=3.0 profile=es shader=300es loader=sdl-proc wireframe=disabled debug-labels=disabled gpu-timer=disabled shutdown=preinit-safe"
         )
     else()
         set_tests_properties(ctr_native_renderer_dialect PROPERTIES PASS_REGULAR_EXPRESSION
-            "^\\[CTR Renderer\\] dialect self-test passed: api=gl context=3.3 profile=core shader=140 loader=native-gl wireframe=enabled debug-labels=enabled gpu-timer=enabled"
+            "^\\[CTR Renderer\\] dialect self-test passed: api=gl context=3.3 profile=core shader=140 loader=native-gl wireframe=enabled debug-labels=enabled gpu-timer=enabled shutdown=preinit-safe"
         )
     endif()
     add_test(NAME ctr_native_checkpoint_pointer_validation COMMAND $<TARGET_FILE:ctr_native> --self-test-checkpoint-pointer-validation)

@@ -213,6 +213,9 @@ global_variable GLuint s_presentVramShader = 0;
 global_variable GLint s_presentVramSourceRectLoc = -1;
 global_variable GLuint s_vramQuadVAO = 0;
 global_variable GLuint s_vramQuadVBO = 0;
+// Shutdown can be reached after SDL starts but before a GL/GLES context or
+// entry-point table exists. Keep that failure path free of unresolved GL calls.
+global_variable b32 s_rendererApiReady = false;
 
 internal int NativeRenderer_InitialiseGLContext(char *windowName, int fullscreen);
 internal int NativeRenderer_InitialiseGLExt(void);
@@ -350,11 +353,19 @@ int NativeRenderer_InitialiseRender(char *windowName, int width, int height, int
 		return 0;
 	}
 
+	s_rendererApiReady = true;
+
 	return 1;
 }
 
 void NativeRenderer_Shutdown(void)
 {
+	if (!s_rendererApiReady)
+	{
+		return;
+	}
+
+	s_rendererApiReady = false;
 	glDeleteVertexArrays(2, s_glVertexArray);
 	glDeleteBuffers(2, s_glVertexBuffer);
 
@@ -2424,6 +2435,11 @@ void NativeRenderer_PopDebugLabel(void)
 
 int NativeRenderer_RunDialectSelfTest(void)
 {
+	// Platform cleanup is intentionally idempotent even when context creation
+	// never reached the GL entry-point loader.
+	NativeRenderer_Shutdown();
+	NativeRenderer_Shutdown();
+
 #if defined(CTR_NATIVE_RENDERER_GLES)
 	const b32 valid = (s_rendererDialect.contextMajor == 3) && (s_rendererDialect.contextMinor == 0) &&
 	                  (s_rendererDialect.contextProfile == SDL_GL_CONTEXT_PROFILE_ES) &&
@@ -2447,7 +2463,7 @@ int NativeRenderer_RunDialectSelfTest(void)
 	}
 
 	printf("[CTR Renderer] dialect self-test passed: api=%s context=%d.%d profile=%s shader=%s loader=%s "
-	       "wireframe=%s debug-labels=%s gpu-timer=%s\n",
+	       "wireframe=%s debug-labels=%s gpu-timer=%s shutdown=preinit-safe\n",
 	       s_rendererDialect.apiName, s_rendererDialect.contextMajor, s_rendererDialect.contextMinor,
 	       s_rendererDialect.profileName, s_rendererDialect.shaderName, s_rendererDialect.loaderName,
 	       s_rendererDialect.wireframeEnabled ? "enabled" : "disabled",
