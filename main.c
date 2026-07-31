@@ -211,6 +211,11 @@ static int NativeArg_IsPotionEmitterLayoutSelfTest(const char *arg)
 	return (arg != NULL) && (strcmp(arg, "--self-test-potion-emitter-layout") == 0);
 }
 
+static int NativeArg_IsCutsceneParticleEmitterLayoutSelfTest(const char *arg)
+{
+	return (arg != NULL) && (strcmp(arg, "--self-test-cutscene-particle-emitter-layout") == 0);
+}
+
 int main(int argc, char *argv[])
 {
 	for (int argIndex = 1; argIndex < argc; argIndex++)
@@ -275,6 +280,10 @@ int main(int argc, char *argv[])
 		if (NativeArg_IsPotionEmitterLayoutSelfTest(argv[argIndex]))
 		{
 			return RB_Explosion_RunPotionEmitterSelfTest();
+		}
+		if (NativeArg_IsCutsceneParticleEmitterLayoutSelfTest(argv[argIndex]))
+		{
+			return OVR233_RunParticleEmitterLayoutSelfTest();
 		}
 	}
 

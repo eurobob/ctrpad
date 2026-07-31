@@ -6126,3 +6126,149 @@ origin/main:
 The work is therefore backed up on GitHub and reviewable in the draft PR. It
 is still deliberately not merged into `main` while full post-fix parity
 regeneration remains pending.
+
+## 2026-07-30 — Clean potion replay and overlay-233 cutscene-emitter correction
+
+### Clean ARM64 regeneration after the first emitter fix
+
+The clean committed ARM64 producer built from `7af15bea2157` was retained as:
+
+```text
+build-macos-arm64/ctr_native-potion-fix-producer-7af15bea2157
+SHA-256:
+d971fce784b8ac0470c5d1603d372a4f2a7f96f7625f861c2868f6328631823a
+```
+
+It passed 15/15 media-free tests and regenerated the full inherited input as
+`build-macos-arm64/debug/reports/20260730/ctr-211646`. The report finalized
+24,232 frames and 81 checkpoints with exit code zero. Its files hash to:
+
+```text
+input.ctrreplay
+  cc0ac47cffcc0f9944ce75dafcecd0dfab1ae32faeabc239513a2320bfc61e92
+state.ctrstates
+  33e8accaa5dd59148bc4230a42d3835c21921a07dee9c98664d946067f744931
+metadata.txt
+  0b0b9eb56fb6f5a8c02056f1cd7e0df8c2d438ccff714ee3238686ecc8dac73f
+ctr-native.log
+  0a823bfc4ab99938e9bb44f5372b38990c91b0f9c0ed8a1a4718e9af8a79f88a
+```
+
+The earlier i686 report `ctr-223323` is stale relative to that fix, so the
+comparison is diagnostic rather than M6 acceptance. It nevertheless proves
+the correction's boundary:
+
+```text
+timing/rng/drivers/pads/vsync: all 24,232 frames match
+world/root:                    499 mismatches, frames 22,158-22,656
+allocation:                    473 mismatches, frames 22,158-22,630
+```
+
+Every old frame-16,561 RNG/world/allocation range and the frame-17,213 driver
+range disappeared. The potion-emitter correction is therefore verified
+end-to-end. A separate later defect remained.
+
+### Checkpoint-22,200 pool localization
+
+The canonical states at frame 22,200 were decoded using the recorded pointer
+width and native field offsets. The i686 state had `numParticles=10` and
+22/32 free particle slots. ARM64 had `numParticles=0` and 32/32 free slots.
+Every other pool count matched:
+
+```text
+thread 27/48
+instance free 35, taken 12, maximum 64
+small 16/25
+medium 0/8
+large 0/4
+oscillator 32/32
+rain 2/2
+```
+
+Decoding the ten i686 ordinary-list records found lifetimes 14 through 5,
+color flags `0x00a3`, and a one-new-particle-per-frame axis sequence. Their
+position, velocity, acceleration, scale, and color fields match overlay-233
+group 46 at retail address comment `0x5818`. `R233.particleConfigs[6]` points
+to that group with count 1 and model delta 2.
+
+### Second source-level root cause
+
+Seven group headers in `game/233/R233.c` were declared through
+`InitTypes.AxisInit` even though `initOffset=12` makes them function
+initializers. This reproduces retail bytes by accident on ILP32:
+
+```text
+union offset:     4
+pointer width:    4
+color/lifespan:   offsets 8/10
+```
+
+On LP64, the union moves to offset 8 and the function pointer widens to eight
+bytes. The axis initializer places color/lifespan at offsets 12/14 inside the
+pointer and leaves the real fields at offsets 16/18 zero. The observed group
+therefore created no persistent ARM64 particles.
+
+The seven headers at indices `0,10,20,28,38,46,54` now initialize
+`FuncInit` directly with null function pointer, named color flags, and named
+lifespan. No axis records or config values changed.
+
+### Cross-width regression gate
+
+`--self-test-cutscene-particle-emitter-layout` verifies:
+
+- all seven function records, color flags, lifespans, types, and fillers;
+- all seven terminators;
+- every config emitter pointer, icon group, frame offset, count, flags, and
+  signed model delta;
+- the entire nine-word retail representation of each corrected function
+  record on i686.
+
+Accepted source-level gates:
+
+```text
+macOS ARM64 Release:
+  16/16 CTests
+  SHA-256 021821a4cddafecd05f9c1ba5fe79db87296618ea70843de9b728027712aeb19
+
+macOS ARM64 ASan/UBSan:
+  ASAN_OPTIONS=symbolize=0:abort_on_error=1:detect_leaks=0
+  UBSAN_OPTIONS=halt_on_error=1:print_stacktrace=1
+  16/16 CTests
+  SHA-256 0ac33ae7f62b11b842390f4bf43a33a5e70ac655246430eee1952055d1417c57
+
+Linux optimized i686:
+  ELF 32-bit LSB PIE, Intel 80386
+  Build ID 05a883c8d6efcef3db117611b5ad43ee5172bda5
+  16/16 CTests, including exact retail-record comparisons
+  SHA-256 9a5af521e2dcf1c97413dbbb1b8fd805a18699b50bbd6acdc2220e02fde13820
+
+git diff --check:
+  passed
+```
+
+The normal ARM64 build repeated 32 established warnings, the sanitizer build
+59 established warnings, and i686 repeated the established two
+format-security plus two maybe-uninitialized warnings. The new typed
+initializers introduced no warning.
+
+### Concurrent i686 continuity run
+
+An immutable copy of committed producer `7af15bea2157` is independently
+regenerating the full i686 report under ordinary Xvfb/llvmpipe execution:
+
+```text
+container:
+  ctrpad-i686-potion-full
+run directory:
+  /private/tmp/ctrpad-i686-potion-run-KMjNWQ
+report:
+  debug/reports/20260731/ctr-023139
+documentation checkpoint:
+  finalized=0 frame_count=3000 checkpoint_count=11
+```
+
+The source rebuild cannot alter that copied executable. This continuity run
+is retained to complete the clean first-fix pair, but it predates the
+overlay-233 correction and cannot accept the new source. M6 remains open
+pending fresh committed producers and a full all-eight-component match after
+both emitter fixes.

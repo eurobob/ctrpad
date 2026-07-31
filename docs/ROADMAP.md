@@ -208,8 +208,19 @@ Result so far:
   The table is now typed, `Particle_Init` accepts a const emitter, and a
   fifteenth media-free test checks all fields on both widths plus the exact
   original 81-word layout on i686. ARM64 Release, ARM64 ASan/UBSan, and i686
-  each pass 15/15 tests. Full-range regeneration is still required before the
-  gate can pass. Evidence and rejected diagnostic routes are in
+  each passed 15/15 tests. A clean ARM64 replay then proved that correction
+  removes every earlier RNG and driver mismatch and both frame-16,561 short
+  world/allocation ranges.
+- The clean ARM64 replay retained only a later mismatch against the stale
+  i686 report: world/root frames 22,158-22,656 and allocation frames
+  22,158-22,630. Decoding checkpoint 22,200 proved the delta is exactly ten
+  missing ARM64 cutscene particles from overlay-233 group 46. Seven group
+  headers repeated the same ILP32-only union-member encoding pattern. They now
+  use `FuncInit`; a sixteenth test validates the semantic fields and config
+  pointers on both widths and exact original record bytes on i686. ARM64
+  Release, ARM64 ASan/UBSan, and optimized i686 pass 16/16. Full clean-pair
+  regeneration is still required before the gate can pass. Evidence and
+  rejected diagnostic routes are in
   `docs/parity/2026-07-30-full-cross-width-result.md`.
 
 Work:
@@ -560,7 +571,19 @@ Result so far:
   and the 20-frame allocation/world mismatch. The root cause was the raw
   32-bit emitter-table cast in `RB_Explosion.c`; the typed replacement and its
   cross-width byte-layout test pass 15/15 on ARM64 Release, ARM64 ASan/UBSan,
-  and optimized i686. Clean full-report regeneration remains pending.
+  and optimized i686. A clean committed ARM64 regeneration then removed every
+  frame-16,561 RNG, driver, allocation, and world mismatch against the prior
+  i686 report. The only remaining ranges begin at frame 22,158.
+- Checkpoint 22,200 contains ten live i686 particles and zero ARM64 particles;
+  all other pool counts match. The ten records have the color, axis, scale,
+  and descending lifetime sequence emitted by overlay-233 particle group 46.
+  Seven overlay-233 function records were initialized through the axis member
+  of a pointer-bearing union, which preserved retail bytes on ILP32 but placed
+  color/lifespan inside the widened function pointer on LP64. Those records
+  now use typed function initializers. A sixteenth media-free test validates
+  all seven groups, terminators, eight configs, and exact i686 retail bytes;
+  ARM64 Release, ARM64 ASan/UBSan, and optimized i686 pass 16/16. Clean
+  committed full-pair regeneration is still required.
 - `tools/inspect-replay-lap-coverage.mjs` validates checkpoint checksums and
   resolves player lap/checkpoint fields for checkpoint versions 2 and 3 on
   ILP32 and LP64. It confirms the historical version-2 report reaches
@@ -579,11 +602,11 @@ Work:
 - Validate audio, desktop renderer, keyboard, MFi/Bluetooth controller,
   memcards, replays, savestates, XA audio, and STR video.
 - Run sanitizers and the full parity gate under Apple Clang.
-- Regenerate clean full ARM64 and optimized-i686 version-4 reports after the
-  typed potion-emitter correction. Require all eight components to match all
-  24,232 frames, then repeat the two-process and mutation gates. All current
-  and pre-correction mismatched reports remain diagnostic inputs, not
-  acceptance artifacts.
+- Regenerate clean full ARM64 and optimized-i686 version-4 reports after both
+  typed emitter corrections. Require all eight components to match all 24,232
+  frames, then repeat the two-process and mutation gates. All current and
+  pre-correction mismatched reports remain diagnostic inputs, not acceptance
+  artifacts.
 - Record or derive a current version-4 input that reaches `lapIndex >= 1`;
   retain failed steering extensions as explicit rejected evidence.
 - Measure frame cadence against the retail 30 Hz logic / approximately
@@ -749,7 +772,7 @@ timestamps are explicitly excluded from game-visible deterministic state.
 |---|---|---|
 | Guest-reference design expands into a full arena rewrite | Asset relocation writes host bases into 32-bit file slots; about 75 pinned pointer-bearing structs were estimated | M2 prototype on real assets before broad edits; preserve guest layout and centralize translation |
 | Existing replay/checkpoint tooling is not a sufficient parity oracle | Prior report found infrastructure but did not run or assess coverage (`docs/ctr-native-viability.md:471-474`) | Prove mutation sensitivity in M1 or build a state-hash harness |
-| Full NTSC-U cross-width trace diverges | Exact producer-memory inspection traced the frame-16,561 delta to a raw 0x24-byte retail potion-emitter table cast to an LP64 0x30-byte host struct; the typed correction passes 15/15 tests on ARM64, sanitizers, and i686 | Regenerate both clean full reports, require all eight components to match, then run two-process/mutation verification |
+| Full NTSC-U cross-width trace diverges | The first typed-emitter correction removes every frame-16,561 RNG/driver mismatch in a clean ARM64 replay. The remaining frame-22,158 world/allocation range is exactly ten overlay-233 particles lost through a second ILP32-only union initializer; its typed correction passes 16/16 tests on ARM64, sanitizers, and i686, including exact i686 retail bytes | Regenerate both clean full reports after both corrections, require all eight components to match, then run two-process/mutation verification |
 | Current version-4 input does not advance a lap | Typed v2 inspection proves historical `lapIndex=1`; current inherited input and extension A both report `maxLap=0` | Record or derive a current input with structural `lapIndex >= 1` evidence |
 | Upstream has moved since `2df55dc5a` | Viability report is commit-specific | Freeze a reproducible baseline, inspect current head, then rebase intentionally |
 | Reference documentation is stale | `ref/README.md` claims four clones that are absent | Derive documentation from actual remote/commit checks |

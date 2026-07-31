@@ -375,11 +375,116 @@ contain a lap advance; it does not prove that the current version-4 scenario
 does. The fresh trajectory is sensitive enough that current coverage must be
 recorded and accepted on its own.
 
+## First post-correction regeneration and second defect
+
+Committed producer `7af15bea2157` regenerated the full ARM64 report:
+
+```text
+producer:
+  build-macos-arm64/ctr_native-potion-fix-producer-7af15bea2157
+producer SHA-256:
+  d971fce784b8ac0470c5d1603d372a4f2a7f96f7625f861c2868f6328631823a
+report:
+  build-macos-arm64/debug/reports/20260730/ctr-211646
+frames/checkpoints/finalized:
+  24232 / 81 / 1
+```
+
+Comparing it with the immutable earlier i686 report `ctr-223323` is not a
+clean-pair acceptance test, because the i686 report predates the correction.
+It is nevertheless a controlled diagnostic comparison:
+
+```text
+timing:      equal=24232 mismatched=0   ranges=none
+rng:         equal=24232 mismatched=0   ranges=none
+drivers:     equal=24232 mismatched=0   ranges=none
+world:       equal=23733 mismatched=499 ranges=22158-22656
+allocation:  equal=23759 mismatched=473 ranges=22158-22630
+root:        equal=23733 mismatched=499 ranges=22158-22656
+pads:        equal=24232 mismatched=0   ranges=none
+vsync:       equal=24232 mismatched=0   ranges=none
+```
+
+The complete disappearance of the old frame-16,561 RNG/world/allocation
+ranges and frame-17,213 driver range is end-to-end evidence that the potion
+correction fixed the first defect. It does not pass M6 because the independent
+later range remains.
+
+Decoding checkpoint 22,200 on both reports localized the remaining state:
+
+```text
+                              i686   ARM64
+numParticles                    10       0
+particle-pool free / maximum 22/32   32/32
+
+thread, instance, small, medium, large, oscillator, and rain pool counts:
+identical
+```
+
+The ten i686 ordinary-particle records have lifetimes 14 down through 5,
+color flags `0x00a3`, and the exact axis/scale values emitted by
+`R233.particleEmitterData[46]`. This is overlay-233 cutscene particle config
+6, which emits one particle per frame with a lifespan of 15.
+
+Seven overlay-233 particle groups used an axis-union initializer to encode
+their function header:
+
+```text
+.InitTypes.AxisInit = {{0, colorFlags, lifespan}, {0, 0, 0}}
+```
+
+On ILP32, the union begins at offset 4 and the four-byte null value followed
+by color/lifespan happens to reproduce the retail `FuncInit` bytes. On LP64,
+the union begins at offset 8 and `particle_funcPtr` is eight bytes; the
+initializer therefore places color/lifespan inside that pointer and leaves
+the real LP64 fields zero. ARM64 calls the emitter, but the zero lifespan
+prevents the particles from persisting.
+
+The seven group headers at indices `0,10,20,28,38,46,54` now use semantic
+`FuncInit` initializers. Their color/lifespan pairs are:
+
+```text
+00a3/12 00a3/12 00a3/15 00a3/15 00c3/15 00a3/15 50a2/8
+```
+
+The new `--self-test-cutscene-particle-emitter-layout` entry point validates
+all seven headers, their terminators, and all eight particle configs on both
+pointer widths. On i686 it additionally compares each complete 0x24-byte
+header against the original retail words.
+
+Source-level verification:
+
+```text
+macOS ARM64 Release:
+  16/16 CTests
+  SHA-256 021821a4cddafecd05f9c1ba5fe79db87296618ea70843de9b728027712aeb19
+
+macOS ARM64 ASan/UBSan:
+  16/16 CTests
+  SHA-256 0ac33ae7f62b11b842390f4bf43a33a5e70ac655246430eee1952055d1417c57
+
+Linux optimized i686:
+  16/16 CTests, including exact retail-record comparisons
+  Build ID 05a883c8d6efcef3db117611b5ad43ee5172bda5
+  SHA-256 9a5af521e2dcf1c97413dbbb1b8fd805a18699b50bbd6acdc2220e02fde13820
+
+git diff --check:
+  passed
+```
+
+The ARM64 builds repeated only established warnings. The i686 build repeated
+the established two format-security and two maybe-uninitialized warnings.
+
+An unchanged committed i686 producer is separately regenerating the earlier
+report under ordinary Xvfb/llvmpipe execution. At this documentation
+checkpoint it was alive at frame 3,000 with 11 checkpoints. It is diagnostic
+continuity evidence and cannot accept the new source correction.
+
 ## Required next work
 
-1. Commit the typed-emitter correction and produce clean ARM64 and optimized
-   i686 binaries with recorded identities.
-2. Regenerate both full reports from those clean producers.
+1. Commit the overlay-233 typed-emitter correction and produce clean ARM64 and
+   optimized i686 binaries with recorded identities.
+2. Regenerate both full reports from those same-source clean producers.
 3. Require all eight components to match all 24,232 frames before running
    the two-process i686 and deliberate-mutation gates.
 4. Record or derive a version-4 coverage input that structurally reaches

@@ -253,4 +253,8 @@ if(BUILD_TESTING)
     set_tests_properties(ctr_native_potion_emitter_layout PROPERTIES PASS_REGULAR_EXPRESSION
         "^\\[CTR PotionEmitter\\] self-test passed: pointer-size=(4|8) entries=8 lifespan=20 random-velocity=400 typed-layout=yes"
     )
+    add_test(NAME ctr_native_cutscene_particle_emitter_layout COMMAND $<TARGET_FILE:ctr_native> --self-test-cutscene-particle-emitter-layout)
+    set_tests_properties(ctr_native_cutscene_particle_emitter_layout PROPERTIES PASS_REGULAR_EXPRESSION
+        "^\\[CTR CutsceneEmitter\\] self-test passed: pointer-size=(4|8) groups=7 observed-group=46 lifespan=15 count=1 typed-function-init=yes"
+    )
 endif()

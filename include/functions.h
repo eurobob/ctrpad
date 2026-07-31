@@ -422,6 +422,7 @@ void OVR233_RebuildInitMatrixTable(void);
 void OVR233_RebuildCreditsModelHeaders(void);
 void OVR233_ResetRuntimeState(void);
 void OVR233_InitData(void);
+int OVR233_RunParticleEmitterLayoutSelfTest(void);
 #endif
 void LOAD_ReadFileASyncCallback(u8 result, u8 *unk);
 
