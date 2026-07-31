@@ -1251,10 +1251,14 @@ int NativeRenderer_InitialisePSX(void)
 			glEnableVertexAttribArray(a_color);
 			glEnableVertexAttribArray(a_extra);
 
-			glVertexAttribPointer(a_position, 4, GL_SHORT, GL_FALSE, sizeof(GrVertex), &((GrVertex *)NULL)->x);
-			glVertexAttribPointer(a_texcoord, 4, GL_UNSIGNED_BYTE, GL_FALSE, sizeof(GrVertex), &((GrVertex *)NULL)->u);
-			glVertexAttribPointer(a_color, 4, GL_UNSIGNED_BYTE, GL_TRUE, sizeof(GrVertex), &((GrVertex *)NULL)->r);
-			glVertexAttribPointer(a_extra, 4, GL_BYTE, GL_FALSE, sizeof(GrVertex), &((GrVertex *)NULL)->tcx);
+			glVertexAttribPointer(a_position, 4, GL_SHORT, GL_FALSE, sizeof(GrVertex),
+			                      (const void *)(uintptr_t)offsetof(GrVertex, x));
+			glVertexAttribPointer(a_texcoord, 4, GL_UNSIGNED_BYTE, GL_FALSE, sizeof(GrVertex),
+			                      (const void *)(uintptr_t)offsetof(GrVertex, u));
+			glVertexAttribPointer(a_color, 4, GL_UNSIGNED_BYTE, GL_TRUE, sizeof(GrVertex),
+			                      (const void *)(uintptr_t)offsetof(GrVertex, r));
+			glVertexAttribPointer(a_extra, 4, GL_BYTE, GL_FALSE, sizeof(GrVertex),
+			                      (const void *)(uintptr_t)offsetof(GrVertex, tcx));
 		}
 
 		glBindVertexArray(0);
