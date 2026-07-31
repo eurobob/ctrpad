@@ -374,15 +374,7 @@ int NativeDiscImage_Init(const char *assetsDir)
 {
 	char path[NATIVE_DISC_IMAGE_PATH_MAX];
 
-	s_nativeDiscImageAvailable = 0;
-	s_nativeDiscImagePath[0] = '\0';
-	s_nativeDiscImageDiscID[0] = '\0';
-
-	if (s_nativeDiscImageFile != NULL)
-	{
-		fclose(s_nativeDiscImageFile);
-		s_nativeDiscImageFile = NULL;
-	}
+	NativeDiscImage_Shutdown();
 
 	if ((assetsDir == NULL) || !NativeDiscImage_FindHostImagePath(path, sizeof(path), NativeStr8_FromCString(assetsDir)))
 	{
@@ -397,21 +389,33 @@ int NativeDiscImage_Init(const char *assetsDir)
 
 	if (!NativeDiscImage_LoadRoot())
 	{
-		fclose(s_nativeDiscImageFile);
-		s_nativeDiscImageFile = NULL;
+		NativeDiscImage_Shutdown();
 		return 0;
 	}
 
 	if (!NativePath_NormalizeSlashes(s_nativeDiscImagePath, sizeof(s_nativeDiscImagePath), NativeStr8_FromCString(path)))
 	{
-		fclose(s_nativeDiscImageFile);
-		s_nativeDiscImageFile = NULL;
+		NativeDiscImage_Shutdown();
 		return 0;
 	}
 
 	s_nativeDiscImageAvailable = 1;
 	NativeDiscImage_DetectDiscID();
 	return 1;
+}
+
+void NativeDiscImage_Shutdown(void)
+{
+	s_nativeDiscImageAvailable = 0;
+	s_nativeDiscImagePath[0] = '\0';
+	s_nativeDiscImageDiscID[0] = '\0';
+	memset(&s_nativeDiscImageRoot, 0, sizeof(s_nativeDiscImageRoot));
+
+	if (s_nativeDiscImageFile != NULL)
+	{
+		fclose(s_nativeDiscImageFile);
+		s_nativeDiscImageFile = NULL;
+	}
 }
 
 int NativeDiscImage_IsAvailable(void)

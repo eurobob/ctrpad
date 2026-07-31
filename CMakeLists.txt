@@ -2,6 +2,10 @@ cmake_minimum_required(VERSION 3.20)
 project(CTR-Native C)
 include(CheckCCompilerFlag)
 
+if(IOS)
+    enable_language(OBJC)
+endif()
+
 set(CTR_NATIVE_VERSION "0.1.0-beta.7.1")
 option(CTR_NATIVE_MACOS_BUNDLE "Build CTR Native as a macOS application bundle" OFF)
 set(CTR_NATIVE_IOS_BUNDLE_IDENTIFIER "io.github.chrissotraidis.ctrpad" CACHE STRING
@@ -115,6 +119,10 @@ if(CTR_NATIVE_MACOS_BUNDLE OR IOS)
 endif()
 
 add_executable(ctr_native ${CTR_NATIVE_EXECUTABLE_OPTIONS} main.c)
+if(IOS)
+    target_sources(ctr_native PRIVATE platform/apple/native_ios_import.m)
+    target_compile_options(ctr_native PRIVATE "$<$<COMPILE_LANGUAGE:OBJC>:-fobjc-arc>")
+endif()
 set_target_properties(ctr_native PROPERTIES
     C_STANDARD 17
     C_STANDARD_REQUIRED ON
@@ -216,6 +224,9 @@ else()
     endif()
 endif()
 target_link_libraries(ctr_native SDL3::SDL3)
+if(IOS)
+    target_link_libraries(ctr_native "-framework UIKit" "-framework UniformTypeIdentifiers")
+endif()
 if(CMAKE_C_COMPILER_ID STREQUAL "GNU")
     target_link_options(ctr_native PRIVATE -static-libgcc)
 endif()

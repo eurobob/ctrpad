@@ -25,6 +25,9 @@
 #include "platform/native_assets.h"
 #include "platform/native_asset_relocation.h"
 #include "platform/native_guest_ref.h"
+#if defined(SDL_PLATFORM_IOS)
+#include "platform/native_ios_import.h"
+#endif
 #include "platform/native_log.h"
 #include "platform/native_memcard.h"
 #include "platform/native_memory.h"
@@ -296,6 +299,194 @@ static void SDLCALL NativeIOS_DisplayIteration(void *userdata)
 }
 #endif
 
+struct NativeLaunchOptions
+{
+	int argc;
+	char **argv;
+	s32 scrapbookSTRProbeFrames;
+	s32 scrapbookSTRPresentProbeFrames;
+	const char *scrapbookSTRPresentProbePath;
+	const char *sdlBasePath;
+};
+
+// Returns 1 when a complete NTSC-U asset source is selected, 0 when the
+// selected source is missing or invalid, and -1 for a storage/path failure.
+static int NativeApp_SelectAndValidateAssets(const char *sdlBasePath)
+{
+	if (!NativeAssets_Init(sdlBasePath, NativeStorage_GetImportBaseDir()))
+	{
+		fprintf(stderr, "[CTR Native] Failed to initialize asset paths.\n");
+		return -1;
+	}
+	if (!NativeStorage_FinalizeForAssetBase(NativeAssets_GetBaseDir()))
+	{
+		fprintf(stderr, "[CTR Native] Failed to finalize storage paths.\n");
+		return -1;
+	}
+
+	printf("[CTR Native] Version: %s (%s)\n", CTR_NATIVE_VERSION, CTR_NATIVE_BUILD_ID);
+	printf("[CTR Native] Built with: " CC "\n");
+	printf("[CTR Native] Base: %s\n", NativeAssets_GetBaseDir());
+	printf("[CTR Native] Assets: %s\n", NativeAssets_GetAssetDir());
+	printf("[CTR Native] Writable data: %s\n", NativeStorage_GetWritableRoot());
+	if (NativeStorage_GetImportAssetDir() != NULL)
+	{
+		printf("[CTR Native] User import assets: %s\n", NativeStorage_GetImportAssetDir());
+	}
+	fflush(stdout);
+
+	return NativeAssets_Validate() ? 1 : 0;
+}
+
+static int NativeApp_StartRuntime(const struct NativeLaunchOptions *options)
+{
+	if (chdir(NativeStorage_GetWritableRoot()) != 0)
+	{
+		fprintf(stderr, "[CTR Native] Failed to enter writable directory: %s\n", NativeStorage_GetWritableRoot());
+		return NativeConsole_Return(1);
+	}
+	{
+		char logPath[1024];
+		char memcardPath[1024];
+
+		if (!NativeStorage_BuildWritablePath("Crash Team Racing.log", logPath, sizeof(logPath)) || !Platform_LogSetPath(logPath))
+		{
+			fprintf(stderr, "[CTR Native] Failed to configure the writable log path.\n");
+			return NativeConsole_Return(1);
+		}
+		if (!NativeStorage_BuildWritablePath("memcards", memcardPath, sizeof(memcardPath)) ||
+		    (NativeMemcard_SetRoot(memcardPath) != NATIVE_MEMCARD_OK))
+		{
+			fprintf(stderr, "[CTR Native] Failed to configure the writable memory-card path.\n");
+			return NativeConsole_Return(1);
+		}
+	}
+
+	if (options->scrapbookSTRProbeFrames != 0)
+	{
+		return NativeConsole_Return((u32)NativeSTR_RunScrapbookProbe(options->scrapbookSTRProbeFrames));
+	}
+	if (options->scrapbookSTRPresentProbeFrames != 0)
+	{
+		return NativeConsole_Return((u32)NativeSTR_RunScrapbookPresentProbe(options->scrapbookSTRPresentProbeFrames,
+		                                                                       options->scrapbookSTRPresentProbePath));
+	}
+
+#if defined(CTR_INTERNAL)
+	if (NativeReplayScheduler_PrepareReportFromArgs(options->argc, options->argv) != 0)
+	{
+		return NativeConsole_Return(1);
+	}
+#endif
+
+#ifdef USE_16BY9
+	printf("[CTR Native] Widescreen\n");
+	Platform_Init("Crash Team Racing", 1280, 720);
+#else
+	printf("[CTR Native] 4:3\n");
+	Platform_Init("Crash Team Racing", 800, 600);
+#endif
+	if (!Platform_IsInitialized())
+	{
+		return NativeConsole_Return(1);
+	}
+
+#if defined(CTR_INTERNAL)
+	if (NativePerf_ConfigureFromArgs(options->argc, options->argv) != 0)
+	{
+		Platform_LogFlush();
+		Platform_Shutdown();
+		return NativeConsole_Return(1);
+	}
+#endif
+
+	Platform_InitScratchpad();
+	Platform_RepairResidentPointers(0);
+
+#if defined(CTR_INTERNAL)
+	if (NativeReplayScheduler_ConfigureFromArgs(options->argc, options->argv) != 0)
+	{
+		Platform_LogFlush();
+		Platform_Shutdown();
+		return NativeConsole_Return(1);
+	}
+#else
+	(void)options;
+#endif
+
+#if defined(SDL_PLATFORM_IOS)
+	if (!Platform_StartDisplayLoop(NativeIOS_DisplayIteration, NULL))
+	{
+		Platform_LogError("[CTR Native] Failed to start iOS display loop: %s\n", SDL_GetError());
+		Platform_Shutdown();
+		return NativeConsole_Return(1);
+	}
+	Platform_Log("[CTR Lifecycle] UIKit display loop active\n");
+	return NativeConsole_Return(0);
+#else
+	const int result = CTR_Main();
+
+	Platform_Shutdown();
+#if defined(CTR_INTERNAL)
+	const int replayExitStatus = NativeReplayScheduler_GetExitStatus();
+	if (replayExitStatus != 0)
+	{
+		return NativeConsole_Return((u32)replayExitStatus);
+	}
+#endif
+	return NativeConsole_Return(result);
+#endif
+}
+
+#if defined(SDL_PLATFORM_IOS)
+static struct NativeLaunchOptions s_nativeIOSLaunchOptions;
+
+static enum NativeIOSImportValidationResult NativeIOS_ValidateStagedImport(const char *stagingBasePath, char *detail,
+	                                                                       size_t detailSize, void *userdata)
+{
+	enum NativeIOSImportValidationResult result;
+
+	(void)userdata;
+	if (!NativeAssets_Init(stagingBasePath, NULL) || !NativeDiscImage_IsAvailable())
+	{
+		result = NATIVE_IOS_IMPORT_INVALID_FORMAT;
+	}
+	else if (!NativeDiscImage_IsExpectedNTSCU())
+	{
+		if ((detail != NULL) && (detailSize != 0))
+		{
+			snprintf(detail, detailSize, "%s", NativeDiscImage_GetDiscID());
+		}
+		result = NATIVE_IOS_IMPORT_WRONG_REGION;
+	}
+	else if (!NativeAssets_Validate())
+	{
+		result = NATIVE_IOS_IMPORT_INCOMPLETE;
+	}
+	else
+	{
+		result = NATIVE_IOS_IMPORT_VALID;
+	}
+
+	// The bridge must be able to atomically move the staged image after this
+	// callback returns, so release the validation handle first.
+	NativeDiscImage_Shutdown();
+	return result;
+}
+
+static int NativeIOS_CompleteImport(void *userdata)
+{
+	struct NativeLaunchOptions *options = (struct NativeLaunchOptions *)userdata;
+
+	if ((options == NULL) || (NativeApp_SelectAndValidateAssets(options->sdlBasePath) != 1))
+	{
+		return 0;
+	}
+
+	return (NativeApp_StartRuntime(options) == 0) && Platform_IsInitialized();
+}
+#endif
+
 int main(int argc, char *argv[])
 {
 	s32 scrapbookSTRProbeFrames = 0;
@@ -419,6 +610,9 @@ int main(int argc, char *argv[])
 	fflush(stdout);
 
 	const char *sdlBasePath = SDL_GetBasePath();
+	struct NativeLaunchOptions launchOptions;
+	int assetSelectionStatus;
+
 	printf("[CTR Native] SDL base path: %s\n", sdlBasePath ? sdlBasePath : "(null)");
 	fflush(stdout);
 	if (!NativeStorage_Init(sdlBasePath))
@@ -431,128 +625,33 @@ int main(int argc, char *argv[])
 	NativeReplayScheduler_SetExecutableIdentity(argv[0], sdlBasePath);
 #endif
 
-	if (!NativeAssets_Init(sdlBasePath, NativeStorage_GetImportBaseDir()))
-	{
-		fprintf(stderr, "[CTR Native] Failed to initialize asset paths.\n");
-		return NativeConsole_Return(1);
-	}
-	if (!NativeStorage_FinalizeForAssetBase(NativeAssets_GetBaseDir()))
-	{
-		fprintf(stderr, "[CTR Native] Failed to finalize storage paths.\n");
-		return NativeConsole_Return(1);
-	}
+	launchOptions.argc = argc;
+	launchOptions.argv = argv;
+	launchOptions.scrapbookSTRProbeFrames = scrapbookSTRProbeFrames;
+	launchOptions.scrapbookSTRPresentProbeFrames = scrapbookSTRPresentProbeFrames;
+	launchOptions.scrapbookSTRPresentProbePath = scrapbookSTRPresentProbePath;
+	launchOptions.sdlBasePath = sdlBasePath;
 
-	printf("[CTR Native] Version: %s (%s)\n", CTR_NATIVE_VERSION, CTR_NATIVE_BUILD_ID);
-	printf("[CTR Native] Built with: " CC "\n");
-	printf("[CTR Native] Base: %s\n", NativeAssets_GetBaseDir());
-	printf("[CTR Native] Assets: %s\n", NativeAssets_GetAssetDir());
-	printf("[CTR Native] Writable data: %s\n", NativeStorage_GetWritableRoot());
-	if (NativeStorage_GetImportAssetDir() != NULL)
+	assetSelectionStatus = NativeApp_SelectAndValidateAssets(sdlBasePath);
+	if (assetSelectionStatus != 1)
 	{
-		printf("[CTR Native] User import assets: %s\n", NativeStorage_GetImportAssetDir());
-	}
-	fflush(stdout);
-
-	if (chdir(NativeStorage_GetWritableRoot()) != 0)
-	{
-		fprintf(stderr, "[CTR Native] Failed to enter writable directory: %s\n", NativeStorage_GetWritableRoot());
-		return NativeConsole_Return(1);
-	}
-	{
-		char logPath[1024];
-		char memcardPath[1024];
-
-		if (!NativeStorage_BuildWritablePath("Crash Team Racing.log", logPath, sizeof(logPath)) || !Platform_LogSetPath(logPath))
-		{
-			fprintf(stderr, "[CTR Native] Failed to configure the writable log path.\n");
-			return NativeConsole_Return(1);
-		}
-		if (!NativeStorage_BuildWritablePath("memcards", memcardPath, sizeof(memcardPath)) ||
-		    (NativeMemcard_SetRoot(memcardPath) != NATIVE_MEMCARD_OK))
-		{
-			fprintf(stderr, "[CTR Native] Failed to configure the writable memory-card path.\n");
-			return NativeConsole_Return(1);
-		}
-	}
-
-	if (!NativeAssets_Validate())
-	{
-		return NativeConsole_Return(1);
-	}
-
-	if (scrapbookSTRProbeFrames != 0)
-	{
-		return NativeConsole_Return((u32)NativeSTR_RunScrapbookProbe(scrapbookSTRProbeFrames));
-	}
-	if (scrapbookSTRPresentProbeFrames != 0)
-	{
-		return NativeConsole_Return(
-		    (u32)NativeSTR_RunScrapbookPresentProbe(scrapbookSTRPresentProbeFrames, scrapbookSTRPresentProbePath));
-	}
-
-#if defined(CTR_INTERNAL)
-	if (NativeReplayScheduler_PrepareReportFromArgs(argc, argv) != 0)
-	{
-		return NativeConsole_Return(1);
-	}
-#endif
-
-#ifdef USE_16BY9
-	printf("[CTR Native] Widescreen\n");
-	Platform_Init("Crash Team Racing", 1280, 720);
-#else
-	printf("[CTR Native] 4:3\n");
-	Platform_Init("Crash Team Racing", 800, 600);
-#endif
-	if (!Platform_IsInitialized())
-	{
-		return NativeConsole_Return(1);
-	}
-
-#if defined(CTR_INTERNAL)
-	if (NativePerf_ConfigureFromArgs(argc, argv) != 0)
-	{
-		Platform_LogFlush();
-		Platform_Shutdown();
-		return NativeConsole_Return(1);
-	}
-#endif
-
-	Platform_InitScratchpad();
-	Platform_RepairResidentPointers(0);
-
-#if defined(CTR_INTERNAL)
-	if (NativeReplayScheduler_ConfigureFromArgs(argc, argv) != 0)
-	{
-		Platform_LogFlush();
-		Platform_Shutdown();
-		return NativeConsole_Return(1);
-	}
-#else
-	(void)argc;
-	(void)argv;
-#endif
-
 #if defined(SDL_PLATFORM_IOS)
-	if (!Platform_StartDisplayLoop(NativeIOS_DisplayIteration, NULL))
-	{
-		Platform_LogError("[CTR Native] Failed to start iOS display loop: %s\n", SDL_GetError());
-		Platform_Shutdown();
+		if (assetSelectionStatus == 0)
+		{
+			s_nativeIOSLaunchOptions = launchOptions;
+			if (!NativeIOSImport_Begin(NativeStorage_GetImportBaseDir(), NativeIOS_ValidateStagedImport, NativeIOS_CompleteImport,
+			                           &s_nativeIOSLaunchOptions))
+			{
+				fprintf(stderr, "[CTR Import] Failed to start the iOS import screen.\n");
+				return NativeConsole_Return(1);
+			}
+			printf("[CTR Import] Waiting for an NTSC-U retail disc image from Files.\n");
+			fflush(stdout);
+			return NativeConsole_Return(0);
+		}
+#endif
 		return NativeConsole_Return(1);
 	}
-	Platform_Log("[CTR Lifecycle] UIKit display loop active\n");
-	return NativeConsole_Return(0);
-#else
-	const int result = CTR_Main();
 
-	Platform_Shutdown();
-#if defined(CTR_INTERNAL)
-	const int replayExitStatus = NativeReplayScheduler_GetExitStatus();
-	if (replayExitStatus != 0)
-	{
-		return NativeConsole_Return((u32)replayExitStatus);
-	}
-#endif
-	return NativeConsole_Return(result);
-#endif
+	return NativeApp_StartRuntime(&launchOptions);
 }

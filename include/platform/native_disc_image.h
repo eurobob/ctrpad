@@ -12,6 +12,7 @@ struct NativeDiscImageFile
 };
 
 int NativeDiscImage_Init(const char *assetsDir);
+void NativeDiscImage_Shutdown(void);
 int NativeDiscImage_IsAvailable(void);
 int NativeDiscImage_IsExpectedNTSCU(void);
 const char *NativeDiscImage_GetDiscID(void);
