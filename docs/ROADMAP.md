@@ -531,7 +531,7 @@ Result so far:
   deliberate frame-1,711 driver-position mutation failed on the `drivers`
   component as required. Corrected optimized-i686 report `ctr-223323` is the
   active cross-width acceptance gate and matches all eight components through
-  frame 13,469 at the documented comparison checkpoint, beyond the old
+  frame 15,571 at the documented comparison checkpoint, beyond the old
   frame-6,780 failure. Typed checkpoint and HUD
   evidence also proves the inherited input changes track checkpoints but
   never advances beyond lap index zero; a new/supplemental actual-lap

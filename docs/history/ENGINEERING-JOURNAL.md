@@ -5543,3 +5543,42 @@ rebuild. M6 itself remains open: the i686 run must finish all 24,232 frames,
 the full two-process/mutation gate remains, real lap advancement is not
 covered by the inherited input, and manual keyboard/controller play plus
 save-across-relaunch still need direct acceptance.
+
+### Clean published rebuild
+
+The seven implementation/documentation files above were committed and pushed
+to the draft PR branch as:
+
+```text
+630e556c15bf134d84f279d2a6b1aab0f78ee3ba
+feat: add macOS ARM64 app bundle workflow
+```
+
+The app preset was configured and rebuilt again after that commit. This
+forced `main.c` and SDL's revision object to pick up the clean source
+identity. The resulting executable reported:
+
+```text
+CTR Native 0.1.0-beta.7.1 (630e556c15bf)
+SHA-256:
+b2fd4921940c10eb55bb063047e29e22b7380adeb4b2d5b032e28ba2b9e474a6
+```
+
+The clean rebuild again passed 14/14 tests, was a thin ARM64 Mach-O with
+`minos 11.0`, and passed strict deep signature verification with the expected
+bundle identifier and 15 bound plist entries.
+
+Git and GitHub were queried independently after the push:
+
+```text
+local HEAD:                    630e556c15bf134d84f279d2a6b1aab0f78ee3ba
+origin/codex/arm64-apple:      630e556c15bf134d84f279d2a6b1aab0f78ee3ba
+draft PR #1 head:              630e556c15bf134d84f279d2a6b1aab0f78ee3ba
+origin/main (unchanged):       95417c723518407d6bfe3c81a37606294963efe2
+```
+
+This is backup on the draft implementation branch, not a merge to `main`.
+
+During the rebuild, the independent corrected i686 run advanced further. A
+fresh prefix comparison covered 15,571 complete candidate frames with zero
+mismatches on timing, RNG, drivers, world, allocation, root, pads, and VSync.
