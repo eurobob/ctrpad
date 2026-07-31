@@ -149,10 +149,13 @@ tools/verify-linux-i686-golden-replay.sh \
 
 The defaults intentionally verify the protected baseline build against the
 current clean commit. To verify an exact disposable i686 producer without
-copying it over the baseline, select its build directory and source commit:
+copying it over the baseline, select its build directory, binary, toolchain
+manifest, and source commit:
 
 ```sh
 CTRPAD_I686_BUILD_DIR=/absolute/path/to/disposable-build \
+CTRPAD_I686_BINARY=/absolute/path/to/disposable-build/exact-producer \
+CTRPAD_TOOLCHAIN_PACKAGES=/absolute/path/to/toolchain-packages.txt \
 CTRPAD_EXPECTED_SOURCE_COMMIT=0123456789abcdef0123456789abcdef01234567 \
 CTRPAD_DISC_IMAGE=/absolute/path/to/user-owned-ntsc-u.bin \
 tools/verify-linux-i686-golden-replay.sh \
@@ -160,17 +163,42 @@ tools/verify-linux-i686-golden-replay.sh \
   auto
 ```
 
-The selected report must be under the selected build directory. Its metadata
-must be finalized replay version 4, contain nonzero frame and checkpoint
-counts, and identify the expected commit's 12-character build ID. The
-producer must embed the same build ID. `CTRPAD_EXPECTED_SOURCE_COMMIT` must
-name a full commit present in this repository; it defaults to `HEAD`. The
-golden scenario defaults to exactly 24,232 frames and 81 checkpoints.
-`CTRPAD_EXPECTED_FRAME_COUNT` and `CTRPAD_EXPECTED_CHECKPOINT_COUNT` exist for
-a separately documented replacement scenario; do not lower them merely to
-make an incomplete report pass.
+The selected binary and report must both be under the selected build
+directory so the container receives exactly that run tree. The toolchain
+manifest may be elsewhere. Report metadata must be finalized replay version
+4, contain nonzero frame and checkpoint counts, and identify the expected
+commit's 12-character build ID. The producer must embed the same build ID.
+`CTRPAD_EXPECTED_SOURCE_COMMIT` must name a full commit present in this
+repository; it defaults to `HEAD`. The golden scenario defaults to exactly
+24,232 frames and 81 checkpoints. `CTRPAD_EXPECTED_FRAME_COUNT` and
+`CTRPAD_EXPECTED_CHECKPOINT_COUNT` exist for a separately documented
+replacement scenario; do not lower them merely to make an incomplete report
+pass.
 
-The verifier:
+The full-golden default is `CTRPAD_REQUIRE_COVERAGE=1`: `coverage.txt` and all
+eight `pass` keys are mandatory. If structural coverage has been accepted in
+a separate, explicitly cited report, the same script may run only the
+two-process address-randomization and deliberate-mutation proof:
+
+```sh
+CTRPAD_REQUIRE_COVERAGE=0 \
+CTRPAD_I686_BUILD_DIR=/absolute/path/to/immutable-run-tree \
+CTRPAD_I686_BINARY=/absolute/path/to/immutable-run-tree/exact-producer \
+CTRPAD_TOOLCHAIN_PACKAGES=/absolute/path/to/toolchain-packages.txt \
+CTRPAD_EXPECTED_SOURCE_COMMIT=0123456789abcdef0123456789abcdef01234567 \
+tools/verify-linux-i686-golden-replay.sh \
+  /absolute/path/to/immutable-run-tree/debug/reports/YYYYMMDD/ctr-HHMMSS \
+  auto
+```
+
+This mode still requires the full finalized frame/checkpoint counts, exact
+build identity, clean tracked worktree, powerslide event, both unchanged
+playbacks, address randomization, and the mutation rejection. It omits only
+the manual coverage-form requirement and labels its result as replay
+process-determinism/mutation verification. It must never be reported as a
+full golden-coverage pass.
+
+With full coverage enabled, the verifier:
 
 - requires the finalized version-4 report, coverage note, clean source tree,
   exact source/build identity, matching binary, and local raw-sector retail
@@ -183,8 +211,9 @@ The verifier:
 - flips bit 0 of the real `driver[0].posCurr.x` field at that exact frame;
 - requires exit status 2 and `drivers` as the first canonical difference;
 - hashes the disc identity, replay, checkpoint, deterministic manifests for
-  the seed and recording memory-card directories, metadata, coverage note,
-  environment, and all three playback logs.
+  the seed and recording memory-card directories, metadata, environment, all
+  three playback logs, and the required coverage note. Determinism-only mode
+  produces the same manifest without `coverage.txt`.
 
 Successful verification writes:
 

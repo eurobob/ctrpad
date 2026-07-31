@@ -630,8 +630,12 @@ Work:
 - Allow clean optimized-i686 version-4 report `ctr-025812` to finalize after
   both typed emitter corrections. Require all eight components to match clean
   ARM64 report `ctr-215303` across all 24,232 frames, then repeat the
-  two-process and mutation gates. All pre-correction mismatched and partial
-  reports remain diagnostic inputs, not acceptance artifacts.
+  two-process and mutation gates. The verifier now accepts an explicitly
+  selected immutable binary and external toolchain manifest; its
+  `CTRPAD_REQUIRE_COVERAGE=0` mode omits only the manual coverage form when
+  structural coverage is cited separately, and cannot be labeled a full
+  golden-coverage pass. All pre-correction mismatched and partial reports
+  remain diagnostic inputs, not acceptance artifacts.
 - Measure frame cadence against the retail 30 Hz logic / approximately
   59.817 Hz VBlank model.
 

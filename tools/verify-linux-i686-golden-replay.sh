@@ -10,6 +10,9 @@ fi
 ctrpad_root_dir=$(CDPATH= cd -- "$(dirname "$0")/.." && pwd)
 ctrpad_container_image="ctrpad-linux-i686:ubuntu-24.04"
 ctrpad_build_dir=${CTRPAD_I686_BUILD_DIR:-"${ctrpad_root_dir}/build-linux-i686-baseline"}
+ctrpad_binary_path=${CTRPAD_I686_BINARY:-"${ctrpad_build_dir}/ctr_native"}
+ctrpad_toolchain_manifest=${CTRPAD_TOOLCHAIN_PACKAGES:-"${ctrpad_build_dir}/toolchain-packages.txt"}
+ctrpad_require_coverage=${CTRPAD_REQUIRE_COVERAGE:-1}
 ctrpad_report_dir=$1
 ctrpad_mutation_frame=$2
 ctrpad_disc_image=${CTRPAD_DISC_IMAGE:-"${ctrpad_root_dir}/assets/ctr-u.bin"}
@@ -46,12 +49,21 @@ case "${ctrpad_mutation_frame}" in
         ;;
 esac
 
-if [ ! -x "${ctrpad_build_dir}/ctr_native" ]; then
-    echo "Missing i686 build: ${ctrpad_build_dir}/ctr_native" >&2
+case "${ctrpad_require_coverage}" in
+    0|1)
+        ;;
+    *)
+        echo "CTRPAD_REQUIRE_COVERAGE must be 0 or 1." >&2
+        exit 1
+        ;;
+esac
+
+if [ ! -x "${ctrpad_binary_path}" ]; then
+    echo "Missing i686 build: ${ctrpad_binary_path}" >&2
     exit 1
 fi
-if [ ! -f "${ctrpad_build_dir}/toolchain-packages.txt" ]; then
-    echo "Missing build manifest: ${ctrpad_build_dir}/toolchain-packages.txt" >&2
+if [ ! -f "${ctrpad_toolchain_manifest}" ]; then
+    echo "Missing build manifest: ${ctrpad_toolchain_manifest}" >&2
     exit 1
 fi
 if [ ! -f "${ctrpad_disc_image}" ]; then
@@ -74,9 +86,23 @@ if [ -n "$(git -C "${ctrpad_root_dir}" status --porcelain --untracked-files=no)"
 fi
 
 ctrpad_build_dir=$(CDPATH= cd -- "${ctrpad_build_dir}" && pwd)
+ctrpad_binary_dir=$(CDPATH= cd -- "$(dirname "${ctrpad_binary_path}")" && pwd)
+ctrpad_binary_path="${ctrpad_binary_dir}/$(basename "${ctrpad_binary_path}")"
+ctrpad_toolchain_dir=$(CDPATH= cd -- "$(dirname "${ctrpad_toolchain_manifest}")" && pwd)
+ctrpad_toolchain_manifest="${ctrpad_toolchain_dir}/$(basename "${ctrpad_toolchain_manifest}")"
 ctrpad_report_dir=$(CDPATH= cd -- "${ctrpad_report_dir}" && pwd)
 ctrpad_disc_dir=$(CDPATH= cd -- "$(dirname "${ctrpad_disc_image}")" && pwd)
 ctrpad_disc_image="${ctrpad_disc_dir}/$(basename "${ctrpad_disc_image}")"
+
+case "${ctrpad_binary_path}" in
+    "${ctrpad_build_dir}/"*)
+        ctrpad_binary_relative=${ctrpad_binary_path#"${ctrpad_build_dir}/"}
+        ;;
+    *)
+        echo "Selected binary must be under ${ctrpad_build_dir}" >&2
+        exit 1
+        ;;
+esac
 
 case "${ctrpad_report_dir}/" in
     "${ctrpad_build_dir}/"*)
@@ -88,12 +114,17 @@ case "${ctrpad_report_dir}/" in
         ;;
 esac
 
-for ctrpad_required_file in input.ctrreplay state.ctrstates metadata.txt coverage.txt ctr-native.log; do
+for ctrpad_required_file in input.ctrreplay state.ctrstates metadata.txt ctr-native.log; do
     if [ ! -f "${ctrpad_report_dir}/${ctrpad_required_file}" ]; then
         echo "Incomplete replay report: missing ${ctrpad_report_dir}/${ctrpad_required_file}" >&2
         exit 1
     fi
 done
+if [ "${ctrpad_require_coverage}" -eq 1 ] &&
+    [ ! -f "${ctrpad_report_dir}/coverage.txt" ]; then
+    echo "Incomplete replay report: missing ${ctrpad_report_dir}/coverage.txt" >&2
+    exit 1
+fi
 for ctrpad_required_dir in memcard.seed memcard.recording; do
     if [ ! -d "${ctrpad_report_dir}/${ctrpad_required_dir}" ]; then
         echo "Incomplete replay report: missing ${ctrpad_report_dir}/${ctrpad_required_dir}/" >&2
@@ -118,21 +149,23 @@ if [ "${ctrpad_frame_count}" != "${ctrpad_expected_frame_count}" ] ||
     exit 1
 fi
 
-for ctrpad_coverage_key in \
-    startup_and_title \
-    menu_and_race_load \
-    steering_and_acceleration \
-    powerslide_and_boost \
-    item_acquired_and_used \
-    lap_advanced \
-    save_action \
-    persisted_result_loaded
-do
-    if ! grep -q "^${ctrpad_coverage_key}=pass$" "${ctrpad_report_dir}/coverage.txt"; then
-        echo "Golden coverage is incomplete: ${ctrpad_coverage_key} is not pass." >&2
-        exit 1
-    fi
-done
+if [ "${ctrpad_require_coverage}" -eq 1 ]; then
+    for ctrpad_coverage_key in \
+        startup_and_title \
+        menu_and_race_load \
+        steering_and_acceleration \
+        powerslide_and_boost \
+        item_acquired_and_used \
+        lap_advanced \
+        save_action \
+        persisted_result_loaded
+    do
+        if ! grep -q "^${ctrpad_coverage_key}=pass$" "${ctrpad_report_dir}/coverage.txt"; then
+            echo "Golden coverage is incomplete: ${ctrpad_coverage_key} is not pass." >&2
+            exit 1
+        fi
+    done
+fi
 grep -q "\\[CTR Gameplay\\] player powerslide boost:" "${ctrpad_report_dir}/ctr-native.log"
 
 ctrpad_replay_path="/out/${ctrpad_report_relative}/input.ctrreplay"
@@ -146,7 +179,7 @@ ctrpad_binary_version=$(docker run --rm \
     --platform linux/amd64 \
     --volume "${ctrpad_build_dir}:/out:ro" \
     "${ctrpad_container_image}" \
-    /out/ctr_native --version)
+    "/out/${ctrpad_binary_relative}" --version)
 case "${ctrpad_binary_version}" in
     *"(${ctrpad_source_build_id})")
         ;;
@@ -167,6 +200,7 @@ docker run --rm \
     --env MESA_SHADER_CACHE_DIR=/out/mesa-cache \
     --env MESA_SHADER_CACHE_MAX_SIZE=64M \
     --env XDG_RUNTIME_DIR=/tmp/ctrpad-runtime \
+    --env "CTRPAD_BINARY_RELATIVE=${ctrpad_binary_relative}" \
     --env "CTRPAD_REPLAY_PATH=${ctrpad_replay_path}" \
     --env "CTRPAD_REPORT_DIR=${ctrpad_container_report_dir}" \
     --env "CTRPAD_MUTATION_FRAME=${ctrpad_mutation_frame}" \
@@ -199,9 +233,9 @@ docker run --rm \
             exit 1
         fi
 
-        /out/ctr_native --replay "${CTRPAD_REPLAY_PATH}" \
+        "/out/${CTRPAD_BINARY_RELATIVE}" --replay "${CTRPAD_REPLAY_PATH}" \
             >"${CTRPAD_REPORT_DIR}/playback-1.log" 2>&1
-        /out/ctr_native --replay "${CTRPAD_REPLAY_PATH}" \
+        "/out/${CTRPAD_BINARY_RELATIVE}" --replay "${CTRPAD_REPLAY_PATH}" \
             >"${CTRPAD_REPORT_DIR}/playback-2.log" 2>&1
 
         grep -q "\\[CTR Replay\\] replay finished after ${CTRPAD_EXPECTED_FRAME_COUNT} frames$" "${CTRPAD_REPORT_DIR}/playback-1.log"
@@ -230,7 +264,7 @@ docker run --rm \
         printf "%s\n" "${ctrpad_mutation_frame}" >"${CTRPAD_REPORT_DIR}/mutation-frame.txt"
 
         set +e
-        /out/ctr_native --replay "${CTRPAD_REPLAY_PATH}" \
+        "/out/${CTRPAD_BINARY_RELATIVE}" --replay "${CTRPAD_REPLAY_PATH}" \
             --replay-test-perturb-driver-x "${ctrpad_mutation_frame}" \
             >"${CTRPAD_REPORT_DIR}/playback-mutated.log" 2>&1
         ctrpad_mutation_status=$?
@@ -248,22 +282,23 @@ docker run --rm \
 
 if command -v sha256sum >/dev/null 2>&1; then
     ctrpad_disc_hash=$(sha256sum "${ctrpad_disc_image}" | awk '{print $1}')
-    ctrpad_binary_hash=$(sha256sum "${ctrpad_build_dir}/ctr_native" | awk '{print $1}')
+    ctrpad_binary_hash=$(sha256sum "${ctrpad_binary_path}" | awk '{print $1}')
     printf "%s  ctr-u.bin\n" "${ctrpad_disc_hash}" > "${ctrpad_report_dir}/disc.sha256"
 else
     ctrpad_disc_hash=$(shasum -a 256 "${ctrpad_disc_image}" | awk '{print $1}')
-    ctrpad_binary_hash=$(shasum -a 256 "${ctrpad_build_dir}/ctr_native" | awk '{print $1}')
+    ctrpad_binary_hash=$(shasum -a 256 "${ctrpad_binary_path}" | awk '{print $1}')
     printf "%s  ctr-u.bin\n" "${ctrpad_disc_hash}" > "${ctrpad_report_dir}/disc.sha256"
 fi
 
 {
     echo "source_commit=${ctrpad_expected_source_commit}"
+    echo "coverage_requirement=${ctrpad_require_coverage}"
     echo "expected_frame_count=${ctrpad_expected_frame_count}"
     echo "expected_checkpoint_count=${ctrpad_expected_checkpoint_count}"
     echo "binary_version=${ctrpad_binary_version}"
     echo "binary_sha256=${ctrpad_binary_hash}"
     echo "container_image_id=$(docker image inspect --format '{{.Id}}' "${ctrpad_container_image}")"
-    sed 's/^/toolchain=/' "${ctrpad_build_dir}/toolchain-packages.txt"
+    sed 's/^/toolchain=/' "${ctrpad_toolchain_manifest}"
 } > "${ctrpad_report_dir}/environment.txt"
 
 (
@@ -283,16 +318,26 @@ fi
 if command -v sha256sum >/dev/null 2>&1; then
     (
         cd "${ctrpad_report_dir}"
-        sha256sum input.ctrreplay state.ctrstates metadata.txt coverage.txt ctr-native.log disc.sha256 environment.txt mutation-frame.txt \
+        sha256sum input.ctrreplay state.ctrstates metadata.txt ctr-native.log disc.sha256 environment.txt mutation-frame.txt \
             memcard-seed.sha256 memcard-recording.sha256 playback-1.log playback-2.log playback-mutated.log
+        if [ "${ctrpad_require_coverage}" -eq 1 ]; then
+            sha256sum coverage.txt
+        fi
     ) > "${ctrpad_report_dir}/evidence.sha256"
 else
     (
         cd "${ctrpad_report_dir}"
-        shasum -a 256 input.ctrreplay state.ctrstates metadata.txt coverage.txt ctr-native.log disc.sha256 environment.txt mutation-frame.txt \
+        shasum -a 256 input.ctrreplay state.ctrstates metadata.txt ctr-native.log disc.sha256 environment.txt mutation-frame.txt \
             memcard-seed.sha256 memcard-recording.sha256 playback-1.log playback-2.log playback-mutated.log
+        if [ "${ctrpad_require_coverage}" -eq 1 ]; then
+            shasum -a 256 coverage.txt
+        fi
     ) > "${ctrpad_report_dir}/evidence.sha256"
 fi
 
-echo "Golden replay verification passed."
+if [ "${ctrpad_require_coverage}" -eq 1 ]; then
+    echo "Golden replay verification passed."
+else
+    echo "Replay process-determinism and mutation verification passed."
+fi
 echo "Evidence: ${ctrpad_report_dir}"

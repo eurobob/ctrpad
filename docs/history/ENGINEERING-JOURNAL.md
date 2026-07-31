@@ -6568,3 +6568,77 @@ state:
 
 That distinction is intentional while M6 is open, but it must always be
 reported plainly: "backed up on GitHub" does not mean "merged to main."
+
+## 2026-07-30 — Prepared the exact i686 process/mutation gate
+
+Reviewing `tools/verify-linux-i686-golden-replay.sh` before the long report
+finished found three assumptions that did not fit the immutable clean run:
+
+1. the executable had to be named `ctr_native`;
+2. `toolchain-packages.txt` had to be in the run directory; and
+3. `coverage.txt` had to be attached to the same report.
+
+The clean producer is intentionally named
+`ctr_native-cutscene-fix-producer-eee2a8df5b96`, its toolchain manifest
+remains in the disposable build tree, and report `ctr-025812` is the formal
+same-commit parity trajectory rather than the separate structural lap report.
+Copying or inventing a coverage form would blur those identities.
+
+The verifier now accepts:
+
+```text
+CTRPAD_I686_BINARY
+CTRPAD_TOOLCHAIN_PACKAGES
+CTRPAD_REQUIRE_COVERAGE=0|1
+```
+
+The defaults are unchanged: ordinary golden verification still selects
+`ctr_native`, requires the build-local manifest, and requires `coverage.txt`
+with all eight pass keys. An explicitly selected binary must remain under the
+selected build/run tree so the container mount is unambiguous. The external
+manifest is read and hashed into `environment.txt`.
+
+`CTRPAD_REQUIRE_COVERAGE=0` is narrowly named and documented as
+process-determinism/mutation verification. It still requires:
+
+- a clean tracked worktree;
+- exact full source commit and embedded build ID;
+- finalized version-4 metadata with 24,232 frames and 81 checkpoints;
+- the complete input, checkpoint, log, and two memcard directories;
+- a recorded powerslide event;
+- two full unchanged processes with different host-address samples;
+- different raw restored checkpoint bytes but identical canonical state;
+- an automatically selected active-driver mutation;
+- exit status 2 and `drivers` as the first canonical difference; and
+- a complete evidence hash manifest.
+
+Only the manually maintained coverage form is omitted. The accepted,
+current-build structural lap evidence remains report `ctr-223221` and must be
+cited separately. This mode must not be described as a full golden-coverage
+pass.
+
+Once `ctr-025812` finalizes and the all-eight-component comparison passes,
+the prepared invocation is:
+
+```sh
+CTRPAD_REQUIRE_COVERAGE=0 \
+CTRPAD_I686_BUILD_DIR=/private/tmp/ctrpad-i686-cutscene-run-4hjAQW \
+CTRPAD_I686_BINARY=/private/tmp/ctrpad-i686-cutscene-run-4hjAQW/ctr_native-cutscene-fix-producer-eee2a8df5b96 \
+CTRPAD_TOOLCHAIN_PACKAGES=/private/tmp/ctrpad-i686-vehlap-8IzCKm/toolchain-packages.txt \
+CTRPAD_EXPECTED_SOURCE_COMMIT=eee2a8df5b9605d27c7b20e943bba76174a4f6fc \
+CTRPAD_DISC_IMAGE='/Users/chrissotraidis/GitHub/ctrpad/ref/CTR/CTR - Crash Team Racing (USA).bin' \
+tools/verify-linux-i686-golden-replay.sh \
+  /private/tmp/ctrpad-i686-cutscene-run-4hjAQW/debug/reports/20260731/ctr-025812 \
+  auto
+```
+
+This command was run once as a preflight while the report was incomplete. It
+resolved the selected retail image and report tree, then exited 1 with:
+
+```text
+Golden report metadata is not accepted: missing finalized=1.
+```
+
+That rejection is expected and proves the verifier will not start the three
+long playback processes from an in-flight report. The full command is
+prepared, not yet claimed as passed.
