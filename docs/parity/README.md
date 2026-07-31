@@ -5,9 +5,10 @@ input fixtures that contain no retail data, comparison-tool documentation, and
 per-milestone results.
 
 No full acceptance baseline has passed yet. The 2,200-frame
-startup/menu/loader/early-race prefix now matches across ARM64 and i686 on all
-six canonical state components; it is narrower than the pending 24,232-frame
-golden scenario.
+startup/menu/loader/early-race prefix matches across ARM64 and i686 on all
+eight required state and transport components. The finalized corrected
+24,232-frame comparison is rejected at frame 16,561 because the i686 path
+advances the particle RNG five additional times.
 
 Current evidence and procedures:
 
@@ -17,6 +18,11 @@ Current evidence and procedures:
   the input/timing omissions it exposed.
 - `2026-07-30-arm64-prefix-parity.md` records the corrected cross-width prefix,
   sanitizer, and audit evidence.
+- `2026-07-30-arm64-full-regeneration.md` records the complete ARM64 capture
+  and the rejected pre-correction i686 candidate.
+- `2026-07-30-full-cross-width-result.md` records the finalized corrected
+  i686 rejection, first-divergence diagnosis, rejected tracing routes, and
+  typed lap-coverage audit.
 
 The first task is to evaluate `platform/native_replay_scheduler.c`,
 `platform/native_checkpoint.c`, `platform/native_savestate.c`, and

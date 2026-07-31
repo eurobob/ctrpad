@@ -5582,3 +5582,248 @@ This is backup on the draft implementation branch, not a merge to `main`.
 During the rebuild, the independent corrected i686 run advanced further. A
 fresh prefix comparison covered 15,571 complete candidate frames with zero
 mismatches on timing, RNG, drivers, world, allocation, root, pads, and VSync.
+
+## 2026-07-30 — Finalized corrected cross-width rejection and typed lap audit
+
+**Starting branch checkpoint:** `codex/arm64-apple` at
+`9beead6b86d577872741a8934d0934e2c6c77f5e`
+
+### GitHub and process-state audit
+
+The user's observation that only the viability work was visible on `main` was
+correct. Independent local, remote-tracking, and GitHub queries reported:
+
+```text
+local HEAD:
+  9beead6b86d577872741a8934d0934e2c6c77f5e
+origin/codex/arm64-apple:
+  9beead6b86d577872741a8934d0934e2c6c77f5e
+draft PR #1 head:
+  9beead6b86d577872741a8934d0934e2c6c77f5e
+origin/main:
+  95417c723518407d6bfe3c81a37606294963efe2
+```
+
+PR #1 was open and draft, with base `main` and head
+`codex/arm64-apple`. The implementation was therefore backed up on GitHub but
+not merged. This is intentional while the mandatory parity gate is red; it is
+not described as merged work.
+
+The previously inspected `CTRReplayInspector.app` was closed through its
+normal window control. A process census found no running CTRPad, replay
+inspector, `qemu-i386`, or diagnostic game process. The disposable GDB
+container remained available only for the frame-16,561 investigation.
+
+### Corrected i686 report finalized
+
+The corrected optimized-i686 producer finished the entire scenario:
+
+```text
+producer:
+  /private/tmp/ctrpad-i686-vehlap-8IzCKm/ctr_native-corrected-full-producer-55d3b71c6da5
+producer SHA-256:
+  e07be52d72e6a2f323587d9302467be366401485cecd29d86ae54846f973528c
+report:
+  /private/tmp/ctrpad-i686-vehlap-8IzCKm/debug/reports/20260730/ctr-223323
+finalized=1
+frame_count=24232
+checkpoint_count=81
+```
+
+The report files are:
+
+```text
+input.ctrreplay
+  4bada362045669896cdbccf78239ff20cba3ca922531e0dc83eaf4167c9043cb
+state.ctrstates
+  c4a12812b3369ceab61891266e6a7e210a9292108f4261fdc9ec4a30cea4c17e
+metadata.txt
+  615b6ec9148e55a56ae9f0a1bb0b701ff2f92122d5913ac03592dadb9a527859
+ctr-native.log
+  81a5002f7d6f321c1289456f9d19beed5ad71981f59f8277ba3c140799a33ae4
+```
+
+This corrected run is not a parity pass. The definitive full comparison
+against ARM64 report `ctr-170507` exited 2:
+
+```text
+timing:      equal=24232 mismatched=0    ranges=none
+rng:         equal=19387 mismatched=4845 ranges=16561-21405
+drivers:     equal=24030 mismatched=202  ranges=17213-17414
+world:       equal=23713 mismatched=519  ranges=16561-16580,22158-22656
+allocation:  equal=23679 mismatched=553  ranges=16561-16580,17213-17227,17231-17275,22158-22630
+root:        equal=18888 mismatched=5344 ranges=16561-21405,22158-22656
+pads:        equal=24232 mismatched=0    ranges=none
+vsync:       equal=24232 mismatched=0    ranges=none
+required components mismatched:
+  rng,drivers,world,allocation,root
+```
+
+The earlier 15,571-frame prefix result was accurate at the time it was
+recorded, but it is now superseded by this finalized rejection.
+
+### Exact first-frame bound
+
+Raw end-of-frame replay fields show both architectures at:
+
+```text
+frame 16560:
+  deadcoed0=0x1b9ef97b
+  deadcoed1=0x533fcdb6
+```
+
+At frame 16,561:
+
+```text
+ARM64:
+  deadcoed0=0xa8c39902
+  deadcoed1=0x7d5e2621
+i686:
+  deadcoed0=0xb5fd73cb
+  deadcoed1=0xdeb84781
+```
+
+Running the exact `RngDeadCoed` recurrence from the common frame-16,560 state
+reaches ARM64 after 33 calls and i686 after 38 calls. This proves a five-call
+i686 excess in one frame; it is stronger than merely observing two different
+hashes.
+
+The exact accepted ARM64 producer was restored from checkpoint 55 and traced
+under LLDB. Frame 16,561 made 12 particle initializations:
+
+```text
+one wall spark:
+  3 deadcoed calls
+six ordinary exhaust particles:
+  5 calls each
+five potion-shatter particles:
+  0 calls
+total:
+  33 calls
+```
+
+The exhaust particles were emitted in pairs for three drivers. The potion
+path was `RB_GenericMine_ThDestroy` to `RB_Explosion_InitPotion`. Neither
+`VehEmitter_Sparks_Ground` nor `RB_FlameJet_Particles` executed on ARM64.
+
+An early theory that “five ground sparks” explained the delta was discarded:
+the source constant is ten, not five, and the breakpoint never fired. A
+complete flame-jet emission was also statically counted at 14 calls, not
+five, and its breakpoint did not fire. The honest remaining bound is one
+additional five-field particle-RNG pattern on i686. The exact emitter is not
+yet proven.
+
+Ignored local LLDB evidence is retained at:
+
+```text
+build-macos-arm64/debug/arm-frame-16561-callers-v2.log
+build-macos-arm64/debug/arm-frame-16561-particles.log
+```
+
+### Rejected i686 tracing attempts
+
+The following routes were attempted and rejected in order:
+
+1. Native GDB inside the amd64 container failed to control the emulated i386
+   process with `Couldn't get CS register: Input/output error`.
+2. A diagnostic binary using return-address introspection exited 139 before
+   game initialization.
+3. Direct QEMU remote debugging encountered one emulation-only address-base
+   artifact during checkpoint restore. A debugger-only adjustment made that
+   slot internally consistent, but the nested validation/bootstrap path was
+   too slow to reach the target frame. It produced no accepted trace and
+   modified no report or retail file.
+4. A simpler frame-gated diagnostic around `Particle_Init` and the candidate
+   emitters was compiled with SHA-256
+   `1e5c3b25a1a36c5d16f94f3486698930db7b18aa94b88c100e6e9b8286fd9cfd`.
+   Under normal outer Docker emulation, it printed the startup, base, and
+   asset paths, then received target SIGSEGV and exited 139 before
+   initialization. The untouched producer survived the same command.
+
+All diagnostic source patches were reverted immediately after their binaries
+were built. No output from a crashing or header-bypassed diagnostic is
+acceptance evidence.
+
+### Rejected lap-extension trial A
+
+The first lap extension retained the inherited input through frame 21,248,
+held Cross+Right through frame 21,320, and then held Cross to frame 24,231.
+Its seed is ignored local evidence:
+
+```text
+build-macos-arm64/debug/reports/20260730/ctr-170507/input-lap-extension-a.ctrreplay
+SHA-256:
+b5db8c1903e06026052efde33ccbb747a8bb9f6e35677017e7dd338a805544ec
+```
+
+The clean bundled producer finalized:
+
+```text
+build-macos-arm64-app/debug/reports/20260730/ctr-192711
+finalized=1
+frame_count=24232
+checkpoint_count=81
+```
+
+Its files hash to:
+
+```text
+input.ctrreplay
+  faaf50b56a7c410e031f7dce07722c7b89a5f4dc2918aafc669b6eb872e96090
+state.ctrstates
+  f75e1a1afa8dbcf52b6e60c4d5efc9b36343ea1f67c4e6b119730730177d3729
+metadata.txt
+  6df42d2efe5886b1cc7983acd0ae0ef9456377fb855a8373123baa3a3fa0fb35
+ctr-native.log
+  6851a3082cfe01bc169661c8dc11bd3024910ca1947efd851e7a59d13ab383a8
+```
+
+All 24,232 recorded pad snapshots equal the extension seed. A raw typed
+checkpoint parser found continued late track progress but `maxLap=0`; trial A
+is rejected.
+
+### Reproducible lap inspector
+
+The raw audit was promoted to
+`tools/inspect-replay-lap-coverage.mjs`. The tool:
+
+- verifies the state-container header, every payload boundary, and every FNV
+  checksum;
+- supports checkpoint v2/i686 and v3/i686/ARM64 layouts;
+- resolves the player driver through recorded address-owner ranges instead of
+  treating recorded host addresses as live pointers; and
+- reports every structural `lapIndex` and
+  `checkpoint.currentIndex`, plus `maxLap`.
+
+It was syntax-checked and run against four real reports. Current ARM64 report
+`ctr-170507`, corrected i686 report `ctr-223323`, and lap-extension report
+`ctr-192711` all report:
+
+```text
+activeRecords=80
+maxLap=0
+maxCheckpoint=77
+lapAdvanced=no
+```
+
+The historical version-2 report
+`build-linux-i686-baseline/debug/reports/20260729/ctr-225420` reports:
+
+```text
+frame 21000 lap 0 checkpoint 72
+frame 21300 lap 1 checkpoint 1
+frame 21600 lap 0 checkpoint 0
+maxLap=1
+lapAdvanced=yes
+```
+
+At frame 21,300 the historical and current inherited inputs share player
+zero's button mask and analog axes, but not the complete transport record or
+the preceding trajectory. The old lap advance is real historical evidence,
+not a substitute for a current version-4 lap.
+
+The complete finalized result, exact comparison command, source citations,
+and next steps are preserved in
+`docs/parity/2026-07-30-full-cross-width-result.md`. The roadmap and parity
+index were updated at the same checkpoint. M6 remains open, and iOS remains
+gated.

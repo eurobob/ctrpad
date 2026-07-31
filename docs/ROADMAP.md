@@ -195,9 +195,16 @@ Result so far:
   restart-node count before resolving or reading the array. The ASM-verified
   PS1 instruction path is unchanged. A fourteenth media-free test covers the
   first and last valid indices and rejects one-past-end, `0xff`, empty, and
-  null cases on ARM64, ARM64 ASan/UBSan, and i686. New full ARM64 and i686
-  reports are still required; the rejected in-flight report cannot satisfy
-  M1.
+  null cases on ARM64, ARM64 ASan/UBSan, and i686.
+- The corrected replacement reports both finalized all 24,232 frames, but
+  their full comparison is also rejected. Timing, pads, and VSync match for
+  every frame; RNG, world, allocation, and root first differ at frame 16,561,
+  followed by drivers at frame 17,213. Exact recurrence analysis proves that
+  i686 makes five additional particle-RNG calls at the first boundary.
+  Accepted-binary ARM64 tracing bounds its 33 calls to one wall spark, six
+  exhaust particles, and five RNG-free potion fragments. The corresponding
+  i686 emitter remains unresolved. Full ranges and rejected diagnostic routes
+  are in `docs/parity/2026-07-30-full-cross-width-result.md`.
 
 Work:
 
@@ -368,8 +375,10 @@ Acceptance:
 **Status:** in progress; native configure/build/CTest, a launchable signed
 development app bundle, direct Metal-backed visual inspection, corrected
 24,232-frame ARM64 playback, and a guarded native restart-node boundary are
-complete. Final optimized-i686 cross-width acceptance, a real lap advance,
-complete manual play, and persistent-save relaunch acceptance remain open
+complete. The finalized corrected i686 comparison is rejected at frame
+16,561, and lap-extension trial A is rejected with `maxLap=0`. Cross-width
+parity, a current real lap advance, complete manual play, and persistent-save
+relaunch acceptance remain open
 
 Result so far:
 
@@ -529,14 +538,20 @@ Result so far:
   powerslide, and persisted 6,016-byte save. Two independent unchanged ARM64
   playback processes passed all frames under different ASLR layouts, and the
   deliberate frame-1,711 driver-position mutation failed on the `drivers`
-  component as required. Corrected optimized-i686 report `ctr-223323` is the
-  active cross-width acceptance gate and matches all eight components through
-  frame 15,571 at the documented comparison checkpoint, beyond the old
-  frame-6,780 failure. Typed checkpoint and HUD
-  evidence also proves the inherited input changes track checkpoints but
-  never advances beyond lap index zero; a new/supplemental actual-lap
-  recording remains required. Exact hashes and the GitHub branch audit are in
-  `docs/history/ENGINEERING-JOURNAL.md`.
+  component as required. Corrected optimized-i686 report `ctr-223323`
+  finalized all 24,232 frames but is rejected: timing, pads, and VSync match
+  throughout; RNG differs over 4,845 frames, drivers over 202, world over 519,
+  allocation over 553, and root over 5,344. The first frame has exactly five
+  additional i686 particle-RNG calls. Exact ranges, accepted-binary tracing,
+  and rejected diagnostic routes are in
+  `docs/parity/2026-07-30-full-cross-width-result.md`.
+- `tools/inspect-replay-lap-coverage.mjs` validates checkpoint checksums and
+  resolves player lap/checkpoint fields for checkpoint versions 2 and 3 on
+  ILP32 and LP64. It confirms the historical version-2 report reaches
+  `lapIndex=1` at frame 21,300, while the current inherited version-4 input
+  and lap-extension trial A both remain at `maxLap=0`. Trial A does continue
+  track progress and reproduces all 24,232 seeded pad snapshots, but it is
+  rejected for lap coverage.
 - Red-beaker rain no longer reads per-player MVP translations out of widened
   instance function/thread pointers. Named draw-record fields preserve the
   retail depth/LOD byte alias, and a four-player cross-width test covers the
@@ -548,9 +563,12 @@ Work:
 - Validate audio, desktop renderer, keyboard, MFi/Bluetooth controller,
   memcards, replays, savestates, XA audio, and STR video.
 - Run sanitizers and the full parity gate under Apple Clang.
-- Regenerate the full optimized-i686 version-4 report from corrected ARM64
-  report `ctr-170507`; all pre-correction reports are diagnostic inputs, not
-  acceptance artifacts.
+- Isolate and correct the extra five-call i686 particle-RNG path at frame
+  16,561, then regenerate clean full ARM64 and optimized-i686 version-4
+  reports. All current and pre-correction mismatched reports are diagnostic
+  inputs, not acceptance artifacts.
+- Record or derive a current version-4 input that reaches `lapIndex >= 1`;
+  retain failed steering extensions as explicit rejected evidence.
 - Measure frame cadence against the retail 30 Hz logic / approximately
   59.817 Hz VBlank model.
 
@@ -714,7 +732,8 @@ timestamps are explicitly excluded from game-visible deterministic state.
 |---|---|---|
 | Guest-reference design expands into a full arena rewrite | Asset relocation writes host bases into 32-bit file slots; about 75 pinned pointer-bearing structs were estimated | M2 prototype on real assets before broad edits; preserve guest layout and centralize translation |
 | Existing replay/checkpoint tooling is not a sufficient parity oracle | Prior report found infrastructure but did not run or assess coverage (`docs/ctr-native-viability.md:471-474`) | Prove mutation sensitivity in M1 or build a state-hash harness |
-| Supplied NTSC-U image has not completed the full parity trace | MODE2/2352 geometry, `SCUS_944.26` identity, retail boot, and live input are proven | Finish gameplay/save coverage and the two-process replay/mutation verifier |
+| Full NTSC-U cross-width trace diverges | Both corrected reports finalize 24,232 frames; timing/pads/VSync match, but i686 advances particle RNG five extra times at frame 16,561 | Isolate the architecture-dependent emitter condition, regenerate both reports, require all eight components to match, then run two-process/mutation verification |
+| Current version-4 input does not advance a lap | Typed v2 inspection proves historical `lapIndex=1`; current inherited input and extension A both report `maxLap=0` | Record or derive a current input with structural `lapIndex >= 1` evidence |
 | Upstream has moved since `2df55dc5a` | Viability report is commit-specific | Freeze a reproducible baseline, inspect current head, then rebase intentionally |
 | Reference documentation is stale | `ref/README.md` claims four clones that are absent | Derive documentation from actual remote/commit checks |
 | Retail assets can be committed accidentally | M0 ignore and tracked-file probes pass | Keep the M0 checks in release verification |
