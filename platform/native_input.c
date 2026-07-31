@@ -785,6 +785,7 @@ internal void NativeInput_CloseController(s32 slot)
 	controller->instanceId = -1;
 	controller->analogEnabled = 0;
 	controller->switchingAnalog = 0;
+	s_controllerToSlotMapping[slot] = -1;
 
 	if (s_lastActiveControllerSlot == slot)
 	{
@@ -823,6 +824,7 @@ internal void NativeInput_OpenController(SDL_JoystickID instanceId, s32 slot)
 	controller->instanceId = joystick != NULL ? SDL_GetJoystickID(joystick) : instanceId;
 	controller->analogEnabled = 1;
 	controller->switchingAnalog = 0;
+	s_controllerToSlotMapping[slot] = controller->instanceId;
 	NativeInput_MoveKeyboardOffControllerSlot(slot);
 }
 
@@ -1166,6 +1168,155 @@ int Platform_InputGetSubmitNameKey(void)
 	return 0;
 }
 
+struct NativeInputVirtualRumbleProbe
+{
+	u16 lowFrequency;
+	u16 highFrequency;
+	s32 callCount;
+};
+
+internal bool SDLCALL NativeInput_VirtualRumble(void *userdata, Uint16 lowFrequency, Uint16 highFrequency)
+{
+	struct NativeInputVirtualRumbleProbe *probe = userdata;
+
+	if (probe != NULL)
+	{
+		probe->lowFrequency = lowFrequency;
+		probe->highFrequency = highFrequency;
+		probe->callCount++;
+	}
+
+	return true;
+}
+
+internal s32 NativeInput_RunVirtualControllerSelfTest(void)
+{
+	struct NativeInputVirtualRumbleProbe rumbleProbe = {0};
+	SDL_VirtualJoystickDesc virtualDesc;
+	SDL_JoystickID virtualId = 0;
+	SDL_Joystick *virtualJoystick = NULL;
+	const char *failure = NULL;
+	unsigned char rumbleTable[2] = {0x40, 0x80};
+	u16 buttons;
+	s32 openControllerCount;
+	s32 slot;
+
+	if (SDL_InitSubSystem(SDL_INIT_GAMEPAD) == 0)
+	{
+		fprintf(stderr, "[CTR Input] self-test failed: SDL virtual gamepad init: %s\n", SDL_GetError());
+		return 0;
+	}
+
+	SDL_INIT_INTERFACE(&virtualDesc);
+	virtualDesc.type = SDL_JOYSTICK_TYPE_GAMEPAD;
+	virtualDesc.naxes = SDL_GAMEPAD_AXIS_COUNT;
+	virtualDesc.nbuttons = SDL_GAMEPAD_BUTTON_COUNT;
+	virtualDesc.name = "CTR Native self-test gamepad";
+	virtualDesc.userdata = &rumbleProbe;
+	virtualDesc.Rumble = NativeInput_VirtualRumble;
+
+	virtualId = SDL_AttachVirtualJoystick(&virtualDesc);
+	if (virtualId == 0)
+	{
+		fprintf(stderr, "[CTR Input] self-test failed: attach virtual gamepad: %s\n", SDL_GetError());
+		failure = "attach virtual gamepad";
+		goto CLEANUP;
+	}
+
+	s_inputInitialized = 1;
+	Platform_InputControllerAdded(virtualId);
+	if ((s_controllers[0].controller == NULL) || (s_controllers[0].instanceId != virtualId) ||
+	    (s_controllerToSlotMapping[0] != virtualId) || (s_keyboardControllerSlot != 1))
+	{
+		failure = "virtual gamepad slot ownership";
+		goto CLEANUP;
+	}
+
+	Platform_InputControllerAdded(virtualId);
+	openControllerCount = 0;
+	for (slot = 0; slot < NATIVE_INPUT_MAX_CONTROLLERS; slot++)
+	{
+		if (s_controllers[slot].controller != NULL)
+		{
+			openControllerCount++;
+		}
+	}
+	if (openControllerCount != 1)
+	{
+		failure = "duplicate controller add opened a second slot";
+		goto CLEANUP;
+	}
+
+	virtualJoystick = SDL_GetGamepadJoystick(s_controllers[0].controller);
+	if ((virtualJoystick == NULL) ||
+	    !SDL_SetJoystickVirtualButton(virtualJoystick, SDL_GAMEPAD_BUTTON_SOUTH, true) ||
+	    !SDL_SetJoystickVirtualButton(virtualJoystick, SDL_GAMEPAD_BUTTON_RIGHT_SHOULDER, true) ||
+	    !SDL_SetJoystickVirtualAxis(virtualJoystick, SDL_GAMEPAD_AXIS_RIGHT_TRIGGER, 24576) ||
+	    !SDL_SetJoystickVirtualAxis(virtualJoystick, SDL_GAMEPAD_AXIS_LEFTX, -32768) ||
+	    !SDL_SetJoystickVirtualAxis(virtualJoystick, SDL_GAMEPAD_AXIS_RIGHTY, 32767))
+	{
+		failure = "set virtual gamepad state";
+		goto CLEANUP;
+	}
+
+	SDL_UpdateJoysticks();
+	NativeInput_ResetSnapshot(0);
+	NativeInput_ApplyController(0);
+	buttons = NativeInput_GetSnapshotButtons(&s_controllers[0].snapshot);
+	if ((s_controllers[0].snapshot.connected == 0) || (s_controllers[0].snapshot.id != NATIVE_INPUT_PAD_ANALOG) ||
+	    (buttons != 0xb5ff) || (s_controllers[0].snapshot.analog[0] != 0x80) ||
+	    (s_controllers[0].snapshot.analog[1] != 0xff) || (s_controllers[0].snapshot.analog[2] != 0x00) ||
+	    (s_controllers[0].snapshot.analog[3] != 0x80) || (s_lastActiveControllerSlot != 0))
+	{
+		failure = "virtual gamepad PS1 snapshot";
+		goto CLEANUP;
+	}
+
+	Platform_InputPadVibrate(0, rumbleTable, sizeof(rumbleTable));
+	if ((rumbleProbe.callCount != 1) || (rumbleProbe.lowFrequency != 32640) || (rumbleProbe.highFrequency != 16320))
+	{
+		failure = "virtual gamepad rumble";
+		goto CLEANUP;
+	}
+
+	Platform_InputControllerRemoved(virtualId);
+	if ((s_controllers[0].controller != NULL) || (s_controllerToSlotMapping[0] != -1))
+	{
+		failure = "virtual gamepad removal";
+		goto CLEANUP;
+	}
+
+	Platform_InputControllerAdded(virtualId);
+	if ((s_controllers[0].controller == NULL) || (s_controllerToSlotMapping[0] != virtualId))
+	{
+		failure = "virtual gamepad reconnect";
+		goto CLEANUP;
+	}
+
+CLEANUP:
+	for (slot = 0; slot < NATIVE_INPUT_MAX_CONTROLLERS; slot++)
+	{
+		NativeInput_CloseController(slot);
+		NativeInput_ResetSnapshot(slot);
+	}
+	s_inputInitialized = 0;
+	s_keyboardControllerSlot = NATIVE_INPUT_DEFAULT_KEYBOARD_SLOT;
+	s_lastActiveControllerSlot = -1;
+	if ((virtualId != 0) && !SDL_DetachVirtualJoystick(virtualId) && (failure == NULL))
+	{
+		failure = "detach virtual gamepad";
+	}
+	SDL_QuitSubSystem(SDL_INIT_GAMEPAD);
+
+	if (failure != NULL)
+	{
+		fprintf(stderr, "[CTR Input] self-test failed: %s\n", failure);
+		return 0;
+	}
+
+	return 1;
+}
+
 int Platform_InputRunSelfTest(void)
 {
 	const struct
@@ -1201,6 +1352,7 @@ int Platform_InputRunSelfTest(void)
 	s_installedSnapshotsActive = 0;
 	for (slot = 0; slot < NATIVE_INPUT_MAX_CONTROLLERS; slot++)
 	{
+		s_controllerToSlotMapping[slot] = -1;
 		NativeInput_ResetSnapshot(slot);
 	}
 
@@ -1294,8 +1446,12 @@ int Platform_InputRunSelfTest(void)
 		fprintf(stderr, "[CTR Input] self-test failed: alias key-down tap was not latched\n");
 		return 1;
 	}
+	if (!NativeInput_RunVirtualControllerSelfTest())
+	{
+		return 1;
+	}
 
-	printf("[CTR Input] self-test passed: metadata-key=%d legacy-enter=%d migration-enter=%d live-start=retail tap-latch=c+right one-snapshot aliases=12 held=k+d+e alias-tap=k+d\n",
+	printf("[CTR Input] self-test passed: metadata-key=%d legacy-enter=%d migration-enter=%d live-start=retail tap-latch=c+right one-snapshot aliases=12 held=k+d+e alias-tap=k+d virtual-gamepad=buttons+axes+rumble+hotplug\n",
 	       SDL_SCANCODE_A, SDL_SCANCODE_RETURN, SDL_SCANCODE_RETURN);
 	return 0;
 }
