@@ -20,6 +20,8 @@ Options:
 Signing requires both --identity and --profile. Without them, the script emits
 an unsigned IPA intended for a compatible user-side re-signing tool. It never
 copies a private key, retail disc image, save, or local runtime container.
+Set SOURCE_DATE_EPOCH to override the archive timestamp; otherwise the current
+source commit time is used, with 2000-01-01 UTC as a non-Git fallback.
 EOF
 }
 
@@ -214,6 +216,19 @@ if [[ -n "$signing_identity" ]]; then
         fail "signed application identifier mismatch: $actual_application_id"
     mode="signed"
 fi
+
+source_date_epoch="${SOURCE_DATE_EPOCH:-}"
+if [[ -z "$source_date_epoch" ]] && command -v git >/dev/null 2>&1 && \
+    git -C "$repo_root" rev-parse --verify HEAD >/dev/null 2>&1; then
+    source_date_epoch="$(git -C "$repo_root" show -s --format=%ct HEAD)"
+fi
+source_date_epoch="${source_date_epoch:-946684800}"
+[[ "$source_date_epoch" =~ ^[0-9]+$ ]] || \
+    fail "SOURCE_DATE_EPOCH must be a non-negative integer"
+((source_date_epoch >= 315532800)) || \
+    fail "SOURCE_DATE_EPOCH must be representable by ZIP (1980-01-01 or later)"
+archive_timestamp="$(date -r "$source_date_epoch" -u '+%Y%m%d%H%M.%S')"
+find "$payload_dir" -exec touch -h -t "$archive_timestamp" {} +
 
 if [[ -z "$output_path" ]]; then
     output_path="$repo_root/dist/CTRPad-${bundle_version}-${build_version}-${mode}.ipa"
