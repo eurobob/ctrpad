@@ -219,8 +219,16 @@ Result so far:
   use `FuncInit`; a sixteenth test validates the semantic fields and config
   pointers on both widths and exact original record bytes on i686. ARM64
   Release, ARM64 ASan/UBSan, and optimized i686 pass 16/16. Full clean-pair
-  regeneration is still required before the gate can pass. Evidence and
-  rejected diagnostic routes are in
+  regeneration is still required before the gate can pass.
+- Clean pushed ARM64 producer `eee2a8df5b96` subsequently finalized all
+  24,232 frames and 81 checkpoints. Its full comparison against the immutable
+  earlier i686 report now matches timing, RNG, drivers, world, allocation,
+  root, pads, and VSync for every frame, proving both old mismatch ranges are
+  gone while the byte-preserving i686 semantics remain unchanged. The clean
+  same-commit i686 producer passes 16/16 tests and its first 1,879 recorded
+  frames match all eight components; its full emulated report remains in
+  progress, so M1/M6 are not yet accepted. Evidence and rejected diagnostic
+  routes are in
   `docs/parity/2026-07-30-full-cross-width-result.md`.
 
 Work:
@@ -582,8 +590,11 @@ Result so far:
   color/lifespan inside the widened function pointer on LP64. Those records
   now use typed function initializers. A sixteenth media-free test validates
   all seven groups, terminators, eight configs, and exact i686 retail bytes;
-  ARM64 Release, ARM64 ASan/UBSan, and optimized i686 pass 16/16. Clean
-  committed full-pair regeneration is still required.
+  ARM64 Release, ARM64 ASan/UBSan, and optimized i686 pass 16/16. Clean ARM64
+  report `ctr-215303` then matched the earlier immutable i686 trajectory on
+  all eight components across all 24,232 frames. Clean same-commit i686 report
+  `ctr-025812` is running and matches all eight components through its first
+  1,879 records; formal clean-pair acceptance waits for its full finalization.
 - `tools/inspect-replay-lap-coverage.mjs` validates checkpoint checksums and
   resolves player lap/checkpoint fields for checkpoint versions 2 and 3 on
   ILP32 and LP64. It confirms the historical version-2 report reaches
@@ -602,11 +613,11 @@ Work:
 - Validate audio, desktop renderer, keyboard, MFi/Bluetooth controller,
   memcards, replays, savestates, XA audio, and STR video.
 - Run sanitizers and the full parity gate under Apple Clang.
-- Regenerate clean full ARM64 and optimized-i686 version-4 reports after both
-  typed emitter corrections. Require all eight components to match all 24,232
-  frames, then repeat the two-process and mutation gates. All current and
-  pre-correction mismatched reports remain diagnostic inputs, not acceptance
-  artifacts.
+- Allow clean optimized-i686 version-4 report `ctr-025812` to finalize after
+  both typed emitter corrections. Require all eight components to match clean
+  ARM64 report `ctr-215303` across all 24,232 frames, then repeat the
+  two-process and mutation gates. All pre-correction mismatched and partial
+  reports remain diagnostic inputs, not acceptance artifacts.
 - Record or derive a current version-4 input that reaches `lapIndex >= 1`;
   retain failed steering extensions as explicit rejected evidence.
 - Measure frame cadence against the retail 30 Hz logic / approximately
@@ -772,7 +783,7 @@ timestamps are explicitly excluded from game-visible deterministic state.
 |---|---|---|
 | Guest-reference design expands into a full arena rewrite | Asset relocation writes host bases into 32-bit file slots; about 75 pinned pointer-bearing structs were estimated | M2 prototype on real assets before broad edits; preserve guest layout and centralize translation |
 | Existing replay/checkpoint tooling is not a sufficient parity oracle | Prior report found infrastructure but did not run or assess coverage (`docs/ctr-native-viability.md:471-474`) | Prove mutation sensitivity in M1 or build a state-hash harness |
-| Full NTSC-U cross-width trace diverges | The first typed-emitter correction removes every frame-16,561 RNG/driver mismatch in a clean ARM64 replay. The remaining frame-22,158 world/allocation range is exactly ten overlay-233 particles lost through a second ILP32-only union initializer; its typed correction passes 16/16 tests on ARM64, sanitizers, and i686, including exact i686 retail bytes | Regenerate both clean full reports after both corrections, require all eight components to match, then run two-process/mutation verification |
+| Full NTSC-U cross-width trace diverges | Both typed-emitter corrections pass 16/16 tests across ARM64, sanitizers, and i686. Clean ARM64 report `ctr-215303` matches the immutable prior i686 trajectory on all eight components for all 24,232 frames; the clean same-commit i686 report also matches its first 1,879 frames but is still running | Finalize same-commit i686 report `ctr-025812`, require the all-frame match, then run two-process/mutation verification |
 | Current version-4 input does not advance a lap | Typed v2 inspection proves historical `lapIndex=1`; current inherited input and extension A both report `maxLap=0` | Record or derive a current input with structural `lapIndex >= 1` evidence |
 | Upstream has moved since `2df55dc5a` | Viability report is commit-specific | Freeze a reproducible baseline, inspect current head, then rebase intentionally |
 | Reference documentation is stale | `ref/README.md` claims four clones that are absent | Derive documentation from actual remote/commit checks |

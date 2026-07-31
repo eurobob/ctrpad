@@ -480,13 +480,102 @@ report under ordinary Xvfb/llvmpipe execution. At this documentation
 checkpoint it was alive at frame 3,000 with 11 checkpoints. It is diagnostic
 continuity evidence and cannot accept the new source correction.
 
+## Finalized ARM64 proof after both emitter corrections
+
+The overlay correction and documentation were committed and pushed as:
+
+```text
+eee2a8df5b9605d27c7b20e943bba76174a4f6fc
+fix: preserve cutscene emitter layout across widths
+```
+
+GitHub, `origin/codex/arm64-apple`, and local `HEAD` all resolved to that
+commit. Draft PR #1 remained open against `main`; `origin/main` remained at
+`95417c723518407d6bfe3c81a37606294963efe2`.
+
+Clean same-source producers:
+
+```text
+ARM64:
+  build-macos-arm64/ctr_native-cutscene-fix-producer-eee2a8df5b96
+  SHA-256 fa9a7d46292ab09b143e0e2b514317daa251af48f6341dc437b1f5d81ded3961
+  16/16 CTests
+
+i686:
+  /private/tmp/ctrpad-i686-vehlap-8IzCKm/ctr_native-cutscene-fix-producer-eee2a8df5b96
+  SHA-256 d2e6f06023ccaedae689f11b36b33e005cb30d7bbc70d2a5e3e036f57b276c8e
+  Build ID 14387ee999252f9fb16177bb0fdfb76e2c099f4b
+  16/16 CTests, including exact retail-record comparisons
+```
+
+The clean ARM64 producer finalized:
+
+```text
+report:
+  build-macos-arm64/debug/reports/20260730/ctr-215303
+frames/checkpoints/finalized/exit:
+  24232 / 81 / 1 / 0
+
+input.ctrreplay:
+  dfd06c677f29d9c2155cb01cf00fd958dddfc06127d9b6c67937651039029e09
+state.ctrstates:
+  a0ea4a59e7e26716e99249430aed02bd45794a096c4b929dcfd323e8ecd03632
+metadata.txt:
+  9ed1ba92c55da00135e5329bce682b2d82a8530a4daab3607bdd6b10eb0d9e4d
+ctr-native.log:
+  bea2c87b0c6694f139561ce5f2ba94eba7d46a6daa54b8bce17b39aba3d0de1a
+```
+
+The all-frame diagnostic comparison against the earlier immutable i686 report
+`ctr-223323` now passes:
+
+```text
+timing:      equal=24232 mismatched=0 ranges=none
+rng:         equal=24232 mismatched=0 ranges=none
+drivers:     equal=24232 mismatched=0 ranges=none
+world:       equal=24232 mismatched=0 ranges=none
+allocation:  equal=24232 mismatched=0 ranges=none
+root:        equal=24232 mismatched=0 ranges=none
+pads:        equal=24232 mismatched=0 ranges=none
+vsync:       equal=24232 mismatched=0 ranges=none
+```
+
+That earlier i686 binary predates both typed corrections, but both i686
+self-tests prove the new typed tables preserve its complete original bytes.
+The full comparison therefore proves that both ARM64 mismatch ranges are
+removed without changing the retail i686 trajectory. It is strong end-to-end
+correction evidence, but the formal same-commit clean-pair gate remains open.
+
+The superseded first-fix-only i686 continuity run was stopped at frame 4,566
+to return its CPU budget to the report that can satisfy the gate. Docker
+reported exit 137. Its recorder shutdown path wrote `finalized=1`, but the
+frame count is only 4,566 of the 24,232-frame seed and no normal exit status
+was recorded; it is explicitly rejected as a partial report. Its files remain
+at `/private/tmp/ctrpad-i686-potion-run-KMjNWQ`.
+
+The clean `eee2a8df5b96` i686 producer is now recording:
+
+```text
+container:
+  ctrpad-i686-cutscene-full
+run directory:
+  /private/tmp/ctrpad-i686-cutscene-run-4hjAQW
+report:
+  debug/reports/20260731/ctr-025812
+documentation checkpoint:
+  finalized=0 frame_count=1800 checkpoint_count=7
+```
+
+Its first 1,879 complete frame records match the clean ARM64 report on all
+eight required components. The full report must still finalize and match all
+24,232 frames before M6 can be accepted.
+
 ## Required next work
 
-1. Commit the overlay-233 typed-emitter correction and produce clean ARM64 and
-   optimized i686 binaries with recorded identities.
-2. Regenerate both full reports from those same-source clean producers.
-3. Require all eight components to match all 24,232 frames before running
+1. Allow clean i686 report `ctr-025812` to finalize.
+2. Require all eight components to match the finalized clean ARM64 report for
+   all 24,232 frames before running
    the two-process i686 and deliberate-mutation gates.
-4. Record or derive a version-4 coverage input that structurally reaches
+3. Record or derive a version-4 coverage input that structurally reaches
    `lapIndex >= 1`.
-5. Keep M6 and all dependent iOS milestones open until these gates pass.
+4. Keep M6 and all dependent iOS milestones open until these gates pass.

@@ -6272,3 +6272,149 @@ is retained to complete the clean first-fix pair, but it predates the
 overlay-233 correction and cannot accept the new source. M6 remains open
 pending fresh committed producers and a full all-eight-component match after
 both emitter fixes.
+
+## 2026-07-30 — Published overlay fix and finalized ARM64 all-component match
+
+### GitHub publication and branch state
+
+The overlay correction, sixteenth test, roadmap, parity report, and preceding
+chronological entry were committed and pushed as:
+
+```text
+eee2a8df5b9605d27c7b20e943bba76174a4f6fc
+fix: preserve cutscene emitter layout across widths
+```
+
+Immediately after the push, `gh pr view` briefly returned the previous draft
+PR head. That response was not accepted. Repository-pinned REST reads and Git
+refs then agreed:
+
+```text
+local HEAD:
+  eee2a8df5b9605d27c7b20e943bba76174a4f6fc
+origin/codex/arm64-apple:
+  eee2a8df5b9605d27c7b20e943bba76174a4f6fc
+draft PR #1 head:
+  eee2a8df5b9605d27c7b20e943bba76174a4f6fc
+PR:
+  https://github.com/chrissotraidis/ctrpad/pull/1
+state/base/head:
+  OPEN draft / main / codex/arm64-apple
+origin/main:
+  95417c723518407d6bfe3c81a37606294963efe2
+```
+
+The implementation—not only viability documentation—is backed up on GitHub.
+It remains deliberately unmerged while the formal parity gate is open.
+
+### Clean committed producers
+
+Both clean builds report `eee2a8df5b96` and pass 16/16 tests:
+
+```text
+ARM64:
+  build-macos-arm64/ctr_native-cutscene-fix-producer-eee2a8df5b96
+  Mach-O 64-bit executable arm64
+  SHA-256 fa9a7d46292ab09b143e0e2b514317daa251af48f6341dc437b1f5d81ded3961
+
+optimized i686:
+  /private/tmp/ctrpad-i686-vehlap-8IzCKm/ctr_native-cutscene-fix-producer-eee2a8df5b96
+  ELF 32-bit LSB PIE, Intel 80386
+  Build ID 14387ee999252f9fb16177bb0fdfb76e2c099f4b
+  SHA-256 d2e6f06023ccaedae689f11b36b33e005cb30d7bbc70d2a5e3e036f57b276c8e
+```
+
+The complete tree sweep for other particle function headers found every
+other `initOffset=12` site already using `InitTypes.FuncInit`. No additional
+wrong-union header remains in the particle tables.
+
+### Superseded i686 continuity run
+
+The first-fix-only i686 producer reached frame 4,566. It was then stopped so
+its emulated renderer's CPU budget could be reassigned to the clean
+same-commit report that can satisfy the gate. The files were retained:
+
+```text
+run:
+  /private/tmp/ctrpad-i686-potion-run-KMjNWQ
+report:
+  debug/reports/20260731/ctr-023139
+Docker exit:
+  137
+frames/checkpoints:
+  4566 / 16
+```
+
+The recorder's signal/shutdown path changed metadata to `finalized=1`, but
+that flag means only that headers were closed. The report contains 4,566 of
+the seeded 24,232 frames, has no normal process exit record, and came from
+source before the overlay correction. It is explicitly rejected as partial
+evidence.
+
+### Finalized clean ARM64 report
+
+Clean producer `eee2a8df5b96` regenerated the entire inherited input:
+
+```text
+report:
+  build-macos-arm64/debug/reports/20260730/ctr-215303
+frames/checkpoints/finalized/exit:
+  24232 / 81 / 1 / 0
+```
+
+The report files hash to:
+
+```text
+input.ctrreplay
+  dfd06c677f29d9c2155cb01cf00fd958dddfc06127d9b6c67937651039029e09
+state.ctrstates
+  a0ea4a59e7e26716e99249430aed02bd45794a096c4b929dcfd323e8ecd03632
+metadata.txt
+  9ed1ba92c55da00135e5329bce682b2d82a8530a4daab3607bdd6b10eb0d9e4d
+ctr-native.log
+  bea2c87b0c6694f139561ce5f2ba94eba7d46a6daa54b8bce17b39aba3d0de1a
+```
+
+A live prefix comparison first crossed the entire former frame
+22,158-through-22,656 mismatch range at 23,256/24,232 with all components
+equal. After finalization, the complete comparison against immutable i686
+report `ctr-223323` was:
+
+```text
+timing:      equal=24232 mismatched=0 ranges=none
+rng:         equal=24232 mismatched=0 ranges=none
+drivers:     equal=24232 mismatched=0 ranges=none
+world:       equal=24232 mismatched=0 ranges=none
+allocation:  equal=24232 mismatched=0 ranges=none
+root:        equal=24232 mismatched=0 ranges=none
+pads:        equal=24232 mismatched=0 ranges=none
+vsync:       equal=24232 mismatched=0 ranges=none
+```
+
+This older i686 report is not the formal same-commit candidate, but the
+i686-only byte comparisons prove both new typed tables preserve its retail
+records exactly. The result proves both ARM64 corrections remove their full
+observed mismatch ranges without changing i686 behavior.
+
+### Clean same-commit i686 run
+
+The clean i686 producer is recording under ordinary Xvfb/llvmpipe execution:
+
+```text
+container:
+  ctrpad-i686-cutscene-full
+run directory:
+  /private/tmp/ctrpad-i686-cutscene-run-4hjAQW
+report:
+  debug/reports/20260731/ctr-025812
+documentation checkpoint:
+  finalized=0 frame_count=1800 checkpoint_count=7
+```
+
+The first 1,879 complete frame records match clean ARM64 report `ctr-215303`
+on all eight required components. The approximately 2.5-frame-per-second
+rate is the established i386 plus llvmpipe emulation cost, not a stall.
+
+M6 remains open until this same-commit report finalizes all 24,232 frames and
+passes the complete comparison. The finalized ARM64 result is a major
+correction checkpoint, not permission to skip the remaining clean-pair gate.
