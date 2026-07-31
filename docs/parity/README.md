@@ -34,6 +34,10 @@ Current evidence and procedures:
 - `2026-07-31-macos-arm64-audio-mixer-oracle.md` records the media-free
   production SPU decode/panning/Room-reverb oracle, exact ARM64/i686 PCM
   digests, sanitizer result, and wet-tail boundary.
+- `2026-07-31-shared-gles3-dialect-bringup.md` records the audited Android
+  reference delta, shared desktop/GLES renderer dialect, context-failure
+  cleanup correction, exact ARM64/sanitizer/i686 matrix, iOS Simulator
+  compile/link probe, rejected attempts, and deliberately open runtime gate.
 - `2026-07-31-macos-arm64-keyboard-tap.md` records the missing quick-tap root
   cause, one-snapshot press-edge transport, direct live PSX packet trace, and
   exact-commit ARM64/sanitizer/i686 validation plus live Time Trial

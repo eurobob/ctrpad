@@ -701,13 +701,48 @@ its frame-6,000 and frame-8,000 markers and remained running, unpaused, and
 not OOM-killed. Its status file was still empty; completion and mutation were
 not accepted.
 
+### 2026-07-31 — Landed the first shared GLES 3 renderer slice
+
+- Audited the populated `ref/ctr-native-android` branch and ported only the
+  load-bearing ES profile, GLSL ES 300, SDL proc-loader and desktop-feature
+  guard concepts. Existing packed RG8 VRAM was already suitable and was not
+  replaced.
+- Commits `4695d9cb3` and `78ef952db` add selectable desktop/GLES production
+  dialects, move profile selection before SDL window creation, validate the
+  ES 3 entry-point contract, and make pre-context shutdown idempotent.
+- The first exact macOS GLES launch exposed a post-failure exit 139. The final
+  exact build reports the missing Cocoa ANGLE/EGL runtime and exits cleanly
+  with status 1. CTest 14 now exercises two shutdowns before renderer init.
+- Exact clean `78ef952dbecc` passed 18/18 ordinary ARM64 tests in 0.70 seconds,
+  18/18 GLES-configured ARM64 tests in 0.70 seconds, 18/18 combined
+  ASan/UBSan tests in 5.00 seconds with no finding, and 18/18 optimized i686
+  tests in 2.98 seconds.
+- A thin ARM64 iOS Simulator executable linked UIKit and OpenGLES and embeds
+  GLSL ES 300 plus the SDL resolver. Its empty bundle metadata and unbound
+  ad-hoc linker signature keep install/launch/device acceptance open.
+- The exact desktop renderer still reported Apple M2 / OpenGL 4.1, compiled
+  all PSX shaders and VRAM pipelines, and opened CoreAudio. A local visual
+  check showed coherent presentation textures; no retail-derived screenshot
+  was tracked.
+- Signed desktop, macOS-GLES, iOS Simulator and sanitizer hashes are recorded
+  in `docs/parity/2026-07-31-shared-gles3-dialect-bringup.md`, along with the
+  rejected leak-detector, Docker-platform, asset-path and bundle-symlink
+  attempts.
+
+The checkpoint ran approximately 06:25–07:08 CDT. Goal elapsed advanced from
+144,159 to 146,335 active seconds and stood at 1 day, 16 hours, 38 minutes,
+55 seconds. The preserved alternate-loader verifier remained running,
+unpaused and not OOM-killed; it crossed frame 10,000, but its machine status
+file remained empty, so completion and mutation were not accepted.
+
 ## Current open path to the requested product
 
 1. Finish independent-process/mutation acceptance for the existing full
    cross-width trace.
 2. Close remaining macOS M6 runtime evidence, including broader audio
    listening, renderer, controller, and full-race manual-play coverage.
-3. Implement and validate the shared GLES 3 renderer.
+3. Continue live GLES 3 runtime, frame-capture, parity, and cadence validation
+   from the landed shared renderer dialect.
 4. Add the iOS/iPadOS lifecycle, sandbox, display pacing, audio, and controller
    application shell.
 5. Add document-picker import and persistent sandbox storage for the user's raw

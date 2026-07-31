@@ -757,7 +757,17 @@ build.
 
 ### M7 — Shared OpenGL ES 3 renderer
 
-**Status:** pending; research may overlap M2–M5; acceptance depends on M6
+**Status:** in progress; first shared-dialect compile slice landed; live GLES
+runtime/frame acceptance remains open and still depends on M6
+
+Checkpoint `78ef952dbecc` adds the explicit ES 3.0 / GLSL ES 300 production
+dialect, SDL proc loading, desktop-only feature guards, pre-context-safe
+cleanup, an exact dialect/lifecycle CTest, an iOS Simulator ARM64 compile/link
+probe, and clean 18/18 ordinary ARM64, sanitizer ARM64, GLES-configured ARM64,
+and optimized i686 gates. Desktop GL still initializes all PSX/VRAM shaders on
+Apple M2. The host lacks the ANGLE/EGL runtime required by SDL's Cocoa GLES
+backend, so no live GLES pixels or M7 acceptance are claimed. Full evidence is
+in `docs/parity/2026-07-31-shared-gles3-dialect-bringup.md`.
 
 Work:
 

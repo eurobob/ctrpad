@@ -8380,3 +8380,84 @@ origin/main: 95417c723518407d6bfe3c81a37606294963efe2
 ```
 
 No merge was attempted.
+
+## 2026-07-31 — First shared GLES 3 renderer dialect and failure-path hardening
+
+The newly populated `ref/CTR` and existing Android reference were reviewed
+before changing the renderer. `ref/ctr-native-android` was clean on
+`feature/add-android-support` at `34648097...`; its relevant renderer change
+was `a9c805a...`. The useful delta was smaller than the branch: select ES,
+emit GLSL ES 300, resolve through SDL, and guard unsupported desktop calls.
+The current tree already stored PSX VRAM as `GL_RG8` and had no
+`glGetTexImage`, so neither was reimplemented.
+
+SDL source inspection showed that Cocoa chooses its CGL versus EGL window
+setup during `SDL_CreateWindow`, while UIKit uses OpenGLES.framework. The
+renderer therefore sets context profile/major/minor before creating the
+window. No ANGLE `libEGL.dylib` was present locally. The checked-in glad
+loader recognizes the `OpenGL ES` version prefix and exposes the shared 3.0
+functions, so the ES path uses `gladLoadGLLoader(SDL_GL_GetProcAddress)` and
+then rejects an incomplete VAO/framebuffer/read/pixel-store contract.
+
+Commit `4695d9cb340d` added `CTR_NATIVE_RENDERER_GLES`, the explicit desktop
+and ES dialect descriptors, GLSL ES 300 precision headers, SDL proc loading,
+and guards for polygon mode, debug labels and GPU timer queries. It also added
+`--self-test-renderer-dialect` as test 14 of 18. A pre-commit ordinary build,
+GLES-configured build and corrected sanitizer build all passed 18/18. The
+first sanitizer invocation requested leak detection; Apple ASan declared that
+unsupported and aborted all tests, so it was rejected and repeated with leak
+detection disabled.
+
+The first bundle launch lacked its retail asset path and was rejected before
+renderer evidence. A temporary bundle `assets` symlink then invalidated the
+signature as unsealed content; it was immediately removed, after which strict
+deep signature verification passed again. The accepted runtime probes used
+ignored build-directory asset links only. No retail byte or capture was
+staged.
+
+The desktop production renderer reached Apple M2 / OpenGL 4.1 Metal 90.5,
+compiled all four PSX shader modes and both VRAM pipelines, and opened the
+44.1 kHz stereo CoreAudio stream. Visual inspection showed coherent SCEA and
+orange-crate/green-stream presentation textures. The temporary 92,914-byte
+JPEG hash is recorded in the detailed report but the retail-derived image was
+not tracked. That bounded probe was stopped with Ctrl-C, not reported as a UI
+close.
+
+The first exact macOS GLES dependency failure then exposed an exit 139 after
+SDL reported its missing OpenGL/GLES library. Shutdown was issuing unresolved
+GL deletion calls after SDL-only initialization, and `main` did not stop after
+failed platform setup. Commit `78ef952dbecc` introduced an API-ready cleanup
+guard, an immediate `Platform_IsInitialized()` check, and two pre-init
+shutdown calls in the dialect self-test. The exact rerun produced the same
+missing-EGL diagnostic but exited 1. LLDB independently observed exit 1 with
+no faulting stopped process.
+
+Every producer was rebuilt from clean `78ef952dbecc`. Ordinary ARM64 and the
+macOS GLES configuration each passed 18/18 in 0.70 seconds; ASan/UBSan passed
+18/18 in 5.00 seconds with no finding; optimized Linux i686 passed 18/18 in
+2.98 seconds. The first Docker attempt incorrectly selected `linux/386` for
+the amd64 multilib builder and exited 125 after a rejected registry pull. The
+correct pinned amd64 builder produced an ELF32 Intel 80386 executable with
+four established warnings. Exact hashes, warning counts and GNU build ID are
+in `docs/parity/2026-07-31-shared-gles3-dialect-bringup.md`.
+
+The iPhone Simulator SDK compiled and linked a thin ARM64 executable with
+UIKit, OpenGLES, Foundation and AVFoundation. Strings confirmed clean build
+ID `78ef952dbecc`, `#version 300 es`, `sdl-proc`, and the pre-init-safe test.
+Its generated plist has empty identifier/name/version fields. The binary is
+only ad-hoc linker-signed, has no team, does not bind the plist, seals no
+resources, and fails strict signature verification. It is compile/link
+evidence, not a launchable M8 bundle.
+
+M7 is now in progress, not accepted. Live GLES pixels, representative CLUT /
+mask / transparency / feedback comparisons, state parity and cadence remain
+open. M8 metadata, lifecycle, signing, Simulator/device execution and all
+later import/touch work also remain open.
+
+The checkpoint ran approximately 06:25–07:08 CDT. Goal active time advanced
+from 144,159 to 146,335 seconds, ending at 1 day, 16 hours, 38 minutes,
+55 seconds. The independent protected i686 alternate-loader verifier was not
+modified. Docker still reported running, unpaused and not OOM-killed; playback
+2 crossed frame 10,000 at its fifth fixed window (1.47 FPS), while the
+machine-owned status file remained empty. No completion, exit-zero, layout or
+mutation result is inferred.
