@@ -226,6 +226,11 @@ static int NativeArg_IsStorageSelfTest(const char *arg)
 	return (arg != NULL) && (strcmp(arg, "--self-test-storage") == 0);
 }
 
+static int NativeArg_IsMemcardAtomicWriteSelfTest(const char *arg)
+{
+	return (arg != NULL) && (strcmp(arg, "--self-test-memcard-atomic-write") == 0);
+}
+
 static int NativeArg_IsCheckpointPointerValidationSelfTest(const char *arg)
 {
 	return (arg != NULL) && (strcmp(arg, "--self-test-checkpoint-pointer-validation") == 0);
@@ -559,6 +564,10 @@ int main(int argc, char *argv[])
 		if (NativeArg_IsStorageSelfTest(argv[argIndex]))
 		{
 			return NativeStorage_RunSelfTest();
+		}
+		if (NativeArg_IsMemcardAtomicWriteSelfTest(argv[argIndex]))
+		{
+			return NativeMemcard_RunAtomicWriteSelfTest();
 		}
 		if (NativeArg_IsCheckpointPointerValidationSelfTest(argv[argIndex]))
 		{

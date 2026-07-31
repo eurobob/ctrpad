@@ -7,13 +7,20 @@
 #include <errno.h>
 #if defined(_WIN32)
 #include "platform/native_win32.h"
+#include <io.h>
 #else
 #include <dirent.h>
+#include <fcntl.h>
 #include <sys/stat.h>
 #include <unistd.h>
 #endif
 #include <stdio.h>
 #include <string.h>
+
+#if !defined(_WIN32)
+/* Strict C17 libc headers can hide this POSIX declaration. */
+extern int fileno(FILE *stream);
+#endif
 
 #define NATIVE_MEMCARD_MAX_FOUND_FILES 64
 #define NATIVE_MEMCARD_MAX_NAME        64
@@ -237,6 +244,72 @@ internal const char *NativeMemcard_PathFromDeviceName(const char *save_name, int
 		s_memcardResolvedPath[0] = '\0';
 	}
 	return s_memcardResolvedPath;
+}
+
+internal int NativeMemcard_BuildTemporaryPath(char *dst, int dst_size, const char *path)
+{
+	const char *slash;
+	int prefix_length;
+	int written;
+
+	if ((dst == NULL) || (dst_size <= 0) || (path == NULL) || (path[0] == '\0'))
+	{
+		return 0;
+	}
+
+	slash = strrchr(path, '/');
+	if (slash == NULL)
+	{
+		written = snprintf(dst, (size_t)dst_size, ".ctrpad-%s.tmp", path);
+		return (written >= 0) && (written < dst_size);
+	}
+
+	prefix_length = (int)(slash - path) + 1;
+	if (prefix_length >= dst_size)
+	{
+		return 0;
+	}
+
+	memcpy(dst, path, (size_t)prefix_length);
+	written = snprintf(dst + prefix_length, (size_t)(dst_size - prefix_length), ".ctrpad-%s.tmp", slash + 1);
+	return (written >= 0) && (written < dst_size - prefix_length);
+}
+
+internal int NativeMemcard_FlushFile(FILE *file)
+{
+	if ((file == NULL) || (fflush(file) != 0))
+	{
+		return 0;
+	}
+
+#if defined(_WIN32)
+	return _commit(_fileno(file)) == 0;
+#else
+	{
+		int fileDescriptor = fileno(file);
+
+		if (fileDescriptor < 0)
+		{
+			return 0;
+		}
+#if defined(__APPLE__) && defined(F_FULLFSYNC)
+		if (fcntl(fileDescriptor, F_FULLFSYNC) == 0)
+		{
+			return 1;
+		}
+#endif
+		return fsync(fileDescriptor) == 0;
+	}
+#endif
+}
+
+internal int NativeMemcard_ReplaceFile(const char *temporary_path, const char *path)
+{
+#if defined(_WIN32)
+	return MoveFileExA(temporary_path, path, MOVEFILE_REPLACE_EXISTING | MOVEFILE_WRITE_THROUGH) != 0;
+#else
+	return rename(temporary_path, path) == 0;
+#endif
 }
 
 internal enum NativeMemcardResult NativeMemcard_CopyFile(const char *src_path, const char *dst_path)
@@ -816,24 +889,138 @@ enum NativeMemcardResult NativeMemcard_ReadSaveData(const char *save_name, unsig
 enum NativeMemcardResult NativeMemcard_WriteSaveData(const char *save_name, const void *icon, int icon_byte_count, const unsigned char *src, int byte_count)
 {
 	const char *path = NativeMemcard_PathFromDeviceName(save_name, 1);
+	char temporary_path[NATIVE_MEMCARD_MAX_PATH];
 	FILE *file;
 	size_t wrote_icon;
 	size_t wrote_data;
+	int write_ok;
 
-	file = fopen(path, "wb");
+	if ((path == NULL) || (path[0] == '\0') || (icon_byte_count < 0) || (byte_count < 0) ||
+	    ((icon_byte_count != 0) && (icon == NULL)) || ((byte_count != 0) && (src == NULL)) ||
+	    !NativeMemcard_BuildTemporaryPath(temporary_path, sizeof(temporary_path), path))
+	{
+		return NATIVE_MEMCARD_IO_ERROR;
+	}
+
+	file = fopen(temporary_path, "wb");
 	if (file == NULL)
 	{
 		return NATIVE_MEMCARD_OPEN_FAILED;
 	}
 
-	wrote_icon = fwrite(icon, 1, icon_byte_count, file);
-	wrote_data = fwrite(src, 1, byte_count, file);
-	fclose(file);
-
-	if ((wrote_icon != (size_t)icon_byte_count) || (wrote_data != (size_t)byte_count))
+	wrote_icon = (icon_byte_count == 0) ? 0 : fwrite(icon, 1, icon_byte_count, file);
+	wrote_data = (byte_count == 0) ? 0 : fwrite(src, 1, byte_count, file);
+	write_ok = (wrote_icon == (size_t)icon_byte_count) && (wrote_data == (size_t)byte_count) && NativeMemcard_FlushFile(file);
+	if (fclose(file) != 0)
 	{
+		write_ok = 0;
+	}
+	if (!write_ok)
+	{
+		remove(temporary_path);
+		return NATIVE_MEMCARD_IO_ERROR;
+	}
+	if (!NativeMemcard_ReplaceFile(temporary_path, path))
+	{
+		remove(temporary_path);
 		return NATIVE_MEMCARD_IO_ERROR;
 	}
 
 	return NATIVE_MEMCARD_OK;
+}
+
+int NativeMemcard_RunAtomicWriteSelfTest(void)
+{
+	static const char *saveName = "bu00:BASCUS-94426-SLOTS";
+	unsigned char icon[0x100];
+	unsigned char firstPayload[64];
+	unsigned char secondPayload[64];
+	unsigned char readback[64];
+	char rootName[96];
+	char rootPath[NATIVE_MEMCARD_MAX_PATH] = {0};
+	char finalPath[NATIVE_MEMCARD_MAX_PATH] = {0};
+	char temporaryPath[NATIVE_MEMCARD_MAX_PATH] = {0};
+	const char *temporaryBase = ".";
+	const char *failure = NULL;
+	int i;
+
+	for (i = 0; i < (int)sizeof(icon); i++)
+	{
+		icon[i] = (unsigned char)(i ^ 0xa5);
+	}
+	for (i = 0; i < (int)sizeof(firstPayload); i++)
+	{
+		firstPayload[i] = (unsigned char)(i * 3 + 1);
+		secondPayload[i] = (unsigned char)(0xf0 - i * 2);
+	}
+
+	snprintf(rootName, sizeof(rootName), "ctrpad-memcard-atomic-selftest");
+	if (!NativeMemcard_JoinPath(rootPath, sizeof(rootPath), temporaryBase, rootName))
+	{
+		failure = "root-path";
+		goto cleanup;
+	}
+	NativeMemcard_RemoveRoot(rootPath);
+	if (NativeMemcard_SetRoot(rootPath) != NATIVE_MEMCARD_OK)
+	{
+		failure = "set-root";
+		goto cleanup;
+	}
+
+	if (NativeMemcard_WriteSaveData(saveName, icon, sizeof(icon), firstPayload, sizeof(firstPayload)) != NATIVE_MEMCARD_OK ||
+	    NativeMemcard_ReadSaveData(saveName, readback, sizeof(readback), sizeof(icon)) != NATIVE_MEMCARD_OK ||
+	    (memcmp(readback, firstPayload, sizeof(readback)) != 0))
+	{
+		failure = "initial-write";
+		goto cleanup;
+	}
+	if (NativeMemcard_WriteSaveData(saveName, icon, sizeof(icon), secondPayload, sizeof(secondPayload)) != NATIVE_MEMCARD_OK ||
+	    NativeMemcard_ReadSaveData(saveName, readback, sizeof(readback), sizeof(icon)) != NATIVE_MEMCARD_OK ||
+	    (memcmp(readback, secondPayload, sizeof(readback)) != 0))
+	{
+		failure = "atomic-replace";
+		goto cleanup;
+	}
+
+	if (!NativeMemcard_CopyString(finalPath, sizeof(finalPath), NativeMemcard_PathFromDeviceName(saveName, 0)) ||
+	    !NativeMemcard_BuildTemporaryPath(temporaryPath, sizeof(temporaryPath), finalPath) || NativeMemcard_PathExists(temporaryPath))
+	{
+		failure = "temporary-cleanup";
+		goto cleanup;
+	}
+	if (!NativeMemcard_MakeDir(temporaryPath))
+	{
+		failure = "failure-fixture";
+		goto cleanup;
+	}
+	if (NativeMemcard_WriteSaveData(saveName, icon, sizeof(icon), firstPayload, sizeof(firstPayload)) != NATIVE_MEMCARD_OPEN_FAILED ||
+	    NativeMemcard_ReadSaveData(saveName, readback, sizeof(readback), sizeof(icon)) != NATIVE_MEMCARD_OK ||
+	    (memcmp(readback, secondPayload, sizeof(readback)) != 0))
+	{
+		failure = "failure-preservation";
+		goto cleanup;
+	}
+	if (NativeMemcard_RemoveRoot(temporaryPath) != NATIVE_MEMCARD_OK ||
+	    NativeMemcard_WriteSaveData(saveName, icon, sizeof(icon), firstPayload, sizeof(firstPayload)) != NATIVE_MEMCARD_OK ||
+	    NativeMemcard_ReadSaveData(saveName, readback, sizeof(readback), sizeof(icon)) != NATIVE_MEMCARD_OK ||
+	    (memcmp(readback, firstPayload, sizeof(readback)) != 0) || NativeMemcard_PathExists(temporaryPath))
+	{
+		failure = "retry";
+		goto cleanup;
+	}
+
+cleanup:
+	NativeMemcard_ClearRoot();
+	if ((rootPath[0] != '\0') && (NativeMemcard_RemoveRoot(rootPath) != NATIVE_MEMCARD_OK) && (failure == NULL))
+	{
+		failure = "root-cleanup";
+	}
+	if (failure != NULL)
+	{
+		fprintf(stderr, "[CTR Memcard] atomic-write self-test failed: %s\n", failure);
+		return 1;
+	}
+
+	printf("[CTR Memcard] atomic-write self-test passed: write=flushed replace=atomic failure=preserves-existing temp=clean retry=checked\n");
+	return 0;
 }

@@ -304,6 +304,10 @@ if(BUILD_TESTING)
     set_tests_properties(ctr_native_storage PROPERTIES PASS_REGULAR_EXPRESSION
         "^\\[CTR Storage\\] self-test passed: bundle=read-only preferences=private documents=user-visible imports=preferred desktop=portable"
     )
+    add_test(NAME ctr_native_memcard_atomic_write COMMAND $<TARGET_FILE:ctr_native> --self-test-memcard-atomic-write)
+    set_tests_properties(ctr_native_memcard_atomic_write PROPERTIES PASS_REGULAR_EXPRESSION
+        "^\\[CTR Memcard\\] atomic-write self-test passed: write=flushed replace=atomic failure=preserves-existing temp=clean retry=checked"
+    )
     add_test(NAME ctr_native_checkpoint_pointer_validation COMMAND $<TARGET_FILE:ctr_native> --self-test-checkpoint-pointer-validation)
     set_tests_properties(ctr_native_checkpoint_pointer_validation PROPERTIES PASS_REGULAR_EXPRESSION
         "^\\[CTR State\\] pointer-validation self-test passed: scalar=ignored relocated=reversion-checked overlap-idempotence=checked pool-allocation=free-list-complement camera-quad=checked"
