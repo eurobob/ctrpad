@@ -6083,3 +6083,46 @@ This verifies the source correction and cross-width layout guard. It does not
 retroactively make reports `ctr-170507` and `ctr-223323` match. M6 remains
 open until clean committed producers regenerate the full trace and all eight
 required components match for all 24,232 frames.
+
+### Typed-emitter GitHub publication checkpoint
+
+The correction, regression test, roadmap, parity report, and chronological
+record were committed and pushed as:
+
+```text
+77d230a0f331675f7d05f79fbe495a61987493a7
+fix: preserve potion emitter layout across widths
+```
+
+The first `gh pr view 1` audit omitted `--repo`. Because this checkout has
+both `origin` and `upstream`, GitHub CLI resolved the number against
+`CTR-tools/ctr-native` and returned that project's unrelated closed PR #1.
+That result was rejected immediately; it says nothing about CTRPad.
+
+The corrected repository-pinned audit used:
+
+```sh
+gh pr view 1 --repo chrissotraidis/ctrpad \
+  --json number,state,isDraft,baseRefName,headRefName,headRefOid,url,title
+```
+
+It and independent Git refs agreed:
+
+```text
+local HEAD:
+  77d230a0f331675f7d05f79fbe495a61987493a7
+origin/codex/arm64-apple:
+  77d230a0f331675f7d05f79fbe495a61987493a7
+draft PR #1 head:
+  77d230a0f331675f7d05f79fbe495a61987493a7
+PR:
+  https://github.com/chrissotraidis/ctrpad/pull/1
+state/base/head:
+  OPEN draft / main / codex/arm64-apple
+origin/main:
+  95417c723518407d6bfe3c81a37606294963efe2
+```
+
+The work is therefore backed up on GitHub and reviewable in the draft PR. It
+is still deliberately not merged into `main` while full post-fix parity
+regeneration remains pending.
