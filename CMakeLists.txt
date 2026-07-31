@@ -119,6 +119,17 @@ if(CTR_NATIVE_MACOS_BUNDLE OR IOS)
 endif()
 
 add_executable(ctr_native ${CTR_NATIVE_EXECUTABLE_OPTIONS} main.c)
+if(CTR_NATIVE_MACOS_BUNDLE OR IOS)
+    set(CTR_NATIVE_DISTRIBUTION_RESOURCES
+        "${CMAKE_SOURCE_DIR}/LICENSE"
+        "${CMAKE_SOURCE_DIR}/THIRD_PARTY_NOTICES.md"
+        "${CMAKE_SOURCE_DIR}/docs/INSTALL-IOS.md"
+    )
+    set_source_files_properties(${CTR_NATIVE_DISTRIBUTION_RESOURCES} PROPERTIES
+        MACOSX_PACKAGE_LOCATION "Resources"
+    )
+    target_sources(ctr_native PRIVATE ${CTR_NATIVE_DISTRIBUTION_RESOURCES})
+endif()
 if(IOS)
     target_sources(ctr_native PRIVATE
         platform/apple/native_ios_import.m
