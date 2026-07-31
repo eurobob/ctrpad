@@ -1,6 +1,8 @@
 #define _CRT_SECURE_NO_WARNINGS
 #define SDL_MAIN_HANDLED
 
+#include <errno.h>
+#include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -216,8 +218,36 @@ static int NativeArg_IsCutsceneParticleEmitterLayoutSelfTest(const char *arg)
 	return (arg != NULL) && (strcmp(arg, "--self-test-cutscene-particle-emitter-layout") == 0);
 }
 
+static int NativeArg_IsScrapbookSTRProbe(const char *arg)
+{
+	return (arg != NULL) && (strcmp(arg, "--probe-str-scrapbook") == 0);
+}
+
+static int NativeArg_ParseScrapbookSTRProbeFrames(const char *text, s32 *frameCount)
+{
+	char *end = NULL;
+	long value;
+
+	if ((text == NULL) || (text[0] == '\0') || (frameCount == NULL))
+	{
+		return 0;
+	}
+
+	errno = 0;
+	value = strtol(text, &end, 10);
+	if ((errno != 0) || (end == text) || (*end != '\0') || (value <= 0) || (value > INT_MAX))
+	{
+		return 0;
+	}
+
+	*frameCount = (s32)value;
+	return 1;
+}
+
 int main(int argc, char *argv[])
 {
+	s32 scrapbookSTRProbeFrames = 0;
+
 	for (int argIndex = 1; argIndex < argc; argIndex++)
 	{
 		if (NativeArg_IsVersion(argv[argIndex]))
@@ -285,6 +315,16 @@ int main(int argc, char *argv[])
 		{
 			return OVR233_RunParticleEmitterLayoutSelfTest();
 		}
+		if (NativeArg_IsScrapbookSTRProbe(argv[argIndex]))
+		{
+			if ((scrapbookSTRProbeFrames != 0) || (argIndex + 1 >= argc) ||
+			    !NativeArg_ParseScrapbookSTRProbeFrames(argv[argIndex + 1], &scrapbookSTRProbeFrames))
+			{
+				fprintf(stderr, "[CTR STR] --probe-str-scrapbook requires one positive frame count\n");
+				return 1;
+			}
+			argIndex++;
+		}
 	}
 
 	printf("[CTR Native] Starting...\n");
@@ -319,6 +359,11 @@ int main(int argc, char *argv[])
 	if (!NativeAssets_Validate())
 	{
 		return NativeConsole_Return(1);
+	}
+
+	if (scrapbookSTRProbeFrames != 0)
+	{
+		return NativeConsole_Return((u32)NativeSTR_RunScrapbookProbe(scrapbookSTRProbeFrames));
 	}
 
 #if defined(CTR_INTERNAL)

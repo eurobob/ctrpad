@@ -7,5 +7,6 @@ s32 NativeSTR_StartTrackPreviewFromBigfileSector(s32 bigfileSector, s32 frameCou
 s32 NativeSTR_StartScrapbook(void);
 void NativeSTR_Stop(void);
 s32 NativeSTR_UploadNextFrame(s32 dstX, s32 dstY);
+s32 NativeSTR_RunScrapbookProbe(s32 frameCount);
 
 #endif

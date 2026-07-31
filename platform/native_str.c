@@ -24,6 +24,8 @@
 #define NATIVE_STR_END_OF_BLOCK             0xfe00u
 #define NATIVE_STR_IDCT_SHIFT               14
 #define NATIVE_STR_IDCT_SCALE               (1 << NATIVE_STR_IDCT_SHIFT)
+#define NATIVE_STR_FNV1A64_OFFSET            0xcbf29ce484222325ull
+#define NATIVE_STR_FNV1A64_PRIME             0x100000001b3ull
 #define NATIVE_STR_SCRAPBOOK_PATH           "TEST.STR"
 #define NATIVE_STR_SCRAPBOOK_FRAME_COUNT    0x1148
 
@@ -89,6 +91,38 @@ struct NativeSTRAcGroup
 };
 
 global_variable struct NativeSTRState s_str;
+
+internal u64 NativeSTR_Fnv1a64Byte(u64 hash, u8 value)
+{
+	return (hash ^ value) * NATIVE_STR_FNV1A64_PRIME;
+}
+
+internal u64 NativeSTR_Fnv1a64LE32(u64 hash, u32 value)
+{
+	hash = NativeSTR_Fnv1a64Byte(hash, (u8)(value >> 0));
+	hash = NativeSTR_Fnv1a64Byte(hash, (u8)(value >> 8));
+	hash = NativeSTR_Fnv1a64Byte(hash, (u8)(value >> 16));
+	hash = NativeSTR_Fnv1a64Byte(hash, (u8)(value >> 24));
+	return hash;
+}
+
+internal u64 NativeSTR_HashDecodedFrame(void)
+{
+	u64 hash = NATIVE_STR_FNV1A64_OFFSET;
+	s32 pixelCount = s_str.width * s_str.height;
+	s32 i;
+
+	hash = NativeSTR_Fnv1a64LE32(hash, (u32)s_str.width);
+	hash = NativeSTR_Fnv1a64LE32(hash, (u32)s_str.height);
+	for (i = 0; i < pixelCount; i++)
+	{
+		u16 pixel = s_str.rgb555[i];
+		hash = NativeSTR_Fnv1a64Byte(hash, (u8)(pixel >> 0));
+		hash = NativeSTR_Fnv1a64Byte(hash, (u8)(pixel >> 8));
+	}
+
+	return hash;
+}
 
 // NOTE(aalhendi): MDEC tables and BS v1/v2/v3 Huffman groups are transcribed
 // from psx-spx's documented PS1 MDEC/STR format.
@@ -847,4 +881,55 @@ s32 NativeSTR_UploadNextFrame(s32 dstX, s32 dstY)
 	// the host VRAM texture at that boundary.
 	NativeRenderer_UpdateVRAM();
 	return 1;
+}
+
+s32 NativeSTR_RunScrapbookProbe(s32 frameCount)
+{
+	u64 sequenceHash = NATIVE_STR_FNV1A64_OFFSET;
+	s32 probeFrame;
+
+	if ((frameCount <= 0) || (frameCount > NATIVE_STR_SCRAPBOOK_FRAME_COUNT))
+	{
+		fprintf(stderr, "[CTR STR] scrapbook probe frame count must be between 1 and %d\n", NATIVE_STR_SCRAPBOOK_FRAME_COUNT);
+		return 1;
+	}
+
+	if (NativeSTR_StartScrapbook() == 0)
+	{
+		fprintf(stderr, "[CTR STR] scrapbook probe could not open %s\n", NATIVE_STR_SCRAPBOOK_PATH);
+		return 1;
+	}
+
+	for (probeFrame = 0; probeFrame < frameCount; probeFrame++)
+	{
+		u64 frameHash;
+
+		if (NativeSTR_ReadNextFrame() == 0)
+		{
+			fprintf(stderr, "[CTR STR] scrapbook probe could not read frame %d\n", probeFrame);
+			NativeSTR_Stop();
+			return 1;
+		}
+		if (NativeSTR_DecodeFrame() == 0)
+		{
+			fprintf(stderr, "[CTR STR] scrapbook probe could not decode frame %d\n", probeFrame);
+			NativeSTR_Stop();
+			return 1;
+		}
+
+		frameHash = NativeSTR_HashDecodedFrame();
+		sequenceHash = NativeSTR_Fnv1a64LE32(sequenceHash, (u32)probeFrame);
+		sequenceHash = NativeSTR_Fnv1a64LE32(sequenceHash, (u32)s_str.width);
+		sequenceHash = NativeSTR_Fnv1a64LE32(sequenceHash, (u32)s_str.height);
+		sequenceHash = NativeSTR_Fnv1a64LE32(sequenceHash, (u32)(frameHash >> 0));
+		sequenceHash = NativeSTR_Fnv1a64LE32(sequenceHash, (u32)(frameHash >> 32));
+
+		printf("[CTR STR] scrapbook probe frame=%d source-frame=%d width=%d height=%d rgb555-fnv1a64=%08x%08x\n", probeFrame,
+		       s_str.frameIndex - 1, s_str.width, s_str.height, (u32)(frameHash >> 32), (u32)frameHash);
+	}
+
+	NativeSTR_Stop();
+	printf("[CTR STR] scrapbook probe passed: frames=%d sequence-fnv1a64=%08x%08x\n", frameCount, (u32)(sequenceHash >> 32),
+	       (u32)sequenceHash);
+	return 0;
 }
