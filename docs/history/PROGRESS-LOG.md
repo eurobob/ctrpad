@@ -577,6 +577,46 @@ transition at frame 21,331. The process has not emitted the 24,232-frame
 completion line, its machine-captured exit-status file is still empty, and
 playback 2/mutation remain unaccepted.
 
+### 2026-07-31 — Controller ownership and virtual hotplug coverage
+
+**Outcome at the 05:18 CDT checkpoint**
+
+- Read-only input review found that controller mappings were queried and
+  preserved but never claimed on successful SDL open or released on close.
+  A duplicate add could open one device twice, and removal could leave a
+  ghost handle.
+- Commit `2f9bf4eaedd1` claims the resolved joystick instance ID only after
+  open succeeds and clears the slot to `-1` on close.
+- The media-free input test attaches an SDL virtual standardized gamepad and
+  verifies buttons, four analog bytes, exact rumble magnitudes, duplicate-add
+  suppression, removal, and same-slot reconnect through the production path.
+- The exact signed ARM64 app and combined ASan/UBSan build both pass all
+  16 tests. The targeted sanitizer input test passed in 1.27 seconds and the
+  complete sanitizer suite in 2.24 seconds with no finding.
+- The exact app embeds `2f9bf4eaedd1`, is a valid signed thin-ARM64 bundle,
+  and has executable SHA-256
+  `0f23ce4c8c8770caddda4c32d28e84ad6fd0c614c20514dea343cb31ca0967c1`.
+- The source checkpoint was pushed to `origin/codex/arm64-apple`; draft PR #1
+  remains open and unmerged.
+
+The first disposable i686 compile exposed two new signed/unsigned warnings in
+test-only comparisons against SDL's unsigned joystick ID. They were corrected
+in local follow-up commit `764205d4c`; final cross-width rebuilding is still
+underway and is not yet claimed here. CMake configured the disposable i686
+tree in 590.4 seconds from a read-only source mount and confirmed SDL's
+virtual-joystick backend plus a 32-bit target.
+
+The preserved parity verifier independently completed unchanged direct-loader
+playback 1 at all 24,232 frames and entered alternate-loader playback 2.
+Playback 2 crossed its first durable 2,000-frame marker at 2.26 FPS, with
+driver 0 active at frame 1,711. Docker still reported running, unpaused, and
+not OOM-killed. Playback 2, its captured container exit, and the deliberate
+mutation remain unaccepted.
+
+The goal API reported cumulative elapsed 1 day, 14 hours, 48 minutes,
+56 seconds at 05:18:22 CDT. This product timer is recorded for transparency;
+it is not a labor estimate or benchmark.
+
 ## Current open path to the requested product
 
 1. Finish independent-process/mutation acceptance for the existing full

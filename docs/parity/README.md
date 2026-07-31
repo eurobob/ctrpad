@@ -34,6 +34,9 @@ Current evidence and procedures:
 - `2026-07-31-macos-arm64-keyboard-tap.md` records the missing quick-tap root
   cause, one-snapshot press-edge transport, direct live PSX packet trace, and
   exact-commit ARM64/sanitizer/i686 validation.
+- `2026-07-31-macos-arm64-controller-hotplug.md` records controller-slot
+  ownership, duplicate-add/removal/reconnect coverage, standardized
+  button/axis translation, and rumble through an SDL virtual gamepad.
 - `2026-07-31-full-cross-width-acceptance.md` records the first complete clean
   same-commit ARM64/i686 all-eight-component match and its exact report,
   process, transport, save, and hash evidence.

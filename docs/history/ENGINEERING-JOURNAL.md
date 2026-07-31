@@ -8020,3 +8020,118 @@ not OOM-killed. Its playback-1 log has durable 2,000-frame markers through
 frame 22,000 and a driver-inactive event at frame 21,331. The 24,232-frame
 finish line and machine-captured exit status are still absent; playback 2 and
 mutation have not begun and remain unaccepted.
+
+## 2026-07-31 — Made controller slots own their SDL instances
+
+### Audited the existing path before changing it
+
+After the keyboard aliases were committed, the desktop input path was read
+from initialization through hotplug, slot cycling, state capture/restore,
+snapshot generation, and vibration. `s_controllerToSlotMapping` already had a
+four-slot `-1` initializer and was swapped, captured, restored, and searched.
+It was not written by `NativeInput_OpenController` and was not cleared by
+`NativeInput_CloseController`.
+
+That made this concrete duplicate-event sequence possible:
+
+1. SDL instance A opens slot 0, but slot 0's mapping remains `-1`;
+2. another add for instance A cannot find an owned mapping;
+3. slot 0 is occupied, so the free-slot search chooses slot 1;
+4. the same instance opens a second handle in slot 1; and
+5. one remove event closes the first matching handle and returns, leaving the
+   second handle live as a ghost controller.
+
+The correction writes the resolved ID returned by the opened gamepad's
+joystick into the selected slot. Close resets both the controller's
+`instanceId` and the slot mapping. A failed open still claims nothing.
+
+### Added a real virtual-device integration test
+
+The self-test initializes SDL's gamepad subsystem and attaches a virtual
+standardized gamepad with all standard buttons/axes and a rumble callback. It
+then invokes the same public hotplug functions used by host events.
+
+The proof requires one open handle after two identical add events. It drives
+South, right shoulder, right trigger, left X, and right Y, pumps the virtual
+joystick state, and applies the production controller-to-PS1 snapshot mapper.
+The exact result is:
+
+```text
+buttons=0xb5ff
+rightX=0x80 rightY=0xff leftX=0x00 leftY=0x80
+rumble input=40 80 callback low=32640 high=16320 calls=1
+```
+
+Removal must leave the controller null and mapping `-1`; reconnect must reopen
+the released slot. The public test marker is:
+
+```text
+virtual-gamepad=buttons+axes+rumble+hotplug
+```
+
+This deliberately does not claim a physical wireless/USB device, a complete
+race, or an iOS controller route.
+
+### Exact ARM64 and sanitizer checks
+
+Functional commit `2f9bf4eaedd1ca6c781a9654f9851687b4c7fc18` was created at
+04:54:36 CDT. The signed app executable followed at 04:55:57 and reports:
+
+```text
+CTR Native 0.1.0-beta.7.1 (2f9bf4eaedd1)
+SHA-256 0f23ce4c8c8770caddda4c32d28e84ad6fd0c614c20514dea343cb31ca0967c1
+Mach-O 64-bit executable arm64
+```
+
+It passed 16/16 CTests, strict deep signature verification, and plist lint.
+A later fresh rerun passed the same 16 tests in 0.70 seconds.
+
+The combined ASan/UBSan executable was written at 05:00:36, reports the same
+exact build ID, and has SHA-256
+`4be53768ba67f9e6d38bb677146e9bf1b24481cf406afe5565bb9abb0025ecad`.
+The verbose controller test passed in 1.27 seconds. All 16 tests then passed in
+2.24 seconds with leak detection disabled and both sanitizers configured to
+halt on the first finding. No finding occurred.
+
+The source commit was pushed from `df17f4643` through `2f9bf4eae` on
+`origin/codex/arm64-apple`. Draft PR #1 remained open, draft, cleanly
+mergeable, and unmerged. `origin/main` remained `95417c723518`.
+
+### Rejected new i686 warnings instead of normalizing them
+
+A new disposable build tree was created at:
+
+```text
+/private/tmp/ctrpad-i686-controller-gXAeRV
+```
+
+The pinned `ctrpad-linux-i686:ubuntu-24.04` image mounted the repository
+read-only at `/src` and the disposable tree read/write at `/out`. Release,
+testing, `-m32` compile flags, and `-m32` link flags matched the established
+i686 procedure. Configuration took 590.4 seconds under ARM-host emulation and
+reported `64-bit: FALSE` plus the SDL virtual joystick backend.
+
+The first unity compile repeated established format and maybe-uninitialized
+warnings but also produced two new sign-comparison warnings in the virtual
+test. `SDL_JoystickID` is unsigned while the historical mapping snapshot is
+signed. Comparing by accidental integer promotion was rejected. Both test
+comparisons now cast the stored mapping bits to `SDL_JoystickID`; local commit
+`764205d4c` contains only those two type-explicit comparisons. The ongoing
+disposable compile will retain its completed SDL objects, then reconfigure and
+rebuild the unity object from the final clean commit. No i686 pass is claimed
+until that occurs.
+
+### Concurrent long-verifier state
+
+The unrelated preserved i686 acceptance container was never restarted,
+paused, or modified. Its direct-loader playback completed all 24,232 frames
+at 04:48:06 CDT and the scripted alternate-loader playback began immediately.
+At the recorded checkpoint, Docker showed the qemu-i386 process using about
+522% CPU and no pause or OOM. `playback-2.log` contained the first 2,000-frame
+FPS marker at 2.26 FPS and the expected frame-1,711 driver activation. The
+machine-owned exit-status file remained empty. Alternate playback, exit 0,
+raw-layout separation, and mutation detection therefore remain open.
+
+At 05:18:22 CDT, the goal API reported 139,736 elapsed seconds: 1 day,
+14 hours, 48 minutes, 56 seconds. It is recorded as cumulative product-task
+time, not continuous labor or a performance measurement.

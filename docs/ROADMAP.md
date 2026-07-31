@@ -420,7 +420,7 @@ complete. Both observed cross-width emitter defects are corrected, the clean
 ARM64 report matches the prior i686 trajectory across all 24,232 frames, and a
 fresh current-build version-4 report structurally reaches `lapIndex=1`.
 Independent i686 repeatability/mutation, broad audio listening, and complete
-manual play remain open.
+manual play with physical controllers remain open.
 
 Result so far:
 
@@ -668,6 +668,16 @@ Result so far:
   app passed 16/16 and visibly accepted `K`, `S`, and `W` through normal boot
   and main-menu navigation. Full-race keyboard and controller play remain
   open.
+- SDL controller slots now record the resolved joystick instance ID after a
+  successful open and return the mapping to `-1` on close. This prevents a
+  duplicate add from opening one device in two slots and prevents removal
+  from leaving a second ghost handle. A virtual standardized gamepad drives
+  the production add/snapshot/rumble/remove/reconnect path and proves
+  active-low buttons `0xb5ff`, analog bytes `80 ff 00 80`, exact low/high
+  rumble magnitudes, one-handle duplicate-add behavior, and slot reuse. Exact
+  ARM64 Release and ASan/UBSan builds pass 16/16; physical MFi/Bluetooth/USB
+  hardware and full-race play remain open. Evidence is in
+  `docs/parity/2026-07-31-macos-arm64-controller-hotplug.md`.
 - A headless retail scrapbook probe now reads `TEST.STR` through the production
   disc-image path and hashes decoded RGB555 output without renderer startup.
   ARM64 and optimized i686 produce identical dimensions and hashes for the
@@ -706,9 +716,9 @@ Result so far:
 
 Work:
 
-- Validate full-range audio mix/reverb/XA listening, broader desktop renderer
-  and full-race manual keyboard play, MFi/Bluetooth controller, replays, and
-  savestates.
+- Validate full-range audio mix/reverb/XA listening, broader desktop renderer,
+  full-race manual keyboard play, physical MFi/Bluetooth/USB controllers,
+  replays, and savestates.
 - Run sanitizers and the full parity gate under Apple Clang.
 - Run the two unchanged i686 processes and deliberate-mutation gate against
   finalized all-eight-match report `ctr-025812`. The verifier accepts an
