@@ -673,10 +673,15 @@ Result so far:
   shader, portable RGBA framebuffer readback, and BMP output. Three runs
   produced identical presented sequence hash `e85a9203c966c801` and
   byte-identical frame-9 BMP; visual inspection shows the coherent Naughty Dog
-  scrapbook title. Exact results are in
-  `docs/parity/2026-07-31-scrapbook-str-presentation.md`. Sanitizer, complete
-  movie coverage, real-menu cadence, and audio/video synchronization remain
-  open.
+  scrapbook title. ASan/UBSan then exposed undefined null-member OpenGL
+  attribute offsets. Commit `75b09db17d1c` replaces them with pinned
+  `offsetof` values. Its exact clean Release and sanitizer builds each pass
+  16/16 tests and reproduce the same ten decoded/presented hashes and
+  byte-identical BMP. The renderer sanitizer run disables SDL HID enumeration
+  to avoid a separately documented Apple CoreGraphics ASan fault; the
+  sanitized input CTest still passes. Exact results and every rejected run are
+  in `docs/parity/2026-07-31-scrapbook-str-presentation.md`. Complete movie
+  coverage, real-menu cadence, and audio/video synchronization remain open.
 - Red-beaker rain no longer reads per-player MVP translations out of widened
   instance function/thread pointers. Named draw-record fields preserve the
   retail depth/LOD byte alias, and a four-player cross-width test covers the

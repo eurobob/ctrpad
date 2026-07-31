@@ -7572,3 +7572,107 @@ the i686 renderer. It was stopped deliberately after 5/131 objects, preserving
 incremental output, so the exact Release result could be rebuilt first.
 Sanitizer cleanliness, 4,424-frame completion, real-menu 15-fps cadence,
 STR XA synchronization, and iOS/GLES behavior remain unaccepted.
+
+## 2026-07-31 — STR presentation sanitizer campaign and defined GL offsets
+
+### Preserved the resumed long replay while testing independently
+
+The i686 verifier remained isolated in Docker while the host performed ARM64
+builds. Read-only checks repeatedly reported `running`, `paused=false`,
+`oom=false`, and exit field 0 while active. The redirected playback log
+continued to grow. The explicitly flushed root
+`Crash Team Racing.log` advanced past frame 14,000 and recorded the expected
+race-driver transitions at 13,765 and 14,291. No completion status was
+invented: `container-exit-status.txt` remained empty, playback 2 did not
+exist, and the acceptance gate remains open.
+
+### Retained three rejected sanitizer routes
+
+The ARM64 sanitizer tree used:
+
+```sh
+cmake -S . -B /private/tmp/ctrpad-str-sanitize-83dRkR -G Ninja \
+  -DCMAKE_BUILD_TYPE=RelWithDebInfo \
+  -DBUILD_TESTING=ON \
+  -DCTR_NATIVE_MACOS_BUNDLE=OFF \
+  '-DCMAKE_C_FLAGS=-fsanitize=address,undefined -fno-omit-frame-pointer' \
+  '-DCMAKE_EXE_LINKER_FLAGS=-fsanitize=address,undefined'
+```
+
+The first suite set `ASAN_OPTIONS=detect_leaks=1`. Apple's ASan runtime
+reported that leak detection is unsupported and every process aborted with
+status 134. All 16 tests were rejected; none was relabeled as a product
+failure or pass.
+
+The supported configuration was:
+
+```text
+ASAN_OPTIONS=detect_leaks=0:halt_on_error=1:strict_string_checks=1
+UBSAN_OPTIONS=halt_on_error=1:print_stacktrace=1
+```
+
+It passed all 16 tests and the headless ten-frame STR probe. The first
+renderer-backed probe then stopped at `platform/native_renderer.c:1254`.
+UBSan correctly rejected `&((GrVertex *)NULL)->x` as null-member access. The
+same undefined expression configured all four packed vertex attributes.
+
+A subsequent run after the source correction, but with ordinary SDL HID
+enumeration, stopped in an Apple system framework. ASan reported a
+heap-buffer-overflow in CoreGraphics `pdf_lexer_scan`, reached through
+CoreUI/SwiftUICore/AppKit and SDL's HID enumeration during
+`Platform_InputInit`. Renderer initialization had completed, but the STR
+decode/upload/presentation loop had not yet executed. This run is retained as
+an environment-boundary rejection, not evidence that the game renderer still
+failed.
+
+### Corrected and pinned the actual renderer defect
+
+Commit `75b09db17` replaces the four null-member expressions with:
+
+```c
+(const void *)(uintptr_t)offsetof(GrVertex, field)
+```
+
+at `platform/native_renderer.c:1254-1261`. Static assertions at
+`include/platform/native_renderer_types.h:37-41` pin `sizeof(GrVertex) == 20`
+and the position, texture, color, and extra offsets at 0, 8, 12, and 16.
+This preserves the exact OpenGL byte layout while using defined C semantics.
+
+Before commit, a fresh normal ARM64 build passed 16/16 tests and produced the
+accepted screenshot bytes. The correction was committed at 03:26:12 CDT and
+pushed to the existing draft branch. Both build trees were then regenerated
+so their binaries embedded the exact clean identity:
+
+```text
+CTR Native 0.1.0-beta.7.1 (75b09db17d1c)
+```
+
+### Exact clean acceptance
+
+The exact clean Release binary was written at 03:27:32 CDT. It passed 16/16
+tests and the ten-frame presentation probe. The exact clean sanitizer binary
+was written at 03:33:27 CDT. It passed:
+
+```text
+16/16 CTests
+headless decoded sequence   60dcf4c65986a034
+presented sequence          e85a9203c966c801
+frame-9 BMP SHA-256         e7366bc9ff8ea4054d7c45e16f0a0eb8539c3bfb0cb8b1bba1c1bc5b3f1888e3
+```
+
+The renderer-specific sanitizer invocation set `SDL_JOYSTICK_HIDAPI=0` to
+avoid the unrelated Apple framework path. The full sanitized CTest suite did
+not use that setting; its `ctr_native_input` test passed. The sanitizer and
+Release BMPs compared byte-for-byte equal. No ASan/UBSan diagnostic appeared
+in the accepted headless or renderer runs.
+
+The sanitizer tree was created at 02:39:24 CDT and the final screenshot was
+written at 03:33:43 CDT. The 54-minute-19-second wall interval includes
+compilation, rejected observations, diagnosis, code correction, Release
+validation, and the exact clean rebuild. It is process/project elapsed time,
+not person-hours. The goal API reported cumulative elapsed
+1 day, 13 hours, 5 minutes, 15 seconds at the 03:34 checkpoint.
+
+The bounded STR sanitizer question is now accepted. Full 4,424-frame movie
+coverage, retail menu cadence, STR XA synchronization, broad normal-menu
+entry/skip/teardown, GLES, and iOS remain open.

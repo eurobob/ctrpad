@@ -2,10 +2,14 @@
 
 **Date:** 2026-07-31
 
-**Source:** `c44ea781039114ef84c9d7fe6043672ea16f8ab5`
+**Implementation source:** `c44ea781039114ef84c9d7fe6043672ea16f8ab5`
+
+**Sanitizer-corrected source:**
+`75b09db17d1cabb91f2fece68a43edbf04662992`
 
 **Status:** first ten production frames accepted through macOS OpenGL
-presentation; full-movie cadence and A/V synchronization remain open
+presentation and ASan/UBSan; full-movie cadence and A/V synchronization remain
+open
 
 ## Question
 
@@ -80,9 +84,12 @@ presented sequence:         e85a9203c966c801
 frame-9 BMP SHA-256:        e7366bc9ff8ea4054d7c45e16f0a0eb8539c3bfb0cb8b1bba1c1bc5b3f1888e3
 ```
 
-Three runs—two pre-commit and one from exact clean commit `c44ea7810`—produced
-the same ten decoded hashes, ten presented hashes, presented sequence hash,
-and byte-identical frame-9 BMP.
+Three initial runs—two pre-commit and one from exact clean commit
+`c44ea7810`—produced the same ten decoded hashes, ten presented hashes,
+presented sequence hash, and byte-identical frame-9 BMP. The later exact clean
+Release and sanitizer reruns at `75b09db17d1c` reproduced all of those values
+and the same BMP bytes after correcting the sanitizer finding described
+below.
 
 ## Visual inspection
 
@@ -104,6 +111,62 @@ present probes, and combining headless and present probes all exited 1 with an
 actionable error. The exact clean ARM64 build passed 16/16 existing CTests.
 `git ls-files ref/CTR` remained empty.
 
+## Sanitizer chronology
+
+The sanitizer campaign used an ARM64 `RelWithDebInfo` build with:
+
+```text
+-fsanitize=address,undefined -fno-omit-frame-pointer
+ASAN_OPTIONS=detect_leaks=0:halt_on_error=1:strict_string_checks=1
+UBSAN_OPTIONS=halt_on_error=1:print_stacktrace=1
+```
+
+Rejected observations were retained rather than silently retried:
+
+1. The first CTest launch requested `detect_leaks=1`. Apple's ASan runtime
+   reported that leak detection is unsupported and aborted all 16 processes
+   with exit 134. This was a test-environment error, not an accepted suite.
+2. With supported options, all 16 CTests and the ten-frame headless probe
+   passed. The first presentation probe then stopped at
+   `platform/native_renderer.c:1254`: forming
+   `&((GrVertex *)NULL)->field` for an OpenGL buffer offset invoked undefined
+   null-member access.
+3. Commit `75b09db17` replaced all four expressions with defined
+   `offsetof(GrVertex, field)` offsets
+   (`platform/native_renderer.c:1254-1261`) and pinned the packed vertex size
+   and four offsets with static assertions
+   (`include/platform/native_renderer_types.h:37-41`).
+4. A presentation rerun with ordinary HID enumeration reached an ASan
+   heap-buffer-overflow inside Apple's CoreGraphics `pdf_lexer_scan`, through
+   CoreUI/SwiftUI/AppKit while SDL enumerated HID devices. Renderer
+   initialization had completed, but the stack had not entered the STR
+   decode/upload/presentation loop. That run is rejected and is not
+   represented as a game-code fix.
+5. The renderer-specific probe was rerun with
+   `SDL_JOYSTICK_HIDAPI=0`, avoiding that unrelated Apple framework path.
+   The separate sanitized `ctr_native_input` CTest still ran and passed with
+   the ordinary suite.
+
+The exact clean sanitizer binary identified itself as:
+
+```text
+CTR Native 0.1.0-beta.7.1 (75b09db17d1c)
+```
+
+It passed 16/16 CTests, the ten-frame headless sequence
+`60dcf4c65986a034`, and the ten-frame presented sequence
+`e85a9203c966c801` without an ASan/UBSan report. Its output BMP SHA-256 was
+again
+`e7366bc9ff8ea4054d7c45e16f0a0eb8539c3bfb0cb8b1bba1c1bc5b3f1888e3`
+and was byte-identical to the exact clean Release output.
+
+The sanitizer tree was created at 02:39:24 CDT. The final exact-clean
+sanitizer screenshot was written at 03:33:43 CDT, an observed campaign wall
+interval of 54 minutes, 19 seconds that includes compilation, rejected runs,
+diagnosis, correction, normal-build validation, and the clean rebuild. The
+source correction was committed at 03:26:12 CDT; the final accepted screenshot
+followed 7 minutes, 31 seconds later.
+
 ## Acceptance boundary
 
 Accepted:
@@ -112,15 +175,22 @@ Accepted:
 - exact continuity with the accepted headless RGB555 hashes;
 - production `LoadImage` plus host VRAM texture upload;
 - macOS ARM64 direct-VRAM presentation shader execution;
-- actual framebuffer readback and a coherent, repeatable visual artifact.
+- actual framebuffer readback and a coherent, repeatable visual artifact;
+- defined and compile-time-pinned OpenGL vertex attribute offsets; and
+- the bounded headless/presentation path under ASan/UBSan, with the
+  renderer-only HID isolation described above.
 
 Not accepted:
 
-- ASan/UBSan cleanliness of the new presentation probe;
 - all 4,424 scrapbook frames;
 - retail 15-fps presentation cadence during the real menu loop;
 - interleaved XA audio/video synchronization;
 - normal menu entry, skip, and teardown under broad manual play; or
 - GLES/iOS presentation.
+
+The Apple framework HID-enumeration fault under ASan remains a documented
+environment boundary. Normal Release HID initialization and the sanitized
+input CTest pass, but this narrow result is not broad full-game sanitizer
+acceptance.
 
 This is a concrete M6 improvement, not completion of M6 or the iPad objective.

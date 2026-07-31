@@ -381,6 +381,54 @@ still pending and will resume incrementally.
 Detailed evidence:
 `docs/parity/2026-07-31-scrapbook-str-presentation.md`.
 
+### 2026-07-31 — STR sanitizer correction and exact clean acceptance
+
+**Outcome**
+
+- The first unsupported Apple leak-detector run and the later Apple-framework
+  HID-enumeration fault are recorded as rejected observations.
+- UBSan found a real renderer issue: four OpenGL VBO offsets were expressed
+  through null-member access.
+- Commit `75b09db17d1cabb91f2fece68a43edbf04662992` uses defined `offsetof`
+  values and compile-time-pins the 20-byte packed vertex layout.
+- The exact clean Release build identifies as `75b09db17d1c`, is native ARM64,
+  passes 16/16 CTests, and produces the accepted ten-frame sequence and BMP.
+- The exact clean ASan/UBSan build identifies as the same commit, passes 16/16
+  CTests plus both ten-frame probes, and produces a byte-identical BMP without
+  a sanitizer report. The presentation-only run sets
+  `SDL_JOYSTICK_HIDAPI=0` to isolate the renderer from the documented Apple
+  framework fault; the normal sanitized input CTest remains enabled and
+  passes.
+- Retail-derived BMPs remain in `/private/tmp`; no retail file is tracked.
+
+**Time ledger**
+
+- sanitizer tree created: 02:39:24 CDT;
+- final exact-clean sanitizer screenshot: 03:33:43 CDT;
+- observed sanitizer campaign wall interval: 54 minutes, 19 seconds,
+  including rejected runs, diagnosis, correction, Release validation, and
+  clean rebuild;
+- source-fix commit: 03:26:12 CDT;
+- exact-clean Release binary: 03:27:32 CDT;
+- exact-clean sanitizer binary: 03:33:27 CDT;
+- exact-clean fix-to-final-evidence interval: 7 minutes, 31 seconds; and
+- Codex goal elapsed at the 03:34 checkpoint: 1 day, 13 hours, 5 minutes,
+  15 seconds, reported by the goal API and not treated as labor time.
+
+**Long verifier status at the same checkpoint**
+
+The preserved direct-loader i686 process is still running, unpaused, and not
+OOM-killed. Its flushed runtime log has now passed the frame-14,000 marker and
+observed the expected inactive/active transitions at frames 13,765/14,291.
+Playback 1 has not yet finished; alternate-layout playback 2 and deliberate
+mutation have not begun. This is progress evidence, not acceptance.
+
+**Git publication boundary**
+
+The source correction was pushed to `codex/arm64-apple` at `75b09db17`; local
+and remote branch tips matched immediately after the push. Draft PR #1 remains
+open and unmerged. `main` still contains only the viability boundary.
+
 ## Current open path to the requested product
 
 1. Finish independent-process/mutation acceptance for the existing full
