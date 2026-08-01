@@ -13688,3 +13688,61 @@ The dirty-evidence goal reading was 248,826 seconds (2 days, 21 hours,
 7 minutes, 6 seconds), 1,817 seconds after the preceding exact-fetch boundary.
 Exact post-commit rebuild/replay, broad churn, 30-FPS and physical-device gates
 remain open.
+
+## 2026-08-01 — Exact batching publication and retail replay
+
+Commit `13f260cb8a0d` published the batching implementation and dirty evidence.
+Exact macOS reconfigure/build took 1.60 / 70.34 seconds at nice 15 and one job,
+emitted ARM64 `b36267d0...02b`, repeated the known 32 warnings and passed all
+22 tests in 2.62 seconds. The fallback ordered-overlap fixture remained 12/12
+draws with logical/blend/presentation hashes `851169f2644a1675`,
+`0c0d08324ae06c35` and `a7798c5a6ddee965`.
+
+Exact iOS reconfigure/build took 1.13 / 68.54 seconds. Its unsigned thin-ARM64
+hash is `1941ddad...4186`; the isolated strict-verified ad-hoc copy and installed
+executable hash to `f9cfc625...9502`. The live GLES oracle used coherent fetch,
+matched every forced-fallback byte, reduced 12 draws to 5 and retained actual-
+surface presentation `172d49a34571b64c`.
+
+The compound disposable-device boot command returned a session while boot was
+settling. A follow-up found the identical install active but issued a second
+identical install, briefly overlapping them. No erase/uninstall occurred; work
+waited for both. CoreSimulator remapped the data-container UUID from B038 to
+2928 while retaining all imports, reports, logs, preferences, retail files and
+memory card. Primary inode/hash checks later proved preservation.
+
+The exact retail launch began at copyright. A batched six-key route advanced
+slowly and reached name entry; its final screenshot emit alone failed on an
+undefined non-persistent helper. Fresh inspection proved the screen. Triangle
+and down did not cancel, so reading `SubmitName.c` identified two Start presses
+as the intended path. After P/P and a trophy/menu transition, the verified
+route selected Time Trial, Crash, Crash Cove, no ghost and the live grid.
+Screenshots covered every intermediate screen plus coherent race/HUD/overlay;
+the race timer advanced to 0:33.50 and exact retail-poll lines consumed gas and
+direction masks.
+
+Correct-ID termination after 799.006 seconds flushed frame CSV
+`50fffaed...798` (5,292 lines, 1,786,746 bytes), GPU header
+`af0f3466...91f6`, and log `f7a541fb...9529` (117 lines, 12,731 bytes), with
+zero targeted faults. The exact 119/78 split group has 145 frames and 66 calls
+versus 151 old exact frames and 122 calls. Total falls 171.223 to 165.879 ms,
+but draw/split buckets are within noise; acceptance rests on the deterministic
+byte oracle, primitive-order contract and structural 45.90% call reduction.
+
+Computer Use's pre-quit accessibility diff still showed capture wording, but
+Command-Q closed the GUI and shut down the disposable device. Direct process
+and device checks proved both named devices off. Retail BIN inode `111450682`
+and save inode `111309627` retained canonical hashes. The task-owned exact
+signed-copy directory was deleted after its hash/signature evidence was
+recorded; ordinary builds, installed app, app data and repository remain.
+
+The first multi-file patch intended to record that cleanup had malformed
+section context and failed verification without applying. A subsequent
+read-only context command left the numeric inode inside shell backticks; zsh
+reported `command not found`, then `rg` still returned the intended context.
+The corrected literal patch applied only documentation.
+
+The exact-acceptance goal reading was 250,402 seconds (2 days, 21 hours,
+33 minutes, 22 seconds), 1,576 seconds after dirty evidence. The batching
+checkpoint is exact-accepted. Simulator 30-FPS, broad churn, full touch race,
+physical-device and final-package gates remain open.

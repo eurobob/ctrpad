@@ -135,9 +135,10 @@ Current evidence and procedures:
   same-state logical-split batching under the coherent primitive-order
   contract, the ordered-overlap 12-to-5-call byte oracle, new logical-versus-
   host counters, one-Simulator canyon route, matched-scene 45.90% call and
-  4.11% frame-time reductions, complete dirty artifact/log hashes, harmless
-  rejected command routes and the deliberately open exact-replay, performance
-  and physical-device gates.
+  4.11% dirty frame-time reductions, complete dirty artifact/log hashes, exact
+  clean-revision desktop/iOS/oracle/retail replay, container-remap/install and
+  name-entry correction chronology, exact 45.90% call reduction, and the
+  deliberately open performance and physical-device gates.
 - `2026-07-31-ios-sandbox-storage.md` records the bundle/Documents/Application
   Support ownership split, Documents-priority retail startup, private log and
   memory-card roots, Files metadata, exact cross-target matrix, rejected

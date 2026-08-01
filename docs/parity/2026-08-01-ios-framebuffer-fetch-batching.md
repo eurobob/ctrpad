@@ -1,8 +1,8 @@
 # iOS framebuffer-fetch split batching
 
 Date: 2026-08-01
-Status: dirty-source implementation, desktop, byte-oracle and one-Simulator
-profile accepted for publication; exact post-commit replay still required
+Status: exact post-commit desktop/iOS/oracle/retail replay accepted; Simulator
+performance, broad churn and physical-device gates remain open
 Parent checkpoint: `2026-08-01-ios-framebuffer-fetch.md`
 
 ## Purpose and gate
@@ -237,11 +237,11 @@ evidence was obtained, including harmless rejected routes.
 
 ## Decision and remaining boundary
 
-The dirty implementation is accepted for an intentional commit because the
+The dirty implementation was accepted for an intentional commit because the
 specification contract, byte oracle, portable fallback, 22-test suite, enabled
 iOS oracle, matched profile, visual route, targeted log scan and retail/save
-hashes agree. It still requires exact post-commit desktop/iOS rebuild and
-one-Simulator replay before the checkpoint itself is final.
+hashes agree. At this boundary it still required exact post-commit desktop/iOS
+rebuild and one-Simulator replay; the section below closes that checkpoint.
 
 Even the matched 164.187-ms frame is about 4.93 times the 30-FPS budget. Broad
 scene/effect churn, full touch race, rotation/Home/resume soak, physical-iPad
@@ -254,3 +254,186 @@ The dirty-evidence goal reading was 248,826 seconds: 2 days, 21 hours,
 the prior 247,009-second exact-fetch boundary. Goal time includes user viewing,
 profiling, review, low-priority compilation and documentation; it is not a
 build benchmark or person-hour estimate. The goal remains active.
+
+## Exact post-commit acceptance
+
+The implementation and complete dirty chronology were committed as
+`13f260cb8a0d6a2a532adcf8a90420a42593838b` and pushed to
+`origin/codex/arm64-apple`. Local `HEAD`, the remote-tracking branch and the
+open draft PR `chrissotraidis/ctrpad#1` all resolved to that exact revision
+after propagation. No duplicate PR was created.
+
+### Exact macOS build and suite
+
+Both named devices and the Simulator GUI remained off. Reconfiguration took
+1.60 seconds and embedded clean build ID `13f260cb8a0d`. The one-job nice-15
+build took 70.34 seconds and repeated only the established 32 warnings. The
+Mach-O ARM64 executable hashes to:
+
+```text
+b36267d010eb527bb1e71eca110edc599391f3e967b4b240fefdaa62d5ffb02b
+```
+
+All 22 native CTests passed in 2.62 seconds. The exact desktop pixel marker
+retained `fallback-draws=12`, `active-draws=12`, logical hash
+`851169f2644a1675`, blend/fallback hash `0c0d08324ae06c35`, portable
+`framebuffer-fetch=two-pass`, and presentation hash `a7798c5a6ddee965`.
+
+### Exact iOS build and byte oracle
+
+Sequential iOS Simulator reconfiguration took 1.13 seconds. Its one-job
+nice-15 build took 68.54 seconds with the same 32 warnings. The clean thin
+ARM64 executable embeds `13f260cb8a0d` and hashes to:
+
+```text
+1941ddaddd9a768499199a6a059e9db2ac62c80805a84d78b5aec322c7514186
+```
+
+An isolated ad-hoc-signed copy in `/tmp/ctrpad-batch-exact.VxRyy2` passed
+strict/deep verification. Its executable hashes to:
+
+```text
+f9cfc625a8d2b12c45d582a442677a77725a46b1292c3313604ba9d6499a9502
+```
+
+Only disposable device `CTRPad Import Negatives` booted. The installed
+executable retained the same signed hash. The exact iOS marker was:
+
+```text
+[CTR Renderer] pixel self-test passed: api=gles size=32x16 formats=4,8,16 clut=4,8 transparency=zero,stp blend=average,add,subtract,quarter bilinear=mixed-stp ordered-overlap=match fallback-draws=12 active-draws=5 mask=output-bit framebuffer=feedback vram=rgb5551 hash=851169f2644a1675 blend-hash=0c0d08324ae06c35 blend-oracle=match oracle-hash=0c0d08324ae06c35 framebuffer-fetch=enabled present=resolve+blit@1032x1376 present-hash=172d49a34571b64c
+```
+
+The known immediate-test unbalanced-appearance and duplicate accessibility-
+loader diagnostics followed app-owned success output. Correct-ID termination
+ended self-test PID 13032 and its console session.
+
+### Install settling and preserved data container
+
+The initial compound boot command reached CoreSimulator's migration/system-app
+wait and returned a session before the remaining install/status commands had
+printed completion. A diagnostic follow-up found that identical signed-app
+install still active and issued a second identical `simctl install`. The two
+idempotent installs briefly overlapped; no uninstall, erase, data copy or app
+launch occurred during that overlap. Work paused until both processes exited,
+then explicit container queries succeeded.
+
+CoreSimulator remapped the preserved app data path from the preceding
+`B038481C-...` UUID to `2928C385-C368-4A3D-89F1-A0E31D3270E5`. This was a
+container-path change, not data loss: the new path retained the historical
+logs, import-negative fixtures, retail images, reports, profiles, memory card,
+preferences and saved UI state. The canonical retail and save inodes and bytes
+were unchanged, as verified again after the live replay.
+
+### Exact retail route and visible evidence
+
+The normal exact app launched as PID 13393 with:
+
+```text
+--perf --perf-dir perf-batch-exact-13f260cb8
+```
+
+Computer Use opened the sole Simulator GUI and enabled visible keyboard
+capture. A first batched `s k k k k i` route started from the copyright screen
+while the software-rendered transitions were still advancing and reached the
+retail name-entry screen rather than Time Trial. The route inputs completed,
+but its final screenshot emission referenced a non-persistent helper variable
+and failed. A fresh independent screen read proved the app was healthy at name
+entry; no input was replayed blindly.
+
+Triangle did not cancel the name editor, and a down input merely moved its
+cursor. Direct inspection of `game/SubmitName.c` showed the retail Start path:
+one Start moves the cursor to CANCEL and a second confirms it. The documented
+`P` mapping twice returned to character selection. The next transition passed
+the trophy intro, then another Triangle reached the mode menu. From that known
+state, each input was screen-verified separately: S selected Time Trial, K
+entered it, K selected Crash, the preserved cursor already highlighted Crash
+Cove, K reached the no-ghost prompt, and K plus I reached the starting grid.
+
+Screenshots across the detour and final route showed coherent copyright text,
+name-entry garage, Crash/kart character scene, trophy animation, mode menu,
+character grid/portrait/model, track menu/preview/map, no-ghost prompt, race
+lights, banner, kart/headlights, terrain/waterfall, horizon, HUD/minimap and
+touch overlay. The final observed race timer advanced from 0:00.60 to 0:33.50.
+Repeated gas and right/gas inputs appeared as exact keyboard-down and retail-
+poll-consumed masks in the app log.
+
+Correct-ID termination after at least 799.006 seconds flushed:
+
+```text
+frame CSV       1,786,746 bytes / 5,292 lines including header
+frame CSV SHA   50fffaedf0faf429acdc38fb708ac7f4c049702d9f946fad7d30211b0b385798
+GPU CSV         28 bytes / header only
+GPU CSV SHA     af0f3466758a717080c8ac7d955fb6c432274898fb065e304a8d36cf3c9d91f6
+app log         12,731 bytes / 117 lines
+app log SHA     f7a541fb905120a642f1f1f62342914a43aa7e4d26a58256ecbebdc726cc9529
+targeted faults 0
+```
+
+The exact log identifies build `13f260cb8a0d`, iOS target, Apple Software
+Renderer, coherent fetch, all shaders/pipelines ready, UIKit/touch loops and
+the preserved Documents/Application-Support roots.
+
+### Exact batching profile
+
+The exact run contains 145 frames with precisely the dirty comparison's 119
+logical splits, 78 semitransparent/fetch splits and 56 removed calls. The
+committed code issues 66 renderer calls, versus 122 calls in 151 frames from
+the exact unbatched parent checkpoint: the structural reduction is again
+45.90%.
+
+| Metric | Exact unbatched | Exact batched | Change |
+|---|---:|---:|---:|
+| renderer calls | 122.00 | 66.00 | -45.90% |
+| total frame | 171.223 ms | 165.879 ms | -3.12% |
+| non-wait work | 147.173 ms | 146.240 ms | -0.63% |
+| renderer triangles | 136.333 ms | 136.514 ms | +0.13% |
+| split submission | 126.900 ms | 127.619 ms | +0.57% |
+| presentation | 7.928 ms | 7.288 ms | -8.07% |
+| reciprocal throughput | 5.84 FPS | 6.03 FPS | +3.22% |
+
+The exact sample confirms fewer API calls and modest total improvement, but
+does not claim an exact draw-stage timing win: the 145-frame stage buckets are
+effectively flat/noisy. The larger 428-frame dirty matched sample remains the
+better measurement of the small draw/split improvement. Correctness rests on
+the byte oracle and extension contract; the call counter proves the intended
+path executes.
+
+The final 300 exact frames average 167.255 ms / 5.98 reciprocal FPS, 66.00
+calls, 117.61 logical splits, 76.74 semitransparent/fetch splits and 54.82
+merged splits. The Simulator gate remains decisively open.
+
+### Final preservation and cleanup boundary
+
+The final authoritative identities are:
+
+```text
+NTSC-U BIN inode 111450682, 605,698,800 bytes
+SHA-256          f780bf2331476aabfc00772fa758b12dd95ebfbc907968132cbd3cdd4e2c07c0
+memory card      inode 111309627, 6,016 bytes
+SHA-256          6a01b0f5562ed7a279d8f8e51e3b1874ac39a6120f55db4fe3873288950619a3
+```
+
+Computer Use attempted to release keyboard capture, then quit Simulator; its
+unchanged accessibility text still said capture was active, but Command-Q
+closed the GUI and automatically shut down the disposable device. A direct
+process/device check proved no Simulator GUI and both named devices off. The
+repository remained clean at the implementation commit, and the draft PR head
+resolved to the pushed revision. After recording hashes and strict signing
+status, the explicit task-owned `/tmp/ctrpad-batch-exact.VxRyy2` directory was
+deleted; the unsigned build, installed app, app data and repository remain.
+
+The first multi-file documentation patch for that cleanup had malformed patch
+section context and applied nothing. A later read-only `rg` context command
+also left inode `111309627` inside shell backticks, so zsh attempted the number
+as a command and reported `command not found` before `rg` returned the intended
+context. The corrected patch used literal context. Neither rejected command
+changed a file, process, device or artifact.
+
+The exact-acceptance goal reading was 250,402 seconds: 2 days, 21 hours,
+33 minutes, 22 seconds cumulative, 1,576 seconds (26 minutes, 16 seconds) after
+the dirty boundary. Goal time includes publication, exact builds, boot/install
+settling, byte oracle, slow screen-by-screen retail routing, profiling and
+analysis; it is not a build benchmark or person-hour estimate. The checkpoint
+is exact-accepted. The overall goal remains active because Simulator cadence,
+broad churn, touch-race ergonomics and every physical-device/final-package
+gate remain open.

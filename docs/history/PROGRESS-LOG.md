@@ -2626,3 +2626,50 @@ The dirty-evidence goal reading was 248,826 seconds: 2 days, 21 hours,
 7 minutes, 6 seconds cumulative, 1,817 seconds after the prior boundary. Goal
 time includes user viewing, profiling, review, compilation and documentation;
 it is not a build benchmark or person-hour estimate. The goal remains active.
+
+### 2026-08-01 — Published and exact-replayed framebuffer-fetch batching
+
+- Committed the reviewed implementation/history as `13f260cb8a0d` and pushed
+  `codex/arm64-apple`. Local, remote-tracking and draft-PR heads converged on
+  the same revision; no duplicate PR was opened.
+- With both devices/GUI off, exact macOS configure/build took 1.60 / 70.34
+  seconds, repeated 32 established warnings and produced ARM64
+  `b36267d0...02b`. All 22 tests passed in 2.62 seconds with the exact 12-draw
+  fallback oracle and established logical/presentation hashes.
+- Exact iOS configure/build took 1.13 / 68.54 seconds with the same warnings.
+  Unsigned/signed hashes are `1941ddad...4186` / `f9cfc625...9502`; strict
+  signing passed. The actual 1032x1376 GLES oracle matched every fallback byte,
+  reduced 12 draws to 5 and retained `172d49a34571b64c` presentation.
+- The first boot/install command returned a session during CoreSimulator boot
+  settling; a diagnostic follow-up briefly overlapped two identical installs.
+  Work paused until both exited. The data-container UUID remapped, but all
+  historical data, retail/save inodes and canonical hashes remained intact.
+- A route launched too early from copyright reached retail name entry. Its
+  screenshot helper then referenced a non-persistent variable. Fresh screen
+  inspection proved the route result; source review identified P/P as the
+  retail cancel path. The verified menu route then selected Time Trial, Crash,
+  Crash Cove, no ghost and the race grid screen by screen.
+- The 799.006-second exact run flushed 5,291 frames plus header at
+  `50fffaed...798`, a header-only GPU file at `af0f3466...91f6`, and a 117-line
+  app log at `f7a541fb...9529`; targeted faults are zero. Exact input masks were
+  consumed, bounded menu/name/character/track/race assets stayed coherent, and
+  the timer advanced to 0:33.50.
+- The exact 119/78 logical state again falls from 122 to 66 calls (-45.90%)
+  across 145 matched frames. Total averages 165.879 ms versus 171.223 ms, but
+  draw/split bucket noise is flat; the structural call reduction and byte
+  oracle, not a claimed exact-stage speedup, accept the route. Final 300 frames
+  average 5.98 FPS.
+- Command-Q closed the GUI and shut down the disposable device even though the
+  preceding accessibility diff still displayed capture text. Direct checks
+  proved both named devices and the GUI off. The explicit temporary signed-app
+  copy was deleted after its hash/signature evidence was recorded; builds,
+  installed app, data and source remain.
+- A malformed multi-file cleanup-doc patch applied nothing. The following
+  read-only context query accidentally put a numeric inode in shell backticks,
+  produced `command not found`, then still returned the requested context. The
+  corrected literal patch changed only these history files.
+
+The exact-acceptance reading was 250,402 seconds: 2 days, 21 hours, 33 minutes,
+22 seconds cumulative, 1,576 seconds after the dirty boundary. Full details are
+in `docs/parity/2026-08-01-ios-framebuffer-fetch-batching.md`. The checkpoint is
+exact-accepted; the overall goal remains active.
