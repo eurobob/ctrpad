@@ -62,7 +62,11 @@ build/package scripts, GPL license, notices, modification history and this
 Installation Information. It fails if tracked changes are present or if the
 archive contains retail/runtime data, an IPA, a profile, a certificate or a
 private-key-like file. Publish this archive alongside the matching signed or
-unsigned IPA; the app's build identity identifies the source commit.
+unsigned IPA; the app's build identity identifies the source commit. Keep the
+generated `CTRPad-source-<12-character-commit>` root name when extracting so
+CMake recovers that identity without `.git`. If the root is renamed, add
+`-DCTR_NATIVE_SOURCE_COMMIT=<full-or-12-character-commit>` to the configure
+command.
 
 To use a different App ID, configure and verify it explicitly:
 

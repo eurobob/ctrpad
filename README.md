@@ -193,7 +193,12 @@ system, vendored SDL source, GPL license, third-party notices, Installation
 Information and both packagers are present, and rejects retail, runtime,
 credential and binary-package material. It writes a deterministic `.tar.gz`
 plus SHA-256 sidecar under ignored `dist/`. Distribute that archive with the IPA
-from the same build identity.
+from the same build identity. Keep the generated
+`CTRPad-source-<12-character-commit>` directory name when extracting: CMake
+uses that packager-derived archive identity when `.git` is intentionally absent.
+If the extracted root must be renamed, configure with
+`-DCTR_NATIVE_SOURCE_COMMIT=<full-or-12-character-commit>` so the rebuilt app
+retains the published source identity.
 
 The generated `CTRPad.app` and IPA contain no retail data. On a first launch with no
 media, CTRPad presents a native **Choose CTR disc image** screen. Select your

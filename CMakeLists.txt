@@ -8,6 +8,9 @@ endif()
 
 set(CTR_NATIVE_VERSION "0.1.0-beta.7.1")
 option(CTR_NATIVE_MACOS_BUNDLE "Build CTR Native as a macOS application bundle" OFF)
+set(CTR_NATIVE_SOURCE_COMMIT "" CACHE STRING
+    "Source commit for a renamed corresponding-source tree without .git"
+)
 set(CTR_NATIVE_IOS_BUNDLE_IDENTIFIER "io.github.chrissotraidis.ctrpad" CACHE STRING
     "Reverse-DNS bundle identifier for iOS and iPadOS builds"
 )
@@ -52,23 +55,81 @@ set(CMAKE_FIND_ROOT_PATH_MODE_PACKAGE NEVER)
 set(CMAKE_FIND_ROOT_PATH_MODE_LIBRARY NEVER)
 set(CMAKE_FIND_ROOT_PATH_MODE_INCLUDE NEVER)
 
-execute_process(
-    COMMAND git rev-parse --short=12 HEAD
-    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
-    OUTPUT_VARIABLE CTR_NATIVE_GIT_HASH
-    OUTPUT_STRIP_TRAILING_WHITESPACE
-    ERROR_QUIET
-)
-if(NOT CTR_NATIVE_GIT_HASH)
-    set(CTR_NATIVE_GIT_HASH "unknown")
+set(CTR_NATIVE_SOURCE_COMMIT_SHORT "")
+if(CTR_NATIVE_SOURCE_COMMIT)
+    string(TOLOWER "${CTR_NATIVE_SOURCE_COMMIT}" CTR_NATIVE_SOURCE_COMMIT_NORMALIZED)
+    string(LENGTH "${CTR_NATIVE_SOURCE_COMMIT_NORMALIZED}" CTR_NATIVE_SOURCE_COMMIT_LENGTH)
+    if(NOT CTR_NATIVE_SOURCE_COMMIT_NORMALIZED MATCHES "^[0-9a-f]+$"
+       OR CTR_NATIVE_SOURCE_COMMIT_LENGTH LESS 12
+       OR CTR_NATIVE_SOURCE_COMMIT_LENGTH GREATER 40)
+        message(FATAL_ERROR
+            "CTR_NATIVE_SOURCE_COMMIT must contain 12 to 40 hexadecimal characters."
+        )
+    endif()
+    string(SUBSTRING "${CTR_NATIVE_SOURCE_COMMIT_NORMALIZED}" 0 12
+        CTR_NATIVE_SOURCE_COMMIT_SHORT)
 endif()
 
 execute_process(
-    COMMAND git diff --quiet --exit-code
-    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
-    RESULT_VARIABLE CTR_NATIVE_GIT_DIRTY
+    COMMAND git -C "${CMAKE_SOURCE_DIR}" rev-parse --show-toplevel
+    OUTPUT_VARIABLE CTR_NATIVE_GIT_TOPLEVEL
+    OUTPUT_STRIP_TRAILING_WHITESPACE
+    RESULT_VARIABLE CTR_NATIVE_GIT_TOPLEVEL_RESULT
     ERROR_QUIET
 )
+get_filename_component(CTR_NATIVE_SOURCE_REALPATH "${CMAKE_SOURCE_DIR}" REALPATH)
+if(CTR_NATIVE_GIT_TOPLEVEL_RESULT EQUAL 0)
+    get_filename_component(CTR_NATIVE_GIT_TOPLEVEL_REALPATH
+        "${CTR_NATIVE_GIT_TOPLEVEL}" REALPATH)
+endif()
+
+set(CTR_NATIVE_GIT_HASH "unknown")
+set(CTR_NATIVE_GIT_DIRTY 1)
+if(CTR_NATIVE_GIT_TOPLEVEL_RESULT EQUAL 0
+   AND CTR_NATIVE_GIT_TOPLEVEL_REALPATH STREQUAL CTR_NATIVE_SOURCE_REALPATH)
+    execute_process(
+        COMMAND git -C "${CMAKE_SOURCE_DIR}" rev-parse --short=12 HEAD
+        OUTPUT_VARIABLE CTR_NATIVE_GIT_HASH
+        OUTPUT_STRIP_TRAILING_WHITESPACE
+        RESULT_VARIABLE CTR_NATIVE_GIT_HASH_RESULT
+        ERROR_QUIET
+    )
+    if(NOT CTR_NATIVE_GIT_HASH_RESULT EQUAL 0 OR NOT CTR_NATIVE_GIT_HASH)
+        message(FATAL_ERROR "Could not determine the source checkout commit.")
+    endif()
+    if(CTR_NATIVE_SOURCE_COMMIT_SHORT
+       AND NOT CTR_NATIVE_SOURCE_COMMIT_SHORT STREQUAL CTR_NATIVE_GIT_HASH)
+        message(FATAL_ERROR
+            "CTR_NATIVE_SOURCE_COMMIT does not match the source checkout commit."
+        )
+    endif()
+    execute_process(
+        COMMAND git -C "${CMAKE_SOURCE_DIR}" diff --quiet --exit-code
+        RESULT_VARIABLE CTR_NATIVE_GIT_DIRTY
+        ERROR_QUIET
+    )
+elseif(CTR_NATIVE_SOURCE_COMMIT_SHORT)
+    set(CTR_NATIVE_GIT_HASH "${CTR_NATIVE_SOURCE_COMMIT_SHORT}")
+    set(CTR_NATIVE_GIT_DIRTY 0)
+    message(STATUS
+        "CTR Native: source identity ${CTR_NATIVE_GIT_HASH} from CTR_NATIVE_SOURCE_COMMIT"
+    )
+else()
+    get_filename_component(CTR_NATIVE_SOURCE_DIR_NAME "${CMAKE_SOURCE_DIR}" NAME)
+    if(CTR_NATIVE_SOURCE_DIR_NAME MATCHES "^CTRPad-source-([0-9a-f]+)$")
+        set(CTR_NATIVE_SOURCE_DIR_COMMIT "${CMAKE_MATCH_1}")
+        string(LENGTH "${CTR_NATIVE_SOURCE_DIR_COMMIT}"
+            CTR_NATIVE_SOURCE_DIR_COMMIT_LENGTH)
+        if(CTR_NATIVE_SOURCE_DIR_COMMIT_LENGTH EQUAL 12)
+            set(CTR_NATIVE_GIT_HASH "${CTR_NATIVE_SOURCE_DIR_COMMIT}")
+            set(CTR_NATIVE_GIT_DIRTY 0)
+            message(STATUS
+                "CTR Native: source identity ${CTR_NATIVE_GIT_HASH} from corresponding-source root"
+            )
+        endif()
+    endif()
+endif()
+
 if(CTR_NATIVE_GIT_DIRTY EQUAL 0)
     set(CTR_NATIVE_BUILD_ID "${CTR_NATIVE_GIT_HASH}")
 else()
