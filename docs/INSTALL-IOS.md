@@ -56,7 +56,8 @@ Package the exact corresponding source from the same clean committed checkout:
 ```
 
 This writes `dist/CTRPad-source-<commit>.tar.gz` and its SHA-256 sidecar. The
-source packager includes the complete tracked buildable source, vendored SDL,
+source packager includes the complete tracked source and build inputs, vendored
+SDL,
 build/package scripts, GPL license, notices, modification history and this
 Installation Information. It fails if tracked changes are present or if the
 archive contains retail/runtime data, an IPA, a profile, a certificate or a

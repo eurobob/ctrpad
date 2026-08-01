@@ -92,6 +92,11 @@ Current evidence and procedures:
   iOS builds, exact portrait/landscape/portrait visual acceptance, data
   preservation, residual Simulator/Foundation diagnostic and open physical-
   iPad windowing/rotation boundary.
+- `2026-08-01-corresponding-source-package.md` records the clean-commit source
+  packager, required GPL/build/modification manifest, retail/runtime/credential
+  exclusions, interrupted first publication order, atomic-sidecar correction,
+  byte-identical exact archives, extraction smoke check and deliberately open
+  clean-build, legal-review, signing and physical-device gates.
 - `2026-07-31-ios-sandbox-storage.md` records the bundle/Documents/Application
   Support ownership split, Documents-priority retail startup, private log and
   memory-card roots, Files metadata, exact cross-target matrix, rejected

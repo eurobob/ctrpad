@@ -442,3 +442,31 @@ valid image plus a seeded reserved stage, removed only that stage, preserved all
 three controls and the BIN/save identities, and visibly entered the game; a
 cold relaunch remained clean. It does not claim an inaccessible-provider
 callback, physical-iPad transfer interruption, or Apple signing.
+
+## 2026-08-01 — Package corresponding source from one clean Git commit
+
+**Decision:** create the release source tarball with `package-source.sh` from
+an exact clean Git commit, not by traversing the working directory. Require the
+build system, vendored SDL, licenses, Installation Information, modification
+records and both packagers; fail on retail/runtime/package/profile/certificate/
+key-like members. Use a commit-derived archive root and `gzip -n`, prepare and
+hash the complete archive in private staging, then publish the tarball and its
+basename-relative SHA-256 sidecar without overwriting an existing output.
+
+**Why:** the future IPA needs a versioned source artifact that a recipient can
+match to its embedded build identity. A working-tree copy could accidentally
+include ignored media, saves, build output or credentials and could silently
+omit uncommitted changes. Git's committed-object boundary selects the complete
+published source and stable metadata without reading ignored files. Staging
+both archive and sidecar prevents an interrupted hash from being mistaken for
+a completed release pair.
+
+**Verification boundary:** corrected exact commit `4091b602ab2a` produced two
+byte-identical 17,482,944-byte, 3,233-member source archives at SHA-256
+`d1c4b4fb...64df1`; both sidecars, gzip streams and tar listings passed. Fresh
+extraction preserved executable packagers, contained no `.git` or prohibited
+member, passed both shell syntax checks and enumerated all four Apple CMake
+presets. Low host headroom prevented a responsible extracted-source compile,
+so clean-machine build, legal review, same-identity IPA pairing, Apple signing
+and physical-device acceptance remain open. Exact and rejected-route evidence
+is in `docs/parity/2026-08-01-corresponding-source-package.md`.

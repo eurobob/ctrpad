@@ -12817,3 +12817,76 @@ normal Quit action. Final process and `simctl` reads showed zero Simulator
 processes and zero booted devices. The next clean rebuild remains deferred
 until it can run without making the user's computer less responsive; this is a
 resource decision, not a build failure or new goal blocker.
+
+## 2026-08-01 — Added and accepted an exact corresponding-source artifact
+
+### Chose release progress that did not overload the host
+
+The next roadmap action was a current-head clean build, but resumed inspection
+found only 3,743 free 16-KiB pages, roughly 58 MB, and 10.60 GB swap in use.
+Both Simulators remained closed and no compiler was running. Rather than repeat
+the previously documented unsafe unity-build attempt, work moved to M11's still
+open corresponding-source release artifact, which required Git/archive I/O but
+no compilation or Simulator.
+
+The repository and draft PR already exposed the tracked GPL source, yet there
+was no deterministic release tarball tied to the app's embedded commit. New
+`package-source.sh` packages one committed Git object rather than traversing
+the working tree. It requires the build system, platform/game/include/tools and
+vendored SDL source, licenses, Installation Information, modification records
+and both packagers. Archive-list scans reject retail/runtime media, saves,
+binary packages, profiles, certificates, key-like files and generated/runtime
+trees before gzip publication.
+
+The README and iOS Installation Information now direct a distributor to create
+the source archive from the same clean commit as the IPA and publish both
+sidecars. The source packager refuses tracked changes and existing outputs,
+uses a commit-derived root plus timestamp/name-free gzip output, and verifies
+the completed tar/gzip/member contract.
+
+### The first exact run exposed an incomplete-publication window
+
+Before commit, `bash -n` and help passed. A run against the dirty tracked tree
+failed before output with the intended commit-first error. The implementation
+and documentation were committed and pushed as `95dcb67f177b`.
+
+The first clean archive then completed. During the second sequential command,
+the execution session ended after the 17-MB tarball moved to its requested
+path but before `shasum` filled the sidecar. The local directory therefore held
+one complete pair plus a second tarball and zero-byte checksum. That state was
+rejected, not normalized into a reproducibility claim.
+
+Although the interruption was external, it revealed that the script published
+its archive too early. The correction calculates and validates the digest,
+writes a basename-relative sidecar, and verifies both inside private staging
+before moving the complete pair and checking it again at the destination. It
+was committed and pushed as `4091b602ab2a`.
+
+### Exact corrected package and extraction proof
+
+Two separate nice-15 runs from exact clean commit
+`4091b602ab2abc74db584a56de06faa23905a96a` completed in about 15.42 and
+17.84 seconds. Each output was exactly 17,482,944 bytes with 3,233 members and
+root `CTRPad-source-4091b602ab2a/`. Both hash to:
+
+```text
+d1c4b4fb119605ab56475d2a6861555a71bceac146ea2b9004c498adf5e64df1
+```
+
+`cmp` succeeded. Both basename-relative sidecars passed independent
+`shasum -a 256 -c`; gzip and tar validation passed. The exact member list had
+no prohibited extension/path and retained executable modes on both packagers.
+An invalid-ref run failed before creating output.
+
+One exact tarball was extracted into a fresh temporary directory. It contained
+no `.git` tree. Both packagers passed `bash -n`; its own CMake metadata listed
+`macos-arm64`, `macos-arm64-app`, `ios-simulator-arm64` and
+`ios-device-arm64`; a second extracted-filesystem restriction scan was empty.
+The archives, checksums, interrupted diagnostic output and extracted tree stay
+local-only.
+
+Final resource state still had only 3,693 free 16-KiB pages and about 10.55 GB
+swap used. No clean compile was attempted and no Simulator was opened. This
+accepts deterministic complete source-artifact generation and extraction, not
+a clean-machine build, legal review, same-identity IPA, signing or physical
+device acceptance. M11 and the overall goal remain active.

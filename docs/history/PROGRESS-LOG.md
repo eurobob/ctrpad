@@ -2083,3 +2083,38 @@ The audit-open reading was 223,681 seconds: 2 days, 14 hours, 8 minutes,
 including 263 seconds (4 minutes, 23 seconds) for the closing evidence audit.
 Goal time includes pauses/resumes and is not a build benchmark or person-hour
 estimate. The goal remains active.
+
+### 2026-08-01 — Deterministic corresponding-source artifact accepted
+
+- Rechecked the planned clean-build gate and found only about 58 MB free with
+  more than 10.5 GB swap used. Kept zero Simulators open and started no
+  compiler; advanced M11's release-source artifact instead.
+- Added `package-source.sh`. It archives one exact clean Git commit, requires
+  the build system, complete game/platform/include/tools and vendored SDL
+  source, licenses, Installation Information, modification history and both
+  packagers, then rejects retail/runtime/package/profile/certificate/key-like
+  members and generated trees.
+- Added README and iOS installation steps requiring the source archive and IPA
+  to share one build identity. Precommit shell/help checks passed; a dirty-tree
+  run failed before output as intended.
+- Published implementation checkpoint `95dcb67f177b`. Its first exact archive
+  completed, but the second execution was interrupted after moving its tarball
+  and before filling the checksum. Rejected the incomplete pair and corrected
+  publication order instead of counting it.
+- Published correction `4091b602ab2a`, which prepares, hashes and verifies the
+  archive/sidecar pair in private staging before destination publication and
+  verifies it again afterward.
+- Two separate nice-15 exact runs at the correction head produced byte-
+  identical 17,482,944-byte, 3,233-member archives at SHA-256
+  `d1c4b4fb...64df1`. `cmp`, both sidecars, gzip, tar, required-member and
+  prohibited-member checks passed. An invalid ref failed before output.
+- Fresh extraction contained no `.git`, preserved both executable packagers,
+  passed both shell syntax checks, enumerated all four Apple CMake presets and
+  contained no prohibited extension. Local artifacts remain outside Git.
+- Final state remained zero Simulator processes and zero booted devices. Low
+  headroom still defers a clean extracted-source compile; source packaging is
+  accepted without overstating clean build, signing or device release.
+
+The source-package documentation-open reading was 224,651 seconds: 2 days,
+14 hours, 24 minutes, 11 seconds cumulative. Goal time includes pauses/resumes
+and is not a build benchmark or person-hour estimate. The goal remains active.

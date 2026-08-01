@@ -1203,10 +1203,11 @@ Acceptance:
 
 ### M11 — Retail parity, signing, and GPL-compliant release
 
-**Status:** in progress; reproducible retail-free unsigned IPA packaging,
-profile-aware DER signing preparation, embedded legal/install resources and
-direct/AltStore-style installation information have landed; user-owned Apple
-signing, physical-iPad install and final device acceptance remain open; depends
+**Status:** in progress; reproducible retail-free unsigned IPA and exact
+corresponding-source packaging, profile-aware DER signing preparation,
+embedded legal/install resources and direct/AltStore-style installation
+information have landed; user-owned Apple signing, clean extracted-source
+build, physical-iPad install and final device acceptance remain open; depends
 on all prior milestones
 
 Checkpoints `6db6116fe67a`, `a37cdf2aa5af` and `207121134a05` add a guarded
@@ -1246,13 +1247,28 @@ remains responsible for full DER signing and strict verification. Fresh state
 still has zero identities, profiles or connected devices, so physical signing
 is the remaining external boundary rather than a software package ambiguity.
 
+Checkpoints `95dcb67f177b` and `4091b602ab2a` add and harden a deterministic
+GPL corresponding-source packager. It refuses tracked-dirty input, archives an
+exact Git commit, requires the build system, vendored SDL, licenses,
+Installation Information, modification history and both packagers, and rejects
+retail/runtime/package/profile/certificate/key material. An interrupted first
+exact route exposed that the tarball was moved before its checksum completed;
+the corrected path prepares and validates both in private staging before
+publication. Two clean corrected archives are byte-identical at SHA-256
+`d1c4b4fb...64df1`, contain 3,233 members, retain executable packager modes and
+enumerate all four Apple presets after fresh extraction. A clean extracted-
+source compile remains deferred for safe host headroom. Exact evidence is in
+`docs/parity/2026-08-01-corresponding-source-package.md`.
+
 Work:
 
 - Run the complete cross-architecture parity suite and prolonged playtesting.
 - Produce reproducible macOS and iOS/iPadOS release builds.
 - Document Xcode, direct-device, and AltStore-style sideload installation.
-- Publish complete corresponding source, build scripts, notices, modifications,
-  and Installation Information; exclude all game assets and signing secrets.
+- Retain the accepted exact corresponding-source archive, build scripts,
+  notices, modifications and Installation Information; exclude every retail
+  asset and signing secret, and pair the release source with the matching IPA
+  build identity.
 - Record known limitations honestly.
 
 Acceptance:
