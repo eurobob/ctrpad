@@ -3,12 +3,14 @@
 - Date: 2026-08-01
 - Branch: `codex/arm64-apple`
 - Exact baseline source: `43245107c279302baf083582f91743bcb47d6a51`
-- Corrected diagnostic source: uncommitted working tree based on that commit
+- Exact logging/accessibility source: `7bcc51a790a173662a701752a980c89daf7193b4`
+- Exact retail-consumer input source: `ba80d153ae558cc74d1660043e32e58ce8baad46`
 - Runtime: iOS 26.5 ARM64 Simulator
 - Sole device: `CTRPad Import Negatives`
 - Protected device kept shut down: `CTRPad Import Validation`
-- Status: **not accepted; Simulator stability and broad graphical integrity
-  remain the physical-device gate**
+- Status: **bounded input, lifecycle and inspected-scene graphics accepted;
+  performance, unexplained process absence and broad graphical churn keep the
+  Simulator and physical-device gates open**
 
 ## Why this checkpoint exists
 
@@ -337,9 +339,123 @@ The isolated test passed. This is implementation evidence, not the required
 exact post-fix Simulator replay; the gate remains open until that committed
 build succeeds.
 
+## Exact consumer-acknowledged replay: bounded acceptance
+
+The consumer-acknowledgement correction was committed and pushed as exact
+source `ba80d153ae558cc74d1660043e32e58ce8baad46`. Both named Simulators were
+shut down during compilation. Builds ran sequentially at nice priority 15 with
+one job:
+
+```text
+macOS ARM64 build         67.25 seconds; 32 established warnings
+macOS executable SHA-256 55070327c683ea66c7b1ab806959756b4a391bec84d2fc1d1e9b890980c2ed2b
+macOS version            CTR Native 0.1.0-beta.7.1 (ba80d153ae55)
+macOS CTest              22/22; 2.41 seconds test / 2.46 outer
+iOS Simulator build      69.93 seconds; 32 established warnings
+iOS executable SHA-256   6f5f71520faa2fec17011f75d3232483faf82c7d91133096be7381033ebeb923
+signed test-copy SHA-256 6d944fed1f59ee492ade35c44b19015da6da6a911b8dde18c44d4937c25c5c55
+```
+
+Both executables were thin ARM64 and embedded `ba80d153ae55`. The temporary
+Simulator copy passed deep/strict ad-hoc verification; it is not an Apple
+device signature. Only `CTRPad Import Negatives` booted. Update installation
+retained the 605,698,800-byte BIN at SHA-256
+`f780bf2331476aabfc00772fa758b12dd95ebfbc907968132cbd3cdd4e2c07c0`
+and the 6,016-byte save at SHA-256
+`6a01b0f5562ed7a279d8f8e51e3b1874ac39a6120f55db4fe3873288950619a3`.
+
+### Keyboard-to-retail correlation
+
+The route used only the published keyboard aliases. `P` skipped the
+presentation, `S` selected Time Trial and `K` entered it. Further `K` presses
+selected Crash, Crash Cove and No Ghost; `I` skipped the fly-in; `K` applied
+Gas; and `P` opened Pause. `S` moved Resume to Restart. After resuming and
+pausing again, three separately consumed `S` presses reached Change Level;
+`K` opened the level list, `S` selected Roo's Tubes, `K` accepted it and No
+Ghost, and `I` skipped the second fly-in.
+
+The final log contains 20 keyboard down edges and 20 immediately following
+retail-poll consumption records. Every mask was acknowledged by
+`GAMEPAD_ProcessHold`; observed ingress-to-consumer latency was about
+0.10-0.21 seconds. No duplicate action was needed to make a stable menu
+respond. This accepts the consumer-acknowledged quick-key contract for the
+inspected route, not physical keyboard delivery or human multi-touch.
+
+### Graphics, lifecycle and retained logs
+
+Visible inspection covered title/main menu, Time Trial highlight, complete
+character portraits, Crash Cove preview/ghost/fly-in/grid/race/HUD/minimap,
+Pause and Change Level, then distinct Roo's Tubes preview/fly-in/grid/tunnel/
+CTR banner/speedometer frames. Roo's Tubes remained coherent across portrait,
+landscape and portrait. Home/resume retained PID `65296`, the course state and
+all inspected pixels while the app log recorded:
+
+```text
++866.705s will-enter-background
++868.538s did-enter-background
++877.802s will-enter-foreground
++878.179s did-enter-foreground
+```
+
+No retail-derived screenshot was committed. Local visual captures were hashed;
+representative Simulator screenshots were
+`43828ed5e591c88d970a1724cf61c8b8e92b89a079b73c8f3c0b64fe822ab644`
+for the Roo's Tubes grid and
+`eb9b565cf95447063007417d170aab3c24591daaea7f44c7146a93d8b145bb5c`
+after Home/resume.
+
+The fully flushed current application log is 128 lines / 13,642 bytes at
+SHA-256
+`fa8324189326db5f941b575f2ac215738e6dcc3125006da06875f6940a7bbcc1`.
+All five retained generations were present:
+
+```text
+current  13,642 bytes  fa832418...bbcc1
+.1        5,685 bytes  aa12c685...9353
+.2        9,370 bytes  8ec554ad...d8687
+.3       10,396 bytes  17f50a77...dc5
+.4        3,704 bytes  12e8a9bf...fc07
+```
+
+A targeted scan across current plus `.1` through `.4` found zero AssetRef,
+visibility-cache-exhaustion, application `ERROR`, `FATAL`, unbalanced-render,
+assert, signal or crash markers. The iOS unified log had five error-level
+framework messages: one CoreFoundation plug-in factory registration and four
+CoreAudio hardware/acoustic-profile limitations. None named the renderer or
+asset pipeline. No new `CTRPad` diagnostic report existed.
+
+### Why the full gate stays open
+
+The 63 persistent FPS samples ranged from 4.61 to 22.80 and averaged 7.37.
+Late steady-state samples were commonly about 4.61-5.30 FPS. One process sample
+showed about 86% CPU and 221,264 KB RSS. This is too slow to call the Simulator
+a usable stability test even though the fixed input route worked.
+
+The app remained responsive and kept logging for about 19 minutes 38 seconds,
+and the same PID survived the explicit lifecycle cycle. During cleanup,
+however, `simctl terminate` reported that no target was running. There was no
+crash report, application fault entry or app-log failure marker, but the exit
+cause was not recovered. A later bounded RunningBoard query outlived its
+initial wait and ended without recovering the exit cause; the device was shut
+down rather than left consuming resources. This unexplained process absence is
+retained as an open stability finding.
+
+The exact replay therefore accepts keyboard consumption, two distinct track
+loads, inspected Adventure/Time Trial pixels, rotation, Home/resume and the
+five-generation log contract. It does not generalize two tracks to every level
+or effect, accept the poor frame rate, explain the process exit, or authorize a
+physical-iPad attempt. The next Simulator work must profile/improve the
+software-renderer path and repeat longer, broader level/effect churn with an
+observable normal shutdown.
+
 ## Goal-time accounting
 
-The documentation-open goal reading was 232,171 seconds: 2 days, 16 hours,
-29 minutes, 31 seconds cumulative. Goal time includes pauses/resumes and is not
-a build benchmark or person-hour estimate. The documentation-close reading is
-recorded in the running progress log after final verification.
+The evidence-open goal reading was 232,171 seconds: 2 days, 16 hours,
+29 minutes, 31 seconds cumulative. The prior in-progress documentation reading
+was 232,558 seconds: 2 days, 16 hours, 35 minutes, 58 seconds. The exact
+post-fix documentation-open reading was 236,181 seconds: 2 days, 17 hours,
+36 minutes, 21 seconds. The pre-publication verification reading was 236,875
+seconds: 2 days, 17 hours, 47 minutes, 55 seconds, adding 694 seconds (11
+minutes, 34 seconds) during the closing documentation and audit. Goal time
+includes pauses/resumes and is not a build benchmark or person-hour estimate.
+The post-push publication reading is recorded in the running progress log.

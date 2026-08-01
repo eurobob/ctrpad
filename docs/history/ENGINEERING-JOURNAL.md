@@ -13278,3 +13278,77 @@ retail acknowledgement and immediate neutral release for both keyboard aliases
 and touch taps. Its isolated CTest passed. Simulator and device were fully shut
 down before compilation. Exact committed builds and the live keyboard route
 remain the next acceptance step.
+
+## 2026-08-01 — Accepted retail-consumer input, retained the Simulator gate
+
+### Exact compilation without Simulator load
+
+The retail-poll acknowledgement was published as
+`ba80d153ae558cc74d1660043e32e58ce8baad46`. Both named devices and the
+Simulator GUI were shut down throughout compilation. Sequential nice-15,
+one-job builds produced thin ARM64 macOS and iOS Simulator executables at
+SHA-256 `55070327...c2ed2b` and `6f5f7152...eb923` in 67.25 and 69.93 seconds,
+respectively. Both embedded `ba80d153ae55` and repeated the 32 established
+warnings. The macOS suite passed 22/22 in 2.41 seconds. A copied Simulator
+bundle was fully ad-hoc sealed, strictly verified and transformed only its
+executable identity to `6d944fed...c5c55`; this was never labeled a device
+signature.
+
+### Exact keyboard-only two-level route
+
+Only disposable `CTRPad Import Negatives` booted. Its complete 605,698,800-byte
+BIN and 6,016-byte save retained hashes `f780bf23...7c0` and
+`6a01b0f5...19a3`. The published keyboard map navigated presentation to Time
+Trial, selected Crash, loaded Crash Cove without a ghost, skipped its fly-in,
+applied Gas, paused, moved the pause selection, resumed, paused again, opened
+Change Level, selected Roo's Tubes, skipped its fly-in and reached that track.
+All 20 logged keyboard ingress edges have 20 ordered consumer lines naming the
+same masks about 0.10-0.21 seconds later. This is the first exact slow-
+Simulator run in this checkpoint where every stable-menu quick key reached the
+retail `GAMEPAD_ProcessHold` consumer without repetition.
+
+Full-resolution Computer Use inspection covered complete character tiles,
+Crash Cove preview/fly-in/grid/race/HUD/minimap and Pause, then distinct Roo's
+Tubes preview/fly-in/grid/tunnel/banner/speedometer pixels. Portrait,
+landscape and portrait remained coherent. An explicit Home/resume cycle kept
+PID `65296`, course state and pixels and wrote all four ordered lifecycle
+events at +866.705 through +878.179 seconds. Representative local simctl
+screenshots hash to `43828ed5...ab644` and `eb9b565c...bb5c`; no retail-
+derived image entered Git.
+
+### Five-generation log and system diagnosis
+
+The final current file contains 128 lines / 13,642 bytes at SHA-256
+`fa832418...bbcc1`. Its four archives are 5,685, 9,370, 10,396 and 3,704 bytes
+at the previously recorded `aa12c685...9353`, `8ec554ad...d8687`,
+`17f50a77...dc5` and `12e8a9bf...fc07` hashes. A single targeted scan over all
+five found no AssetRef, cache-exhaustion, app error/fatal, unbalanced-render,
+assert, signal or crash marker.
+
+The unified log contained five error-level framework diagnostics: one
+CoreFoundation plug-in-factory registration and four CoreAudio unavailable-
+hardware-profile lines. No new CTRPad crash report existed. These are retained
+as Simulator limitations rather than hidden or misattributed to the renderer.
+
+### Rejected full-stability claim and resource cleanup
+
+The 63 FPS samples ranged 4.61-22.80 and averaged 7.37, with later readings
+commonly 4.61-5.30 FPS. CTRPad used about 86% CPU and 221,264 KB RSS at one
+sample. Input correctness at that speed is accepted; Simulator usability is
+not.
+
+The app produced logs for about 19 minutes 38 seconds and survived the tested
+lifecycle cycle. When cleanup ran, `simctl terminate` nevertheless returned
+`found nothing to terminate`. No crash artifact or app fault explained the
+absence. A narrowly filtered headless RunningBoard query then hung, so its
+exact diagnostic process was allowed to end and the device was shut down
+rather than left consuming system resources. Final reads showed both CTRPad
+devices shut down and no CTRPad/Simulator GUI process. Two verified task-owned
+temporary signed-app directories, 3.5 MB each, were deleted by exact path;
+the final text log and two hashed screenshot files were retained in `/tmp`.
+
+This accepts the exact consumer latch, the inspected two-track graphical churn,
+rotation/Home recovery and retained logging. Poor software-renderer cadence,
+the unexplained final process absence, broader level/effect coverage, human
+multi-touch and every physical-iPad gate remain open. Full proof and hashes are
+in `docs/parity/2026-08-01-simulator-stability-logging.md`.

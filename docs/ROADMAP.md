@@ -7,9 +7,10 @@ timing.
 
 **Roadmap status:** active
 
-**Current milestone:** M10 touch-control iteration; M7's level-visibility
-regression gate is restored, while M8/M9 still await physical-iPad signing,
-controller, Files, performance, and lifecycle gates
+**Current milestone:** M10 Simulator stability and touch-control iteration;
+exact retail-consumer keyboard input and bounded two-track graphics/lifecycle
+are accepted, while Simulator cadence, unexplained process exit, broad visual
+churn and all physical-iPad M8/M9 gates remain open
 
 **Last updated:** 2026-08-01
 
@@ -1084,10 +1085,11 @@ Acceptance:
 ### M10 — Touch-first controls
 
 **Status:** in progress; a functional safe-area-aware Simulator prototype,
-peer input composition, continuous analog steering, menu D-pad edges and core
-button layout have landed; the user has reopened current-build Simulator
-stability/visual acceptance, and physical-iPad ergonomics and drift-boost
-acceptance remain open; depends on M8 and M9
+peer input composition, continuous analog steering, consumer-acknowledged
+quick keys, menu D-pad edges and core button layout have landed; exact
+two-track input/visual/lifecycle coverage is accepted, but Simulator
+performance, broader graphics, normal process exit and physical-iPad
+ergonomics/drift-boost acceptance remain open; depends on M8 and M9
 
 Checkpoint `c496c27f04c8` adds an iOS UIKit overlay with a virtual analog
 stick, Cross/Square/Circle/Triangle, L1/R1, Start and Select. Touch is composed
@@ -1196,8 +1198,22 @@ overwritten by later VSync pad refreshes before slow retail game logic reached
 `GAMEPAD_ProcessHold`. The native latch now remains active until that exact
 retail consumer polls, then logs and acknowledges the edge. The media-free
 input self-test proves persistence across repeated host reads and immediate
-release after retail acknowledgement. Exact post-fix Simulator validation is
-still required before the gate can close.
+release after retail acknowledgement. At that point, exact post-fix Simulator
+validation was still required before the gate could close.
+
+Exact checkpoint `ba80d153ae55` then completed that bounded post-fix replay.
+Twenty keyboard down edges each reached an ordered retail-poll consumer while
+the published keys navigated Time Trial through Crash Cove, Pause/Resume,
+Change Level and Roo's Tubes. Both tracks, character tiles, previews, fly-ins,
+HUD/minimap, course geometry and portrait/landscape/Home-resume frames were
+coherent. The current 13,642-byte log plus four archives contain none of the
+targeted asset/cache/application-fault markers. This accepts the input fix and
+the inspected graphical/lifecycle route, not the whole Simulator gate: 63 FPS
+samples averaged 7.37 and fell to about 4.61-5.30 late, only two tracks were
+churned, and cleanup found the app already absent without a recovered crash
+cause. Performance profiling, broader level/effect churn and an observable
+normal shutdown remain prerequisites for physical-device work. See
+`docs/parity/2026-08-01-simulator-stability-logging.md`.
 
 Work:
 
@@ -1217,13 +1233,13 @@ Work:
 Acceptance:
 
 - Touch-only users can start the app, select content, race, pause, and save.
-- Historical exact runs cover startup, menu navigation, cold Load-screen
-  access, Time Trial entry, movement, Pause/rotation/Resume and a keyboard-only
-  route to the race grid. The current Simulator product gate is reopened:
-  repeat those routes on one exact clean build with the retained logs, no
-  missing/corrupt graphical assets and reliable keyboard/touch delivery before
-  treating that historical coverage as current acceptance. Physical keyboard
-  and a complete human multi-touch race/save remain open.
+- Current exact runs cover startup, menu navigation, cold Load-screen access,
+  Time Trial entry, movement, Pause/rotation/Resume and a keyboard-only route
+  across Crash Cove and Roo's Tubes with retained logs, coherent inspected
+  graphics and reliable keyboard delivery. The current Simulator product gate
+  remains open for usable cadence, normal process termination and broader
+  level/effect churn. Physical keyboard and a complete human multi-touch
+  race/save remain open.
 - Steering remains continuously analog while accelerate and drift are held.
 - A tester can intentionally execute repeated three-boost drift chains in both
   turn directions without grip changes or missed simultaneous contacts.

@@ -518,10 +518,13 @@ unlimited Application Support footprint.
 
 **Verification boundary:** exact baseline `43245107c279` rendered the inspected
 title/menu/Crash Cove frames coherently, but ran at roughly 4-8 FPS and exposed
-intermittent short actions plus destructive single-session logging. The
-corrected dirty-source diagnostic retained two real sessions, produced exact
-mapped input/lifecycle timestamps, made accessible Start/Cross actions affect
-the game, and showed no known asset/cache/error marker in either log. Because
-that diagnostic retained the old configured build identity and did not cover
-broad scene churn, it is not acceptance. The required exact post-commit run and
-physical-device gate remain open.
+intermittent short actions plus destructive single-session logging. Exact
+logging checkpoint `7bcc51a790a1` retained real sessions but exposed that its
+two-VSync quick-input latch could expire before the retail consumer. Exact
+consumer checkpoint `ba80d153ae55` made 20/20 keyboard edges reach
+`GAMEPAD_ProcessHold`, churned coherent Crash Cove and Roo's Tubes plus
+rotation/Home-resume, and retained five logs without known asset/cache/app-
+fault markers. This accepts that bounded input/visual/lifecycle route. It does
+not accept average 7.37 FPS, an unexplained already-absent process at cleanup,
+all levels/effects, human multi-touch or a physical device; those gates remain
+open.

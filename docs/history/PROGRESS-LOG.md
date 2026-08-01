@@ -2347,3 +2347,46 @@ published boundary, including 215 seconds (3 minutes, 35 seconds) for the
 closing audit and first acceptance-documentation commit. Goal time includes
 pauses/resumes and is not a build benchmark or person-hour estimate. The goal
 remains active.
+
+### 2026-08-01 — Exact keyboard consumption and two-track graphics accepted; full Simulator gate stays open
+
+- Published retail-consumer input checkpoint `ba80d153ae55` and backed it up
+  to `origin/codex/arm64-apple` before the live acceptance run.
+- Compiled with every Simulator shut down, nice 15 and one job. Exact macOS
+  and iOS Simulator thin ARM64 executables hash to `55070327...c2ed2b` and
+  `6f5f7152...eb923`; builds took 67.25 and 69.93 seconds. The macOS suite
+  passed 22/22 in 2.41 seconds.
+- Booted only the disposable import-negative device. Update installation
+  retained the complete 605,698,800-byte retail image and 6,016-byte save.
+- Used only the published keyboard map to enter Time Trial, select Crash and
+  Crash Cove, skip the fly-in, drive, pause/resume, open Change Level, select
+  Roo's Tubes and reach its course. All 20 key-down entries have 20 matching
+  retail-poll consumption entries; single quick actions no longer vanished
+  between native VSync and `GAMEPAD_ProcessHold`.
+- Inspected coherent title/menu, character portraits, Crash Cove and Roo's
+  Tubes preview/fly-in/grid/course/HUD/minimap/banner pixels. Rotation and an
+  explicit Home/resume retained PID `65296`, the level state and graphics.
+- Preserved a fully flushed 128-line / 13,642-byte current log at SHA-256
+  `fa832418...bbcc1` plus four exact prior sessions. All five scan clean of the
+  known asset/cache/app-error/fatal/unbalanced/assert/signal/crash markers.
+  The unified log contains five framework-level CFBundle/CoreAudio Simulator
+  limitations and no new CTRPad crash report.
+- Kept the full gate open. Sixty-three FPS samples range 4.61-22.80 and average
+  7.37, with the late run near 4.61-5.30 FPS. Cleanup also found the app already
+  absent despite no recovered crash cause. Two tracks do not prove every
+  level/effect. Performance profiling, an explained normal shutdown and
+  broader graphical churn are required before physical-device work.
+- A bounded RunningBoard query outlived its initial wait but ended without an
+  exit cause. The one disposable device was then shut down. Final state is both
+  CTRPad devices shut down with no game or Simulator GUI process left consuming
+  the host.
+
+The exact post-fix documentation-open reading was 236,181 seconds: 2 days,
+17 hours, 36 minutes, 21 seconds cumulative. The pre-publication verification
+reading was 236,875 seconds: 2 days, 17 hours, 47 minutes, 55 seconds, adding
+694 seconds (11 minutes, 34 seconds) for the closing documentation/audit and
+4,317 seconds (1 hour, 11 minutes, 57 seconds) from the previous 232,558-second
+in-progress ledger reading. Two exact 3.5 MB temporary signed-app copies were
+deleted; the final log and visual evidence remain. The post-push publication
+reading follows. Goal time includes pauses/resumes and is not a build benchmark
+or person-hour estimate. The goal remains active.
