@@ -2983,3 +2983,80 @@ material at SHA-256 `116781ee...42c5`. The package's built-in checksum passed;
 a redundant caller first ran `shasum -c` from the wrong directory, then passed
 unchanged from `dist/`. The 17:33:01 reading was 266,988 seconds (3 days,
 2 hours, 9 minutes, 48 seconds); GitHub publication remained next.
+
+### 2026-08-01 — Added the physical-iPad campaign handoff
+
+- Re-audited the completion boundary after PR #6: zero Apple signing
+  identities, no profiles and no CoreDevice physical devices remain.
+- Added `tools/ios-device-campaign.sh` with separate signed-IPA `preflight`,
+  non-destructive update-install/launch `prepare`, and post-human-test
+  Application Support `collect` phases using versioned `devicectl` JSON.
+- Bound the app's extracted leaf signing certificate to one of the provisioning
+  profile's `DeveloperCertificates`, beyond App ID/team/UDID matching.
+- Added a redacted timestamped acceptance template covering Files import,
+  complete touch race, three-boost drift, audio/lifecycle, cadence/thermals,
+  log review and save/update persistence.
+- Forced raw in-repo evidence into gitignored paths, avoided installed-binary
+  hash claims that iPadOS cannot prove, and excluded the Documents retail tree
+  from collection.
+- Passed syntax/help and safe argument/path failures. The current unsigned IPA
+  passed sidecar/ZIP checks then correctly failed for missing profile; a fake
+  UDID produced CoreDevice error 1000 and JSON version 3 before any install.
+- Recorded and corrected a literal-suffix BSD `mktemp` probe, a rejected direct
+  cleanup replaced by recoverable Trash, and one malformed test-orchestration
+  output-limit tuple. `shellcheck` remains unavailable.
+
+The 17:45:00 reading was 267,693 seconds: 3 days, 2 hours, 21 minutes, 33
+seconds cumulative. This improves the other-Mac/iPad handoff but does not close
+Apple signing or any physical result. Exact evidence is in
+`docs/parity/2026-08-01-ios-physical-campaign-handoff.md`.
+
+The unchanged macOS ARM64 suite subsequently passed 22/22 in 5.39 seconds.
+Exactly one Simulator remained booted at installed hash `c6d40aaf...187f` and
+was untouched. Device collection now also extracts FPS and campaign-event rows
+for later scene-qualified physical analysis.
+
+The certificate-data loop independently round-tripped one synthetic plist
+entry byte-for-byte (`cmp=0`). Real leaf-certificate/profile authorization
+remains unpassed until a user-signed IPA is supplied.
+The first space-separated codesign certificate-prefix probe failed; the
+required `--extract-certificates=PREFIX` form extracted Xcode's three-
+certificate chain and was retained before commit.
+Literal dotted team-entitlement readback was likewise assigned to PlistBuddy
+and reproduced a synthetic `TESTTEAM` value exactly.
+The final certificate-link loop compared real Xcode leaf DER
+`d84db96a...1ed57` with a synthetic one-entry profile array and returned
+`profile_count=1`, `match=1`; no CTRPad Apple authorization is inferred.
+
+The final claim-audit reading was 268,214 seconds at 17:53:34 CDT: 3 days,
+2 hours, 30 minutes, 14 seconds. Signed CTRPad preflight and all physical gates
+remain unexecuted.
+
+At 17:55–17:56 CDT the final working-tree audit passed Bash/package syntax,
+diff hygiene and all 22/22 macOS ARM64 tests in 4.87 seconds. One obsolete
+bundle-ID lookup failed without mutation; the corrected exact identifier
+confirmed the sole Simulator still installed `c6d40aaf...187f`. Signing
+identity/device inventory remained zero. The 17:55:51 active-time reading was
+268,363 seconds (3 days, 2 hours, 32 minutes, 43 seconds).
+
+The pre-stage audit also made `collect` require the exact successful prepare
+manifest/UDID/bundle tuple before accessing CoreDevice, preventing evidence
+from being attached to the wrong signed-install campaign.
+
+At 17:59 CDT, a root without that manifest failed before creating a collection;
+an ignored synthetic matching-manifest negative advanced to and failed at the
+fake device with CoreDevice error 1000 before app lookup/copy. Final syntax and
+diff checks passed. The 17:59:07 reading was 268,549 seconds (3 days, 2 hours,
+35 minutes, 49 seconds); neither raw negative is tracked.
+
+At 18:00 CDT commit `4349bae8d` produced a clean 3,253-member corresponding-
+source archive at SHA-256 `b9dfcc85...cba4`. Internal and independent checksum
+checks passed; the tool/template/report were present and both retail/runtime
+and private/package scans returned zero. The 18:00:26 reading was 268,628
+seconds (3 days, 2 hours, 37 minutes, 8 seconds).
+
+At 18:01–18:02 CDT both commits reached GitHub. The connector returned its
+private-repository HTTP 404, then authenticated `gh` fallback opened draft PR
+#7. Its exact 12-file/two-commit scope was `MERGEABLE`/`CLEAN` with no configured
+checks. The 18:02:05 reading was 268,724 seconds (3 days, 2 hours, 38 minutes,
+44 seconds); merge was still pending.

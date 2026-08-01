@@ -207,6 +207,13 @@ Simulator that already contains the retail image and slot-zero save to compare
 their inode, size and SHA-256 across the update. Full behavior and limitations
 are in `docs/INSTALL-IOS.md`.
 
+For a user-signed physical build, `tools/ios-device-campaign.sh` provides
+separate offline `preflight`, non-destructive update-install/launch `prepare`,
+and post-test `collect` phases. Raw device evidence and saves stay under
+ignored `dist/`; summarize the actual human/device results with
+`docs/templates/IOS-DEVICE-ACCEPTANCE.md`. This workflow does not turn an
+unsigned IPA or Simulator result into physical-device evidence.
+
 Create the matching GPL corresponding-source archive from a clean committed
 checkout with:
 

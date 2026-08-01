@@ -14326,3 +14326,140 @@ checksum verification passed. A redundant outer `shasum -c` initially ran from
 the repository root and could not resolve the sidecar's `dist/`-relative
 basename; rerunning from `dist/` returned `OK`. The 17:33:01 goal reading was
 266,988 seconds (3 days, 2 hours, 9 minutes, 48 seconds).
+
+## 2026-08-01 — Made the external physical-iPad campaign executable
+
+After PR #6 merged exact Simulator installation into `main`, the completion
+audit returned to the release re-baseline's only remaining owner: a user-signed
+physical iPad. Current inventory again found zero valid signing identities, no
+provisioning profiles and no CoreDevice devices. The repo described seven human
+requirements and direct commands but had no tool binding a signed IPA,
+profile-authorized UDID, update install, launch and local evidence directory.
+
+At 17:38 CDT, local `devicectl 518.33` help established that on-disk versioned
+JSON is its only supported automation output. It also established exact app
+install, foreground launch, installed-app lookup and `appDataContainer` copy
+commands. The retail image belongs under CTRPad Documents; logs and saves
+belong under Application Support, allowing collection without copying 605 MB
+of retail media.
+
+The first JSON-schema help probe used `/tmp/ctrpad-devices.XXXXXX.json` as a
+BSD `mktemp` template. Because the X run was not the terminal suffix, literal-X
+paths resulted. A direct exact-file cleanup command was rejected by execution
+policy; both 471/77-byte temporary files were then moved to macOS Trash with
+`/usr/bin/trash`, so cleanup remained recoverable. No repo, app or Simulator
+state was involved.
+
+New `tools/ios-device-campaign.sh` separates `preflight`, `prepare` and
+`collect`. Offline preflight validates the sidecar, ZIP, one-app payload,
+ARM64/IOS Mach-O, strict signature, profile expiration/platform/App ID/team/
+authorized leaf certificate/optional UDID and retail/runtime exclusion.
+Prepare retains that extracted signed app through a no-uninstall update
+install, exact-bundle lookup and
+foreground launch, writing JSON/logs at every CoreDevice boundary. It records
+the signed-package hash rather than claiming iPadOS exposes the installed
+binary. Collect copies only Application Support, hashes saves and scans rotating
+logs. In-checkout raw evidence must pass `git check-ignore`.
+
+`docs/templates/IOS-DEVICE-ACCEPTANCE.md` now requires a timestamped complete-
+race, three-boost drift, simultaneous touch, Files/import, audio/lifecycle,
+cadence/thermal and update/save record. It explicitly prohibits committing raw
+JSON, UDIDs, profiles, saves or retail data. Installation Information and
+README usage were updated, and the source packager now requires both the tool
+and template.
+
+At 17:42–17:44 CDT, syntax/help passed. Missing command, zero timeout, missing
+prepare UDID, tracked evidence path and nonexistent tracked evidence parent all
+failed before mutation. A test-orchestration call initially put a string in a
+numeric output-limit tuple and was rerun with corrected arguments. The clean
+unsigned `41e00a5d...13ed` IPA passed its sidecar and ZIP test, then exited 1 at
+`signed app has no embedded.mobileprovision`; no fake authorization was added.
+A deliberate nonexistent UDID exited 1 at device details with CoreDevice error
+1000 and preserved JSON version 3. The downstream install/copy commands did not
+run. `shellcheck` remained unavailable; `bash -n` and `git diff --check` passed.
+
+The 17:45:00 reading was 267,693 seconds (3 days, 2 hours, 21 minutes, 33
+seconds). The exact contract, paths, negative output and physical execution
+checklist are in
+`docs/parity/2026-08-01-ios-physical-campaign-handoff.md`. The goal remains
+open: no signed physical pass is inferred from making its procedure
+reproducible.
+
+After the documentation boundary, the unchanged macOS ARM64 product passed
+22/22 CTests in 5.39 seconds. A state snapshot retained exactly one booted
+Simulator with installed executable `c6d40aaf...187f`; physical-device probes
+had not altered it. Collection was also extended to extract FPS and campaign-
+event rows beside the targeted-fault and save-hash summaries, without treating
+those rows as self-sufficient hardware acceptance.
+
+The final offline claim audit added leaf-certificate linkage: `codesign`
+extracts certificate zero from the app signature, each profile
+`DeveloperCertificates` data entry is decoded, and at least one SHA-256 must
+match. A synthetic plist data-array round trip produced one decoded entry and
+`cmp=0`, accepting the extraction mechanism but not an absent Apple pair.
+The first codesign extraction probe used a space-separated long-option value;
+codesign misparsed the prefix as another code path and exited 1. Repeating with
+`--extract-certificates=PREFIX` extracted Xcode's three-certificate chain and
+exited 0. The helper was corrected before commit.
+The signed team entitlement also uses a literal dotted plist key. Its reader
+was switched to PlistBuddy rather than allowing `plutil` to interpret dots as a
+key path; a synthetic `TESTTEAM` value read back exactly.
+
+The complete linkage mechanism then extracted Xcode leaf certificate
+`d84db96a...1ed57`, imported that DER value into a synthetic one-entry
+`DeveloperCertificates` array, decoded it through the helper's loop and
+reported `profile_count=1`, `match=1`. This tests exact certificate bytes and
+comparison flow; it remains explicitly short of a CTRPad Apple profile.
+
+The final claim-audit reading at 17:53:34 CDT was 268,214 seconds (3 days,
+2 hours, 30 minutes, 14 seconds). No signed or physical criterion changed
+state during the offline mechanism tests.
+
+At 17:55–17:56 CDT, the publication audit reran script syntax/help,
+`package-source.sh` syntax, `git diff --check` and the complete macOS ARM64
+suite. All 22 tests passed again in 4.87 seconds. Inventory still showed one
+booted Simulator, zero valid signing identities and no CoreDevice device. The
+first installed-app hash lookup used the obsolete
+`com.chrissotraidis.ctrpad` identifier and returned POSIX error 2; resolving
+Simulator inventory showed the actual bundle remains
+`io.github.chrissotraidis.ctrpad`. Repeating with that exact identifier found
+the unchanged installed executable at `c6d40aaf...187f`. The lookup mistake
+changed no application, Simulator or repository state.
+
+The 17:55:51 goal reading was 268,363 seconds (3 days, 2 hours, 32 minutes,
+43 seconds). This remained a local regression/publication check, not physical
+iPad evidence.
+
+The last scope review strengthened the campaign linkage before staging:
+`collect` now validates UDID syntax and refuses any evidence root without a
+successful prepare manifest whose exact device and bundle match the request.
+This prevents a later log/save collection from being attributed to a different
+signed-install campaign. The guard runs before CoreDevice access or collection
+directory creation.
+
+At 17:59 CDT, collection against the unsigned-preflight evidence root rejected
+the missing prepare manifest at exit 1 and created no collection directory. A
+second negative used an ignored, explicitly synthetic matching prepare
+manifest and fake UDID; it passed only the new linkage guard, then CoreDevice
+again returned error 1000 and wrote its failure JSON/log before any app lookup
+or copy. Syntax/help/package syntax and diff hygiene passed after the change.
+The 17:59:07 reading was 268,549 seconds (3 days, 2 hours, 35 minutes, 49
+seconds). Neither synthetic manifest nor raw negative evidence is tracked.
+
+At 18:00 CDT, the complete handoff became clean commit
+`4349bae8dd938447b9f67fff04b34dd4b574f09b`. Packaging that exact commit
+produced `CTRPad-source-4349bae8dd93.tar.gz` with 3,253 members and SHA-256
+`b9dfcc85c35b9cb36d82f9eed942e7a0ab2449d2b36cb5f8de1170ff77c9cba4`.
+The built-in and independent `dist/`-relative sidecar checks passed. Direct
+member inspection found the campaign tool, acceptance template and focused
+report; retail/runtime and credential/package scans each returned zero. The
+18:00:26 reading was 268,628 seconds (3 days, 2 hours, 37 minutes, 8 seconds).
+
+At 18:01–18:02 CDT, commits `4349bae8d` and `e7af0bc32` were pushed to
+`origin/codex/simulator-performance-next`. The preferred GitHub connector again
+returned HTTP 404 for this private repository; authenticated `gh` fallback
+opened draft PR #7. GitHub reported the exact two commits, 12 intended files,
+head `e7af0bc323034e51ba8e4e0426abd0c7c28f0e79`, base `main`, `MERGEABLE` /
+`CLEAN`, and no configured checks. The 18:02:05 active-time reading was 268,724
+seconds (3 days, 2 hours, 38 minutes, 44 seconds). Merge remained the next
+explicit operation.

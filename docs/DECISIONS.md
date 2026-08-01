@@ -681,3 +681,29 @@ SHA-256; the source executable remained `1699c36d...091`; the app relaunched
 and rendered current controls with clean targeted logs. This is an ad-hoc
 Simulator procedure only and supplies no physical-device signing evidence.
 Full evidence is in `docs/parity/2026-08-01-exact-simulator-install.md`.
+
+## 2026-08-01 — Separate physical preflight, device mutation and human acceptance
+
+**Decision:** run the signed-iPad release campaign through distinct
+`ios-device-campaign.sh preflight`, `prepare` and `collect` phases. Consume
+only versioned `devicectl --json-output` files for automation, never scrape its
+human output. Keep raw device evidence ignored and commit only a reviewed,
+redacted copy of `docs/templates/IOS-DEVICE-ACCEPTANCE.md`.
+
+**Why:** signature/profile correctness can be proven before touching a device;
+install and launch have machine-readable CoreDevice outcomes; touch feel,
+complete-race play, audio and thermal behavior require a human on hardware.
+Combining those evidence classes would encourage an offline pass to masquerade
+as a device pass. Raw JSON/save data also contains identifiers or user state
+that should not enter Git.
+
+**Verification boundary:** local syntax and privacy-path guards pass; the
+unsigned IPA reaches and fails the missing-profile boundary after valid
+sidecar/ZIP checks; a nonexistent device exits with CoreDevice error 1000 and
+writes JSON version 3. No signed preflight, install, launch or collection has
+passed because this Mac has no identity, profile or physical device. The
+workflow never uninstalls and collection excludes the Documents retail tree.
+Collection also rejects any evidence root without a successful prepare
+manifest matching the exact requested UDID and bundle identifier.
+Exact evidence is in
+`docs/parity/2026-08-01-ios-physical-campaign-handoff.md`.
