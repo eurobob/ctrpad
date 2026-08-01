@@ -125,4 +125,6 @@ A subsequent ownership audit safely stopped the stale goal-owned
 and a diagnostic polling shell; its writable output was bind-mounted on the
 host. Four unrelated production containers remained untouched. Free pages
 still settled near 96 MB with about 11.66 GB swap used, so the unity build was
-again not started.
+again not started. The stopped container ultimately reported exit 137 after
+stop-timeout escalation of its idle process group; no verifier or host-mounted
+evidence was lost. The final free-page reading was about 87 MB.

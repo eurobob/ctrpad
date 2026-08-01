@@ -10048,6 +10048,14 @@ At this boundary the goal timer read 218,822 seconds: 2 days, 12 hours,
 47 minutes, 2 seconds cumulative, 258 seconds (4 minutes, 18 seconds) after
 the publication-close reading.
 
+The final `docker ps -a` state was `Exited (137)`: Docker escalated after the
+idle Rosetta/Xvfb process group did not exit within the stop timeout. This does
+not change the preservation conclusion—there was no verifier, source/media
+were read-only and writable output was a host bind—but records the exact stop
+result. Free pages then read 5,313 (about 87 MB) with 11.60 GB swap used. At
+218,932 goal seconds (2 days, 12 hours, 48 minutes, 52 seconds), the same
+build-headroom condition had recurred for the third consecutive goal turn.
+
 ## 2026-07-31 — Touch-only Time Trial, rotation and direct analog delivery
 
 ### Re-established exact starting state

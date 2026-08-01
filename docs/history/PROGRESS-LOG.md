@@ -1908,7 +1908,15 @@ The publication-close reading was 218,564 seconds: 2 days, 12 hours,
   Free pages settled near 5,864 (about 96 MB) and swap use near 11.66 GB,
   still unsafe for the large unity translation. No build was started and no
   unrelated app, service or protected Simulator state was changed.
+- Final `docker ps -a` reported the stopped CTRPad container as exit 137: its
+  unresponsive idle/Xvfb process group required stop-timeout escalation. With
+  no verifier and host-mounted writable output, this lost no test evidence and
+  remains restartable. The final readback was about 87 MB free and 11.60 GB
+  swap used.
 
 The post-cleanup timer reading was 218,822 seconds: 2 days, 12 hours,
 47 minutes, 2 seconds cumulative, adding 258 seconds (4 minutes, 18 seconds)
 from the publication-close reading.
+
+The final blocker reading was 218,932 seconds: 2 days, 12 hours, 48 minutes,
+52 seconds cumulative, 110 seconds (1 minute, 50 seconds) later.
