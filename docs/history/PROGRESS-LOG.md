@@ -1894,3 +1894,21 @@ The publication-close reading was 218,564 seconds: 2 days, 12 hours,
 42 minutes, 44 seconds cumulative. That adds 506 seconds (8 minutes,
 26 seconds) from the prepublication reading and 6,302 seconds (1 hour,
 45 minutes, 2 seconds) from the preceding published boundary.
+
+- A later headroom audit began clean at pushed head `79f4b1bb2`, with one
+  protected Simulator and no compiler. It measured 9,151 free 16-KiB pages
+  (about 150 MB) and 11.69 GB swap used, still below the build boundary.
+- Read-only Docker inspection found four unrelated healthy `buzz-prod`
+  services, which were left untouched, plus goal-owned
+  `ctrpad-i686-debug`. The latter ran no verifier: only `sleep infinity`, Xvfb
+  and a stale diagnostic shell polling Xvfb. Source was mounted read-only and
+  writable `/out` was a host bind mount, so `docker stop ctrpad-i686-debug`
+  was recoverable and preserved all evidence.
+- After that in-scope stop, the four unrelated containers remained running.
+  Free pages settled near 5,864 (about 96 MB) and swap use near 11.66 GB,
+  still unsafe for the large unity translation. No build was started and no
+  unrelated app, service or protected Simulator state was changed.
+
+The post-cleanup timer reading was 218,822 seconds: 2 days, 12 hours,
+47 minutes, 2 seconds cumulative, adding 258 seconds (4 minutes, 18 seconds)
+from the publication-close reading.

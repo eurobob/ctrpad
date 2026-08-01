@@ -10022,6 +10022,32 @@ was running. The goal timer then read 218,564 seconds: 2 days, 12 hours,
 after the prepublication reading and 6,302 seconds (1 hour, 45 minutes,
 2 seconds) after the preceding published boundary.
 
+### Recovered only in-scope container headroom
+
+A later clean-tip audit rechecked the blocker instead of assuming the earlier
+reading persisted. Head and origin were both `79f4b1bb2`; exactly the protected
+Simulator was booted; no compiler ran. Free pages briefly measured 9,151
+16-KiB pages (about 150 MB), with 11.69 GB of swap used. The largest single
+process was a roughly 1.5-GB Virtualization VM.
+
+Docker inspection separated ownership before mutation. Four healthy
+`buzz-prod` relay/Redis/Postgres/MinIO containers were unrelated and left
+untouched. Goal-owned `ctrpad-i686-debug` had been up for two days, but
+`docker top` proved it held only `sleep infinity`, Xvfb and a stale diagnostic
+shell looping on Xvfb. No recorder, playback, test or compiler process existed.
+Its `/src` bind was read-only; writable `/out` mapped to host directory
+`build-linux-i686-m3`; the retail BIN bind was read-only. Stopping this one
+container therefore preserved source, output and media and remains reversible
+with `docker start ctrpad-i686-debug`.
+
+The four unrelated containers remained running after the stop. Free pages
+settled near 5,864 (about 96 MB) and swap use near 11.66 GB. That remains too
+little headroom for the unity `main.c.o`, so no compiler was started. The
+protected Simulator and unrelated user applications/services were not changed.
+At this boundary the goal timer read 218,822 seconds: 2 days, 12 hours,
+47 minutes, 2 seconds cumulative, 258 seconds (4 minutes, 18 seconds) after
+the publication-close reading.
+
 ## 2026-07-31 — Touch-only Time Trial, rotation and direct analog delivery
 
 ### Re-established exact starting state
