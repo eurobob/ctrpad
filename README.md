@@ -308,11 +308,12 @@ retain at least 44-point targets. Opening, rebuilding, dismissing, or resetting
 the sheet neutralizes active touch contacts so a customization change cannot
 leave steering or a button stuck.
 
-Quick keyboard and touch edges remain active for two host snapshots so an
-input update immediately before the next approximately 29.9 Hz retail pad
-poll cannot erase a tap. Simulator tests have navigated the main menu in both
-directions, selected Adventure, opened **Load**, and displayed a persisted
-profile using only the overlay. A later touch-only run entered Time Trial,
+Quick keyboard and touch edges remain active until the retail
+`GAMEPAD_ProcessHold` consumer acknowledges its poll. This prevents repeated
+native VSync packet refreshes from erasing a tap while slow game logic is
+still rendering the preceding frame. Simulator tests have navigated the main
+menu in both directions, selected Adventure, opened **Load**, and displayed a
+persisted profile using only the overlay. A later touch-only run entered Time Trial,
 selected Crash and Crash Cove, skipped the fly-in, accelerated off the grid,
 paused, reflowed the controls after device rotation, and resumed. Physical-
 iPad ergonomics, performance, human simultaneous steering/acceleration, and

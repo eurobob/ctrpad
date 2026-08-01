@@ -362,6 +362,13 @@ int GAMEPAD_ProcessHold(struct GamepadSystem *gGamepads)
 		}
 	}
 
+#ifdef CTR_NATIVE
+	// Native VSync can refresh a short host tap several times before slow game
+	// logic reaches this retail consumer. Release the transport latch only
+	// after the packet above has actually been sampled.
+	Platform_InputAcknowledgeRetailPoll();
+#endif
+
 	return heldAny;
 }
 

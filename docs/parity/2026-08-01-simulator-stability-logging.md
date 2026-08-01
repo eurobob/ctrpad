@@ -278,6 +278,65 @@ build must satisfy all of the following with one booted device only:
 The current work improves diagnosis and accessibility and shows coherent
 specific scenes. It does not yet qualify the game for a physical iPad.
 
+## First exact post-commit run: rejected, then corrected
+
+The logging/accessibility checkpoint was committed and pushed as exact source
+`7bcc51a790a173662a701752a980c89daf7193b4`. With no booted Simulator, a fresh
+macOS configure produced thin ARM64 executable SHA-256
+`be060628...47795`, embedded `7bcc51a790a1`, and completed its one-job build
+in 56.43 seconds. All 22 CTests passed in 2.97 seconds. The fresh iOS Simulator
+build completed in 67.04 seconds with the same 32 established warnings and
+linked thin ARM64 executable SHA-256 `3b646623...d1d8`. A copied bundle was
+fully ad-hoc signed, passed deep/strict verification and had transformed
+executable SHA-256 `13cca464...a4d5`.
+
+Only `CTRPad Import Negatives` booted. Update installation preserved the
+605,698,800-byte imported image. The first 86-line, 9,370-byte exact log was
+preserved at `/tmp/ctrpad-exact-adventure-run.log`, SHA-256
+`8ec554ad...d8687`. A second 46-line, 5,685-byte exact session was preserved at
+`/tmp/ctrpad-exact-second-run.log`, SHA-256 `aa12c685...9353`. Rotation moved
+the former current session to `.1`, the prior diagnostic to `.2`, and the
+baseline to `.3`, proving real multi-session retention. Neither exact log had
+an AssetRef, visibility-cache, error, fatal or unbalanced marker.
+
+The inspected frames were coherent: copyright and presentation; main menu;
+Adventure New/Load and saved profile; character garage and name entry; and
+the live Adventure hub with Crash, kart, fully textured Aku Aku mask, exhaust,
+portal scenery, flags, HUD counters and minimap. Portrait to landscape and back
+retained the complete game and overlay. Home/resume retained PID `58597`, game
+state and pixels and logged all four ordered lifecycle transitions.
+
+That exact run still failed acceptance. `P`/Start advanced, but later single
+quick `K`/Cross and `S`/Down actions were logged with scancodes 14/22 and masks
+`0x4000`/`0x0040` without moving the retail menu. Accessible Cross and the
+analog touch stick acted immediately. Repetition did not make the logged
+keyboard Down deterministic. The product therefore remained unsuitable for a
+tester even though its observed assets were intact.
+
+Source tracing showed that the two-snapshot host latch was tied to native
+VSync, while the retail menu consumes input in `GAMEPAD_ProcessHold`. At a
+roughly 4-8 FPS game rate, multiple VSync callbacks could publish the pressed
+packet and then neutral before game logic polled it. The correction retains
+quick mapped keyboard and touch edges across native snapshots until
+`GAMEPAD_ProcessHold` has sampled the packet, then explicitly clears the host
+latch. The acknowledgement adds a bounded log line naming the keyboard and
+touch masks consumed by the retail poll. Held keyboard/touch state remains
+live independently, and replay, disabled-pad, lifecycle and reset boundaries
+still clear unconsumed host transport state.
+
+The updated media-free input self-test sends complete quick C/Right and K/D
+down/up pairs, reads them repeatedly before acknowledgement, then requires
+neutral immediately after acknowledgement. The same contract covers a touch
+chord and released Circle tap. Its marker is:
+
+```text
+tap-latch=c+right until-retail-poll
+```
+
+The isolated test passed. This is implementation evidence, not the required
+exact post-fix Simulator replay; the gate remains open until that committed
+build succeeds.
+
 ## Goal-time accounting
 
 The documentation-open goal reading was 232,171 seconds: 2 days, 16 hours,

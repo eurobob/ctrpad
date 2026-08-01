@@ -13234,3 +13234,47 @@ complete current and rotated logs. It must report frame behavior and every
 visual or diagnostic defect honestly. Only that can reopen physical-device
 work. Full current evidence is in
 `docs/parity/2026-08-01-simulator-stability-logging.md`.
+
+### Exact replay exposed a VSync/retail-consumer boundary
+
+After committing and pushing `7bcc51a790a1`, both Apple build graphs were
+freshly configured with no booted device. The exact macOS build passed all 22
+tests; the exact iOS product was fully ad-hoc signed in a temporary copy and
+installed as an update on the sole disposable device. Four generations of
+real logs rotated correctly.
+
+The graphical claim strengthened: Adventure Load and its saved slot, character
+garage, name keyboard, hub, Crash's kart, Aku Aku, HUD/minimap, orientation
+changes and same-PID lifecycle recovery all rendered coherently without the
+known asset/cache diagnostics. Full-resolution inspection resolved an
+initially suspicious large feathered object as the correctly textured Aku Aku
+mask rather than corrupt geometry.
+
+The same run invalidated the control claim. SDL ingress logged `P`, `K` and `S`
+with the expected Start, Cross and Down masks. Start advanced, but later quick
+Cross/Down did not affect stable retail menus; accessible Cross and a UIKit
+stick drag did. Repeating Down did not make it deterministic. The observation
+was not relabeled as an automation issue because the product promises quick
+keyboard taps and the mapped events were demonstrably inside the app.
+
+Code order explained the miss. `MainDrawCb_Vsync` polls host events, writes a
+PSX-shaped packet and immediately calls `GAMEPAD_PollVsync`, but menu code does
+not derive held/tapped buttons until the later `GAMEPAD_ProcessHold`. The old
+two-native-snapshot latch was therefore measured in VSync callbacks, not in
+retail consumers. With game logic at 4-8 FPS, two pressed packets could be
+followed by neutral before the menu sampled them.
+
+An arbitrary millisecond timeout or larger fixed snapshot count was rejected:
+either can still expire before a stalled frame or remain held long enough to
+trigger retail repeat behavior. Instead, mapped quick keyboard and touch edges
+now persist until `GAMEPAD_ProcessHold` has sampled all retail pads. A native-
+only acknowledgement then clears the transport latches and logs the consumed
+masks. Physical held state still comes from SDL/UIKit, while replay installs,
+disabled pad communication, suspend, restore and shutdown retain their
+fail-closed clearing behavior.
+
+The self-test now proves persistence through repeated host reads, explicit
+retail acknowledgement and immediate neutral release for both keyboard aliases
+and touch taps. Its isolated CTest passed. Simulator and device were fully shut
+down before compilation. Exact committed builds and the live keyboard route
+remain the next acceptance step.

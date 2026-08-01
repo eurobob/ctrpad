@@ -2264,6 +2264,37 @@ checkpoint close and publication times will be recorded after exact clean-build
 acceptance. Goal time includes pauses/resumes and is not a build benchmark or
 person-hour estimate. The goal remains active.
 
+### 2026-08-01 — First exact stability replay rejected; retail-consumer latch implemented
+
+- Committed and pushed logging/accessibility checkpoint `7bcc51a790a1`, then
+  freshly configured both Apple graphs with every Simulator shut down. The
+  exact macOS binary SHA was `be060628...47795`; its one-job build took 56.43
+  seconds and passed 22/22 CTests in 2.97 seconds. The exact iOS Simulator
+  binary SHA was `3b646623...d1d8`; its one-job build took 67.04 seconds. A
+  strictly verified ad-hoc test copy transformed to `13cca464...a4d5`.
+- Booted only `CTRPad Import Negatives`. Its migrated container retained the
+  complete 605,698,800-byte BIN. Exact sessions rotated current plus three
+  predecessors as intended; the 9,370-byte Adventure log hashed to
+  `8ec554ad...d8687` and the 5,685-byte follow-up to `aa12c685...9353`.
+- Visually observed coherent presentation/main menu, Adventure New/Load,
+  stored profile, character/name screens, hub, kart, Aku Aku, scenery, HUD,
+  minimap, two orientations and same-PID Home/resume. Both exact logs had zero
+  AssetRef/cache/error/fatal/unbalanced markers.
+- Rejected the run because logged single `S` and `K` actions did not reliably
+  reach the retail menu, while touch did. Runtime remained roughly 4-8 FPS and
+  slow transitions could let a subsequent action land on the next screen.
+- Identified the boundary mismatch: the two-snapshot latch expired on native
+  VSync, but retail input is consumed later by `GAMEPAD_ProcessHold`. Quick
+  keyboard and touch pulses now remain latched until that retail consumer
+  samples the packet, which then logs and acknowledges the exact masks.
+- Updated the input self-test to read quick C/Right, K/D, touch chord and
+  Circle taps repeatedly before acknowledgement and require immediate neutral
+  afterward. Its isolated CTest passed with marker
+  `tap-latch=c+right until-retail-poll`.
+- Terminated the app, shut down the sole device and quit Simulator before the
+  correction build. Exact post-fix compile, full tests and live replay remain
+  required; the Simulator and physical-device gates stay open.
+
 ### 2026-08-01 — Fresh extracted corresponding source built and tested
 
 - Packaged documented head `34ea4415cda8` into a fresh temporary directory.

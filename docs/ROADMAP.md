@@ -1097,7 +1097,8 @@ pair while active. Lifecycle suspension, replay/state installation, shutdown
 and restore reset host contacts.
 
 Checkpoint `c783eda740c4` adds D-pad direction edges at the stick's outer 32%
-and retains quick keyboard/touch edges for two host snapshots. LLDB proved why
+and originally retained quick keyboard/touch edges for two host snapshots.
+LLDB proved why
 the earlier one-snapshot version failed: the correct `00 73 bf ff ...` Down
 packet was replaced by neutral `ff ff` before the retail `GAMEPAD_ProcessHold`
 poll. The exact clean app then navigated Adventure → Time Trial → Adventure,
@@ -1187,12 +1188,23 @@ level/scene churn, performance/input stability and a complete graphical scan
 remain required. See
 `docs/parity/2026-08-01-simulator-stability-logging.md`.
 
+The first exact post-commit run at `7bcc51a790a1` retained its log history and
+rendered Adventure Load, profile, character/name, hub, Aku Aku, kart, HUD,
+minimap, portrait/landscape and same-PID Home/resume coherently. It also
+reproduced a real remaining input defect: logged quick `S`/`K` edges could be
+overwritten by later VSync pad refreshes before slow retail game logic reached
+`GAMEPAD_ProcessHold`. The native latch now remains active until that exact
+retail consumer polls, then logs and acknowledges the edge. The media-free
+input self-test proves persistence across repeated host reads and immediate
+release after retail acknowledgement. Exact post-fix Simulator validation is
+still required before the gate can close.
+
 Work:
 
 - Retain the implemented touch peer in the platform input composition path so
   it can coexist with a connected controller.
 - Retain true analog steering, outer-ring menu directions, multi-touch holds,
-  and the two-host-snapshot press-edge transport.
+  and consumer-acknowledged quick press edges.
 - Iterate on layouts for steering + held drift + three boost taps, the core
   simultaneity problem identified in the viability report
   (`docs/ctr-native-viability.md:319-358`).

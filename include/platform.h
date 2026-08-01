@@ -29,6 +29,7 @@ int Platform_GetVBlankCount(void);
 void Platform_WaitUntilVBlank(int targetVBlank);
 void Platform_PollHostEvents(void);
 int Platform_PollInput(void);
+void Platform_InputAcknowledgeRetailPoll(void);
 int Platform_StartDisplayLoop(void (*callback)(void *), void *userdata);
 void Platform_StopDisplayLoop(void);
 int Platform_RunLifecycleSelfTest(void);
