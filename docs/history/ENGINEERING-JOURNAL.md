@@ -14316,3 +14316,13 @@ The 17:27:33 reading was 266,659 seconds (3 days, 2 hours, 4 minutes, 19
 seconds). The exact implementation, negative cases, hashes, paths and remaining
 physical boundary are in
 `docs/parity/2026-08-01-exact-simulator-install.md`.
+
+At 17:32:23 CDT, the complete helper/documentation checkpoint was committed as
+`67b4c6276640dc59fb4495cf26ce4e86e64ea5b1`. The exact clean commit then
+produced a 3,249-member corresponding-source archive at `116781ee...42c5`;
+member inspection found the helper and focused evidence report, with
+retail/runtime/package/profile/key material excluded. The packager's internal
+checksum verification passed. A redundant outer `shasum -c` initially ran from
+the repository root and could not resolve the sidecar's `dist/`-relative
+basename; rerunning from `dist/` returned `OK`. The 17:33:01 goal reading was
+266,988 seconds (3 days, 2 hours, 9 minutes, 48 seconds).

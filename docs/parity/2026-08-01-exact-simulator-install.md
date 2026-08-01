@@ -123,3 +123,23 @@ goal: this Mac still lacks an Apple signing identity, matching provisioning
 profile and connected target iPad, so signed physical installation, hardware
 cadence/thermals, audio latency and real multi-touch drift/boost acceptance
 remain open.
+
+## Publication-source verification
+
+The implementation and history were committed at 17:32:23 CDT as
+`67b4c6276640dc59fb4495cf26ce4e86e64ea5b1`. From that clean commit,
+`package-source.sh` produced a 3,249-member corresponding-source archive at
+17:32:48 CDT. Its SHA-256 was
+`116781ee716c0f8d4400fb82c12e5ee8af991c478d058917ebe553edd4cb42c5`; member
+inspection found both `tools/install-ios-simulator.sh` and this report, while
+the packager excluded retail/runtime/package/profile/key material.
+
+The packager's own checksum verification succeeded. A redundant outer
+`shasum -c dist/...sha256` command then failed because the sidecar intentionally
+contains the archive basename and the caller remained one directory above
+`dist/`. Repeating the same check from inside `dist/` returned `OK`. This was a
+verification-caller path mistake, not an archive or sidecar defect.
+
+At the 17:33:01 CDT reading, active goal time was 266,988 seconds: 3 days,
+2 hours, 9 minutes and 48 seconds. Publication to GitHub remained the next
+step; the physical-device boundary was unchanged.

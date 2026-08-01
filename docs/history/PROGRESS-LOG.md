@@ -2976,3 +2976,10 @@ The 17:27:33 reading was 266,659 seconds: 3 days, 2 hours, 4 minutes, 19
 seconds cumulative. Reproducible Simulator product identity is now closed;
 real signing and every physical-iPad criterion remain open. Exact evidence is
 in `docs/parity/2026-08-01-exact-simulator-install.md`.
+
+At 17:32:23 CDT this checkpoint became commit `67b4c6276`. Its clean 3,249-file
+GPL source archive included the installer/report and excluded private/runtime
+material at SHA-256 `116781ee...42c5`. The package's built-in checksum passed;
+a redundant caller first ran `shasum -c` from the wrong directory, then passed
+unchanged from `dist/`. The 17:33:01 reading was 266,988 seconds (3 days,
+2 hours, 9 minutes, 48 seconds); GitHub publication remained next.
