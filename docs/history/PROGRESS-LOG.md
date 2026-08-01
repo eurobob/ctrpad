@@ -3107,3 +3107,11 @@ At 18:31 CDT, the checked-in candidate repeated 22/22 tests in 2.68 seconds,
 accepted the Apple-signed Calculator chain/root proof and rejected the
 self-signed profile. Active goal time was 270,498 seconds (3 days, 3 hours, 8
 minutes, 18 seconds); the external signing/device boundary is unchanged.
+
+At 18:33–18:36 CDT, commit `5af382409` and its exact 14-file scope were pushed,
+audited as PR #10 and merged to `main` as `8f3b2be37`. The preferred connector
+returned its known private-repository 404, so authenticated CLI fallback handled
+PR creation. The final-main corresponding-source archive passed at 3,255
+members / `34f600e6...6326a`, with zero forbidden-member matches. At 18:36:44,
+active goal time was 270,811 seconds (3 days, 3 hours, 13 minutes, 31 seconds).
+The real Apple profile/device positive remains open.
