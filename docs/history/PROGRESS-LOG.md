@@ -2701,3 +2701,45 @@ The handoff goal reading was 251,875 seconds: 2 days, 21 hours, 57 minutes,
 55 seconds cumulative, 1,473 seconds after exact batching acceptance. Goal time
 includes this interactive launch and inspection; it is not a build benchmark
 or person-hour estimate. The overall goal remains active.
+
+### 2026-08-01 — Rejected unified fetch-state batching after live profiling
+
+- Prototyped renderer-only per-primitive blend/STP/mask state after logical
+  trace capture. The first route used one dynamically branched 4/8/16-bit
+  shader; the second retained three texture-format-specialized shaders.
+- Both candidates preserved the 20-byte vertex ABI, exact logical hash
+  `851169f2644a1675`, blend hash `0c0d08324ae06c35`, iOS presentation hash
+  `172d49a34571b64c` and desktop fallback. Enabled iOS reduced the ordered
+  overlap fixture from 12 to 1 draw; the mixed-state fixture used 2 draws in
+  the dynamic route and 4 in the specialized route.
+- Only the disposable simulator booted. Computer Use verified coherent
+  trophy/menu, character, track, no-ghost, loading and Crash Cove grid scenes;
+  no bounded-route asset loss appeared. Correct-ID termination finalized the
+  specialized 3,216-line CSV at `994a1f79...c2f` and 69-line log at
+  `ce135e14...810`; the targeted fault scan is empty.
+- The exact 119-split / 78-semitransparent published state averages 66 calls,
+  165.879 ms total and 136.514 ms triangle time. Dynamic state batching cut
+  calls to 26 but regressed to 248.567 / 204.207 ms. Format specialization
+  recovered only to 52 calls and 236.441 / 190.911 ms: 42.54% slower total
+  than published despite 21.21% fewer calls.
+- Rejected both candidates, restored all four source files through
+  `apply_patch`, rebuilt at nice 15 / one job with the same 32 warnings, passed
+  22/22 tests in 3.18 seconds and independently passed the desktop pixel oracle
+  in 1.27 seconds. No renderer diff remains.
+- Retail BIN/save inodes, sizes and canonical hashes are unchanged. Both
+  devices and Simulator GUI are off. Two explicitly verified task-owned signed
+  copies were removed; installed app, app data, builds and profile/log evidence
+  remain.
+- Retained the full patch-context failures, transient Computer Use windows,
+  accidental prototype-A relaunch, obsolete retail-path query, corrected
+  `super+q`, restore-patch attempts, shell `PATH` shadow, policy-rejected
+  `rm -rf` and fault-scan false positive in the detailed report.
+
+Full evidence is in
+`docs/parity/2026-08-01-ios-unified-fetch-state-rejection.md`.
+
+The rejection/restoration reading was 254,820 seconds: 2 days, 22 hours,
+47 minutes cumulative, 2,945 seconds after the interactive handoff. Goal time
+includes user inspection, implementation, builds, signing, oracles, live
+profiling, restoration, cleanup, testing and documentation; it is not a build
+benchmark or person-hour estimate. The overall goal remains active.

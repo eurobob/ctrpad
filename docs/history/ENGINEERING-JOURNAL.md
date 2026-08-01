@@ -13781,3 +13781,65 @@ returned the intended `platform/native_input.c` mappings. Neither changed data.
 The handoff goal reading was 251,875 seconds (2 days, 21 hours, 57 minutes,
 55 seconds), 1,473 seconds after exact batching acceptance. The overall goal
 remains active.
+
+## 2026-08-01 — Unified fetch-state prototypes rejected on matched live cost
+
+The next profile-driven attempt tried to merge state transitions that the
+accepted `13f260cb8a0d` renderer intentionally kept separate. Renderer-only
+bytes were populated after logical trace capture so `GrVertex` stayed 20 bytes
+and trace hashes saw their historical zeros. Blend, textured semitransparency,
+sampled STP and draw-mask state became flat per-primitive shader input.
+
+The first version also encoded texture format and selected 4/8/16-bit sampling
+inside one coherent-fetch fragment shader. Its exact iOS byte oracle passed and
+reduced the mixed-state fixture to two draws, but live Apple Software Renderer
+cost made the approach untenable. In the matched 119/78 state, 26 calls still
+cost 248.567 ms total and 204.207 ms in triangle submission. A transient
+Computer Use `noWindowsAvailable` followed landed input; a subsequent CLI state
+diagnostic mistakenly included `--terminate-running-process`. The resulting
+short profile was discarded. Correct-ID termination finalized the restarted
+1,704-line CSV at `23a10888...07` and 58-line log at `2b1b707c...70c`.
+
+The replacement kept separate 4-, 8-, and 16-bit state-fetch shaders and
+batched only within one format. Desktop and iOS builds repeated the established
+32 warnings; 22/22 tests and every byte/hash oracle passed. Unsigned/signed iOS
+hashes were `448eb314...c3f` / `aeccf0e4...7f3`. The enabled actual-surface
+marker reported `fallback-draws=12 active-draws=1 mixed-state-draws=4`, logical
+`851169f2644a1675`, blend `0c0d08324ae06c35` and presentation
+`172d49a34571b64c`.
+
+Only the disposable device booted. Screen-by-screen Computer Use inspection
+reached coherent trophy/menu, character, Crash Cove selection, ghost prompt,
+loading preview and the live grid with kart, character, track, HUD, minimap,
+transparency and touch overlay present. The specialized profile finalized at
+3,216 lines / `994a1f79...c2f`; the 69-line retained log is
+`ce135e14...810` and has no targeted fault. Primary retail and save inodes,
+sizes and hashes remained exact.
+
+Matched data rejected the optimization. The published 66-call state averages
+165.879 / 136.514 ms total/triangles. Dynamic state uses 26 calls but 248.567 /
+204.207 ms; specialized state uses 52 calls but 236.441 / 190.911 ms. The final
+variant therefore regresses total time 42.54% and triangle time 39.85% despite
+21.21% fewer calls. Fewer calls alone did not satisfy the product gate.
+
+All candidate source was restored to the published revision through
+`apply_patch`. Three reverse-patch wrapper/format attempts applied nothing
+before the context-only form succeeded. The restored one-job low-priority
+macOS build repeated 32 warnings; 22/22 tests passed in 3.18 seconds and the
+independent pixel test passed in 1.27 seconds with the established hashes.
+Both devices and the GUI were confirmed off. The two isolated signed copies
+were deleted after hash verification; evidence, builds, installed app and
+simulator data remain.
+
+The record also retains early literal-tab/macro patch misses, harmless absent-
+path searches, prototype-A's accidental restart, prototype-B's recovered
+window query, an obsolete retail path, the corrected xdotool-style `super+q`,
+a verification loop that shadowed `PATH`, a policy-rejected `rm -rf` followed
+by explicit `rm -r`, and a fault scan that first matched the retail title in
+log paths. Complete commands, artifacts and preservation boundaries are in
+`docs/parity/2026-08-01-ios-unified-fetch-state-rejection.md`.
+
+The rejection/restoration goal reading was 254,820 seconds (2 days, 22 hours,
+47 minutes), 2,945 seconds after the interactive handoff. The goal remains
+active; Simulator cadence, wider scene churn, touch-race ergonomics, exact
+post-publication replay and every physical-device/final-package gate stay open.

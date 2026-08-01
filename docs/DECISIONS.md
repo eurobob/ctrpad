@@ -556,3 +556,26 @@ full Simulator gate: split submission still costs 131.012 ms per frame, broader
 asset churn and exact post-commit replay remain open, and physical-device work
 remains prohibited. Correct-ID termination was observed in this run. Full
 evidence is in `docs/parity/2026-08-01-simulator-renderer-profile.md`.
+
+## 2026-08-01 — Reject unified fetch-state batching on live frame cost
+
+**Decision:** retain the published same-state coherent-fetch batcher. Do not
+merge texture-format or blend/STP/mask transitions through per-primitive shader
+state on the Apple Software Renderer, even though both tested designs preserve
+the exact pixel oracle and reduce host draw calls.
+
+**Why:** the matched 119-split / 78-semitransparent published state averages
+66 calls and 165.879 ms. A single dynamically branched shader uses 26 calls but
+248.567 ms; three texture-format-specialized shaders use 52 calls but 236.441
+ms. The best prototype is 42.54% slower total and 39.85% slower in triangle
+submission. API-call count is diagnostic, not an acceptance criterion.
+
+**Verification boundary:** both prototypes passed the established logical,
+blend, fallback and actual-surface iOS hashes and rendered the bounded retail
+route coherently. Correct-ID termination preserved full profiles/logs and
+retail/save identities. All candidate source was restored; the restored macOS
+ARM64 tree repeats the established 32 warnings, passes 22/22 tests and the
+independent pixel oracle. Full chronology is in
+`docs/parity/2026-08-01-ios-unified-fetch-state-rejection.md`. A different
+optimization must pass the same matched-state performance gate before it is
+retained.

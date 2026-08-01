@@ -1462,7 +1462,9 @@ The next dependency-ordered work is:
    removes 79 of 205 draws, and the next dirty batching checkpoint reduces an
    identical 119-split state from 122 to 66 calls and 171.223 to 164.187 ms;
    exact post-commit replay retains 66 calls and averages 165.879 ms, still
-   about five times the 30-FPS budget;
+   about five times the 30-FPS budget. Do not pursue the rejected unified-state
+   shader route: dynamic and format-specialized variants reduced the same state
+   to 26 and 52 calls but regressed total cost to 248.567 and 236.441 ms;
 5. reopen physical-device work only after the Simulator route is usable,
    visually complete and diagnosable.
 
@@ -1470,4 +1472,6 @@ Evidence and exact hashes are in
 `docs/parity/2026-08-01-simulator-renderer-profile.md` and
 `docs/parity/2026-08-01-ios-framebuffer-fetch.md`. The batching design,
 ordered-overlap oracle, live hashes, matched methodology and command chronology
-are in `docs/parity/2026-08-01-ios-framebuffer-fetch-batching.md`.
+are in `docs/parity/2026-08-01-ios-framebuffer-fetch-batching.md`. The two
+correct-but-slower follow-on designs and full restoration boundary are in
+`docs/parity/2026-08-01-ios-unified-fetch-state-rejection.md`.

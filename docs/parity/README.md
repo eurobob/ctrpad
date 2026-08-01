@@ -139,6 +139,12 @@ Current evidence and procedures:
   clean-revision desktop/iOS/oracle/retail replay, container-remap/install and
   name-entry correction chronology, exact 45.90% call reduction, and the
   deliberately open performance and physical-device gates.
+- `2026-08-01-ios-unified-fetch-state-rejection.md` records two discarded
+  per-primitive state-batching designs, their exact pixel/hash/build/signing
+  passes, one-Simulator Crash Cove visual evidence, matched Apple Software
+  Renderer regressions despite lower draw counts, complete failed-command and
+  recovery chronology, source restoration, preservation hashes and the reason
+  the published same-state renderer remains accepted.
 - `2026-07-31-ios-sandbox-storage.md` records the bundle/Documents/Application
   Support ownership split, Documents-priority retail startup, private log and
   memory-card roots, Files metadata, exact cross-target matrix, rejected
