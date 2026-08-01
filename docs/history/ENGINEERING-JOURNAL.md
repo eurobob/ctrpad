@@ -12774,3 +12774,46 @@ physical-iPad acceptance. Live-device orientation/window resizing, Stage
 Manager behavior, cadence, energy and simultaneous human touch remain open;
 M10 and the overall goal remain active. Full evidence is in
 `docs/parity/2026-08-01-ios-orientation-hint.md`.
+
+## 2026-08-01 — Re-audited user media and release hygiene without new load
+
+The user asked that the newly populated `ref/CTR/` inputs be checked while the
+machine remained slow. A read-only inventory found six ignored entries totaling
+about 1.3 GB: the current 605,698,800-byte BIN and 95-byte CUE, `.DS_Store`,
+and the older 740,179,104-byte IMG, 788-byte CCD and 30,211,392-byte SUB.
+`.gitignore` excludes the entire directory and `git status --ignored` reported
+only `!! ref/CTR/`; none of those files entered the index.
+
+The current CUE still names the BIN as one `MODE2/2352` track at
+`INDEX 01 00:00:00`. Its BIN size is exactly 257,525 raw sectors and matches
+the already accepted NTSC-U `SCUS_944.26` fixture identity and preservation
+records. The older CloneCD metadata describes 314,702 sectors; its documented
+runtime identity remains PAL `SCES_021.05`, so it is a negative region fixture,
+not an input for the NTSC-U build. The canonical BIN had already been hashed
+and exercised through import, rendering and save-preservation acceptance; a
+new multi-file full hash was deliberately not repeated.
+
+A tracked-file extension scan found no BIN, CUE, IMG, CCD, SUB, ISO, CHD, PBP,
+BIG, HWL, XA, STR, TIM, save, memory-card, IPA, provisioning-profile,
+certificate or private-key artifact. `LICENSE`, `THIRD_PARTY_NOTICES.md`,
+`docs/INSTALL-IOS.md`, the top-level build instructions and the packager's
+retail/runtime exclusion checks are tracked. `bash -n package-ios.sh` passed;
+CMake listed all four Apple configure presets; the existing macOS build exposed
+the complete 22-test manifest through `ctest --show-only`. These were syntax,
+inventory and manifest checks, not a relabeled compile or test run.
+
+The audit caught two stale prose issues. README still listed live wrong-region
+UI as open even though the dedicated Files follow-up accepted it; the actual
+open software case is an inaccessible-provider callback plus physical-device
+behavior. M10 also repeated its older landscape/full-screen clause. Both were
+corrected without changing an implementation or acceptance boundary.
+
+Resource inspection found only 4,687 free 16-KiB pages, about 73 MB, with a
+heavily occupied compressor. No simulated device was booted and no compiler or
+full-media hash was started. A final process audit did find an idle Simulator
+app showing a shut-down `OpenRCT2 Touch Invalid Import` window. Computer Use
+refreshed its accessibility state, opened the Simulator menu and selected the
+normal Quit action. Final process and `simctl` reads showed zero Simulator
+processes and zero booted devices. The next clean rebuild remains deferred
+until it can run without making the user's computer less responsive; this is a
+resource decision, not a build failure or new goal blocker.

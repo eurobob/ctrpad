@@ -2047,3 +2047,39 @@ adds 1,578 seconds (26 minutes, 18 seconds) from the preceding 221,583-second
 published boundary, including 499 seconds (8 minutes, 19 seconds) for the
 closing evidence audit. Goal time includes pauses/resumes and is not a build
 benchmark or person-hour estimate.
+
+### 2026-08-01 — User-media and GPL/release hygiene re-audited read-only
+
+- Confirmed the ignored `ref/CTR/` folder contains the current 605,698,800-byte
+  BIN/95-byte CUE pair and the older CCD/IMG/SUB set, with no media indexed by
+  Git. The current pair is the already accepted 257,525-sector raw
+  MODE2/2352 NTSC-U fixture; the old 314,702-sector CloneCD set remains the
+  documented PAL negative fixture.
+- Did not redundantly hash all 1.3 GB. The canonical BIN's exact identity has
+  already passed import/runtime/save preservation; this pass checked current
+  path, size, CUE contract, ignore coverage and prior evidence instead.
+- Found no tracked retail-media, save, IPA, profile, certificate or private-key
+  extension. Confirmed the GPL license, third-party notices, Installation
+  Information, source build instructions and package exclusion logic remain
+  tracked.
+- `bash -n package-ios.sh` passed. CMake enumerated the four Apple configure
+  presets, and the existing macOS directory enumerated all 22 tests with
+  `ctest --show-only`. No compile or test execution is implied by those static
+  checks.
+- Corrected README's stale claim that live wrong-region UI was still open; the
+  accepted rejection remains intact and inaccessible-provider/physical-device
+  behavior remains open. Removed one duplicated M10 orientation phrase.
+- Measured only 4,687 free 16-KiB VM pages, about 73 MB. Kept both Simulators
+  shut down and started no compiler or broad hash traversal. A process audit
+  found an idle Simulator app with a shut-down OpenRCT2 window; Computer Use
+  selected its normal Quit menu item. Final state is zero Simulator processes
+  and zero booted devices. A clean rebuild is deferred for headroom, not
+  reported as failed or accepted.
+
+The audit-open reading was 223,681 seconds: 2 days, 14 hours, 8 minutes,
+1 second cumulative. The documentation-close reading was 223,944 seconds:
+2 days, 14 hours, 12 minutes, 24 seconds cumulative. That adds 783 seconds
+(13 minutes, 3 seconds) from the preceding 223,161-second published boundary,
+including 263 seconds (4 minutes, 23 seconds) for the closing evidence audit.
+Goal time includes pauses/resumes and is not a build benchmark or person-hour
+estimate. The goal remains active.

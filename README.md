@@ -198,9 +198,10 @@ acceptance covers the picker, cancellation, invalid-format rejection, a full
 valid import, same-process startup, cold relaunch, a game-created memory-card
 save, background/foreground survival, app-update retention, and a later cold
 read of that profile through the retail Load screen after explicitly seeding
-the accepted report bytes into the default private root. Wrong-region live UI,
-physical-device Files/save behavior, distribution signing, and the final
-sideloaded-device acceptance remain roadmap work. See
+the accepted report bytes into the default private root. Live wrong-region and
+incomplete-image rejection are also accepted on Simulator. Inaccessible-
+provider callbacks, physical-device Files/save behavior, distribution signing,
+and the final sideloaded-device acceptance remain roadmap work. See
 `docs/parity/2026-07-31-ios-files-import.md` and
 `docs/parity/2026-07-31-ios-memory-card-atomicity.md` for the runtime boundaries,
 and `docs/parity/2026-07-31-ios-sideload-package.md` for exact packaging evidence.

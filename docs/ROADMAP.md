@@ -1118,7 +1118,7 @@ documentation subsequently established that iPadOS 26 supports resizable
 windowed scenes and no longer treats a forced landscape full-screen launch as
 the correct product contract. Checkpoint `db45004f909d` supports all four iPad
 orientations from iPadOS 26 while retaining the older landscape/full-screen
-plist declaration while retaining the older landscape/full-screen preference.
+preference.
 A current-head visual re-audit then found that the runtime SDL hint still
 intersected that declaration down to landscape-only: a portrait shell clipped
 the `1376x1032` controller view and lost the right action cluster. Checkpoint
