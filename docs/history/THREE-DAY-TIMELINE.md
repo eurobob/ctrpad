@@ -39,6 +39,7 @@ adds a complete durable commit ledger.
 | Wall-clock span | 3 days, 2 hours, 10 minutes, 13 seconds | Includes pauses and time when the goal was not actively consuming work time. |
 | Active goal time | 3 days, 50 minutes, 38 seconds | Exact `timeUsedSeconds=262238` reading at the boundary. |
 | Paused/non-active difference | 1 hour, 19 minutes, 35 seconds | Wall span minus active goal time; not claimed as implementation time. |
+| Post-resume correction reading | 2026-08-01 17:14:21 | Active goal time reached 3 days, 1 hour, 51 minutes, 8 seconds after correcting the stale Simulator installation. |
 
 ## Executive chronology
 
@@ -97,7 +98,8 @@ adds a complete durable commit ledger.
 | 15:54 | UIKit self-test teardown boundary documented (`79152b7b5`) | Traced the remaining warning to synchronous test teardown before UIKit's first run-loop return and rejected unsafe warning-suppression changes. |
 | 15:55:44 | PR #3 merged to `main` (`cd4804186`) | Published the final local source assessment and historical checkpoint. |
 | 15:56:54 | Goal marked blocked at 262,238 seconds | Zero Apple signing identities, no provisioning profile and no connected physical device prevented the required signed-iPad acceptance. |
-| 16:00–16:33 | User-requested live recheck | Booted only `CTRPad Import Validation`, launched `io.github.chrissotraidis.ctrpad`, visibly rendered retail copyright/logo/menu/cutscene/character assets and exercised touch navigation. The Apple Software Renderer ran around 7 FPS; long presses reached retail polls while short automation taps were inconsistent. This is retained as a Simulator automation/cadence limitation, not evidence of physical touch failure or a claim of completion. |
+| 16:00–16:33 | User-requested live recheck | Booted only `CTRPad Import Validation`, launched `io.github.chrissotraidis.ctrpad`, visibly rendered retail copyright/logo/menu/cutscene/character assets and exercised touch navigation. The Apple Software Renderer ran around 7 FPS, but a later exact audit proved this installed executable stale; its input behavior is not current-product evidence. |
+| 17:08–17:14 | Exact-install and touch-correlation correction | Replaced stale executable `ed53ba9f...79c11c` with exact current `c6d40aaf...187f`, preserved retail/save hashes and inodes, and logged Cross/Circle down → retail-poll → up on the current build. Focused input CTest passed; no source change was needed. Synthetic Computer Use keyboard input remained automation non-evidence. |
 
 ## Complete durable commit ledger
 

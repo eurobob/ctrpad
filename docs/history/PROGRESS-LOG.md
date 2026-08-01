@@ -2927,3 +2927,29 @@ The teardown-assessment reading was 261,906 seconds: 3 days, 45 minutes, 6
 seconds cumulative, 714 seconds (11 minutes, 54 seconds) after the clean-smoke
 close boundary. The overall goal remains open only at the real
 signing/physical-iPad campaign.
+
+### 2026-08-01 — Replaced the stale visible Simulator build with the exact current build
+
+- The first user-visible follow-up rendered retail assets but the installed
+  executable was stale: SHA `ed53ba9f...79c11c`, old input-self-test text and
+  no current touch/retail-poll log strings.
+- Rejected that session as input evidence instead of changing working source.
+- Re-signed an isolated copy of the exact clean Simulator build and
+  update-installed executable `c6d40aaf...187f` on the single validation
+  device.
+- The update preserved the retail image at 605,698,800 bytes /
+  `f780bf23...7c0` and the save at 6,016 bytes / `6a01b0f5...19a3`, including
+  their pre-update inodes.
+- Exact current-build Cross and Circle activations each logged touch down,
+  retail-poll consumption and touch up. Cross was consumed at `+99.540s` even
+  near 5.56 Simulator FPS, proving the accepted latch survives low cadence.
+- Computer Use's synthetic keyboard event did not enter the app log; retained
+  as automation non-evidence. Keyboard capture was disabled before handoff.
+- Focused `ctr_native_input` passed 1/1 in 0.17 seconds. No application source
+  change was needed.
+
+The correction reading was 265,868 seconds: 3 days, 1 hour, 51 minutes, 8
+seconds cumulative, 3,630 seconds (1 hour, 30 seconds) after the
+262,238-second physical-device boundary. The exact current build remains open
+in the one iPad Simulator; real signing and physical-device acceptance remain
+open.
