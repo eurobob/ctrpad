@@ -2953,3 +2953,26 @@ seconds cumulative, 3,630 seconds (1 hour, 30 seconds) after the
 262,238-second physical-device boundary. The exact current build remains open
 in the one iPad Simulator; real signing and physical-device acceptance remain
 open.
+
+### 2026-08-01 — Enforced exact Simulator update installation
+
+- Added `tools/install-ios-simulator.sh` so future evidence requires one booted
+  Simulator, a valid thin ARM64 Simulator app, an isolated strict ad-hoc
+  signature and equal staged/installed executable hashes.
+- Added an optional slow update-preservation proof and made the GPL source
+  package require the helper.
+- Passed syntax/help checks and safe rejection of an unknown option, a missing
+  app and the explicitly requested shutdown negative-test Simulator. The first
+  local zsh harness used its reserved `status` variable; the corrected `rc`
+  harness passed. `shellcheck` was unavailable.
+- Performed one real guarded update on the sole validation Simulator. Exact
+  executable `c6d40aaf...187f` installed and launched as PID 66389; retail and
+  save inodes, sizes and hashes were unchanged.
+- Captured current Controls/Change Disc/touch-overlay and rendered retail
+  pixels at 17:27:06 CDT. The new log initialized GLES, touch and UIKit and had
+  zero targeted faults across its five-file rotation set.
+
+The 17:27:33 reading was 266,659 seconds: 3 days, 2 hours, 4 minutes, 19
+seconds cumulative. Reproducible Simulator product identity is now closed;
+real signing and every physical-iPad criterion remain open. Exact evidence is
+in `docs/parity/2026-08-01-exact-simulator-install.md`.

@@ -928,6 +928,17 @@ recorded; natural app-initiated termination and physical-hardware lifecycle
 remain open. Full chronology, hashes and commands are in
 `docs/parity/2026-08-01-ios-uikit-view-lifecycle.md`.
 
+The post-handoff stale-install correction is now enforced by
+`tools/install-ios-simulator.sh`. It refuses anything other than one booted
+Simulator, validates a thin ARM64 `IOSSIMULATOR` product, signs only an isolated
+copy, update-installs it and requires the installed executable hash to equal
+the staged hash. Its accepted live run reproduced executable
+`c6d40aaf...187f`, preserved exact retail/save inode, size and hashes, launched
+PID 66389 and produced coherent current-build pixels plus clean targeted logs.
+This closes stale-bundle ambiguity for future Simulator runs; it does not
+change the remaining signed physical-iPad boundary. Exact evidence is in
+`docs/parity/2026-08-01-exact-simulator-install.md`.
+
 Work:
 
 - Retain the completed device/simulator presets, bundle metadata and

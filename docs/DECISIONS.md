@@ -659,3 +659,25 @@ normal retail lifecycle and five-log fault scan. Reopen this decision if the
 signed physical application emits the warning on its normal route. Detailed
 source ownership and rejected alternatives are in
 `docs/parity/2026-08-01-ios-uikit-view-lifecycle.md`.
+
+## 2026-08-01 — Require installed-hash identity for Simulator evidence
+
+**Decision:** install Simulator products through
+`tools/install-ios-simulator.sh` and accept live evidence only after the
+installed executable SHA-256 equals the isolated signed staging executable.
+Refuse installation unless exactly one Simulator is booted.
+
+**Why:** an older installed build rendered plausible retail assets but lacked
+the current input latch and diagnostic strings. Visual similarity and bundle
+ID were insufficient to establish product identity. A build-tree bundle can
+also carry a stale resource signature after resource generation, so the helper
+must copy and sign rather than mutate or trust that source bundle.
+
+**Verification boundary:** the helper rejected an explicitly requested
+shutdown device without installing, then update-installed current executable
+`c6d40aaf...187f` on the sole booted validation device. Installed and staged
+hashes matched; the retail image and save retained exact inode, size and
+SHA-256; the source executable remained `1699c36d...091`; the app relaunched
+and rendered current controls with clean targeted logs. This is an ad-hoc
+Simulator procedure only and supplies no physical-device signing evidence.
+Full evidence is in `docs/parity/2026-08-01-exact-simulator-install.md`.

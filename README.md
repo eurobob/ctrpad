@@ -194,6 +194,19 @@ installation resources, and retail/runtime-data exclusion. See
 `docs/INSTALL-IOS.md` for signing, direct-device, and AltStore-style sideload
 instructions.
 
+For an ARM64 iOS Simulator build, boot exactly one target and use the guarded
+update installer instead of a bare `simctl install`:
+
+```sh
+./tools/install-ios-simulator.sh --device YOUR_BOOTED_SIMULATOR_UDID --launch
+```
+
+It signs an isolated copy and fails unless the installed executable hash
+matches that exact staged product. Add `--verify-persistence` on a validation
+Simulator that already contains the retail image and slot-zero save to compare
+their inode, size and SHA-256 across the update. Full behavior and limitations
+are in `docs/INSTALL-IOS.md`.
+
 Create the matching GPL corresponding-source archive from a clean committed
 checkout with:
 

@@ -14265,3 +14265,54 @@ The correction reading was 265,868 seconds (3 days, 1 hour, 51 minutes, 8
 seconds), 3,630 seconds (1 hour, 30 seconds) after the 262,238-second physical-
 device boundary. The Simulator is now running the exact current build; real
 Apple signing and physical-iPad acceptance remain open.
+
+## 2026-08-01 — Made exact Simulator installation reproducible
+
+The stale-install correction exposed a process defect rather than a game-code
+defect: the repository had rigorous device packaging but no equivalent
+Simulator installer. Manual `simctl install` could leave product identity
+implicit, and signing the build-tree bundle directly would mutate evidence
+while masking its stale resource signature. The next bounded task was therefore
+a repository-owned exact-install contract.
+
+At 17:25:31–17:25:42 CDT, `docs/INSTALL-IOS.md`, `package-source.sh` and new
+`tools/install-ios-simulator.sh` were staged locally. The Bash helper requires
+one booted device, validates the app/bundle/thin ARM64 Simulator load command,
+rejects bundled retail media, copies through `ditto`, ad-hoc signs only the
+temporary copy, verifies it strictly, installs by exact UDID, resolves the app
+container and compares the installed/staged executable hashes. Its optional
+slow mode also fingerprints the known retail image and slot-zero save around
+the update. The corresponding-source packager now requires the helper.
+
+`bash -n` and help passed. Unknown-option and missing-app probes exited 1 as
+required. An explicit request for shutdown device `26F3DEE8-...-009C9C06`
+also exited 1 because sole booted device `1D19A61F-...-52E2` did not match. A
+first version of the three-command test harness used zsh's reserved `status`
+parameter and failed before evaluating its captured result; renaming that
+harness variable to `rc` corrected the harness without changing product code.
+`shellcheck` was unavailable.
+
+At 17:26 CDT, the real helper ran with `--verify-persistence --launch` on the
+sole booted validation Simulator. It copied raw executable `1699c36d...091`,
+produced strictly valid isolated executable `c6d40aaf...187f`, installed that
+same hash in bundle container `2BF7ACA4-...-185B`, and launched PID 66389. The
+retail image retained inode 111131200, 605,698,800 bytes and
+`f780bf23...7c0`; the save retained inode 111222179, 6,016 bytes and
+`6a01b0f5...19a3`. The source bundle remained unchanged and strictly invalid
+for the previously documented stale-resource-signature reason. Temporary
+staging cleanup left no matching directory.
+
+The new runtime session opened at 17:26:46 CDT, reported the accepted
+`d5772375fabc` identity, initialized the GLES/touch/UIKit path and advanced at
+roughly 44–55 FPS after initial startup. At 17:27:06, a 2064x2752 screenshot
+(`11455c47...991ba`) showed the rendered Aku Aku crate/title sequence, current
+Controls/Change Disc buttons and the complete touch overlay. The current log
+plus four rotations had zero targeted error/fatal/asset-reference/visibility
+matches. A supplementary `simctl spawn ... ps -ax` returned POSIX error 2
+because the guest command was unavailable; launch PID, advancing log and
+pixels remained direct process evidence.
+
+The 17:27:33 reading was 266,659 seconds (3 days, 2 hours, 4 minutes, 19
+seconds). The exact implementation, negative cases, hashes, paths and remaining
+physical boundary are in
+`docs/parity/2026-08-01-exact-simulator-install.md`.

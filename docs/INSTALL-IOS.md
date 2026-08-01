@@ -136,6 +136,46 @@ by the embedded profile. Do not use the example temporary path as a permanent
 backup. Apple documents registered-device development/distribution at
 <https://developer.apple.com/documentation/Xcode/distributing-your-app-to-registered-devices>.
 
+## Install an exact Simulator build
+
+Simulator installation does not use an Apple development certificate or a
+provisioning profile. Build the thin ARM64 Simulator product, boot exactly one
+target Simulator, and use the repository helper:
+
+```sh
+cmake --preset ios-simulator-arm64
+cmake --build --preset ios-simulator-arm64
+
+./tools/install-ios-simulator.sh \
+  --device YOUR_BOOTED_SIMULATOR_UDID \
+  --launch
+```
+
+The helper refuses zero or multiple booted Simulators, validates the ARM64
+`IOSSIMULATOR` load command, copies the app into an isolated temporary
+directory, applies and strictly verifies an ad-hoc Simulator-only signature,
+then performs an update install. It resolves the installed application
+container and requires its executable SHA-256 to equal the signed staged
+executable. This prevents an older installed bundle from being mistaken for
+the current source product and leaves the possibly stale build-tree signature
+untouched.
+
+For a validation Simulator that already contains the retail image and a
+slot-zero save, request the slower preservation proof:
+
+```sh
+./tools/install-ios-simulator.sh \
+  --device YOUR_BOOTED_SIMULATOR_UDID \
+  --verify-persistence \
+  --launch
+```
+
+That mode requires both files to exist before the update and compares each
+file's inode, size and SHA-256 before and after installation. It can take
+several minutes for a full retail image on a slow Simulator host. The helper
+does not boot or shut down devices, delete an app, modify a runtime container,
+or create a physical-device signature.
+
 ## Import the retail image and verify persistence
 
 1. Launch CTRPad. If no valid image is installed, the native Files chooser
