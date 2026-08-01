@@ -49,6 +49,20 @@ requires a thin ARM64 device executable, an iOS load command, the legal/source
 installation resources, and the standard `Payload/CTRPad.app` IPA layout. It
 fails if it sees known retail-media extensions or runtime save directories.
 
+Package the exact corresponding source from the same clean committed checkout:
+
+```sh
+./package-source.sh
+```
+
+This writes `dist/CTRPad-source-<commit>.tar.gz` and its SHA-256 sidecar. The
+source packager includes the complete tracked buildable source, vendored SDL,
+build/package scripts, GPL license, notices, modification history and this
+Installation Information. It fails if tracked changes are present or if the
+archive contains retail/runtime data, an IPA, a profile, a certificate or a
+private-key-like file. Publish this archive alongside the matching signed or
+unsigned IPA; the app's build identity identifies the source commit.
+
 To use a different App ID, configure and verify it explicitly:
 
 ```sh

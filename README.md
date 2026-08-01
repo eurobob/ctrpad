@@ -181,6 +181,20 @@ installation resources, and retail/runtime-data exclusion. See
 `docs/INSTALL-IOS.md` for signing, direct-device, and AltStore-style sideload
 instructions.
 
+Create the matching GPL corresponding-source archive from a clean committed
+checkout with:
+
+```sh
+./package-source.sh
+```
+
+The source packager archives the exact Git commit, verifies that the build
+system, vendored SDL source, GPL license, third-party notices, Installation
+Information and both packagers are present, and rejects retail, runtime,
+credential and binary-package material. It writes a deterministic `.tar.gz`
+plus SHA-256 sidecar under ignored `dist/`. Distribute that archive with the IPA
+from the same build identity.
+
 The generated `CTRPad.app` and IPA contain no retail data. On a first launch with no
 media, CTRPad presents a native **Choose CTR disc image** screen. Select your
 own NTSC-U single-track raw MODE2/2352 BIN through Files. CTRPad copies the
