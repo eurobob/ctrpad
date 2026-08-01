@@ -2255,6 +2255,10 @@ remains active.
   signing or physical-iPad behavior.
 
 The extracted-source evidence-open reading was 228,335 seconds: 2 days,
-15 hours, 25 minutes, 35 seconds cumulative. The closing reading is recorded
-after the acceptance documentation commit. Goal time includes pauses/resumes
-and is not a build benchmark or person-hour estimate. The goal remains active.
+15 hours, 25 minutes, 35 seconds cumulative. The documentation-close reading
+was 228,550 seconds: 2 days, 15 hours, 29 minutes, 10 seconds cumulative. That
+adds 1,288 seconds (21 minutes, 28 seconds) from the preceding 227,262-second
+published boundary, including 215 seconds (3 minutes, 35 seconds) for the
+closing audit and first acceptance-documentation commit. Goal time includes
+pauses/resumes and is not a build benchmark or person-hour estimate. The goal
+remains active.
