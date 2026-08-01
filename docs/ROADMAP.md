@@ -848,16 +848,17 @@ boundary.
 ### M8 — iOS/iPadOS application with controller input
 
 **Status:** in progress; reproducible app shell, Simulator launch and
-background/resume checkpoint landed; physical-device/controller/full-lifecycle
-acceptance depends on M6 and M7
+background/resume/rotation plus balanced ordinary UIKit presentation landed;
+physical-device/controller/full-lifecycle acceptance depends on M6 and M7
 
 Checkpoint `98ae2c6d86fe` adds ARM64 Simulator/device presets, credential-free
 iPhone/iPad metadata, landscape declarations, SDL's iOS-owned entry point,
 physical-pixel sizing and UIKit presentation-object handling. An exact clean
 local-only Simulator package launches the production retail path, renders and
 opens audio. The generated physical-device binary is unsigned and has not run
-on hardware. Simulator logs still report unbalanced UIKit appearance
-transitions, so lifecycle acceptance remains explicitly open.
+on hardware. The ordinary-launch appearance warning reported at that checkpoint
+was subsequently corrected by `6b268157888f`; physical lifecycle acceptance
+remains explicitly open.
 
 The 2026-07-31 physical-gate audit reported `No devices found` from
 `xcrun devicectl list devices`, zero valid code-signing identities from
@@ -875,8 +876,24 @@ wait now yields completely instead of entering either the project spin window
 or `SDL_DelayPrecise`'s final sub-millisecond spin. Simulator performance is
 not accepted: a 324-frame diagnostic averaged 8.335 FPS and attributed
 105.157 ms of 119.983 ms per frame to software-renderer triangle submission.
-The repeated UIKit appearance-transition warning also remains. Detailed
-evidence is in `docs/parity/2026-07-31-ios-lifecycle-display-loop.md`.
+Detailed evidence is in
+`docs/parity/2026-07-31-ios-lifecycle-display-loop.md`.
+
+Checkpoint `6b268157888f` modernizes SDL's UIKit view-replacement path for
+CTRPad's iOS 15 minimum. It preserves the installed root controller and
+directly attaches a replacement GLES view instead of clearing and restoring
+the controller through a historical iOS 7 workaround. The first attempt
+removed the reset but failed to attach the replacement view, yielding a fully
+black screen despite zero ordinary warnings; it was reverted. The accepted
+path preserved coherent pixels and produced zero appearance-transition
+warnings during exact production startup, real Simulator Home/resume, rotation
+and bounded termination. Ordered audio/lifecycle markers, overlay reflow,
+renderer hash `851169f2644a1675`, unchanged BIN/save hashes, desktop and
+sanitizer CTest 22/22, iPhoneOS ARM64 link and macOS GLES link all pass. One
+warning after the deliberately immediate renderer-self-test teardown remains
+recorded; natural app-initiated termination and physical-hardware lifecycle
+remain open. Full chronology, hashes and commands are in
+`docs/parity/2026-08-01-ios-uikit-view-lifecycle.md`.
 
 Work:
 

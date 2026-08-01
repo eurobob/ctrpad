@@ -65,6 +65,12 @@ Current evidence and procedures:
   lifecycle reducer, cooperative display loop, explicit audio/input/VBlank
   suspension boundaries, fully yielding iOS wait, repeated Home/resume runs,
   Simulator software-renderer diagnosis, and deliberately open device gates.
+- `2026-08-01-ios-uikit-view-lifecycle.md` records the exact repeated-root-
+  controller warning diagnosis, the rejected warning-free black-screen
+  attempt, the iOS 15+ hierarchy-preserving correction, real Simulator
+  Home/resume/rotation evidence, exact renderer/cross-target/sanitizer hashes,
+  preservation checks, the residual immediate-self-test teardown warning, and
+  deliberately open physical-device/natural-termination gates.
 - `2026-07-31-ios-sandbox-storage.md` records the bundle/Documents/Application
   Support ownership split, Documents-priority retail startup, private log and
   memory-card roots, Files metadata, exact cross-target matrix, rejected

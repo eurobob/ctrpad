@@ -1696,3 +1696,54 @@ The preceding published reading was 202,463 goal seconds. The
 documentation-close reading was 205,801 seconds: 2 days, 9 hours, 10 minutes,
 1 second cumulative, adding 3,338 seconds (55 minutes, 38 seconds). The timer
 is cumulative goal time, including pauses, not a benchmark or labor estimate.
+
+### 2026-08-01 — UIKit view lifecycle and visible transition correction
+
+- Reproduced two unbalanced UIKit appearance-transition warnings during an
+  ordinary pre-correction production launch and three after the immediate
+  renderer self-test returned. Both ordinary warnings mapped to SDL's two
+  nil/restore root-controller sequences, retained historically for iOS 7 and
+  below despite CTRPad's iOS 15 minimum.
+- Rejected the first warning-only correction. Removing the nil assignments
+  reduced the short-test warning count to one and ordinary count to zero, but
+  reassignment of the same controller did not attach its replacement view.
+  GLES ran behind a completely black screenshot (`97de7803...a5b`), so the
+  change was fully reverted and never committed.
+- Implemented an iOS 15+ hierarchy-preserving path: retain the installed root
+  controller, attach its replacement view directly only when it has no
+  superview, and install the controller normally only when it is not root.
+  Dirty-source validation restored coherent pixels and zero ordinary warnings.
+- Published implementation `6b268157888f` (`fix: balance UIKit view
+  transitions`) before the final matrix, then reconfigured every build so its
+  embedded build ID was exact.
+- Exact Simulator renderer self-test passed unchanged GLES semantic hash
+  `851169f2644a1675`. It still emits one warning only after immediate teardown;
+  that residual remains explicit.
+- Exact production startup emitted zero appearance warnings, initialized UIKit
+  FBO/RBO 1 and all PSX/VRAM pipelines, then visibly rendered the animated
+  title/demo and complete touch overlay. A slow initial interval was confirmed
+  as CPU-active validation of canonical 605.7 MB `ctr-u.bin`, not a hang.
+- Used the actual Simulator Home control and actual SpringBoard CTRPad icon.
+  Logs ordered will/did background with audio suspended, then will/did
+  foreground with audio active. The retained process remained visibly
+  coherent and animated.
+- Used the actual Simulator Rotate control after refreshing accessibility
+  state. Rendering survived, geometry changed, and the native overlay reflowed.
+  The attached production console remained free of appearance warnings through
+  startup, Home/resume, rotation and bounded termination.
+- Exact clean validation passed desktop GL CTest 22/22, iPhoneOS ARM64
+  compile/link, macOS GLES compile/link, and ASan/UBSan CTest 22/22. Input CTest
+  6 also reconfirmed the already published basic keyboard aliases; no duplicate
+  keyboard source path was added.
+- Canonical BIN/save inodes, sizes and SHA-256 stayed unchanged. The disposable
+  clone was shut down without deletion; protected validation Simulator stayed
+  booted and untouched. Retail media and screenshots stayed outside Git.
+- The ordinary Simulator appearance-warning, Home/resume and rotation boundary
+  is accepted. Physical signing/device execution, natural termination,
+  low-memory/background-save behavior, device input/race/audio/video, cadence
+  and energy remain open; M8 and the overall goal stay active.
+
+The preceding published reading was 205,801 goal seconds. The
+documentation-close reading was 208,828 seconds: 2 days, 10 hours, 0 minutes,
+28 seconds cumulative, adding 3,027 seconds (50 minutes, 27 seconds). The timer
+is cumulative goal time, including pauses, not a benchmark or labor estimate.

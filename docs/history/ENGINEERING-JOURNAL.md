@@ -11737,3 +11737,189 @@ The preceding published timer was 202,463 seconds. The documentation-close
 reading was 205,801 seconds: 2 days, 9 hours, 10 minutes, 1 second cumulative,
 adding 3,338 seconds (55 minutes, 38 seconds). It includes paused and resumed
 task lifetime and is not a build benchmark or person-hour estimate.
+
+## 2026-08-01 — Balanced UIKit view replacement without losing the GLES drawable
+
+### Why this was the next local gate
+
+The renderer pixel-semantics checkpoint left the repeated
+`SDL_uikitviewcontroller` appearance-transition warning as the clearest local
+M8 lifecycle defect. Physical iPad signing, MFi/Bluetooth controller delivery,
+true simultaneous touch and device cadence still require hardware or
+credentials not present on this Mac. The Simulator warning was reproducible,
+bounded and potentially coupled to the view hierarchy that presents the game,
+so it was selected before moving to another broad feature.
+
+The user's later keyboard request did not require a second input system. The
+published tree already maps arrows/WASD, C/K gas, X/J brake, V/L item, Q/E
+drift, P/Enter Start and Tab/Space Select into player one. That route had live
+iOS and desktop evidence, and exact CTest 6 revalidated it in both the ordinary
+and sanitizer matrices during this checkpoint.
+
+### Reproduced before changing source
+
+An ordinary production launch of exact implementation `818bc0e161d3` on the
+disposable ARM64 iPad Simulator printed two unbalanced appearance-transition
+warnings. Its deliberately short renderer self-test printed three after
+`SDL_main` returned. The ordinary warnings appeared before renderer
+initialization, and neither warning involved the imported BIN or save.
+
+Both call paths converged on
+`externals/SDL/src/video/uikit/SDL_uikitview.m`. When SDL exchanged the window
+view, the add and remove paths each assigned the existing root controller to
+nil and immediately installed the same controller again. The source comment
+described this as protection for orientation on iOS 7 and below. CTRPad's
+deployment target is iOS 15. A read-only check of current upstream SDL found
+the same historical code, so no nonexistent upstream fix was claimed.
+
+The count was compelling: two nil/reset sites matched the two warnings on an
+ordinary launch. The self-test's extra warning was kept separate because its
+`SDL_main` returns immediately instead of entering the production display
+loop.
+
+### Rejected the first superficially successful attempt
+
+The first experiment removed only the two nil assignments. It left the later
+assignment of `data.viewcontroller` to `rootViewController` in place. This
+looked promising in logs:
+
+- ordinary warnings fell from two to zero;
+- short-test warnings fell from three to one;
+- GLES initialized; and
+- all PSX shaders, VRAM pipelines and the display loop ran.
+
+The screen was completely black. The 104,142-byte screenshot
+`/tmp/ctrpad-uikit-root-test.png` hashed to
+`97de7803f8e9c1186c3097079455d17a36720cdeb3d59668c36bbae7f3b30a5b`.
+UIKit treats reassignment of the same root controller as a no-op, so the
+controller's replacement view had not been reattached to the window. This is
+exactly why the visible-screen check accompanied the warning count.
+
+The experiment was fully reverted with `apply_patch`. It was neither committed
+nor used as the basis for exact validation.
+
+### Preserved the controller and repaired the view hierarchy
+
+The accepted implementation keeps the installed root view controller when it
+is already correct. After replacing its view, the code checks whether that view
+has a superview and uses `[data.uiwindow addSubview:...]` only when attachment
+is missing. When the desired controller is not the root, normal root-controller
+installation still occurs. The same rule covers both addition and removal.
+
+The source comment makes the compatibility decision explicit: CTRPad targets
+iOS 15 and later, while the clear/reinstall sequence served iOS 7 and below.
+This avoids a silent fork whose reason would otherwise be lost.
+
+The first dirty-source production launch proved that this approach differed
+from the rejected one. It emitted zero ordinary warnings and produced coherent
+title/demo/touch pixels. Screenshot
+`/tmp/ctrpad-uikit-root-test2-live.png` was 964,291 bytes with SHA-256
+`fddf49e3aba96237086ff07e86a057bd51c7d909b73053951b9421e64fea3d83`.
+The live GLES oracle still passed hash `851169f2644a1675`.
+
+That dirty process then exercised actual Simulator UI controls through the
+visible app: Home, the SpringBoard CTRPad icon, and Rotate. Background and
+foreground lifecycle markers remained ordered, audio suspended and resumed,
+and the overlay reflowed. No appearance warning appeared. This was retained as
+precommit evidence only.
+
+Desktop GL CTest 22/22, an iPhoneOS ARM64 link and ASan/UBSan 22/22 also passed
+before commit. The one-file source scope passed diff review and was committed
+and pushed as:
+
+```text
+6b268157888fbe66b8a4910ae6bf02db6b095d2b
+fix: balance UIKit view transitions
+```
+
+### Rebuilt and repeated from the exact clean commit
+
+Every final build directory was reconfigured after the commit. SDL and CTRPad
+both embedded `6b268157888f`, preventing the documentation tip or a prior dirty
+tree from masquerading as the implementation under test.
+
+The unsigned Simulator product was ARM64 Mach-O and hashed to
+`5024f16b...427`. It was copied to a temporary directory, ad-hoc signed and
+verified for disposable installation; signing produced executable hash
+`7146c5bb...33e4`. No retail media entered the app bundle.
+
+The exact renderer self-test initialized UIKit at 1,376 by 1,032, selected
+presentation framebuffer/renderbuffer 1, compiled four PSX shaders and both
+VRAM pipelines, and passed the complete GLES semantic marker with hash
+`851169f2644a1675`. One unbalanced warning followed only after this immediate
+self-test returned. It is logged as an open teardown residual.
+
+The exact ordinary production launch printed no appearance warning. Its
+initial black/slow interval was diagnosed instead of guessed at: process
+`47918` was CPU-active and `lsof` showed it reading canonical 605,698,800-byte
+inode `111313696`. The work was the established asset-validation scan. It then
+logged `UIKit display loop active`, rendered the title/demo and produced exact
+live screenshot hash `fb8fefc8...765e`.
+
+The actual Simulator Home button produced:
+
+```text
+will-enter-background / audio=suspended
+did-enter-background  / audio=suspended
+```
+
+The actual SpringBoard icon resumed the same process and produced:
+
+```text
+will-enter-foreground / audio=suspended
+did-enter-foreground  / audio=active
+```
+
+The actual Rotate control then changed geometry while the game remained
+animated and coherent. The native overlay reflowed, and the rotated screenshot
+hashed to `eaaa7ee1...081`. The attached production console remained free of
+appearance warnings through startup, background, resume, rotation and bounded
+`simctl terminate`.
+
+This visible-control exercise was intentionally separate from `simctl` log
+inspection. It proved the state transitions occurred through the Simulator UI
+that a tester uses rather than by manufacturing lifecycle log records.
+
+### Preservation and exact regression matrix
+
+The exact app was terminated only after renderer, lifecycle and rotation
+evidence closed. Canonical disposable-clone data retained:
+
+```text
+BIN   inode 111313696, 605698800 bytes,
+      f780bf2331476aabfc00772fa758b12dd95ebfbc907968132cbd3cdd4e2c07c0
+save  inode 111309627, 6016 bytes,
+      6a01b0f5562ed7a279d8f8e51e3b1874ac39a6120f55db4fe3873288950619a3
+```
+
+The disposable `CTRPad Import Negatives` simulator was shut down without
+deletion. Protected `CTRPad Import Validation` remained booted and was not
+installed to, launched, inspected or controlled.
+
+Exact artifacts and outcomes were:
+
+```text
+macOS desktop GL       5583d39d...80cc  version exact, CTest 22/22
+iOS Simulator ARM64   5024f16b...427   GLES oracle + production lifecycle
+iPhoneOS ARM64         3da318db...04ab  compile/link, arm64 Mach-O
+macOS GLES config      57af21a0...1f24  compile/link, arm64 Mach-O
+macOS ASan/UBSan       2f93ed66...b25d  version exact, CTest 22/22
+```
+
+The compiler repeated known legacy conversion/deprecation warnings; no build
+or test failed, and ASan/UBSan reported no runtime finding across 22 tests.
+
+### Acceptance boundary and elapsed goal time
+
+The ordinary Simulator appearance-warning boundary is accepted. Exact Home,
+resume and rotation are also accepted locally. The one immediate-test teardown
+warning is not hidden, and M8 remains in progress for physical signing/install,
+natural termination and low-memory delivery, device background/save behavior,
+physical keyboard/controller/multi-touch play, a completed race, audio/XA/STR,
+cadence and energy.
+
+The preceding published timer was 205,801 goal seconds. The
+documentation-close reading was 208,828 seconds: 2 days, 10 hours, 0 minutes,
+28 seconds cumulative, adding 3,027 seconds (50 minutes, 27 seconds). This is
+cumulative goal lifetime including pauses, not a build benchmark or person-hour
+estimate.
