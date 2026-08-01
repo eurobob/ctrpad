@@ -195,9 +195,20 @@ internal s32 NativeInput_NextControllerSlot(s32 slot)
 	return slot;
 }
 
-internal void NativeInput_MoveKeyboardOffControllerSlot(s32 slot)
+internal s32 NativeInput_SharePrimaryInputSources(void)
 {
-	if (s_keyboardControllerSlot == slot)
+#if defined(SDL_PLATFORM_IOS)
+	// iPhone and iPad have one local player surface. Hardware-keyboard,
+	// touch, and gamepad input must all compose into the primary PSX pad.
+	return 1;
+#else
+	return 0;
+#endif
+}
+
+internal void NativeInput_AssignKeyboardForController(s32 slot, s32 sharePrimaryInput)
+{
+	if ((sharePrimaryInput == 0) && (s_keyboardControllerSlot == slot))
 	{
 		s_keyboardControllerSlot = NativeInput_NextControllerSlot(s_keyboardControllerSlot);
 	}
@@ -950,7 +961,7 @@ internal void NativeInput_OpenController(SDL_JoystickID instanceId, s32 slot)
 	controller->analogEnabled = 1;
 	controller->switchingAnalog = 0;
 	s_controllerToSlotMapping[slot] = controller->instanceId;
-	NativeInput_MoveKeyboardOffControllerSlot(slot);
+	NativeInput_AssignKeyboardForController(slot, NativeInput_SharePrimaryInputSources());
 }
 
 internal void NativeInput_OpenKnownControllers(void)
@@ -1393,7 +1404,8 @@ internal s32 NativeInput_RunVirtualControllerSelfTest(void)
 	s_inputInitialized = 1;
 	Platform_InputControllerAdded(virtualId);
 	if ((s_controllers[0].controller == NULL) || (s_controllers[0].instanceId != virtualId) ||
-	    ((SDL_JoystickID)s_controllerToSlotMapping[0] != virtualId) || (s_keyboardControllerSlot != 1))
+	    ((SDL_JoystickID)s_controllerToSlotMapping[0] != virtualId) ||
+	    (s_keyboardControllerSlot != (NativeInput_SharePrimaryInputSources() != 0 ? 0 : 1)))
 	{
 		failure = "virtual gamepad slot ownership";
 		goto CLEANUP;
@@ -1539,6 +1551,20 @@ int Platform_InputRunSelfTest(void)
 		s_controllerToSlotMapping[slot] = -1;
 		NativeInput_ResetSnapshot(slot);
 	}
+
+	NativeInput_AssignKeyboardForController(0, 1);
+	if (s_keyboardControllerSlot != 0)
+	{
+		fprintf(stderr, "[CTR Input] self-test failed: shared primary input assignment\n");
+		return 1;
+	}
+	NativeInput_AssignKeyboardForController(0, 0);
+	if (s_keyboardControllerSlot != 1)
+	{
+		fprintf(stderr, "[CTR Input] self-test failed: separate controller input assignment\n");
+		return 1;
+	}
+	s_keyboardControllerSlot = NATIVE_INPUT_DEFAULT_KEYBOARD_SLOT;
 
 	snapshot = &s_controllers[NATIVE_INPUT_DEFAULT_KEYBOARD_SLOT].snapshot;
 	NativeInput_SetSnapshotSubmitNameKey(snapshot, SDL_SCANCODE_A);
@@ -1703,7 +1729,7 @@ int Platform_InputRunSelfTest(void)
 		return 1;
 	}
 
-	printf("[CTR Input] self-test passed: metadata-key=%d legacy-enter=%d migration-enter=%d live-start=retail tap-latch=c+right two-host-snapshots aliases=12 held=k+d+e alias-tap=k+d touch=analog+dpad+chord+tap+gamepad-peer virtual-gamepad=buttons+axes+rumble+hotplug\n",
+	printf("[CTR Input] self-test passed: metadata-key=%d legacy-enter=%d migration-enter=%d live-start=retail tap-latch=c+right two-host-snapshots aliases=12 held=k+d+e alias-tap=k+d primary-share=keyboard+touch+gamepad virtual-gamepad=buttons+axes+rumble+hotplug\n",
 	       SDL_SCANCODE_A, SDL_SCANCODE_RETURN, SDL_SCANCODE_RETURN);
 	return 0;
 }

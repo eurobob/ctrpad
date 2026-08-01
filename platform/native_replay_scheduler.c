@@ -660,6 +660,8 @@ internal const char *NativeReplayScheduler_PlatformID(void)
 {
 #if defined(_WIN32)
 	return "win32";
+#elif defined(SDL_PLATFORM_IOS)
+	return "ios";
 #elif defined(__APPLE__)
 	return "macos";
 #elif defined(__linux__)
