@@ -13843,3 +13843,50 @@ The rejection/restoration goal reading was 254,820 seconds (2 days, 22 hours,
 47 minutes), 2,945 seconds after the interactive handoff. The goal remains
 active; Simulator cadence, wider scene churn, touch-race ergonomics, exact
 post-publication replay and every physical-device/final-package gate stay open.
+
+## 2026-08-01 — Exact publication replay after renderer-source restoration
+
+The rejection report and its synchronized index/roadmap/decision/history files
+were staged by explicit path. `git diff --cached --check` passed. Commit
+`125966b21f19ea6bccc3a37b5c12b147cc69ad78` was pushed to the downstream
+`codex/arm64-apple` branch; local, origin and existing draft PR #1 heads then
+matched exactly. The commit changes documentation only.
+
+Both devices and Simulator GUI were directly verified off before compilation.
+The exact nice-15 / one-job macOS reconfigure/build took 65.02 seconds, repeated
+the same 32 warnings and produced ARM64 `7c313610...1d0a` embedding
+`125966b21f19`. All 22 tests passed in 2.57 seconds. A separate pixel invocation
+passed in 1.28 seconds with desktop 12/12 draws and hashes `851169f2644a1675`,
+`0c0d08324ae06c35` and `a7798c5a6ddee965`.
+
+The exact iOS Simulator build took 71.72 seconds with the same warning set. Its
+unsigned thin-ARM64 executable is `aa9b6483...23b4`; an isolated strict/deep-
+verified signed copy is `4cca94f1...6fad`. Only the disposable device booted.
+The install remapped the data container to E37C without replacing primary BIN
+inode `111450682` or save inode `111309627`; both canonical hashes remained
+unchanged. The actual-surface GLES marker returned to the accepted
+`fallback-draws=12 active-draws=5` route and retained every established hash.
+Correct-ID termination ended the self-test shell.
+
+The normal exact app captured `perf-exact-125966b21`. Computer Use moved
+screen-by-screen through the binary crate, Crash/trophy, main menu, character,
+track, no-ghost and Crash Cove grid. The first grid capture coincided with the
+overlay's hidden phase while its accessibility controls stayed live; a fresh
+capture at timer 0:04.13 showed every control. Repeated C/Right taps moved the
+timer to 0:18.36, changed the live frame, and emitted exact retail-poll masks
+`0x4000`, `0x0020` and combined `0x4020`.
+
+Correct-ID termination flushed CSV `eb5bc3c...1f3` (792,410 bytes, 2,375
+complete data records plus header and one non-newline 31-field partial row), GPU
+header `af0f3466...91f6`, and log `a1d98d65...107b` (75 lines, 8,702 bytes).
+The corrected targeted scan returned zero. The 693 complete normal-race frames
+average 171.335 ms / 5.84 reciprocal FPS; final 299 complete rows average
+165.816 ms / 6.03 FPS. The 119/78 logical group still uses 66 calls and 56
+merges. This accepts identity/correctness, not Simulator performance.
+
+The isolated signed directory was removed after hashing. Installed exact app,
+simulator data, builds, evidence and remote source remain. The exact-replay goal
+reading was 255,884 seconds (2 days, 23 hours, 4 minutes, 44 seconds), 1,064
+seconds after rejection/restoration. The exact checkpoint is accepted; cadence,
+wider churn, touch-race ergonomics and all physical-device/final-package gates
+remain open.

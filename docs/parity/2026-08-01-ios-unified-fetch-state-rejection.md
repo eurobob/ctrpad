@@ -215,5 +215,75 @@ slow live profiling, source restoration, cleanup, testing and documentation; it
 is not a build benchmark or person-hour estimate.
 
 The overall goal remains active. Simulator cadence, broader scene/effect churn,
-full touch-race ergonomics, exact post-publication replay, Apple signing, the
-physical-iPad gate and the final sideloadable package remain open.
+full touch-race ergonomics, Apple signing, the physical-iPad gate and the final
+sideloadable package remain open.
+
+## Published documentation checkpoint and exact replay
+
+The six-file documentation-only rejection record was committed as
+`125966b21f19ea6bccc3a37b5c12b147cc69ad78` and pushed to
+`origin/codex/arm64-apple`. Local HEAD, remote-tracking HEAD and the open draft
+PR #1 head all resolved to that exact object. No candidate renderer source was
+part of the commit.
+
+With both named devices and Simulator GUI off, the exact macOS build reconfigured
+and linked at nice 15 / one job in 65.02 seconds. It repeated the same 32 warnings,
+produced ARM64 executable
+`7c31361034ed04a6fd5d05ae8c435d6b2ba9d7319e44594d4c1d1a0231d21d0a`,
+embedded `125966b21f19`, and passed all 22 tests in 2.57 seconds. The independent
+1.28-second pixel invocation retained desktop 12/12 draws plus logical
+`851169f2644a1675`, blend `0c0d08324ae06c35`, and presentation
+`a7798c5a6ddee965`.
+
+The exact iOS Simulator build took 71.72 seconds under the same resource rules
+and warning set. Its thin-ARM64 executable embedded the same revision and hashed
+to `aa9b648321d0d48db079cf335225368622ef79708bc7b03a66837f9f25cb23b4`.
+An isolated signed copy passed strict/deep verification at
+`4cca94f178f3b09dddbd5c4fc49c4556c27c53648b16fe275e7d4a92c0ba6fad`.
+
+Only the disposable simulator booted. Updating the installed exact app remapped
+the data-container UUID to `E37C4BF4-0D95-4ACF-9A09-99C047A60294`; retail/save
+inodes, sizes and canonical hashes remained unchanged. The exact actual-surface
+GLES oracle reported the accepted renderer's `fallback-draws=12
+active-draws=5`, byte-matched fallback, enabled coherent fetch, and the
+established logical/blend/1032×1376 presentation hashes. Correct-ID termination
+closed the resident UIKit self-test shell.
+
+The normal exact app launched with `perf-exact-125966b21`. Computer Use inspected
+the binary-crate intro, Crash/trophy scene, mode menu, character portraits/kart,
+Crash Cove preview/map, no-ghost screen and live grid. A first grid capture landed
+during the control overlay's hidden phase even though its accessibility elements
+remained active; a fresh capture at 0:04.13 showed the full steering and action
+controls. C and Right taps then advanced the timer to 0:18.36 and the retained
+log recorded retail-poll consumption of `0x4000`, `0x0020`, and `0x4020`.
+
+Correct-ID termination finalized:
+
+```text
+frame CSV       792,410 bytes / 2,376 newline-terminated lines
+frame CSV SHA   eb5bc3c0566b5bdf7bbfca8acb107aaedc3b5151bdbe434a02cdc701cf0801f3
+GPU CSV         28 bytes / header only
+GPU CSV SHA     af0f3466758a717080c8ac7d955fb6c432274898fb065e304a8d36cf3c9d91f6
+app log         8,702 bytes / 75 lines
+app log SHA     a1d98d657307f7751dc2b7e09d5d09d214747130934d0c1aabd1feb0ec41107b
+targeted faults 0
+```
+
+The final SIGTERM left one non-newline 31-field partial CSV row after 2,375
+complete records; analysis excludes it explicitly. The 693 complete normal-race
+frames average 171.335 ms / 5.84 reciprocal FPS. The final 299 complete rows
+average 165.816 ms / 6.03 FPS with 57 calls, 101 logical splits, 64
+semitransparent/fetch splits and 47 merged splits. A 200-frame 119/78 group uses
+the expected 66 calls and 56 merges. This is structural and runtime evidence,
+not a claim that variable Simulator host timing improved.
+
+The isolated signed copy was removed after its hash and verification were
+recorded. The installed exact app, app data, build products, CSV/log evidence,
+Git commit and remote branch remain.
+
+The exact-replay reading was 255,884 seconds: 2 days, 23 hours, 4 minutes,
+44 seconds cumulative, 1,064 seconds (17 minutes, 44 seconds) after the
+rejection/restoration boundary. Goal time includes publication, exact builds,
+oracles, boot/install, one-Simulator user-visible routing, profiling, analysis
+and cleanup; it is not a build benchmark or person-hour estimate. The exact
+documentation checkpoint is accepted. The overall goal remains active.

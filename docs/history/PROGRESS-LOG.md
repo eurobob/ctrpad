@@ -2743,3 +2743,36 @@ The rejection/restoration reading was 254,820 seconds: 2 days, 22 hours,
 includes user inspection, implementation, builds, signing, oracles, live
 profiling, restoration, cleanup, testing and documentation; it is not a build
 benchmark or person-hour estimate. The overall goal remains active.
+
+### 2026-08-01 — Published rejection record and exact-replayed accepted renderer
+
+- Committed the six-file documentation-only record as `125966b21f19` and pushed
+  `codex/arm64-apple`. Local, remote-tracking and existing draft-PR heads match;
+  no rejected source or duplicate PR was published.
+- With both devices/GUI off, exact nice-15 one-job macOS/iOS builds took 65.02 /
+  71.72 seconds and repeated only 32 established warnings. The macOS ARM64
+  executable is `7c313610...1d0a`; the iOS unsigned/signed hashes are
+  `aa9b6483...23b4` / `4cca94f1...6fad`; all embed `125966b21f19` and signing
+  passed strict/deep verification.
+- All 22 macOS tests passed in 2.57 seconds. Desktop and actual-surface iOS
+  oracles retained the established logical/blend/presentation hashes; iOS
+  reported the accepted 12-to-5 ordered-overlap path, proving the rejected
+  12-to-1 shader was no longer installed.
+- Only the disposable simulator booted. Container remap preserved retail/save
+  inodes, sizes and hashes. Computer Use verified coherent intro/trophy/menu,
+  character, track, no-ghost and grid screens. A fresh capture confirmed the
+  temporarily hidden overlay returned; the timer advanced to 0:18.36 and
+  C/Right inputs reached retail poll as `0x4000`, `0x0020` and `0x4020`.
+- Correct-ID termination flushed 2,375 complete frame records plus one partial
+  final row at `eb5bc3c...1f3`, header-only GPU data at `af0f3466...91f6`, and
+  a 75-line log at `a1d98d65...107b`; targeted faults are zero. Normal race is
+  5.84 reciprocal FPS and the final 299 complete frames are 6.03 FPS, so the
+  Simulator performance and device gates stay open.
+- Removed only the isolated signed copy after recording its hash. Installed
+  exact app, data, builds, evidence, commit and remote branch remain.
+
+The exact-replay reading was 255,884 seconds: 2 days, 23 hours, 4 minutes,
+44 seconds cumulative, 1,064 seconds after the rejection boundary. Full
+evidence is in
+`docs/parity/2026-08-01-ios-unified-fetch-state-rejection.md`. The checkpoint
+is exact-accepted; the overall goal remains active.
