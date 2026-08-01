@@ -1602,3 +1602,52 @@ The preceding published reading was 194,894 goal seconds. The pre-publication
 reading was 196,487 seconds: 2 days, 6 hours, 34 minutes, 47 seconds cumulative,
 adding 1,593 seconds (26 minutes, 33 seconds). The timer is cumulative goal
 time, including pauses, not a benchmark or labor estimate.
+
+### 2026-07-31 — Full exact-current iOS GLES golden comparison
+
+- Preserved the already-running exact iOS/UIKit/GLES producer instead of
+  interrupting it for the later keyboard request. Report `ctr-211128`
+  finalized all 24,232 frames and 81 checkpoints after 1:07:38 under Apple's
+  Simulator software renderer. Final replay/state hashes are
+  `056866ff...c60d` and `94eca26b...05e`.
+- Strict comparison against accepted macOS oracle `ctr-215303` first found all
+  eight required components equal on all 24,232 frames. Exact iOS checkpoint
+  80 then validated all 81 records, restored frame 24,000, and replayed to the
+  normal frame-24,232 close.
+- The first checkpoint launch used stale bundle ID
+  `com.chrissotraidis.CTRPad` and SpringBoard rejected it as not found. The
+  installed `Info.plist`/`simctl listapps` identity
+  `io.github.chrissotraidis.ctrpad` was then used successfully. The rejected
+  request started no app and changed no report.
+- No exact-current full macOS report existed, so exact build `e6ba535a9c73`
+  generated desktop-GL report `ctr-222546` from the same pad/VSync seed. It
+  finalized all 24,232 frames and 81 checkpoints with exit 0 after 13:31,
+  later measuring 29.90-29.91 FPS.
+- The decisive same-build comparison found zero mismatches in timing, RNG,
+  drivers, world, allocation, root, pads and VSync on all 24,232 frames.
+  Exact checkpoint-80 playbacks also emitted identical late frame-24,001 draw
+  commands, aggregate hash `d1765e952537c48b`, and both finished normally.
+- Direct iOS checkpoint inspection reports `maxLap=0`, `maxCheckpoint=77` and
+  `lapAdvanced=no`. This is full renderer-state/transport evidence, not a
+  replacement for the separately accepted lap oracle or an open completed
+  human race.
+- The user's explicit keyboard request was audited against the published tip.
+  Basic controls were already implemented and documented: arrows/WASD,
+  C/K Gas, X/J brake, V/L item, Q/E drift, P/Enter Start and Tab/Space Select.
+  The direct input test passed all aliases, quick taps and the held `K+D+E`
+  chord; the complete macOS matrix passed 21/21. No duplicate source path was
+  added.
+- The clone retail BIN/save kept inodes `111313696`/`111309627`, sizes and
+  hashes `f780bf23...07c0`/`6a01b0f5...619a`. Local reports, state files and
+  traces stayed outside Git. The clone was shut down; protected source PID
+  `93637` remained running.
+- The full renderer choice state/cadence criterion is accepted. M7 remains in
+  progress for live Cocoa GLES/ANGLE, explicit uncovered pixel edge cases and
+  physical-iPad cadence. Signing/device and natural multi-touch race gates
+  remain open; the overall goal remains active.
+
+The preceding published reading was 196,487 goal seconds. The
+pre-documentation reading was 202,463 seconds: 2 days, 8 hours, 14 minutes,
+23 seconds cumulative, adding 5,976 seconds (1 hour, 39 minutes, 36 seconds).
+The timer is cumulative goal time, including pauses, not a benchmark or labor
+estimate. Exact iOS/macOS producer wall times are listed separately above.

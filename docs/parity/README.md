@@ -49,6 +49,12 @@ Current evidence and procedures:
   representative vertex/draw-split trace equality, coherent live framebuffer,
   rejected cross-platform checkpoint bypass, media/save preservation and the
   deliberately open full-suite/macOS-GLES/physical-device boundaries.
+- `2026-07-31-ios-gles-full-golden.md` records exact-current native macOS
+  desktop-GL and iOS UIKit/GLES regeneration of all 24,232 frames and 81
+  checkpoints, zero mismatches in all eight required components, exact
+  checkpoint-80 playback, an identical late frame-24,001 render trace, the
+  explicit non-lap coverage limit, keyboard revalidation, preservation hashes,
+  rejected stale bundle ID and remaining macOS-GLES/device/visual boundaries.
 - `2026-07-31-ios-lifecycle-display-loop.md` records the synchronous UIKit
   lifecycle reducer, cooperative display loop, explicit audio/input/VBlank
   suspension boundaries, fully yielding iOS wait, repeated Home/resume runs,

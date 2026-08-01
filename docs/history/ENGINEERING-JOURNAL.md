@@ -11478,3 +11478,102 @@ The preceding published timer was 194,894 seconds. The pre-publication reading
 was 196,487 seconds: 2 days, 6 hours, 34 minutes, 47 seconds cumulative, adding
 1,593 seconds (26 minutes, 33 seconds). It includes paused/resumed task lifetime
 and is not a build benchmark or person-hour estimate.
+
+## 2026-07-31 — Full current-build iOS GLES golden run and keyboard audit
+
+### Preserved the in-flight producer
+
+The continuation resumed while exact iOS implementation `e6ba535a9c73` was
+already consuming the complete accepted 24,232-frame version-4 pad/VSync seed
+through `--record-from-replay`. The user's later request for basic keyboard
+testing was additive, not a reason to terminate this hour-long producer.
+
+Simulator `26F3DEE8-8840-446D-85FE-C882009C9C06`, installed executable
+SHA-256 `1cef6404...c62cb`, generated private report `ctr-211128`. UIKit
+framebuffer/renderbuffer 1, Apple Software Renderer GLES 3.0, GLSL ES 300, all
+PSX/VRAM pipelines, touch overlay and the cooperative lifecycle loop had
+initialized before frame capture began. Monitoring sampled file-complete frame
+records and native checkpoint records every 45 seconds. Two monitor tool
+requests had malformed polling syntax and were corrected immediately; neither
+sent input to PID `20290`, restarted it, or changed its continuously growing
+files.
+
+The run crossed checkpoint 71 at frame 21,300 and the late race-driver
+inactive event at frame 21,331, reached checkpoint 80 at frame 24,000, and
+closed naturally after all 24,232 frames. The monitor elapsed reading was
+1:07:38. Final replay/state files were 10,662,228 and 359,201,012 bytes with
+hashes `056866ff...c60d` and `94eca26b...05e`; metadata finalized with 81
+checkpoints. Later Simulator cadence ranged roughly 4-11 FPS and remains a
+software-renderer observation only.
+
+### Compared first, then validated the checkpoint file
+
+The strict all-eight comparator first compared iOS `ctr-211128` with accepted
+macOS oracle `ctr-215303`. Timing, RNG, drivers, world, allocation, root, pads
+and VSync each reported 24,232 equal and zero mismatches.
+
+A copy of the iOS replay/state pair was prepared for checkpoint-80 playback so
+the producer report remained immutable. The first `simctl launch` mistakenly
+used stale identifier `com.chrissotraidis.CTRPad`; SpringBoard rejected it as
+`NotFound`. Inspection resolved the installed identity as
+`io.github.chrissotraidis.ctrpad`. The corrected exact launch validated all 81
+records, restored frame 24,000 with recorded checksum `0xe32367e8`, and reached
+the normal frame-24,232 finish. The differing post-restore raw checksum was
+explicitly diagnostic-only and host-address-bearing, not a canonical
+divergence.
+
+Checkpoint coverage inspection succeeded structurally but returned
+`activeRecords=80 maxLap=0 maxCheckpoint=77 lapAdvanced=no`. That limit is
+recorded rather than inferred away. This report does not supersede current lap
+oracle `ctr-223221` or the open human completed-race gate.
+
+### Generated the missing same-build desktop report
+
+No 24,232-frame macOS report existed for current build `e6ba535a9c73`. Because
+the historical oracle predates substantial platform/renderer work, the exact
+current macOS executable (`cfd3d9b4...1dca`) regenerated the entire seed under
+desktop GL. Report `ctr-222546` finalized 24,232 frames/81 checkpoints with
+exit 0 in 13:31 and later throughput 29.90-29.91 FPS. Replay/state hashes were
+`78ef4251...32a` and `7595dafa...4c9`.
+
+The decisive same-build comparison again required all eight components. Every
+one reported 24,232 equal and zero mismatches. This upgrades the renderer
+state/transport result from a bounded slice to the complete scenario.
+
+Disposable checkpoint-80 copies then traced frame 24,001 in each exact native
+producer. Both emitted 3,186 packed vertices, four 4-bit draw splits, flush
+hash `2381a1fe20c00a91` and aggregate hash `d1765e952537c48b`; direct trace
+diff was empty. Both playbacks finished at frame 24,232. Trace-log hashes were
+`dc5d9c30...7034` and `a789d242...5985`. The observed format count does not
+claim absent 8-bit/16-bit/RGBA coverage.
+
+### Verified the already implemented keyboard controls
+
+Source inspection found the requested controls already present in
+`NativeInput_DefaultMappings`, routed by SDL key events into the same
+active-low pad snapshot used by controllers/touch, and documented in the
+README. The current dedicated input test passed in 0.17 seconds: all 12
+aliases, quick `C+Right` and `K+D` taps, two-host-snapshot retention, held
+`K+D+E`, primary sharing, touch composition and virtual gamepad composition.
+The final full macOS suite passed 21/21 in 1.01 seconds. No redundant source
+change was made; the new requirement and fresh validation are recorded here
+and in the parity report.
+
+### Preservation, cleanup and boundary
+
+Clone retail BIN/save retained inodes `111313696`/`111309627`, sizes
+605,698,800/6,016 and hashes `f780bf23...07c0`/`6a01b0f5...619a`. The exact
+reports, playback copies, state files and trace logs stayed local-only outside
+Git. The disposable Simulator was shut down without deletion. Source-validation
+PID `93637` remained alive.
+
+M7's complete renderer-choice state/cadence criterion is accepted. Live Cocoa
+GLES remains unavailable without ANGLE/EGL; explicit pixel cases not present
+in the captured frames and physical-iPad cadence remain open. Physical signing,
+keyboard/controller delivery and natural multi-touch full-race/save acceptance
+also remain open. The overall goal stays active.
+
+The preceding published timer was 196,487 seconds. The pre-documentation
+reading was 202,463 seconds: 2 days, 8 hours, 14 minutes, 23 seconds cumulative,
+adding 5,976 seconds (1 hour, 39 minutes, 36 seconds). It includes paused and
+resumed task lifetime and is not a build benchmark or person-hour estimate.

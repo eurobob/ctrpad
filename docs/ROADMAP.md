@@ -758,9 +758,9 @@ build.
 ### M7 — Shared OpenGL ES 3 renderer
 
 **Status:** in progress; shared dialect, live iPad Simulator GLES pixels, a
-2,000-frame all-component desktop-GL/GLES match and two exact representative
-render traces have landed; live macOS GLES, the full GLES golden suite and
-physical-device cadence remain open
+full 24,232-frame exact-current desktop-GL/GLES state/transport match and three
+exact representative render traces have landed; live macOS GLES, remaining
+explicit pixel edge cases and physical-device cadence remain open
 
 Checkpoint `78ef952dbecc` adds the explicit ES 3.0 / GLSL ES 300 production
 dialect, SDL proc loading, desktop-only feature guards, pre-context-safe
@@ -793,6 +793,17 @@ zero. Full commands, hashes, rejected cross-platform-checkpoint route and
 preservation evidence are in
 `docs/parity/2026-07-31-ios-gles-desktop-gl-equivalence.md`.
 
+The exact same implementation build subsequently regenerated the complete
+24,232-frame/81-checkpoint scenario natively on macOS desktop GL and iOS
+UIKit/GLES. All eight required components matched on every frame with zero
+mismatches. Exact checkpoint-80 playbacks reached frame 24,232, and both
+renderers emitted identical packed vertices/draw splits at late frame 24,001
+(`d1765e952537c48b`). Direct checkpoint inspection truthfully reports
+`lapAdvanced=no`; the separate accepted current-format lap report remains the
+lap-structure oracle. Full report hashes, the one rejected stale-bundle-ID
+launch, keyboard revalidation and preservation evidence are in
+`docs/parity/2026-07-31-ios-gles-full-golden.md`.
+
 Work:
 
 - Diff Simon358's GLES branch against the exact upstream baseline and port only
@@ -812,10 +823,11 @@ Acceptance:
   artifacts.
 - Renderer choice does not alter game-visible state or frame cadence.
 
-The second and third criteria are accepted for the documented 2,000-frame
-Simulator slice and two traced frames. They remain open at full golden-suite
-scope; the first criterion remains blocked locally by the absent Cocoa
-ANGLE/EGL runtime.
+The third criterion is now accepted for the complete 24,232-frame scenario.
+The second is accepted for the observed coherent framebuffer and exact traced
+frames 1,802, 1,813 and 24,001, but explicit pixel/mask/feedback cases absent
+from those frames remain open. The first criterion remains blocked locally by
+the absent Cocoa ANGLE/EGL runtime.
 
 ### M8 — iOS/iPadOS application with controller input
 
@@ -1180,7 +1192,7 @@ timestamps are explicitly excluded from game-visible deterministic state.
 | Reference documentation is stale | `ref/README.md` claims four clones that are absent | Derive documentation from actual remote/commit checks |
 | Retail assets can be committed accidentally | M0 ignore and tracked-file probes pass | Keep the M0 checks in release verification |
 | Wrong-region retail media can corrupt indexed loads | The archived PAL image identifies as `SCES_021.05`; the replacement identifies as `SCUS_944.26` | Keep the import/runtime identity gate and exercise both accept/reject cases |
-| Apple lifecycle/pacing changes perturb timing | macOS ARM64 clean report `ctr-215303` uses the retail 32-ms/two-VBlank step on 99.872065% of post-bootstrap frames; a 6,465-VBlank checkpoint segment measured within -0.025190% of the exact 59.817333-Hz model; current iOS GLES and macOS desktop GL reports match timing and VSync on all 2,000 regenerated frames | Preserve the full macOS baseline; expand the accepted GLES slice to the complete golden run and measure physical-iPad wall cadence |
+| Apple lifecycle/pacing changes perturb timing | macOS ARM64 clean report `ctr-215303` uses the retail 32-ms/two-VBlank step on 99.872065% of post-bootstrap frames; a 6,465-VBlank checkpoint segment measured within -0.025190% of the exact 59.817333-Hz model; exact-current iOS GLES and macOS desktop GL reports now match timing and VSync on all 24,232 regenerated frames | Preserve both full reports and measure physical-iPad wall cadence |
 | Touch boost chains are ergonomically poor despite correct input injection | Three boosts require steering + drift hold + repeated taps | Device prototypes and repeated triple-boost usability criterion |
 | Signing/publishing depends on credentials and external accounts | Not yet inventoried | Keep configuration credential-free; verify available team/device before release milestone |
 | GPL provenance and commercial-IP exposure need legal judgment | Facts are documented but not legal advice (`docs/ctr-native-viability.md:363-400`) | Sideload-only, publish corresponding source, and obtain counsel review before public release |
