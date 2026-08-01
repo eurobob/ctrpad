@@ -194,6 +194,11 @@ Current evidence and procedures:
   profile/entitlement binding, synthetic and ad-hoc rejections, Apple-signed
   chain positive, unchanged unsigned packages and still-open real-profile/
   physical-device positive.
+- `2026-08-01-ios-entitlement-authorization.md` closes the remaining
+  suffix-only signed App ID check, binds the exact prefix/team/keychain/
+  debugger/minimal entitlement set to the trusted profile, records two
+  positive and seven negative authorization fixtures, the expanded 23-test
+  suite and the still-open real-profile/physical-device result.
 - `2026-07-31-macos-arm64-keyboard-tap.md` records the missing quick-tap root
   cause, historical one-snapshot press-edge transport, its later two-snapshot
   supersession, direct live PSX packet traces, and exact-commit

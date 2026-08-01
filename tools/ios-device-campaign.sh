@@ -218,17 +218,23 @@ preflight_signed_ipa() {
     ((expiration_epoch > $(date -u '+%s'))) || fail "embedded profile expired at $profile_expiration"
 
     profile_application_id="$(plutil -extract Entitlements.application-identifier raw -o - "$profile_plist")"
-    profile_suffix="${profile_application_id#*.}"
-    if [[ "$profile_suffix" == *'*' ]]; then
-        allowed_prefix="${profile_suffix%\*}"
-        [[ "$bundle_id" == "$allowed_prefix"* ]] || \
-            fail "profile application ID $profile_application_id does not allow $bundle_id"
-    else
-        [[ "$profile_suffix" == "$bundle_id" ]] || \
-            fail "profile application ID $profile_application_id does not match $bundle_id"
-    fi
-
     profile_team="$(plutil -extract TeamIdentifier.0 raw -o - "$profile_plist")"
+    entitlement_binding_manifest="$evidence_dir/entitlement-binding-manifest.txt"
+    "$entitlement_binding_tool" --profile-plist "$profile_plist" \
+        --entitlements-plist "$signed_entitlements" --bundle-id "$bundle_id" \
+        --output "$entitlement_binding_manifest" >/dev/null
+    application_identifier_prefix="$(awk -F= \
+        '$1 == "APPLICATION_IDENTIFIER_PREFIX" { print $2 }' \
+        "$entitlement_binding_manifest")"
+    signed_application_id="$(awk -F= \
+        '$1 == "SIGNED_APPLICATION_IDENTIFIER" { print $2 }' \
+        "$entitlement_binding_manifest")"
+    signed_keychain_group="$(awk -F= \
+        '$1 == "SIGNED_KEYCHAIN_ACCESS_GROUP" { print $2 }' \
+        "$entitlement_binding_manifest")"
+    get_task_allow_status="$(awk -F= \
+        '$1 == "GET_TASK_ALLOW_STATUS" { print $2 }' \
+        "$entitlement_binding_manifest")"
     profile_certificate_match=0
     profile_certificate_count=0
     while profile_certificate_base64="$(plutil -extract "DeveloperCertificates.$profile_certificate_count" raw -o - \
@@ -248,13 +254,6 @@ preflight_signed_ipa() {
         fail "app signature has no certificate authority and may be ad hoc"
     grep -Fq "TeamIdentifier=$profile_team" "$evidence_dir/codesign-display.txt" || \
         fail "signature TeamIdentifier does not match embedded profile team $profile_team"
-    signed_application_id="$(plutil -extract application-identifier raw -o - "$signed_entitlements")"
-    signed_team="$("$plist_buddy" -c 'Print :com.apple.developer.team-identifier' \
-        "$signed_entitlements")"
-    [[ "${signed_application_id#*.}" == "$bundle_id" ]] || \
-        fail "signed application ID $signed_application_id does not match $bundle_id"
-    [[ "$signed_team" == "$profile_team" ]] || \
-        fail "signed team $signed_team does not match profile team $profile_team"
 
     udid_status="not-requested"
     if [[ -n "$device_udid" ]]; then
@@ -281,6 +280,11 @@ preflight_signed_ipa() {
         printf 'PROFILE_EXPIRATION=%s\n' "$profile_expiration"
         printf 'PROFILE_APPLICATION_ID=%s\n' "$profile_application_id"
         printf 'PROFILE_TEAM=%s\n' "$profile_team"
+        printf 'APPLICATION_IDENTIFIER_PREFIX=%s\n' "$application_identifier_prefix"
+        printf 'SIGNED_APPLICATION_IDENTIFIER=%s\n' "$signed_application_id"
+        printf 'SIGNED_KEYCHAIN_ACCESS_GROUP=%s\n' "$signed_keychain_group"
+        printf 'GET_TASK_ALLOW_STATUS=%s\n' "$get_task_allow_status"
+        printf 'ENTITLEMENT_BINDING_STATUS=verified\n'
         printf 'PROFILE_CMS_SIGNER_CERTIFICATE_SHA256=%s\n' "$profile_signer_hash"
         printf 'PROFILE_TRUSTED_ROOT_CERTIFICATE_SHA256=%s\n' "$profile_trusted_root_hash"
         printf 'PROFILE_CMS_TRUST_STATUS=verified\n'
@@ -299,6 +303,9 @@ repo_root="$(cd "$script_dir/.." && pwd)"
 signing_trust_tool="$repo_root/tools/verify-ios-signing-trust.sh"
 [[ -x "$signing_trust_tool" ]] || \
     fail "required signing-trust verifier not found: $signing_trust_tool"
+entitlement_binding_tool="$repo_root/tools/verify-ios-entitlement-binding.sh"
+[[ -x "$entitlement_binding_tool" ]] || \
+    fail "required entitlement-binding verifier not found: $entitlement_binding_tool"
 command_name="${1:-}"
 if [[ -z "$command_name" ]]; then
     usage

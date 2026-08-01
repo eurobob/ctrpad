@@ -193,7 +193,8 @@ tool. The packager enforces thin ARM64/iOS metadata, the standard
 installation resources, and retail/runtime-data exclusion. Signed mode also
 cryptographically verifies the profile, pins profile/app certificate chains to
 Apple roots from the macOS system keychain, binds the app leaf certificate to
-the profile, and verifies the final application/team/keychain entitlements. See
+the profile, and verifies the exact App ID prefix, team, sole profile-authorized
+keychain group, debugger authorization and minimal final entitlement set. See
 `docs/INSTALL-IOS.md` for signing, direct-device, and AltStore-style sideload
 instructions.
 
@@ -218,7 +219,9 @@ ignored `dist/`; summarize the actual human/device results with
 unsigned IPA or Simulator result into physical-device evidence. Its offline
 gate shares `tools/verify-ios-signing-trust.sh` with the packager so a merely
 decodable or locally trusted synthetic profile cannot masquerade as Apple
-authorization.
+authorization. It also shares `tools/verify-ios-entitlement-binding.sh`, so an
+App ID prefix or keychain/entitlement mismatch is rejected offline rather than
+first appearing as an iPad installation failure.
 
 Create the matching GPL corresponding-source archive from a clean committed
 checkout with:

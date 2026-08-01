@@ -405,4 +405,12 @@ if(BUILD_TESTING)
     set_tests_properties(ctr_native_cutscene_particle_emitter_layout PROPERTIES PASS_REGULAR_EXPRESSION
         "^\\[CTR CutsceneEmitter\\] self-test passed: pointer-size=(4|8) groups=7 observed-group=46 lifespan=15 count=1 typed-function-init=yes"
     )
+    if(APPLE AND NOT IOS)
+        add_test(NAME ctr_ios_entitlement_binding
+            COMMAND "${CMAKE_CURRENT_SOURCE_DIR}/tools/test-ios-entitlement-binding.sh"
+        )
+        set_tests_properties(ctr_ios_entitlement_binding PROPERTIES PASS_REGULAR_EXPRESSION
+            "^IOS_ENTITLEMENT_BINDING_SELF_TEST=passed positives=2 negatives=7"
+        )
+    endif()
 endif()

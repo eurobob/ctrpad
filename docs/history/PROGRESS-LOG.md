@@ -3115,3 +3115,25 @@ PR creation. The final-main corresponding-source archive passed at 3,255
 members / `34f600e6...6326a`, with zero forbidden-member matches. At 18:36:44,
 active goal time was 270,811 seconds (3 days, 3 hours, 13 minutes, 31 seconds).
 The real Apple profile/device positive remains open.
+
+### 2026-08-01 — Bound the exact signed entitlement set to the profile
+
+- Found that physical preflight compared only the signed App ID suffix, not
+  the install-critical prefix, and did not validate keychain/debugger/extra
+  entitlements against the profile.
+- Added a shared verifier used before and after manual signing and by device
+  preflight; it enforces exact prefix/bundle/team, one authorized default
+  keychain group, optional `get-task-allow` equality and CTRPad's minimal keys.
+- Added a macOS CTest with two exact/wildcard positives and seven isolated
+  negative mutations; all 23/23 tests passed in 20.94 seconds.
+- Repeated two byte-identical seven-member unsigned IPAs at
+  `7ebb1f4e...52a36`; syntax/diff checks passed.
+
+At 18:48:30 CDT, active goal time was 271,519 seconds: 3 days, 3 hours, 25
+minutes and 19 seconds. One Simulator, zero valid identities and no physical
+device remained; the external acceptance boundary is unchanged.
+
+The final Boolean-type/wildcard hardening retained the same fixture outcomes;
+the focused test passed in 4.51 seconds and the full suite repeated 23/23 in
+8.13 seconds. The 18:51:23 active-time reading was 271,689 seconds (3 days, 3
+hours, 28 minutes, 9 seconds).

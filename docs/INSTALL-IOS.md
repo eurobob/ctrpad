@@ -113,9 +113,12 @@ minimal application/team/keychain entitlements in Apple's
 `<App ID prefix>.<bundle ID>` form, requests DER entitlements, and signs. It
 then verifies the app's code-signing chain against an Apple root, requires its
 leaf certificate to appear in the profile's `DeveloperCertificates`, reads the
-three final entitlements back, and packages. Public trust evidence stays in
-temporary staging; the private key never leaves the keychain. A decodable CMS
-or user-trusted self-signed root is not accepted as Apple authorization.
+final entitlements back, and binds the exact App ID prefix/bundle ID, team,
+sole keychain group and optional `get-task-allow` to the profile. CTRPad's
+signature is limited to those minimal keys; unexpected service entitlements
+fail. Public trust evidence stays in temporary staging; the private key never
+leaves the keychain. A decodable CMS or user-trusted self-signed root is not
+accepted as Apple authorization.
 
 CTRPad uses no Apple service capability such as Game Center, iCloud, push, an
 app group, or background execution. If a later modification adds one, do not
@@ -159,7 +162,8 @@ The preflight requires a standard one-app IPA, valid sidecar when present,
 thin ARM64 `IOS` executable, strict non-ad-hoc signature, embedded non-expired
 iOS profile, cryptographically valid profile CMS, Apple-root-pinned profile and
 app certificate chains, provisioning-profile signer purpose, exact App
-ID/team/signed entitlements, target UDID authorization, leaf
+ID prefix/bundle/team, profile-authorized sole keychain group, minimal signed
+entitlement allowlist, target UDID authorization, leaf
 signing-certificate membership in the profile, distribution resources and
 retail/runtime-data exclusion. It does not prove that installation or launch
 works. Raw profile/device trust evidence belongs only in the ignored evidence

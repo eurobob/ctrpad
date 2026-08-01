@@ -84,6 +84,9 @@ plist_buddy='/usr/libexec/PlistBuddy'
 signing_trust_tool="$repo_root/tools/verify-ios-signing-trust.sh"
 [[ -x "$signing_trust_tool" ]] || \
     fail "required signing-trust verifier not found: $signing_trust_tool"
+entitlement_binding_tool="$repo_root/tools/verify-ios-entitlement-binding.sh"
+[[ -x "$entitlement_binding_tool" ]] || \
+    fail "required entitlement-binding verifier not found: $entitlement_binding_tool"
 
 if [[ -n "$signing_identity" || -n "$profile_path" ]]; then
     [[ -n "$signing_identity" && -n "$profile_path" ]] || \
@@ -235,6 +238,9 @@ if [[ -n "$signing_identity" ]]; then
     if [[ "$get_task_allow" == "true" || "$get_task_allow" == "false" ]]; then
         "$plist_buddy" -c "Add :get-task-allow bool $get_task_allow" "$entitlements_plist"
     fi
+    "$entitlement_binding_tool" --profile-plist "$profile_plist" \
+        --entitlements-plist "$entitlements_plist" --bundle-id "$bundle_id" \
+        --output "$tmp_dir/requested-entitlement-binding.txt" >/dev/null
 
     ditto --norsrc --noextattr --noqtn --noacl "$profile_path" "$staged_app/embedded.mobileprovision"
     codesign_command=(codesign --force --sign "$signing_identity")
@@ -272,17 +278,9 @@ if [[ -n "$signing_identity" ]]; then
         fail "app signing certificate is not authorized by the provisioning profile"
     signed_entitlements="$tmp_dir/signed-entitlements.plist"
     codesign --display --entitlements - --xml "$staged_app" >"$signed_entitlements" 2>/dev/null
-    actual_application_id="$(plutil -extract application-identifier raw -o - "$signed_entitlements")"
-    actual_team_identifier="$("$plist_buddy" -c \
-        'Print :com.apple.developer.team-identifier' "$signed_entitlements")"
-    actual_keychain_group="$("$plist_buddy" -c \
-        'Print :keychain-access-groups:0' "$signed_entitlements")"
-    [[ "$actual_application_id" == "$signed_application_id" ]] || \
-        fail "signed application identifier mismatch: $actual_application_id"
-    [[ "$actual_team_identifier" == "$team_identifier" ]] || \
-        fail "signed team identifier mismatch: $actual_team_identifier"
-    [[ "$actual_keychain_group" == "$signed_application_id" ]] || \
-        fail "signed keychain access group mismatch: $actual_keychain_group"
+    "$entitlement_binding_tool" --profile-plist "$profile_plist" \
+        --entitlements-plist "$signed_entitlements" --bundle-id "$bundle_id" \
+        --output "$tmp_dir/signed-entitlement-binding.txt" >/dev/null
     mode="signed"
 fi
 
