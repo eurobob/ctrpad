@@ -1920,3 +1920,51 @@ from the publication-close reading.
 
 The final blocker reading was 218,932 seconds: 2 days, 12 hours, 48 minutes,
 52 seconds cumulative, 110 seconds (1 minute, 50 seconds) later.
+
+### 2026-08-01 — Level-geometry regression accepted after safe resumed build
+
+- The user explicitly resumed the active goal and confirmed the Simulator was
+  unblocked. Both named Simulators were shut down for compilation. Every build
+  ran at nice priority 15, one target at a time and one Ninja job at a time.
+- Reconfigured exact head `4a4b148dd8d1`, rebuilt ARM64 desktop, ARM64
+  ASan/UBSan, iOS Simulator and iPhoneOS products, and verified all four embed
+  version `0.1.0-beta.7.1` plus that exact build ID. Their full hashes are in
+  `docs/parity/2026-08-01-level-visibility-cache.md`.
+- The focused visibility-sidecar test passed ordinary and sanitizer builds with
+  exact marker `cache-recycle=targeted+range+all`. Both complete desktop suites
+  passed 22/22; ASan/UBSan reported no finding.
+- Recorded the iOS packaging boundary honestly: both ARM64 bundles compile and
+  link, contain no retail media and install in Simulator, but their linker
+  ad-hoc signature fails deep/strict resource sealing. Physical team signing
+  and sideloadable-device acceptance remain open.
+- Booted only disposable `CTRPad Import Negatives`; protected `CTRPad Import
+  Validation` remained shut down and untouched. Installed the exact app and
+  used fresh Computer Use state to observe complete legal/title/menu,
+  **Race Today**, forest, building, ground, foliage, sky, kart, character and
+  touch-overlay rendering. This directly closes the observed missing whole-
+  course-geometry class without claiming every asset is pixel-perfect.
+- The cold-launch active log has 42 lines and 28 periodic FPS samples. It
+  contains zero `[CTR AssetRef]`, visibility-cache exhaustion, `ERROR` or
+  `FATAL` lines. The former 268-line signature did not recur.
+- Install/container migration and runtime preserved active BIN inode
+  `111450682`, 605,698,800-byte size and modification time, plus save inode
+  `111309627`, 6,016-byte size, modification time and SHA-256
+  `6a01b0f5...619a`. An unnecessary all-fixture multi-gigabyte hash traversal
+  was stopped rather than add load; retained identities and the established
+  canonical BIN hash are the preservation evidence.
+- Captured and visually reviewed both device pixels and the Simulator window.
+  The 655-by-903 window image hashes to `5637af80...26a87` and clearly shows
+  the textured forest scene; it remains local-only so retail-derived pixels do
+  not enter the GPL source repository.
+- Bounded termination closed the attached console, then the disposable device
+  was shut down. Final state is zero booted Simulators. M7's visual regression
+  gate is restored; physical iPad signing, performance, real multi-input play,
+  completed-race and remaining lifecycle gates stay open. The goal remains
+  active.
+
+The resumed-runtime reading was 220,500 seconds: 2 days, 13 hours, 15 minutes,
+0 seconds cumulative. The documentation-close reading was 221,029 seconds:
+2 days, 13 hours, 23 minutes, 49 seconds cumulative. That adds 2,097 seconds
+(34 minutes, 57 seconds) from the final blocker reading, including 529 seconds
+(8 minutes, 49 seconds) for the closing evidence audit. Goal time includes
+pauses/resumes and is not a build benchmark or person-hour estimate.

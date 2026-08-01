@@ -138,21 +138,29 @@ iPhoneOS ARM64 and macOS ARM64. The ordinary and ASan/UBSan desktop matrices
 each passed all 22 CTests; the sanitizer matrix reported no finding. Commit
 `828d095809fc` was pushed before exact-build acceptance.
 
-The final exact matrix is recorded here after low-priority, one-target-at-a-
-time completion:
+After the later level-visibility correction and machine-resource pause, the
+user explicitly resumed the goal. A clean head containing the unchanged
+control-settings implementation was reconfigured and completed at nice
+priority 15, one target and one Ninja job at a time, with zero booted
+Simulators during compilation:
 
 ```text
 product                         build ID       SHA-256
-iOS Simulator ARM64            828d095809fc   pending
-iPhoneOS ARM64                  828d095809fc   pending
-macOS ARM64 desktop OpenGL      828d095809fc   pending
-macOS ARM64 desktop GLES        828d095809fc   pending
-macOS ARM64 ASan/UBSan          828d095809fc   pending
+iOS Simulator ARM64            4a4b148dd8d1   6c0189fafa44de71ce8aadf01c53a186bccd862ec8244f428aedbbde2468d78a
+iPhoneOS ARM64                  4a4b148dd8d1   7dc667e7523e761806b488356824082515eef43604872c8d8f3badc1a93f63f5
+macOS ARM64 desktop OpenGL      4a4b148dd8d1   7fe474c5e1299445e97ba0bd3d64a38346d0097f6b6509e51180a9a210786c56
+macOS ARM64 ASan/UBSan          4a4b148dd8d1   da62529752f29f231f1566afc69035b0a32ae78bfec84441366238b81ecf1d5f
 ```
 
-The exact ordinary and sanitizer CTest totals, final Simulator UI result and
-post-install preservation identities are finalized below before this report is
-published.
+The ordinary and ASan/UBSan suites each passed 22/22 in 2.66 and 7.19 seconds,
+respectively; input CTest 6 therefore revalidated the keyboard aliases in both
+exact binaries. The exact Simulator app visibly rendered the complete touch
+overlay during the accepted level-geometry runtime and installed without
+changing the canonical BIN or save identities. The separate macOS ARM64 GLES
+configuration was not rerun in this resource-bounded continuation and is not
+listed as a pass; the shared keyboard/touch mapper is already covered by the
+ordinary and sanitizer builds. Full resumed-runtime evidence is in
+`2026-08-01-level-visibility-cache.md`.
 
 ## Resource correction during acceptance
 

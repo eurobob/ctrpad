@@ -7,9 +7,9 @@ timing.
 
 **Roadmap status:** active
 
-**Current milestone:** M7 level-visibility regression correction, then M10
-touch-control iteration; M8/M9 still await physical-iPad signing, controller,
-Files, performance, and lifecycle gates
+**Current milestone:** M10 touch-control iteration; M7's level-visibility
+regression gate is restored, while M8/M9 still await physical-iPad signing,
+controller, Files, performance, and lifecycle gates
 
 **Last updated:** 2026-08-01
 
@@ -828,11 +828,14 @@ by memory-pack pop/clear operations; once full, `visMem1` became null and
 `RenderAllLevelGeometry` skipped the entire level while instances could remain.
 A range-aware invalidation correction is implemented at every low-memory pack
 reset with targeted/range/all media-free recycling coverage. Provisional
-checkpoint `eeaf2c72c` preserves that reviewed source and its explicit pending
-status on GitHub. Build and live
-more-than-eight-level churn remain pending because validation was stopped to
-honor the user's one-Simulator and low-system-load constraints. M7 visual
-acceptance is reopened until that post-fix gate passes. Full evidence and the
+checkpoint `eeaf2c72c` first preserved the reviewed source while low memory
+prevented honest validation. After the user resumed, exact head
+`4a4b148dd8d1` passed ordinary and ASan/UBSan 22/22 suites, both iOS products
+compiled sequentially with no booted device, and the exact app completed a
+disposable one-Simulator title/menu/demo churn with complete scene geometry and
+zero recurrence of the 268-error signature. M7 visual acceptance is restored
+for this regression. Physical-iPad rendering/performance and broader input/
+race gates remain open. Full evidence, hashes, preservation checks and the
 superseded call-site-only draft are in
 `docs/parity/2026-08-01-level-visibility-cache.md`.
 

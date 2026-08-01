@@ -83,8 +83,9 @@ Current evidence and procedures:
 - `2026-08-01-level-visibility-cache.md` records the user-visible missing-
   scene report, the exact 268-error cache-exhaustion signature, the eight-entry
   LP64 sidecar lifetime root cause, range-aware memory-pack correction,
-  targeted/range/all recycling coverage, resource-throttled validation status,
-  and deliberately pending post-fix live churn gate.
+  targeted/range/all recycling coverage, resource-throttled provisional
+  boundary, resumed exact ordinary/sanitizer/iOS matrix, one-Simulator visual
+  acceptance and deliberately open physical-iPad/signing/performance gates.
 - `2026-07-31-ios-sandbox-storage.md` records the bundle/Documents/Application
   Support ownership split, Documents-priority retail startup, private log and
   memory-card roots, Files metadata, exact cross-target matrix, rejected

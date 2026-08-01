@@ -12351,3 +12351,230 @@ adding 3,434 seconds (57 minutes, 14 seconds) from the preceding published
 checkpoint and 384 seconds (6 minutes, 24 seconds) during the closing audit.
 Goal time is cumulative across pauses and resumes and is not a build benchmark
 or person-hour estimate.
+
+## 2026-08-01 — Resumed exact acceptance of the level-visibility correction
+
+### Resume and machine-safety boundary
+
+The prior pass ended at a real machine-resource boundary, not at an accepted
+renderer fix. The reviewed source was remotely recoverable, but the user had
+reported system slowness and instructed the work to use at most one Simulator.
+The goal timer had reached 218,932 seconds when that boundary was recorded.
+
+The user then explicitly unblocked and resumed the goal, while asking for more
+care with Simulator. Goal state read active. Before compilation, both named
+devices were confirmed shut down:
+
+```text
+CTRPad Import Negatives    26F3DEE8-8840-446D-85FE-C882009C9C06  Shutdown
+CTRPad Import Validation   1D19A61F-20B7-46B0-AB52-B3A3406952E2  Shutdown
+```
+
+No Simulator was booted for compilation. The protected validation device was
+never installed to, launched, reset or controlled during this acceptance. The
+stale goal-owned i686 diagnostic container remained stopped; four unrelated
+`buzz-prod` containers remained untouched. Builds were deliberately serialized
+at nice priority 15 and Ninja parallelism one.
+
+### Exact ARM64 desktop and sanitizer rebuilds
+
+The ordinary Apple Silicon configuration was regenerated and built with:
+
+```text
+nice -n 15 cmake --preset macos-arm64
+nice -n 15 cmake --build --preset macos-arm64 --parallel 1
+```
+
+The large unity translation completed. The executable reported:
+
+```text
+CTR Native 0.1.0-beta.7.1 (4a4b148dd8d1)
+```
+
+Focused `ctr_native_asset_relocation` CTest passed 1/1 in 0.04 seconds. Direct
+execution emitted the required final field:
+
+```text
+cache-recycle=targeted+range+all
+```
+
+The complete ordinary suite passed 22/22 in 2.66 seconds.
+
+ASan/UBSan was then reconfigured rather than relying on stale generated build
+metadata:
+
+```text
+nice -n 15 cmake -S . -B build-macos-arm64-sanitizers -G Ninja \
+  -DBUILD_TESTING=ON -DCMAKE_BUILD_TYPE=RelWithDebInfo \
+  -DCMAKE_OSX_ARCHITECTURES=arm64 \
+  '-DCMAKE_C_FLAGS=-fsanitize=address,undefined -fno-omit-frame-pointer' \
+  '-DCMAKE_EXE_LINKER_FLAGS=-fsanitize=address,undefined'
+nice -n 15 cmake --build build-macos-arm64-sanitizers --parallel 1
+```
+
+Its focused test passed in 0.21 seconds and the full suite passed 22/22 in 7.19
+seconds with no sanitizer finding. Both executables were ARM64 Mach-O and
+embedded exact build ID `4a4b148dd8d1`. Known legacy conversion and API
+deprecation warnings repeated; they were not misreported as new failures.
+
+Exact desktop product identities were:
+
+```text
+desktop    7fe474c5e1299445e97ba0bd3d64a38346d0097f6b6509e51180a9a210786c56
+ASan/UBSan da62529752f29f231f1566afc69035b0a32ae78bfec84441366238b81ecf1d5f
+```
+
+### Sequential iOS compile/link and packaging observation
+
+With zero booted devices, `ios-simulator-arm64` and `ios-device-arm64` were
+each reconfigured and built separately at nice 15 / parallel 1. Both UIKit/GLES
+targets compiled and linked as ARM64 Mach-O. Exact executable hashes were:
+
+```text
+iOS Simulator  6c0189fafa44de71ce8aadf01c53a186bccd862ec8244f428aedbbde2468d78a
+iPhoneOS        7dc667e7523e761806b488356824082515eef43604872c8d8f3badc1a93f63f5
+```
+
+Both contain version `0.1.0-beta.7.1`, build ID `4a4b148dd8d1` and SDL source
+marker `SDL-3.4.10-beta-7.1-157-g4a4b148dd`. Each bundle contains only its
+executable, `Info.plist`, `LICENSE`, `INSTALL-IOS.md`,
+`THIRD_PARTY_NOTICES.md` and `_CodeSignature/CodeResources`; no disc image or
+derived retail media is bundled. The identifier is
+`io.github.chrissotraidis.ctrpad`, minimum iOS is 15.0 and both device families
+are present.
+
+The linker's ad-hoc signature was inspected rather than assumed valid.
+`codesign -dv` reports identifier `CTRPad`, no team identifier and no sealed
+resources. Deep/strict verification fails with:
+
+```text
+code has no resources but signature indicates they must be present
+```
+
+The Simulator accepts that development bundle, but it is not evidence of a
+properly resource-sealed, team-signed physical-device package. That open gate
+is retained explicitly.
+
+### Exact disposable install with preserved data-container state
+
+Only disposable **CTRPad Import Negatives** was booted for the runtime gate.
+Protected **CTRPad Import Validation** remained shut down. Before install, the
+active imported disc and save identities were:
+
+```text
+BIN   inode 111450682, 605698800 bytes, mtime 1785358888,
+      SHA-256 f780bf2331476aabfc00772fa758b12dd95ebfbc907968132cbd3cdd4e2c07c0
+save  inode 111309627, 6016 bytes, mtime 1785525736,
+      SHA-256 6a01b0f5562ed7a279d8f8e51e3b1874ac39a6120f55db4fe3873288950619a3
+```
+
+Installing exact `build-ios-simulator-arm64/CTRPad.app` migrated the data
+container from UUID `7C46DC73-D4C0-4CFD-9C40-317D44C655F7` to
+`F5B6B88F-640E-440B-888D-FC9514311E11`. The BIN/save inodes, sizes,
+modification times and hashes were unchanged after migration.
+
+The first launch command mistakenly used the unsupported argument
+`--terminate-running` and was rejected as `Invalid device` without launching or
+changing state. The corrected flag was `--terminate-running-process`; launch
+then succeeded. This failure is recorded because silently dropping it would
+make the procedure harder to reproduce.
+
+### Real UI inspection and careful rotation handling
+
+Computer Use was used for visible Simulator inspection because shell logs
+cannot prove pixels. The plugin wrapper was loaded in its persistent Node REPL.
+Targeting `com.apple.iphonesimulator` was ambiguous because two Xcode installs
+expose that identifier, so the retry used the explicit application path
+`/Applications/Xcode.app/Contents/Developer/Applications/Simulator.app`.
+
+The first exact live frame showed the legal/title scene, Crash, trophy,
+textured checkered floor and walls, plus the touch overlay. The Simulator window
+was sideways. One accessibility-indexed Rotate action was issued. Its immediate
+screenshot refresh failed because a helper binding was missing; the action was
+not repeated blindly. Fresh app state then confirmed the rotation had already
+occurred. The device was left in that state.
+
+Subsequent fresh frames visibly showed:
+
+1. the complete CTR title/menu with logo, character, background and text;
+2. a **Race Today** scene with sky, grass, foliage, sign and course geometry;
+3. Crash and a kart in a forest with textured ground, trees, foliage, building,
+   sky, character/kart instances and complete touch controls; and
+4. a later Crash/kart scene with textured props, wheels, crates and background.
+
+These views directly contradict the pre-correction failure mode in which
+`RenderAllLevelGeometry` skipped BSP terrain/scenery while instances remained.
+They do not imply a whole-game visual-parity claim.
+
+Two screenshots were captured for visual QA. The clearer 655-by-903 Simulator
+window frame hashes to
+`5637af8065ed6f29acbfe89045e9088cc27ff25aeb6df4575df8f13059626a87`.
+A raw 2,064-by-2,752 device image was rotated 180 degrees to make the captured
+content human-readable and hashes to
+`dc75cc1947c5097aa143ea0a0813bb79655b559cf57e0f25f6f2e5c25c99ea67`.
+Both were reviewed locally, then moved outside the worktree so retail-derived
+pixels do not enter the GPL source repository.
+
+### Attached-console churn and error audit
+
+The exact app was cold relaunched with an attached console using
+`simctl launch --console-pty --terminate-running-process`. It reported the
+expected exact version, disposable sandbox paths, Apple Software Renderer,
+OpenGL ES 3.0, all four PSX shaders, VRAM pipelines, touch overlay, UIKit
+display loop, memory-pack arena and CoreAudio. The only unrelated diagnostic
+was the established duplicate WebCore/WebKit accessibility-class warning from
+the Simulator runtime.
+
+The active file log reached 42 lines: 14 initialization lines followed by 28
+periodic 120-frame FPS samples. On Apple Software Renderer the samples ranged
+from 3.37 through 7.72 FPS. A complete exact-pattern audit found none of:
+
+```text
+[CTR AssetRef]
+visibility cache exhausted
+cache exhausted
+ERROR
+FATAL
+```
+
+The attached console likewise showed no visibility/materialization error before
+termination. The deterministic nine-fixture test proves slot recycling and
+out-of-range preservation; the live run proves the repaired production app can
+render the observed title/menu/demo scenes without the old error signature.
+No new production-only materialization counter was added merely to inflate the
+claim surface.
+
+One attempted evidence command began SHA-256 traversal of every document
+fixture, including multiple 605–740 MB files. It produced the stat identities
+but no useful digest before it was interrupted to avoid needless machine load.
+The canonical active BIN's unchanged inode, size and mtime across install and
+runtime, combined with its already established SHA-256, are the stronger and
+cheaper preservation evidence. The active save was rehashed and remained exact.
+
+### Natural stopping point and acceptance boundary
+
+After evidence capture, exact bundle ID termination ended the app and attached
+console cleanly. The disposable Simulator was shut down without deletion.
+Final `simctl` state showed both disposable and protected devices shut down,
+so no Simulator load was left behind.
+
+The eight-entry LP64 level-visibility sidecar lifetime defect is accepted as
+corrected at its deterministic host boundary and in this observed UIKit/GLES
+title/menu/demo runtime. The original 268-error signature did not recur,
+whole-scene geometry and textures are visible, ordinary and sanitizer matrices
+pass, iOS targets compile, and disc/save state is preserved. This restores the
+specific M7 visual gate that the user's observation reopened.
+
+The acceptance remains bounded. It does not close physical-iPad team signing,
+strict resource sealing, hardware cadence/energy, true simultaneous touch,
+controller/keyboard hardware delivery, completed-race play, every scene/asset,
+or remaining device lifecycle/Files/save gates. The overall goal remains
+active and moves back to those dependencies.
+
+The resumed-runtime timer reading was 220,500 seconds: 2 days, 13 hours,
+15 minutes, 0 seconds cumulative. The documentation-close reading was 221,029
+seconds: 2 days, 13 hours, 23 minutes, 49 seconds. That adds 2,097 seconds
+(34 minutes, 57 seconds) from the recorded 218,932-second blocker boundary,
+including 529 seconds (8 minutes, 49 seconds) for the closing documentation
+audit. Goal time includes pauses/resumes and is not a build benchmark or
+person-hour estimate.
