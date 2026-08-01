@@ -288,6 +288,10 @@ static int NativeAssetRelocation_SelfTestSetReference(struct CtrAssetRef32 *dest
 
 static int NativeAssetRelocation_SelfTestLevelReferences(struct NativeGuestRefError *guestError)
 {
+	enum
+	{
+		NATIVE_ASSET_LEVEL_CACHE_SELF_TEST_CAPACITY = 8,
+	};
 	struct NativeAssetLevelSelfTest
 	{
 		struct Level level;
@@ -301,10 +305,13 @@ static int NativeAssetRelocation_SelfTestLevelReferences(struct NativeGuestRefEr
 		struct LevelVisMemAsset visMemAsset;
 		struct VisMemBspListNode serializedBspLists[4][1];
 		int visWords[1];
-	} serializedLevel = {0};
+	};
+	struct NativeAssetLevelSelfTest serializedLevel = {0};
+	struct NativeAssetLevelSelfTest churnLevels[NATIVE_ASSET_LEVEL_CACHE_SELF_TEST_CAPACITY + 1] = {0};
 	struct mesh_info *mesh;
 	struct CheckpointNode *checkpointNodes;
 	struct VisMem *visMem;
+	struct VisMem *rangeVisMem[NATIVE_ASSET_LEVEL_CACHE_SELF_TEST_CAPACITY];
 	int *packedVisibility;
 
 #if UINTPTR_MAX == UINT32_MAX
@@ -413,6 +420,79 @@ static int NativeAssetRelocation_SelfTestLevelReferences(struct NativeGuestRefEr
 	}
 #endif
 	LevelRuntime_InvalidateAll();
+
+#if UINTPTR_MAX > UINT32_MAX
+	NativeGuestRef_Reset();
+	if (!NativeGuestRef_RegisterRegion(10, churnLevels, sizeof(churnLevels), "level-cache-churn-self-test", guestError))
+	{
+		return 0;
+	}
+#endif
+	for (size_t levelIndex = 0; levelIndex < len(churnLevels); levelIndex++)
+	{
+		if (!NativeAssetRelocation_SelfTestSetReference(&churnLevels[levelIndex].level.ptr_mesh_info,
+								&churnLevels[levelIndex].mesh, sizeof(churnLevels[levelIndex].mesh), 0,
+								guestError, "level cache mesh self-test") ||
+		    !NativeAssetRelocation_SelfTestSetReference(&churnLevels[levelIndex].level.visMem,
+								&churnLevels[levelIndex].visMemAsset,
+								sizeof(churnLevels[levelIndex].visMemAsset), 0, guestError,
+								"level cache visibility self-test"))
+		{
+			LevelRuntime_InvalidateAll();
+			return 0;
+		}
+	}
+
+	for (size_t levelIndex = 0; levelIndex < len(churnLevels) - 1u; levelIndex++)
+	{
+		if (Level_GetVisMem(&churnLevels[levelIndex].level, "level cache fill self-test") == NULL)
+		{
+			LevelRuntime_InvalidateAll();
+			return 0;
+		}
+	}
+	LevelRuntime_Invalidate(&churnLevels[3].level);
+	if (Level_GetVisMem(&churnLevels[len(churnLevels) - 1u].level, "level cache targeted recycle self-test") == NULL)
+	{
+		LevelRuntime_InvalidateAll();
+		return 0;
+	}
+	LevelRuntime_InvalidateAll();
+	for (size_t levelIndex = 0; levelIndex < len(churnLevels) - 1u; levelIndex++)
+	{
+		rangeVisMem[levelIndex] = Level_GetVisMem(&churnLevels[levelIndex].level, "level cache range fill self-test");
+		if (rangeVisMem[levelIndex] == NULL)
+		{
+			LevelRuntime_InvalidateAll();
+			return 0;
+		}
+	}
+	LevelRuntime_InvalidateRange(&churnLevels[2], &churnLevels[5]);
+	for (size_t levelIndex = 0; levelIndex < len(rangeVisMem); levelIndex++)
+	{
+		if ((levelIndex >= 2u) && (levelIndex < 5u))
+		{
+			continue;
+		}
+		if (Level_GetVisMem(&churnLevels[levelIndex].level, "level cache range preserve self-test") !=
+		    rangeVisMem[levelIndex])
+		{
+			LevelRuntime_InvalidateAll();
+			return 0;
+		}
+	}
+	if (Level_GetVisMem(&churnLevels[len(churnLevels) - 1u].level, "level cache range recycle self-test") == NULL)
+	{
+		LevelRuntime_InvalidateAll();
+		return 0;
+	}
+	LevelRuntime_InvalidateAll();
+	if (Level_GetVisMem(&churnLevels[0].level, "level cache full recycle self-test") == NULL)
+	{
+		LevelRuntime_InvalidateAll();
+		return 0;
+	}
+	LevelRuntime_InvalidateAll();
 	return 1;
 }
 
@@ -488,7 +568,7 @@ int NativeAssetRelocation_RunSelfTest(void)
 		return 1;
 	}
 
-	printf("[CTR AssetRelocation] self-test passed: first=0x%08x duplicate=%s target=%s atomic=yes model=checked override=checked level=checked\n",
+	printf("[CTR AssetRelocation] self-test passed: first=0x%08x duplicate=%s target=%s atomic=yes model=checked override=checked level=checked cache-recycle=targeted+range+all\n",
 	       0x07000014u,
 	       NativeAssetRelocation_StatusName(NATIVE_ASSET_RELOCATION_DUPLICATE_PATCH),
 	       NativeAssetRelocation_StatusName(NATIVE_ASSET_RELOCATION_TARGET_OUT_OF_RANGE));

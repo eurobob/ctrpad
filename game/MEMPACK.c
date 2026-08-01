@@ -160,6 +160,9 @@ void MEMPACK_ClearLowMem()
 {
 	struct Mempack *ptrMempack = sdata->PtrMempack;
 
+#if defined(CTR_NATIVE)
+	LevelRuntime_InvalidateRange(ptrMempack->start, ptrMempack->firstFreeByte);
+#endif
 	ptrMempack->numBookmarks = 0;
 	ptrMempack->firstFreeByte = ptrMempack->start;
 }
@@ -173,6 +176,9 @@ void MEMPACK_PopState()
 	if (numBookmarks > 0)
 	{
 		numBookmarks--;
+#if defined(CTR_NATIVE)
+		LevelRuntime_InvalidateRange(ptrMempack->bookmarks[numBookmarks], ptrMempack->firstFreeByte);
+#endif
 		ptrMempack->firstFreeByte = ptrMempack->bookmarks[numBookmarks];
 		ptrMempack->numBookmarks = numBookmarks;
 	}
@@ -184,6 +190,9 @@ void MEMPACK_PopToState(int id)
 {
 	struct Mempack *ptrMempack = sdata->PtrMempack;
 
+#if defined(CTR_NATIVE)
+	LevelRuntime_InvalidateRange(ptrMempack->bookmarks[id], ptrMempack->firstFreeByte);
+#endif
 	ptrMempack->numBookmarks = id;
 	ptrMempack->firstFreeByte = ptrMempack->bookmarks[id];
 }

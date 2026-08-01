@@ -347,6 +347,7 @@ struct CtrAssetRef32 *Level_GetNavHeaderRefs(const struct Level *level, const ch
 struct NavHeader *Level_GetNavHeader(const struct Level *level, size_t index, const char *context);
 struct VisMem *Level_GetVisMem(const struct Level *level, const char *context);
 void LevelRuntime_Invalidate(const struct Level *level);
+void LevelRuntime_InvalidateRange(const void *start, const void *end);
 void LevelRuntime_InvalidateAll(void);
 
 struct QuadBlock *MeshInfo_GetQuadBlocks(const struct mesh_info *mesh, const char *context);

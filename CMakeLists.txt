@@ -266,7 +266,7 @@ if(BUILD_TESTING)
     )
     add_test(NAME ctr_native_asset_relocation COMMAND $<TARGET_FILE:ctr_native> --self-test-asset-relocation)
     set_tests_properties(ctr_native_asset_relocation PROPERTIES PASS_REGULAR_EXPRESSION
-        "^\\[CTR AssetRelocation\\] self-test passed: first=0x07000014 duplicate=duplicate-patch target=target-out-of-range atomic=yes model=checked override=checked"
+        "^\\[CTR AssetRelocation\\] self-test passed: first=0x07000014 duplicate=duplicate-patch target=target-out-of-range atomic=yes model=checked override=checked level=checked cache-recycle=targeted\\+range\\+all"
     )
     add_test(NAME ctr_native_input COMMAND $<TARGET_FILE:ctr_native> --self-test-input)
     set_tests_properties(ctr_native_input PROPERTIES PASS_REGULAR_EXPRESSION

@@ -18,6 +18,11 @@ void LOAD_Hub_ReadFile(struct BigHeader *bigfile, int levID, int packID)
 	// wipe the pack to reload the new hub
 	MEMPACK_SwapPacks(packID);
 	MEMPACK_ClearLowMem();
+#if defined(CTR_NATIVE)
+	// The range-aware allocator reset released the inactive level sidecar.
+	// Do not retain its host pointer while the replacement is loading.
+	gGT->visMem2 = NULL;
+#endif
 
 	sdata->load_inProgress = 1;
 	gGT->level2 = 0;

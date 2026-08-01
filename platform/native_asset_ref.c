@@ -1047,9 +1047,34 @@ static void CtrLevelRuntimeVisMem_Clear(struct CtrLevelRuntimeVisMem *entry)
 
 void LevelRuntime_Invalidate(const struct Level *level)
 {
+	if (level == NULL)
+	{
+		return;
+	}
+
 	for (size_t i = 0; i < len(s_levelRuntimeVisMem); i++)
 	{
 		if (s_levelRuntimeVisMem[i].level == level)
+		{
+			CtrLevelRuntimeVisMem_Clear(&s_levelRuntimeVisMem[i]);
+		}
+	}
+}
+
+void LevelRuntime_InvalidateRange(const void *start, const void *end)
+{
+	const uintptr_t startAddress = (uintptr_t)start;
+	const uintptr_t endAddress = (uintptr_t)end;
+
+	if ((start == NULL) || (end == NULL) || (startAddress >= endAddress))
+	{
+		return;
+	}
+
+	for (size_t i = 0; i < len(s_levelRuntimeVisMem); i++)
+	{
+		const uintptr_t levelAddress = (uintptr_t)s_levelRuntimeVisMem[i].level;
+		if ((levelAddress >= startAddress) && (levelAddress < endAddress))
 		{
 			CtrLevelRuntimeVisMem_Clear(&s_levelRuntimeVisMem[i]);
 		}
