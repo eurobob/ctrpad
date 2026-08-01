@@ -8,6 +8,7 @@
 
 @interface CTRPadImportViewController : UIViewController
 @property(nonatomic, weak) CTRPadImportCoordinator *coordinator;
+@property(nonatomic, assign) BOOL replacingExistingImport;
 @property(nonatomic, strong) UILabel *statusLabel;
 @property(nonatomic, strong) UIButton *chooseButton;
 @property(nonatomic, strong) UIActivityIndicatorView *activityIndicator;
@@ -18,6 +19,7 @@
 @property(nonatomic, strong) UIWindow *window;
 @property(nonatomic, strong) CTRPadImportViewController *viewController;
 @property(nonatomic, copy) NSString *importBasePath;
+@property(nonatomic, assign) enum NativeIOSImportPurpose purpose;
 @property(nonatomic, assign) NativeIOSImportValidateCallback validateCallback;
 @property(nonatomic, assign) NativeIOSImportCompletionCallback completionCallback;
 @property(nonatomic, assign) void *callbackUserdata;
@@ -48,7 +50,7 @@ static NSString *const s_importStagingPrefix = @".ctrpad-import-";
 
 	UILabel *headingLabel = [[UILabel alloc] init];
 	headingLabel.translatesAutoresizingMaskIntoConstraints = NO;
-	headingLabel.text = @"Your retail disc image is required";
+	headingLabel.text = self.replacingExistingImport ? @"Choose a different retail disc image" : @"Your retail disc image is required";
 	headingLabel.textColor = [UIColor colorWithRed:0.98 green:0.73 blue:0.17 alpha:1.0];
 	headingLabel.font = [UIFont systemFontOfSize:24.0 weight:UIFontWeightBold];
 	headingLabel.textAlignment = NSTextAlignmentCenter;
@@ -56,14 +58,16 @@ static NSString *const s_importStagingPrefix = @".ctrpad-import-";
 
 	UILabel *bodyLabel = [[UILabel alloc] init];
 	bodyLabel.translatesAutoresizingMaskIntoConstraints = NO;
-	bodyLabel.text = @"Choose your own NTSC-U Crash Team Racing BIN in raw MODE2/2352 format. CTRPad copies it into this app's Documents folder; the original file is left unchanged.";
+	bodyLabel.text = self.replacingExistingImport
+	                     ? @"Choose your own NTSC-U Crash Team Racing BIN in raw MODE2/2352 format. CTRPad validates a private copy before atomically replacing the installed image. Memory-card saves are kept."
+	                     : @"Choose your own NTSC-U Crash Team Racing BIN in raw MODE2/2352 format. CTRPad copies it into this app's Documents folder; the original file is left unchanged.";
 	bodyLabel.textColor = [UIColor colorWithWhite:0.86 alpha:1.0];
 	bodyLabel.font = [UIFont systemFontOfSize:17.0 weight:UIFontWeightRegular];
 	bodyLabel.textAlignment = NSTextAlignmentCenter;
 	bodyLabel.numberOfLines = 0;
 
 	UIButtonConfiguration *buttonConfiguration = [UIButtonConfiguration filledButtonConfiguration];
-	buttonConfiguration.title = @"Choose CTR disc image";
+	buttonConfiguration.title = self.replacingExistingImport ? @"Choose replacement disc image" : @"Choose CTR disc image";
 	buttonConfiguration.baseBackgroundColor = [UIColor colorWithRed:0.13 green:0.42 blue:0.84 alpha:1.0];
 	buttonConfiguration.baseForegroundColor = UIColor.whiteColor;
 	buttonConfiguration.cornerStyle = UIButtonConfigurationCornerStyleLarge;
@@ -80,7 +84,8 @@ static NSString *const s_importStagingPrefix = @".ctrpad-import-";
 
 	self.statusLabel = [[UILabel alloc] init];
 	self.statusLabel.translatesAutoresizingMaskIntoConstraints = NO;
-	self.statusLabel.text = @"No game data is bundled with CTRPad.";
+	self.statusLabel.text = self.replacingExistingImport ? @"Your current disc remains installed until a replacement passes every check."
+	                                                     : @"No game data is bundled with CTRPad.";
 	self.statusLabel.textColor = [UIColor colorWithWhite:0.68 alpha:1.0];
 	self.statusLabel.font = [UIFont systemFontOfSize:15.0 weight:UIFontWeightMedium];
 	self.statusLabel.textAlignment = NSTextAlignmentCenter;
@@ -208,6 +213,7 @@ static NSString *const s_importStagingPrefix = @".ctrpad-import-";
 
 	self.viewController = [[CTRPadImportViewController alloc] init];
 	self.viewController.coordinator = self;
+	self.viewController.replacingExistingImport = self.purpose == NATIVE_IOS_IMPORT_RESELECTION;
 	self.window = [[UIWindow alloc] initWithWindowScene:windowScene];
 	self.window.frame = windowScene.coordinateSpace.bounds;
 	self.window.windowLevel = UIWindowLevelNormal + 2.0;
@@ -248,7 +254,10 @@ static NSString *const s_importStagingPrefix = @".ctrpad-import-";
 - (void)documentPickerWasCancelled:(UIDocumentPickerViewController *)controller
 {
 	(void)controller;
-	[self.viewController setBusy:NO status:@"No file selected. Choose the NTSC-U raw BIN when you are ready."];
+	[self.viewController setBusy:NO
+	                         status:self.purpose == NATIVE_IOS_IMPORT_RESELECTION
+	                                    ? @"No file selected. Your current disc remains installed. Choose a replacement when you are ready."
+	                                    : @"No file selected. Choose the NTSC-U raw BIN when you are ready."];
 }
 
 - (void)documentPicker:(UIDocumentPickerViewController *)controller didPickDocumentsAtURLs:(NSArray<NSURL *> *)urls
@@ -397,10 +406,23 @@ static NSString *const s_importStagingPrefix = @".ctrpad-import-";
 			  {
 				  return;
 			  }
-			  [mainSelf.viewController setBusy:YES status:@"Disc verified. Starting Crash Team Racing…"];
-			  if (!completionCallback(callbackUserdata))
+			  [mainSelf.viewController setBusy:YES
+			                                  status:mainSelf.purpose == NATIVE_IOS_IMPORT_RESELECTION
+			                                             ? @"Disc verified. Installing the replacement…"
+			                                             : @"Disc verified. Starting Crash Team Racing…"];
+			  enum NativeIOSImportCompletionResult completionResult = completionCallback(callbackUserdata);
+			  if (completionResult == NATIVE_IOS_IMPORT_COMPLETION_FAILED)
 			  {
 				  [mainSelf.viewController setBusy:NO status:@"The image installed, but the game could not start. Close and reopen CTRPad to retry."];
+				  return;
+			  }
+			  if (completionResult == NATIVE_IOS_IMPORT_RELAUNCH_REQUIRED)
+			  {
+				  [mainSelf.viewController setBusy:NO
+				                                  status:@"Replacement installed. Fully close CTRPad from the app switcher, then open it again to use the new disc. Your memory-card saves are unchanged."];
+				  mainSelf.viewController.chooseButton.enabled = NO;
+				  UIAccessibilityPostNotification(UIAccessibilityAnnouncementNotification,
+				                                  @"Replacement installed. Close and reopen CTRPad to use the new disc.");
 				  return;
 			  }
 			  mainSelf.window.hidden = YES;
@@ -415,7 +437,10 @@ static NSString *const s_importStagingPrefix = @".ctrpad-import-";
 - (void)finishWithError:(NSString *)message
 {
 	dispatch_async(dispatch_get_main_queue(), ^{
-	  [self.viewController setBusy:NO status:message];
+	  NSString *status = self.purpose == NATIVE_IOS_IMPORT_RESELECTION
+	                         ? [message stringByAppendingString:@" Your current disc remains installed."]
+	                         : message;
+	  [self.viewController setBusy:NO status:status];
 	});
 }
 
@@ -439,11 +464,13 @@ int NativeIOSImport_RecoverStaleStages(const char *importBaseDir)
 	return (int)[coordinator removeStaleStagingDirectories];
 }
 
-int NativeIOSImport_Begin(const char *importBaseDir, NativeIOSImportValidateCallback validateCallback,
+int NativeIOSImport_Begin(const char *importBaseDir, enum NativeIOSImportPurpose purpose,
+	                      NativeIOSImportValidateCallback validateCallback,
 	                      NativeIOSImportCompletionCallback completionCallback, void *userdata)
 {
 	if ((importBaseDir == NULL) || (importBaseDir[0] == '\0') || (validateCallback == NULL) || (completionCallback == NULL) ||
-	    !NSThread.isMainThread || (s_importCoordinator != nil))
+	    ((purpose != NATIVE_IOS_IMPORT_INITIAL_SETUP) && (purpose != NATIVE_IOS_IMPORT_RESELECTION)) || !NSThread.isMainThread ||
+	    (s_importCoordinator != nil))
 	{
 		return 0;
 	}
@@ -456,6 +483,7 @@ int NativeIOSImport_Begin(const char *importBaseDir, NativeIOSImportValidateCall
 
 	CTRPadImportCoordinator *coordinator = [[CTRPadImportCoordinator alloc] init];
 	coordinator.importBasePath = basePath;
+	coordinator.purpose = purpose;
 	coordinator.validateCallback = validateCallback;
 	coordinator.completionCallback = completionCallback;
 	coordinator.callbackUserdata = userdata;

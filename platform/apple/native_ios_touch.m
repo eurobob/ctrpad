@@ -19,6 +19,8 @@
 @end
 
 static CTRPadTouchOverlayViewController *s_touchOverlayController;
+static NativeIOSTouchDiscReselectionCallback s_discReselectionCallback;
+static void *s_discReselectionUserdata;
 
 @implementation CTRPadTouchPassthroughView
 
@@ -210,6 +212,34 @@ static CTRPadTouchOverlayViewController *s_touchOverlayController;
 	Platform_InputTouchButton((unsigned int)sender.tag, 0);
 }
 
+- (void)presentDiscReselectionConfirmation
+{
+	if ((self.presentedViewController != nil) || (s_discReselectionCallback == NULL))
+	{
+		return;
+	}
+
+	UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"Choose a different disc?"
+	                                                              message:@"CTRPad must stop the current game before opening Files. Memory-card saves are kept, but unsaved race progress will be lost."
+	                                                       preferredStyle:UIAlertControllerStyleAlert];
+	[alert addAction:[UIAlertAction actionWithTitle:@"Cancel" style:UIAlertActionStyleCancel handler:nil]];
+	[alert addAction:[UIAlertAction actionWithTitle:@"Stop Game & Choose"
+	                                         style:UIAlertActionStyleDefault
+	                                       handler:^(__unused UIAlertAction *action) {
+	                                         // Allow the alert dismissal transition to finish before the
+	                                         // display callback removes the game view hierarchy.
+	                                         dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.35 * NSEC_PER_SEC)),
+	                                                        dispatch_get_main_queue(), ^{
+	                                                          if (s_discReselectionCallback != NULL)
+	                                                          {
+		                                                          s_discReselectionCallback(s_discReselectionUserdata);
+	                                                          }
+	                                                        });
+	                                       }]];
+	alert.preferredAction = alert.actions.lastObject;
+	[self presentViewController:alert animated:YES completion:nil];
+}
+
 - (void)viewDidLoad
 {
 	[super viewDidLoad];
@@ -223,6 +253,17 @@ static CTRPadTouchOverlayViewController *s_touchOverlayController;
 	UIButton *rightDrift = [self buttonWithTitle:@"R DRIFT / BOOST" mask:PLATFORM_INPUT_TOUCH_R1 color:[UIColor colorWithRed:0.94 green:0.59 blue:0.10 alpha:1.0]];
 	UIButton *start = [self buttonWithTitle:@"PAUSE" mask:PLATFORM_INPUT_TOUCH_START color:[UIColor colorWithWhite:0.08 alpha:1.0]];
 	UIButton *select = [self buttonWithTitle:@"SELECT" mask:PLATFORM_INPUT_TOUCH_SELECT color:[UIColor colorWithWhite:0.08 alpha:1.0]];
+	UIButton *disc = [UIButton buttonWithType:UIButtonTypeCustom];
+	disc.translatesAutoresizingMaskIntoConstraints = NO;
+	disc.exclusiveTouch = YES;
+	disc.backgroundColor = [[UIColor colorWithWhite:0.08 alpha:1.0] colorWithAlphaComponent:0.58];
+	disc.layer.borderColor = [UIColor colorWithWhite:1.0 alpha:0.68].CGColor;
+	disc.layer.borderWidth = 2.0;
+	disc.layer.cornerRadius = 12.0;
+	disc.titleLabel.font = [UIFont systemFontOfSize:12.0 weight:UIFontWeightBold];
+	[disc setTitle:@"CHANGE DISC" forState:UIControlStateNormal];
+	[disc setTitleColor:UIColor.whiteColor forState:UIControlStateNormal];
+	[disc addTarget:self action:@selector(presentDiscReselectionConfirmation) forControlEvents:UIControlEventTouchUpInside];
 
 	cross.accessibilityIdentifier = @"ctrpad.touch.cross";
 	square.accessibilityIdentifier = @"ctrpad.touch.square";
@@ -232,8 +273,10 @@ static CTRPadTouchOverlayViewController *s_touchOverlayController;
 	rightDrift.accessibilityIdentifier = @"ctrpad.touch.r1";
 	start.accessibilityIdentifier = @"ctrpad.touch.start";
 	select.accessibilityIdentifier = @"ctrpad.touch.select";
+	disc.accessibilityIdentifier = @"ctrpad.touch.disc";
+	disc.accessibilityLabel = @"Change retail disc image";
 
-	NSArray<UIView *> *controls = @[ stick, cross, square, circle, triangle, leftDrift, rightDrift, start, select ];
+	NSArray<UIView *> *controls = @[ stick, cross, square, circle, triangle, leftDrift, rightDrift, start, select, disc ];
 	for (UIView *control in controls)
 	{
 		[self.view addSubview:control];
@@ -264,6 +307,10 @@ static CTRPadTouchOverlayViewController *s_touchOverlayController;
 		[select.centerXAnchor constraintEqualToAnchor:safe.centerXAnchor constant:-48.0],
 		[select.widthAnchor constraintEqualToConstant:82.0],
 		[select.heightAnchor constraintEqualToConstant:40.0],
+		[disc.topAnchor constraintEqualToAnchor:start.bottomAnchor constant:8.0],
+		[disc.centerXAnchor constraintEqualToAnchor:safe.centerXAnchor],
+		[disc.widthAnchor constraintEqualToConstant:112.0],
+		[disc.heightAnchor constraintEqualToConstant:34.0],
 
 		[cross.trailingAnchor constraintEqualToAnchor:safe.trailingAnchor constant:-24.0],
 		[cross.bottomAnchor constraintEqualToAnchor:safe.bottomAnchor constant:-22.0],
@@ -318,7 +365,7 @@ static UIWindow *CTRPadTouch_FindGameWindow(void)
 	return nil;
 }
 
-int NativeIOSTouch_Begin(void)
+int NativeIOSTouch_Begin(NativeIOSTouchDiscReselectionCallback discReselectionCallback, void *userdata)
 {
 	if (!NSThread.isMainThread)
 	{
@@ -328,10 +375,14 @@ int NativeIOSTouch_Begin(void)
 	{
 		return 1;
 	}
+	s_discReselectionCallback = discReselectionCallback;
+	s_discReselectionUserdata = userdata;
 
 	UIWindow *gameWindow = CTRPadTouch_FindGameWindow();
 	if (gameWindow == nil)
 	{
+		s_discReselectionCallback = NULL;
+		s_discReselectionUserdata = NULL;
 		return 0;
 	}
 
@@ -356,6 +407,8 @@ void NativeIOSTouch_End(void)
 		return;
 	}
 	Platform_InputTouchSetEnabled(0);
+	s_discReselectionCallback = NULL;
+	s_discReselectionUserdata = NULL;
 	[s_touchOverlayController willMoveToParentViewController:nil];
 	[s_touchOverlayController.view removeFromSuperview];
 	[s_touchOverlayController removeFromParentViewController];

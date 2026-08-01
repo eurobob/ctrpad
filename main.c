@@ -289,10 +289,20 @@ static int NativeArg_ParseScrapbookSTRProbeFrames(const char *text, s32 *frameCo
 }
 
 #if defined(SDL_PLATFORM_IOS)
+static int s_nativeIOSDiscReselectionRequested;
+
+static void NativeIOS_RequestDiscReselection(void *userdata);
+static void NativeIOS_StopRuntimeForDiscReselection(void);
+
 static void SDLCALL NativeIOS_DisplayIteration(void *userdata)
 {
 	(void)userdata;
 
+	if (s_nativeIOSDiscReselectionRequested != 0)
+	{
+		NativeIOS_StopRuntimeForDiscReselection();
+		return;
+	}
 	if (!Platform_IsInitialized())
 	{
 		return;
@@ -427,13 +437,14 @@ static int NativeApp_StartRuntime(const struct NativeLaunchOptions *options)
 #endif
 
 #if defined(SDL_PLATFORM_IOS)
+	s_nativeIOSDiscReselectionRequested = 0;
 	if (!Platform_StartDisplayLoop(NativeIOS_DisplayIteration, NULL))
 	{
 		Platform_LogError("[CTR Native] Failed to start iOS display loop: %s\n", SDL_GetError());
 		Platform_Shutdown();
 		return NativeConsole_Return(1);
 	}
-	if (!NativeIOSTouch_Begin())
+	if (!NativeIOSTouch_Begin(NativeIOS_RequestDiscReselection, NULL))
 	{
 		Platform_LogError("[CTR Touch] Failed to attach the iOS touch overlay.\n");
 		Platform_StopDisplayLoop();
@@ -494,16 +505,49 @@ static enum NativeIOSImportValidationResult NativeIOS_ValidateStagedImport(const
 	return result;
 }
 
-static int NativeIOS_CompleteImport(void *userdata)
+static enum NativeIOSImportCompletionResult NativeIOS_CompleteImport(void *userdata)
 {
 	struct NativeLaunchOptions *options = (struct NativeLaunchOptions *)userdata;
 
 	if ((options == NULL) || (NativeApp_SelectAndValidateAssets(options->sdlBasePath) != 1))
 	{
-		return 0;
+		return NATIVE_IOS_IMPORT_COMPLETION_FAILED;
 	}
 
-	return (NativeApp_StartRuntime(options) == 0) && Platform_IsInitialized();
+	return ((NativeApp_StartRuntime(options) == 0) && Platform_IsInitialized()) ? NATIVE_IOS_IMPORT_RUNTIME_STARTED
+	                                                                         : NATIVE_IOS_IMPORT_COMPLETION_FAILED;
+}
+
+static enum NativeIOSImportCompletionResult NativeIOS_CompleteReselection(void *userdata)
+{
+	(void)userdata;
+	return NATIVE_IOS_IMPORT_RELAUNCH_REQUIRED;
+}
+
+static void NativeIOS_RequestDiscReselection(void *userdata)
+{
+	(void)userdata;
+	if (Platform_IsInitialized())
+	{
+		s_nativeIOSDiscReselectionRequested = 1;
+		Platform_Log("[CTR Import] confirmed runtime disc re-selection request\n");
+	}
+}
+
+static void NativeIOS_StopRuntimeForDiscReselection(void)
+{
+	s_nativeIOSDiscReselectionRequested = 0;
+	Platform_Log("[CTR Import] stopping the current game before disc re-selection\n");
+	Platform_StopDisplayLoop();
+	NativeIOSTouch_End();
+	Platform_Shutdown();
+	NativeDiscImage_Shutdown();
+
+	if (!NativeIOSImport_Begin(NativeStorage_GetImportBaseDir(), NATIVE_IOS_IMPORT_RESELECTION,
+	                           NativeIOS_ValidateStagedImport, NativeIOS_CompleteReselection, NULL))
+	{
+		fprintf(stderr, "[CTR Import] Failed to start the iOS disc re-selection screen.\n");
+	}
 }
 #endif
 
@@ -677,7 +721,8 @@ int main(int argc, char *argv[])
 		if (assetSelectionStatus == 0)
 		{
 			s_nativeIOSLaunchOptions = launchOptions;
-			if (!NativeIOSImport_Begin(NativeStorage_GetImportBaseDir(), NativeIOS_ValidateStagedImport, NativeIOS_CompleteImport,
+			if (!NativeIOSImport_Begin(NativeStorage_GetImportBaseDir(), NATIVE_IOS_IMPORT_INITIAL_SETUP,
+			                           NativeIOS_ValidateStagedImport, NativeIOS_CompleteImport,
 			                           &s_nativeIOSLaunchOptions))
 			{
 				fprintf(stderr, "[CTR Import] Failed to start the iOS import screen.\n");
