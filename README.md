@@ -217,9 +217,9 @@ ctr-native/
 
 ### Keyboard Controls
 
-The desktop build accepts both the original compact key map and a more
-comfortable two-hand test layout. The aliases are additive: existing scripts
-and testers can keep using the original keys.
+The native desktop and iOS builds accept both the original compact key map and
+a more comfortable two-hand test layout. The aliases are additive: existing
+scripts and testers can keep using the original keys.
 
 | PS1 input | Test layout | Original layout | Common racing use |
 |---|---|---|---|
@@ -240,10 +240,12 @@ presses are translated to the same PS1-shaped pad packets as a controller;
 no keyboard-only physics path is used.
 
 Click the game window before testing. In iOS Simulator, also enable its
-hardware-keyboard capture for the running app. macOS keyboard play is accepted;
-Computer Use key injection produced no SDL keyboard events in the Simulator,
-and a physical keyboard on a real iPad has not yet passed the device acceptance
-gate.
+hardware-keyboard capture for the running app. macOS keyboard play is accepted.
+An exact iOS Simulator trace also used only `P`, `S`, and `K` to navigate from
+the presentations to a Time Trial starting grid, with every press and release
+recorded in player one. A physical keyboard on a real iPad has not yet passed
+the device acceptance gate; see
+`docs/parity/2026-07-31-ios-hardware-keyboard.md` for the exact boundary.
 
 ### iOS/iPadOS Touch Controls
 

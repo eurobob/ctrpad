@@ -1033,6 +1033,18 @@ multi-touch. Exact trace, screenshot hashes and failed-tooling history are in
 single-control delivery but leaves physical held Gas/steer/drift unchanged as
 the M10 exit gate.
 
+Checkpoint `e6ba535a9c73` corrects hardware-keyboard ownership on iOS. The
+existing practical aliases were already reaching SDL, but an enumerated
+Simulator controller moved the keyboard to player two while touch remained
+player one. iOS now composes keyboard, touch and controller into the primary
+PS1-shaped pad; desktop retains separate-player controller behavior. An exact
+1,869-frame report records Start, Down and four Cross presses only in player
+one, each with next-frame neutral release, while slots two through four remain
+disconnected. Keyboard-only input reached the Crash Cove Time Trial starting
+grid. Exact root cause, build hashes, rejected diagnostic routes and packet
+frames are in `docs/parity/2026-07-31-ios-hardware-keyboard.md`. Physical-iPad
+keyboard delivery remains open.
+
 Work:
 
 - Retain the implemented touch peer in the platform input composition path so
@@ -1053,8 +1065,10 @@ Acceptance:
 - **Startup, menu navigation, selection, cold Load-screen access, Time Trial
   entry, forward race movement, Pause and post-rotation Resume are accepted on
   Simulator. Current-tip live traces also accept Gas movement and near-full
-  analog steering with neutral release as separate contacts; a complete human
-  multi-touch race/save is still open.**
+  analog steering with neutral release as separate contacts. Hardware-keyboard
+  Start/Down/Cross delivery and release are accepted through a keyboard-only
+  route to the race grid; physical keyboard and a complete human multi-touch
+  race/save are still open.**
 - Steering remains continuously analog while accelerate and drift are held.
 - A tester can intentionally execute repeated three-boost drift chains in both
   turn directions without grip changes or missed simultaneous contacts.

@@ -70,6 +70,10 @@ Current evidence and procedures:
   direct live packet trace, two-host-snapshot cadence correction, exact matrix,
   touch-only menu/save-reader evidence, the iPadOS 26 adaptive-orientation
   correction, and remaining physical-iPad gates.
+- `2026-07-31-ios-hardware-keyboard.md` records the live player-two ownership
+  diagnosis, iOS shared-primary correction, rejected debugger/immediate-record
+  routes, exact cross-target matrix, keyboard-only presentation-to-race route,
+  decoded player-one press/release packets, and remaining physical-iPad gate.
 - `2026-07-31-ios-sideload-package.md` records the reproducible retail-free IPA
   workflow, embedded GPL/notices/Installation Information, profile and DER
   signing guards, rejected archive/signing bugs, exact artifact hashes, and the

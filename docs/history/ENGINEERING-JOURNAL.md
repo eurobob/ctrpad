@@ -11058,3 +11058,142 @@ The preceding published timer was 188,683 seconds. The pre-publication reading
 was 191,189 seconds: 2 days, 5 hours, 6 minutes, 29 seconds cumulative, adding
 2,506 seconds (41 minutes, 46 seconds). It includes paused/resumed task lifetime
 and is not a build benchmark or person-hour estimate.
+
+## 2026-07-31 — Corrected and accepted iOS hardware-keyboard ownership
+
+### Request, initial audit and observable failure
+
+The user asked for basic keyboard controls so the game could be tested without
+touch. The practical aliases were already in published commit `2c10b00b34df`:
+WASD D-pad, IJKL faces, Q/E shoulders, P Start and Tab Select. They were covered
+by the media-free input self-test and documented in the README, but physical
+iPad delivery remained open and the preceding Simulator note incorrectly said
+Computer Use produced no SDL keyboard event.
+
+A bounded live investigation used the disposable `CTRPad Import Negatives`
+clone while preserving the source-validation Simulator. A normal LLDB attach
+to a live process hung for about 60 seconds and was killed. Two subsequent
+wait-for-debugger launches remained on a white frame with zero game CPU;
+interrupting LLDB placed the main thread in dyld's external-state notification
+trap before input startup. Detaching let the app initialize. These attempts
+were rejected as debugger/dyld perturbation rather than game hangs.
+
+The first immediate `--record --detailed` report, `ctr-195059`, also failed at
+frame zero with `too many VSync packets in replay frame 0`: slow iOS bootstrap
+exceeded the fixed 64-run VSync packet capacity. The supported delayed-start
+route `--record --toggle --detailed` was used instead. F9 armed report
+`ctr-195304`; F10 finalized 1,106 frames.
+
+Direct parsing of that report proved key delivery. Slot zero was the connected
+touch/analog `0x73` pad and stayed neutral. Slot one was a connected digital
+`0x41` keyboard pad: P produced Start `0xfff7` at frame 467 and S produced Down
+`0xffbf` at frame 640. The UI did not respond because retail menus read player
+one. The bounded K tap missed the low-FPS sample.
+
+Source inspection found the exact cause. Opening any SDL gamepad in a slot
+unconditionally moved the keyboard to the next slot. That preserves useful
+separate-player desktop behavior, but iOS touch is deliberately applied only
+to slot zero. Simulator controller enumeration therefore turned the hardware
+keyboard into player two.
+
+### Correction, self-test and first GitHub checkpoint
+
+`platform/native_input.c` now makes the ownership decision explicit. iOS
+shares keyboard, touch and controller input in the primary PSX-shaped pad;
+other platforms still move an overlapping keyboard to the next slot. The
+generic assignment helper is directly tested in both shared and separate
+modes, while the SDL virtual-controller test derives the platform's expected
+slot. Input composition order and retail game code were not changed.
+
+The same live report exposed a second metadata defect: `__APPLE__` labeled iOS
+as `macos`. `platform/native_replay_scheduler.c` now checks
+`SDL_PLATFORM_IOS` first and emits `ios`, leaving macOS unchanged.
+
+Dirty diagnostic builds linked macOS, iOS Simulator and iOS device ARM64.
+macOS passed 21/21 CTests; the verbose input test reported
+`primary-share=keyboard+touch+gamepad`. Only the two intended source files were
+staged. Commit `e6ba535a9c73` (`fix: share iOS keyboard with primary input`) was
+pushed to `origin/codex/arm64-apple` before exact runtime acceptance, so the
+work was already backed up while the longer test continued.
+
+### Exact clean matrix and update preservation
+
+All three presets were explicitly reconfigured after the source commit and
+rebuilt with clean identity `e6ba535a9c73`. Exact executable SHA-256 values:
+
+```text
+iOS Simulator  1cef6404aa3c2bf094c3357e71eb1069e81ed3e6307b972d043bfe222c2c62cb
+iOS device     4ca08e9bbc2095f1a05d533e15af688da23f244a464164c24e4265557a199db1
+macOS          cfd3d9b420e8e9592a622112bd368b20857ba427d68c92fab58bd8578d741dca
+```
+
+The exact macOS binary again passed 21/21 CTests. Both iOS applications were
+thin ARM64. The linker-signed Simulator executable installed without a second
+signature transform and retained hash `1cef6404...c62cb`.
+
+Before install, clone BIN/save identities were inodes
+`111313696`/`111309627`, sizes 605,698,800/6,016 and hashes
+`f780bf23...07c0`/`6a01b0f5...619a`. Installation migrated the data container
+from UUID `1F53906D-0653-4C99-A0A8-EF38A69CA3E4` to
+`501F6DA4-63D0-49D2-B4FC-C0A1F5B7EBC7`; it was re-resolved rather than reused.
+Both files retained their exact inodes, sizes and hashes after migration.
+
+### Keyboard-only route and packet acceptance
+
+PID `11165` launched the exact app with delayed detailed recording. F9 began
+report `ctr-201917` after the Crash-box presentation and complete touch overlay
+were visible. Computer Use then sent only documented aliases:
+
+```text
+P        presentation -> main menu
+S        Adventure -> Time Trial highlight
+K        select Time Trial
+K        select Crash
+K        select Crash Cove
+K        select No Ghost
+```
+
+The exact app visibly reached the Crash Cove Time Trial starting grid with
+retail textures, kart and touch overlay. Local-only 655-by-903 evidence frames
+for the selected Time Trial and starting grid hashed to
+`b50085dd...6d37` and `09764b01...96dc`; they did not enter Git. F10 finalized
+the 1,869-frame, seven-checkpoint report. Metadata now says
+`build_id=e6ba535a9c73`, `platform=ios`, fingerprint `e9d9b4240372487c`.
+Replay/checkpoint hashes are `07fe7a7e...a7fd` and `524d2aa0...53e5`.
+
+Direct decoding of every 12-byte pad snapshot found slot zero's single stable
+identity `status=0x00/id=0x73/connected=0x01`. Its complete non-neutral runs
+were Start at frame 361, Down at 528, and Cross at 906, 1,249, 1,376 and 1,562.
+Every run lasted one frame and the next frame was neutral. Slots one through
+three remained disconnected `0xff/0xff/0x00`, neutral for all 1,869 frames.
+This is the decisive player-one correction relative to `ctr-195304`.
+
+### Exact replay, cleanup and boundary
+
+The accepted app was terminated and the same installed binary launched as PID
+`12141` with the finalized report. It validated all seven rolling checkpoints,
+restored frame-zero state and used the isolated playback memory-card sandbox.
+Without further input injection, Computer Use observed the same Time Trial
+highlight and Crash Cove grid. The log closed with
+`replay finished after 1869 frames`; no canonical divergence occurred. Its raw
+frame-zero checkpoint diagnostic differed because it contains excluded host
+addresses, as labeled by the log.
+
+After recording/replay, clone BIN/save identities and hashes were unchanged.
+The source-validation BIN/save also retained original inodes
+`111131200`/`111222179`, sizes and hashes. The disposable clone was shut down
+without deletion; existing source PID `93637` returned to the foreground.
+Retail files, saves, reports, screenshots, app containers and products all
+remain local-only and outside Git.
+
+This accepts iOS Simulator hardware-keyboard delivery, player-one ownership,
+menu/content selection to a race grid and explicit release. A physical iPad
+keyboard, signed installation, physical Files/update/save behavior, natural
+multi-touch, a completed race and device performance remain open. The goal
+remains active. Exact evidence and rejected routes are centralized in
+`docs/parity/2026-07-31-ios-hardware-keyboard.md`.
+
+The preceding published timer was 191,189 seconds. The pre-publication reading
+was 194,894 seconds: 2 days, 6 hours, 8 minutes, 14 seconds cumulative, adding
+3,705 seconds (1 hour, 1 minute, 45 seconds). It includes paused/resumed task
+lifetime and is not a build benchmark or person-hour estimate.

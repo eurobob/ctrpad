@@ -146,6 +146,13 @@ iPad performance evidence.
 
 ## Hardware-keyboard delivery audit
 
+> **Follow-up:** a later delayed-start packet recording proved that Computer
+> Use key events did reach SDL but were assigned to player two after Simulator
+> controller enumeration. Commit `e6ba535a9c73` corrected iOS ownership, and an
+> exact keyboard-only run reached a Time Trial grid. See
+> `2026-07-31-ios-hardware-keyboard.md`. The bounded negative route below is
+> retained as the historical evidence available at this checkpoint.
+
 The requested basic keyboard controls were already published in commit
 `2c10b00b34df`: `WASD`, `IJKL`, `Q/E`, `P`, and Tab are additive aliases for
 D-pad, face buttons, shoulders, Start, and Select. They use the same active-low

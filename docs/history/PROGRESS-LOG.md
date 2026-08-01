@@ -1515,3 +1515,42 @@ documentation reading was 191,189 seconds: 2 days, 5 hours, 6 minutes,
 29 seconds cumulative, adding 2,506 seconds (41 minutes, 46 seconds). The timer
 is cumulative product-task time, including pauses, not a benchmark or labor
 estimate.
+
+### 2026-07-31 — iOS hardware keyboard now controls player one
+
+- The practical keyboard aliases were already published, but a delayed live
+  iOS report proved Simulator controller enumeration moved the keyboard to
+  player two while touch remained player one. Start and Down arrived in slot
+  one, explaining why retail menus did not respond.
+- Commit `e6ba535a9c73` shares keyboard, touch and controller input in iOS's
+  primary PSX-shaped pad while retaining separate-player desktop ownership. A
+  media-free test covers both policies. iOS replay metadata now says `ios`
+  instead of `macos`.
+- A normal LLDB attach and two dyld-stopped wait-for-debugger launches were
+  rejected as debugger perturbation. Immediate report `ctr-195059` overflowed
+  its frame-zero VSync runs; delayed F9/F10 recording was the accepted route.
+- The source fix was committed and pushed before final acceptance. Exact clean
+  Simulator/device/macOS binaries hashed to `1cef6404...c62cb`,
+  `4ca08e9b...9db1`, and `cfd3d9b4...1dca`; macOS passed 21/21 CTests.
+- Exact Simulator installation migrated but preserved the imported BIN and
+  save under inodes `111313696`/`111309627`, accepted sizes and hashes.
+- Keyboard-only `P`, `S`, and `K` input navigated presentations → Time Trial →
+  Crash → Crash Cove → No Ghost → starting grid. Final report `ctr-201917`
+  contains 1,869 frames, seven checkpoints, clean build ID `e6ba535a9c73`,
+  `platform=ios` and fingerprint `e9d9b4240372487c`.
+- Slot zero contains Start at frame 361, Down at 528, and Cross at 906/1249/
+  1376/1562, each followed by neutral. Slots one through three stayed
+  disconnected and neutral. Exact replay completed all 1,869 frames without a
+  canonical divergence and visibly reproduced the race grid.
+- Clone and source BIN/save identities remained unchanged after replay. The
+  disposable clone was shut down; source PID `93637` returned to the
+  foreground. Reports, screenshots, products, retail data and saves remained
+  outside Git.
+- Simulator keyboard navigation/release is accepted. Physical-iPad keyboard,
+  signing, physical Files/update/save behavior, natural multi-touch, a full
+  race and device performance remain open. The goal remains active.
+
+The preceding published reading was 191,189 goal seconds. The pre-publication
+reading was 194,894 seconds: 2 days, 6 hours, 8 minutes, 14 seconds cumulative,
+adding 3,705 seconds (1 hour, 1 minute, 45 seconds). The timer is cumulative
+goal time, including pauses, not a benchmark or labor estimate.
