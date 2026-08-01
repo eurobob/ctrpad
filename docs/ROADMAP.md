@@ -29,6 +29,9 @@ commands, evidence, failures, decisions, validation, and remaining limitations
 so the project can be reconstructed historically rather than only understood
 from its final state. `docs/history/THREE-DAY-CHECKPOINT.md` provides the
 readable end-to-end map through the 258,100-second checkpoint.
+`docs/history/THREE-DAY-TIMELINE.md` is the timestamped navigation index for the
+full campaign, including all 151 durable commits and the exact
+262,238-second physical-device boundary.
 `docs/history/RELEASE-REBASELINE.md` maps that implementation evidence to the
 minimum physical-device release contract and supersedes the earlier policy
 that required hardware-like Simulator cadence before device validation.
