@@ -1,0 +1,462 @@
+# Simulator Stability, Logging, and Current Visual Re-audit
+
+- Date: 2026-08-01
+- Branch: `codex/arm64-apple`
+- Exact baseline source: `43245107c279302baf083582f91743bcb47d6a51`
+- Exact logging/accessibility source: `7bcc51a790a173662a701752a980c89daf7193b4`
+- Exact retail-consumer input source: `ba80d153ae558cc74d1660043e32e58ce8baad46`
+- Runtime: iOS 26.5 ARM64 Simulator
+- Sole device: `CTRPad Import Negatives`
+- Protected device kept shut down: `CTRPad Import Validation`
+- Status: **bounded input, lifecycle and inspected-scene graphics accepted;
+  performance, broad graphical churn and an observable correct-ID shutdown
+  keep the Simulator and physical-device gates open**
+
+## Why this checkpoint exists
+
+The user explicitly required a stable, visibly correct Simulator product with
+robust logs before any native physical-device attempt. The earlier visibility-
+cache correction and its one-run visual evidence were not treated as a waiver.
+The current build had to be observed again, and a frame that merely launched or
+compiled could not qualify.
+
+This pass found three different facts that must not be collapsed into one
+claim:
+
+1. the current baseline rendered the specific title, menu, character, track,
+   Crash Cove and Adventure screens inspected here without the former missing-
+   asset signature;
+2. Simulator performance on this host was only about 4-8 FPS for much of the
+   run, and short keyboard/accessibility actions were not consistently usable;
+3. the production log overwrote the only previous run and lacked timestamps,
+   session identity and input correlation.
+
+The logging and accessibility-action defects were corrected and live-tested.
+The broader Simulator product gate remains open until an exact post-commit
+build survives repeated scene/level churn with reliable controls and no
+graphical corruption.
+
+## Resource and Simulator discipline
+
+Both builds were compiled with nice priority 15, one job and no Simulator
+process or booted device. Only the disposable `CTRPad Import Negatives` device
+was booted for runtime work. `CTRPad Import Validation` stayed shut down for the
+entire checkpoint. Compilation never overlapped a booted Simulator.
+
+The complete imported runtime image remained 605,698,800 bytes across both
+update installs. CoreSimulator migrated the data-container UUID on each
+install, so every path was re-resolved rather than reused. No retail file or
+retail-derived screenshot was added to Git.
+
+The baseline runtime reached about 83% CPU for CTRPad and 53% for WindowServer.
+At the same reading, the host had about 23 GB resident use, about 10 GB of
+compressed memory, 272 MB free and load averages `15.21 25.23 47.16`. Those
+figures explain why this is a hostile Simulator environment, but they do not
+turn dropped input or untested graphics into acceptance.
+
+## Exact baseline build
+
+The clean baseline was configured and built before booting a device:
+
+```text
+source identity       43245107c279
+iOS build time        67.99 seconds real
+compiler warnings     32 established warnings
+architecture          Mach-O 64-bit executable arm64
+executable SHA-256    d37cdf88fbec01c4f05c4c434b6fcbf76086b5e78bf68c816f0f2534f5f6c493
+version               0.1.0-beta.7.1
+SDL identity          SDL-3.4.10-beta-7.1-174-g43245107c
+```
+
+The linker's incomplete ad-hoc resource signature failed strict bundle
+verification as expected. The exact build remained untouched. A temporary
+copy was fully ad-hoc signed for installation and passed deep/strict
+verification; its transformed executable SHA-256 was
+`5f22d274bcd621934ea22f5225ca4d71e0b9b3a079e45366492bc76edacb176a`.
+That transform is Simulator installation plumbing, not a release signature.
+
+## Baseline visual route and findings
+
+The device had retained a non-upright orientation from earlier work. Its Home
+screen and CTR content were both rotated, proving this was device state rather
+than game-only geometry. Two ordinary Simulator Rotate actions restored an
+upright landscape presentation. This orientation normalization is not counted
+as a product fix.
+
+Computer Use then observed these retail surfaces:
+
+- copyright and main menu;
+- Time Trial highlight;
+- Crash character selection;
+- Crash Cove track list and preview;
+- No Ghost selection;
+- Crash Cove fly-in, starting grid and live lap state;
+- pause menu.
+
+The observed frames contained the expected menu text, Crash/vehicle models,
+character portraits, track preview, course geometry, start banner, kart, HUD,
+lights and minimap. No inspected frame reproduced the earlier widespread
+missing-visibility geometry. This is specific visual evidence, not a complete
+game-wide asset census.
+
+The baseline app log grew to 88 lines / 3,704 bytes and had SHA-256
+`12e8a9bfe12ea051217815942900684d9f5080e71e531c275a5abfe3b469fc07`.
+It contained zero `[CTR AssetRef]`, `visibility cache exhausted`, `ERROR`,
+`FATAL` or unbalanced-render lines. It reported roughly 4-8 FPS for the later
+run, with an earlier short peak near 15 FPS. An earlier 1,000-byte log was
+manually copied before launch because the production logger otherwise opened
+the active path with `wb` and destroyed the preceding diagnosis.
+
+Keyboard `S` moved the main-menu highlight, but two separate `K` actions did
+not select. Touch Cross selected. In the pause menu, only some keyboard Down
+actions moved the highlight. Short coordinate/accessibility Cross actions also
+became unreliable. The run therefore did not satisfy the basic-controls part
+of the user's Simulator gate.
+
+The launch console additionally contained two Simulator/Foundation
+diagnostics: a null `NSMapTable` argument and duplicate
+`UIAccessibilityLoaderWebShared` classes in the iOS 26.5 runtime. Neither
+appeared in the app-owned file log and neither terminated the process. They are
+recorded rather than hidden or reclassified as app success.
+
+## Logging correction
+
+The former logger held one path and opened it with `wb`. The correction now:
+
+- keeps four complete previous sessions as `.1` through `.4`
+  (`platform/native_log.c:20,60-107,191-217`);
+- prefixes the persistent copy of every app log call with UTC wall time,
+  elapsed session time and `INFO`/`WARN`/`ERROR` severity while leaving console
+  text compatible (`platform/native_log.c:22-58,109-146,239-264`);
+- flushes every entry as before (`platform/native_log.c:119-131`);
+- exposes the active/previous path and open state
+  (`include/platform/native_log.h:6-11`);
+- records exact version, build, compiler, target, asset root, writable root and
+  log/archive paths after platform initialization (`main.c:116-126,416-433`);
+- records mapped touch down/up and keyboard down edges only while a real log is
+  open, so media-free self-test output remains stable
+  (`platform/native_input.c:444-468,504-523`).
+
+The log contains paths and input masks, not retail media bytes. Simulator OS
+diagnostics remain in console/unified-log capture; the app does not claim to
+own or persist messages emitted outside its logging API.
+
+## Accessibility input root cause and correction
+
+The game buttons published input-down only from
+`UIControlEventTouchDown | UIControlEventTouchDragEnter` and released it from
+touch-up/cancel events (`platform/apple/native_ios_touch.m:444-461`). A UIKit
+accessibility activation can invoke the button's primary action without
+synthesizing `UIControlEventTouchDown`. That made a control visibly activate
+while the PS1-shaped pad received no down edge.
+
+`CTRPadInputButton` now overrides `accessibilityActivate`, publishes the same
+touch-down action as a finger, and sends touch-up 100 ms later on the main
+queue (`platform/apple/native_ios_touch.m:37-38,116-131`). Only game-input
+buttons use the subclass (`platform/apple/native_ios_touch.m:444-446`);
+settings and disc utility buttons retain their ordinary UIKit actions.
+
+This is an accessibility correctness fix, not a test-only Simulator hook.
+Voice Control, Switch Control and other accessibility activation paths now
+produce the input their visible button state promises.
+
+## Build and media-free verification after the correction
+
+No Simulator was running for either build:
+
+```text
+macOS ARM64 one-job build        107.14 seconds real; 32 warnings
+macOS CTest                       22/22; 2.94 seconds test / 2.98 outer
+iOS Simulator one-job build      36.47 seconds real; 32 warnings
+iOS diagnostic executable SHA    6f2614393552b75e3151a59380f8ce56d85923abe67426a90d0e0d7f28fb384a
+strict-signed temp-copy SHA       b4851964b15aa5c6a6d109fe58c9698581f6c38b568bc030fedb0a9579c12932
+```
+
+The logger was exercised twice in a fresh isolated directory through the
+renderer pixel self-test. Both renderer hashes passed. The second run preserved
+the first as `.1`:
+
+```text
+current log     1,340 bytes  ae03ee0ad2c3be66d951a53f3dbbb3f03f2d6977412c641796eea0c6d523058d
+previous .1     1,310 bytes  bb937fcf14974d081c301ad0b1802284cf5331ea8963ae3025958c60394305ac
+first close     +0.871 seconds
+second close    +0.884 seconds
+```
+
+Each first line had an ISO-8601 UTC timestamp, `+0.000s`, `INFO`, the active
+path and whether a prior session existed. Each last line was a timestamped
+`WARN` close marker.
+
+The corrected iOS build was intentionally diagnostic and uncommitted. Its
+already-configured binary still embedded the preceding clean commit string.
+It is not described as an exact source artifact. Publication evidence requires
+a commit followed by a fresh clean configure/build.
+
+## Corrected live diagnostic
+
+The same sole disposable device was update-installed. Its complete imported
+image remained 605,698,800 bytes after CoreSimulator migrated the data
+container again.
+
+Live accessibility activation then produced and consumed:
+
+```text
++87.634s  touch Start down  mask=0x0008
++87.755s  touch Start up    held-before=0x0008
++145.033s touch Cross down  mask=0x4000
++145.178s touch Cross up    held-before=0x4000
+```
+
+One accessible Start skipped the presentation to the retail main menu. One
+accessible Cross opened Adventure, later Cross actions entered character/name
+screens, and a Cross action visibly entered `A` into the retail name field.
+Those are game-consumption observations, not just button animations or log
+lines.
+
+The corrected visual route covered copyright/presentation, main menu,
+Adventure New/Load submenu, character selection and name entry. These screens
+retained their expected models, vehicles, text, background, stats and overlay.
+The preceding exact baseline already covered Crash Cove through live lap
+state. The corrected run did not complete an Adventure-hub transition or
+repeat multiple full course loads, so the visibility-cache churn gate remains
+open.
+
+Hardware-keyboard capture logged Return as scancode 40 / Start mask `0x0008`,
+but some short Return actions still needed repetition before the retail menu
+responded. Attempting to type `A` through generic text automation was rejected:
+the established game aliases correctly interpreted Shift as L1 and `A` as
+D-pad Left rather than as text entry. The source did not add a second hidden
+keyboard path to make automation appear successful.
+
+The same PID completed one Home/background and foreground cycle. The
+persistent timeline recorded:
+
+```text
++959.758s will-enter-background  phase=will-background audio=suspended
++961.745s did-enter-background   phase=background       audio=suspended
++970.276s will-enter-foreground  phase=will-foreground audio=suspended
++970.647s did-enter-foreground   phase=active           audio=active
+```
+
+The name-entry frame and typed state were visible after resume. The final live
+file contained 95 lines / 10,396 bytes at SHA-256
+`17f50a77b9b446812584beba7139358d0ea508a73fe898c1dfdf23f2f7c63dc5`.
+Its `.1` was the complete 88-line baseline file at the exact prior hash. The
+current file contained zero AssetRef, visibility-cache-exhaustion, `ERROR`,
+`FATAL` or unbalanced-render lines.
+
+## Rejected shortcuts
+
+- The rotated cold screen was not called an app orientation defect; the Home
+  screen was rotated identically and ordinary device rotation normalized it.
+- The linker's incomplete ad-hoc bundle signature was not called a release
+  signature. A temporary copied bundle was strictly sealed for Simulator only.
+- The diagnostic build's stale configured commit string was not called an
+  exact working-tree identity.
+- A coherent Crash Cove or Adventure frame was not generalized to all levels.
+- Logged key-down was not generalized to reliable keyboard consumption.
+- Simulator performance was not extrapolated to physical Metal hardware, and
+  anticipated physical performance was not used to waive the Simulator gate.
+
+## Remaining acceptance gate
+
+Before physical-device work resumes, one exact clean post-commit Simulator
+build must satisfy all of the following with one booted device only:
+
+1. repeat presentation, main menu, Time Trial, Crash Cove and Adventure/Load;
+2. churn between multiple levels/scenes enough to exercise memory-pack
+   recycling, then inspect track, kart, HUD, effects, menu and overlay pixels;
+3. show zero AssetRef/cache/error/fatal/unbalanced markers in the complete
+   current and retained prior-session logs;
+4. make basic keyboard and accessible touch navigation reliable rather than
+   occasionally requiring duplicate actions;
+5. complete rotation plus Home/resume without losing pixels, input, audio or
+   state;
+6. characterize or improve the 4-8 FPS software-renderer experience enough
+   that the Simulator is a usable stability test rather than a slide show;
+7. document the exact source, executable, install transform, log hashes,
+   process times and any failure honestly.
+
+The current work improves diagnosis and accessibility and shows coherent
+specific scenes. It does not yet qualify the game for a physical iPad.
+
+## First exact post-commit run: rejected, then corrected
+
+The logging/accessibility checkpoint was committed and pushed as exact source
+`7bcc51a790a173662a701752a980c89daf7193b4`. With no booted Simulator, a fresh
+macOS configure produced thin ARM64 executable SHA-256
+`be060628...47795`, embedded `7bcc51a790a1`, and completed its one-job build
+in 56.43 seconds. All 22 CTests passed in 2.97 seconds. The fresh iOS Simulator
+build completed in 67.04 seconds with the same 32 established warnings and
+linked thin ARM64 executable SHA-256 `3b646623...d1d8`. A copied bundle was
+fully ad-hoc signed, passed deep/strict verification and had transformed
+executable SHA-256 `13cca464...a4d5`.
+
+Only `CTRPad Import Negatives` booted. Update installation preserved the
+605,698,800-byte imported image. The first 86-line, 9,370-byte exact log was
+preserved at `/tmp/ctrpad-exact-adventure-run.log`, SHA-256
+`8ec554ad...d8687`. A second 46-line, 5,685-byte exact session was preserved at
+`/tmp/ctrpad-exact-second-run.log`, SHA-256 `aa12c685...9353`. Rotation moved
+the former current session to `.1`, the prior diagnostic to `.2`, and the
+baseline to `.3`, proving real multi-session retention. Neither exact log had
+an AssetRef, visibility-cache, error, fatal or unbalanced marker.
+
+The inspected frames were coherent: copyright and presentation; main menu;
+Adventure New/Load and saved profile; character garage and name entry; and
+the live Adventure hub with Crash, kart, fully textured Aku Aku mask, exhaust,
+portal scenery, flags, HUD counters and minimap. Portrait to landscape and back
+retained the complete game and overlay. Home/resume retained PID `58597`, game
+state and pixels and logged all four ordered lifecycle transitions.
+
+That exact run still failed acceptance. `P`/Start advanced, but later single
+quick `K`/Cross and `S`/Down actions were logged with scancodes 14/22 and masks
+`0x4000`/`0x0040` without moving the retail menu. Accessible Cross and the
+analog touch stick acted immediately. Repetition did not make the logged
+keyboard Down deterministic. The product therefore remained unsuitable for a
+tester even though its observed assets were intact.
+
+Source tracing showed that the two-snapshot host latch was tied to native
+VSync, while the retail menu consumes input in `GAMEPAD_ProcessHold`. At a
+roughly 4-8 FPS game rate, multiple VSync callbacks could publish the pressed
+packet and then neutral before game logic polled it. The correction retains
+quick mapped keyboard and touch edges across native snapshots until
+`GAMEPAD_ProcessHold` has sampled the packet, then explicitly clears the host
+latch. The acknowledgement adds a bounded log line naming the keyboard and
+touch masks consumed by the retail poll. Held keyboard/touch state remains
+live independently, and replay, disabled-pad, lifecycle and reset boundaries
+still clear unconsumed host transport state.
+
+The updated media-free input self-test sends complete quick C/Right and K/D
+down/up pairs, reads them repeatedly before acknowledgement, then requires
+neutral immediately after acknowledgement. The same contract covers a touch
+chord and released Circle tap. Its marker is:
+
+```text
+tap-latch=c+right until-retail-poll
+```
+
+The isolated test passed. This is implementation evidence, not the required
+exact post-fix Simulator replay; the gate remains open until that committed
+build succeeds.
+
+## Exact consumer-acknowledged replay: bounded acceptance
+
+The consumer-acknowledgement correction was committed and pushed as exact
+source `ba80d153ae558cc74d1660043e32e58ce8baad46`. Both named Simulators were
+shut down during compilation. Builds ran sequentially at nice priority 15 with
+one job:
+
+```text
+macOS ARM64 build         67.25 seconds; 32 established warnings
+macOS executable SHA-256 55070327c683ea66c7b1ab806959756b4a391bec84d2fc1d1e9b890980c2ed2b
+macOS version            CTR Native 0.1.0-beta.7.1 (ba80d153ae55)
+macOS CTest              22/22; 2.41 seconds test / 2.46 outer
+iOS Simulator build      69.93 seconds; 32 established warnings
+iOS executable SHA-256   6f5f71520faa2fec17011f75d3232483faf82c7d91133096be7381033ebeb923
+signed test-copy SHA-256 6d944fed1f59ee492ade35c44b19015da6da6a911b8dde18c44d4937c25c5c55
+```
+
+Both executables were thin ARM64 and embedded `ba80d153ae55`. The temporary
+Simulator copy passed deep/strict ad-hoc verification; it is not an Apple
+device signature. Only `CTRPad Import Negatives` booted. Update installation
+retained the 605,698,800-byte BIN at SHA-256
+`f780bf2331476aabfc00772fa758b12dd95ebfbc907968132cbd3cdd4e2c07c0`
+and the 6,016-byte save at SHA-256
+`6a01b0f5562ed7a279d8f8e51e3b1874ac39a6120f55db4fe3873288950619a3`.
+
+### Keyboard-to-retail correlation
+
+The route used only the published keyboard aliases. `P` skipped the
+presentation, `S` selected Time Trial and `K` entered it. Further `K` presses
+selected Crash, Crash Cove and No Ghost; `I` skipped the fly-in; `K` applied
+Gas; and `P` opened Pause. `S` moved Resume to Restart. After resuming and
+pausing again, three separately consumed `S` presses reached Change Level;
+`K` opened the level list, `S` selected Roo's Tubes, `K` accepted it and No
+Ghost, and `I` skipped the second fly-in.
+
+The final log contains 20 keyboard down edges and 20 immediately following
+retail-poll consumption records. Every mask was acknowledged by
+`GAMEPAD_ProcessHold`; observed ingress-to-consumer latency was about
+0.10-0.21 seconds. No duplicate action was needed to make a stable menu
+respond. This accepts the consumer-acknowledged quick-key contract for the
+inspected route, not physical keyboard delivery or human multi-touch.
+
+### Graphics, lifecycle and retained logs
+
+Visible inspection covered title/main menu, Time Trial highlight, complete
+character portraits, Crash Cove preview/ghost/fly-in/grid/race/HUD/minimap,
+Pause and Change Level, then distinct Roo's Tubes preview/fly-in/grid/tunnel/
+CTR banner/speedometer frames. Roo's Tubes remained coherent across portrait,
+landscape and portrait. Home/resume retained PID `65296`, the course state and
+all inspected pixels while the app log recorded:
+
+```text
++866.705s will-enter-background
++868.538s did-enter-background
++877.802s will-enter-foreground
++878.179s did-enter-foreground
+```
+
+No retail-derived screenshot was committed. Local visual captures were hashed;
+representative Simulator screenshots were
+`43828ed5e591c88d970a1724cf61c8b8e92b89a079b73c8f3c0b64fe822ab644`
+for the Roo's Tubes grid and
+`eb9b565cf95447063007417d170aab3c24591daaea7f44c7146a93d8b145bb5c`
+after Home/resume.
+
+The fully flushed current application log is 128 lines / 13,642 bytes at
+SHA-256
+`fa8324189326db5f941b575f2ac215738e6dcc3125006da06875f6940a7bbcc1`.
+All five retained generations were present:
+
+```text
+current  13,642 bytes  fa832418...bbcc1
+.1        5,685 bytes  aa12c685...9353
+.2        9,370 bytes  8ec554ad...d8687
+.3       10,396 bytes  17f50a77...dc5
+.4        3,704 bytes  12e8a9bf...fc07
+```
+
+A targeted scan across current plus `.1` through `.4` found zero AssetRef,
+visibility-cache-exhaustion, application `ERROR`, `FATAL`, unbalanced-render,
+assert, signal or crash markers. The iOS unified log had five error-level
+framework messages: one CoreFoundation plug-in factory registration and four
+CoreAudio hardware/acoustic-profile limitations. None named the renderer or
+asset pipeline. No new `CTRPad` diagnostic report existed.
+
+### Why the full gate stays open
+
+The 63 persistent FPS samples ranged from 4.61 to 22.80 and averaged 7.37.
+Late steady-state samples were commonly about 4.61-5.30 FPS. One process sample
+showed about 86% CPU and 221,264 KB RSS. This is too slow to call the Simulator
+a usable stability test even though the fixed input route worked.
+
+The app remained responsive and kept logging for about 19 minutes 38 seconds,
+and the same PID survived the explicit lifecycle cycle. The first cleanup
+command mistakenly targeted `com.chrissotraidis.ctrpad`; the built plist's
+actual identifier is `io.github.chrissotraidis.ctrpad`. Therefore `simctl`'s
+`found nothing to terminate` response referred only to a nonexistent bundle
+identifier and is not evidence that PID `65296` exited. The later RunningBoard
+query was unnecessary and outlived its initial wait; the device was shut down
+without obtaining a correct-ID explicit-termination observation. No crash
+report, application fault entry or app-log failure marker exists.
+
+The exact replay therefore accepts keyboard consumption, two distinct track
+loads, inspected Adventure/Time Trial pixels, rotation, Home/resume and the
+five-generation log contract. It does not generalize two tracks to every level
+or effect, accept the poor frame rate, prove a correct-ID explicit or natural
+termination, or authorize a physical-iPad attempt. The next Simulator work
+must profile/improve the software-renderer path and repeat longer, broader
+level/effect churn with an observable normal shutdown.
+
+## Goal-time accounting
+
+The evidence-open goal reading was 232,171 seconds: 2 days, 16 hours,
+29 minutes, 31 seconds cumulative. The prior in-progress documentation reading
+was 232,558 seconds: 2 days, 16 hours, 35 minutes, 58 seconds. The exact
+post-fix documentation-open reading was 236,181 seconds: 2 days, 17 hours,
+36 minutes, 21 seconds. The pre-publication verification reading was 236,875
+seconds: 2 days, 17 hours, 47 minutes, 55 seconds, adding 694 seconds (11
+minutes, 34 seconds) during the closing documentation and audit. Goal time
+includes pauses/resumes and is not a build benchmark or person-hour estimate.
+The post-push publication reading is recorded in the running progress log.

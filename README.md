@@ -1,0 +1,403 @@
+# CTR Native
+
+A native PC port of Crash Team Racing (PS1, 1999), built on top of the [CTR-ModSDK](https://github.com/CTR-tools/CTR-ModSDK) decompilation project.
+
+## Apple port status
+
+CTRPad now builds natively for ARM64 macOS, iOS, and iPadOS; imports a
+user-owned NTSC-U retail BIN; persists saves; and provides controller,
+keyboard, and touch-first input. The bounded iPad Simulator retail route is
+functional and visually coherent, but heavy scenes remain approximately
+5–6 FPS under Apple's software renderer and the physical-iPad acceptance gate
+is still open. Read `docs/history/THREE-DAY-CHECKPOINT.md` for the complete
+implementation chronology, evidence map, exact current boundary, rebuild path,
+rejected experiments, and remaining work. Do not interpret a successful build
+as final device acceptance.
+
+## Philosophy
+
+- **No byte budget.** Game source lives in `game/` as our own copies. Edit freely.
+- **No PSX toolchain.** Targets Windows and Linux with SDL3. No MIPS compiler needed.
+- **Clean platform layer.** `main.c` owns process startup; host details stay in `platform/native_*`.
+- **No build system nonsense.** Just `build.bat` / `build.sh`.
+- **Fully static build.** Single executable, zero dependencies. SDL3 is compiled from vendored source and linked statically.
+
+## Directory Layout
+
+```
+ctr_native/
+  main.c              Entrypoint and native platform boundary
+  platform/           Native-owned audio, input, memcard, CD, and PSX facade glue
+  build-msvc.bat      Windows build (MSVC x86)
+  build.bat           Windows build (MinGW i686)
+  build.sh            Linux build
+  CMakePresets.json   Shared CLion/command-line CMake configurations
+  README.md           This file
+  game/               Our copies of all decompiled game source (943 files)
+    game_unity.h      Ordered unity include chain for all game source files
+  include/            Project headers (structs, globals, declarations, platform facade)
+  externals/
+    SDL/              SDL3 source (static build)
+```
+
+## Prerequisites
+
+### Windows
+
+The recommended native Windows toolchain is MSVC x86:
+
+1. Install Visual Studio 2022 or Visual Studio Build Tools 2022.
+2. Select the **Desktop development with C++** workload and a current Windows SDK.
+3. Ensure CMake 3.20 or newer is on `PATH` (standalone or the Visual Studio C++ CMake tools component).
+4. Run `build-msvc.bat`, or select the `windows-msvc-x86` CMake preset in CLion.
+
+The existing MinGW i686 build remains supported:
+
+1. Install [MSYS2](https://www.msys2.org/).
+2. In an MSYS2 terminal:
+   ```
+   pacman -Syu
+   pacman -S --needed git mingw-w64-i686-gcc mingw-w64-i686-cmake mingw-w64-i686-make
+   ```
+   If the update asks you to close the terminal, reopen MSYS2 and run the install command.
+3. Add `C:\msys64\mingw32\bin` to your system PATH
+4. Open a new Command Prompt or PowerShell and run `build.bat`.
+
+That's it. SDL3 is compiled from vendored source -- no separate install needed.
+
+### Linux (Debian/Ubuntu)
+
+```
+sudo apt install gcc-multilib
+sudo apt install libx11-dev libxext-dev libgl1-mesa-dev libasound2-dev libudev-dev libdbus-1-dev
+```
+
+### macOS (Apple Silicon)
+
+Install Xcode or the Xcode Command Line Tools, CMake 3.20 or newer, and Ninja.
+The `macos-arm64` preset produces the exact bare Mach-O used by parity work.
+The separate `macos-arm64-app` preset produces a launchable application
+bundle without embedding retail game data.
+
+## Building
+
+```
+build-msvc.bat       # Windows, MSVC x86 (recommended)
+build.bat            # Windows, MinGW i686
+chmod +x build.sh
+./build.sh           # Linux
+```
+
+The shared CMake presets can also be used directly or selected as CLion CMake profiles:
+
+```
+cmake --preset windows-msvc-x86
+cmake --build --preset windows-msvc-x86-debug
+ctest --preset windows-msvc-x86-debug
+```
+
+On Apple Silicon:
+
+```sh
+cmake --preset macos-arm64-app
+cmake --build --preset macos-arm64-app
+ctest --preset macos-arm64-app
+```
+
+First build compiles SDL3 from source. This is cached as a static library in the selected build directory.
+
+Output:
+
+- MSVC: `build-msvc-x86/Release/ctr_native.exe`
+- MinGW: `build/ctr_native.exe`
+- Linux: `build/ctr_native`
+- macOS bare parity build: `build-macos-arm64/ctr_native`
+- macOS application build: `build-macos-arm64-app/CTRPad.app`
+
+### Clean build
+
+```
+rmdir /s /q build    # Windows: delete cached libraries
+build.bat            # Windows: rebuild everything
+
+rmdir /s /q build-msvc-x86
+build-msvc.bat       # Windows MSVC: rebuild everything
+
+rm -rf build/        # Linux: delete cached libraries
+./build.sh           # Linux: rebuild everything
+```
+
+## Running
+
+### Normal Setup
+
+If you downloaded a release build, you only need two things for normal play:
+
+1. The game executable:
+   - `ctr_native.exe` on Windows
+   - `ctr_native` on Linux
+2. Your own NTSC-U retail CTR disc image, named (put in directory called `assets`):
+   - `assets/ctr-u.bin`
+
+Example:
+
+```
+CTR-Native/
+  ctr_native.exe
+  assets/
+    ctr-u.bin
+```
+
+Then run `ctr_native.exe`.
+
+The disc image must be the common single-track raw PSX BIN layout: MODE2/2352 sectors, with the data track starting at byte 0. A cooked 2048-byte `.iso` does not preserve the XA/STR sector data needed for audio and video playback.
+
+For the macOS app build, keep the retail image outside the application bundle
+and launch with:
+
+```sh
+CTRPAD_DISC_IMAGE="/absolute/path/to/CTR - Crash Team Racing (USA).bin" \
+  tools/run-macos-arm64-app.sh
+```
+
+The launcher validates the raw-sector byte size and creates only an ignored
+development symlink at `build-macos-arm64-app/assets/ctr-u.bin`. It never
+copies the disc image into `CTRPad.app` or Git. Internal recording arguments
+can be passed through, for example
+`tools/run-macos-arm64-app.sh --record --detailed`.
+
+The app preset targets the macOS 11.0 ARM64 floor and applies an ad-hoc local
+signature that binds the bundle metadata. Distribution signing and
+notarization are separate release steps and are not implied by this
+development signature.
+
+For the current iOS/iPadOS development build:
+
+```sh
+cmake --preset ios-simulator-arm64
+cmake --build --preset ios-simulator-arm64
+
+cmake --preset ios-device-arm64
+cmake --build --preset ios-device-arm64
+
+# Validate and create a retail-free unsigned IPA under dist/.
+./package-ios.sh
+```
+
+`package-ios.sh --build` combines the device build and packaging steps. It can
+also validate a user-supplied Apple identity/profile and emit a signed IPA;
+without them it emits an unsigned IPA for a compatible user-side re-signing
+tool. The packager enforces thin ARM64/iOS metadata, the standard
+`Payload/CTRPad.app` layout, byte-reproducible archive timestamps, legal/source
+installation resources, and retail/runtime-data exclusion. See
+`docs/INSTALL-IOS.md` for signing, direct-device, and AltStore-style sideload
+instructions.
+
+Create the matching GPL corresponding-source archive from a clean committed
+checkout with:
+
+```sh
+./package-source.sh
+```
+
+The source packager archives the exact Git commit, verifies that the build
+system, vendored SDL source, GPL license, third-party notices, Installation
+Information and both packagers are present, and rejects retail, runtime,
+credential and binary-package material. It writes a deterministic `.tar.gz`
+plus SHA-256 sidecar under ignored `dist/`. Distribute that archive with the IPA
+from the same build identity. Keep the generated
+`CTRPad-source-<12-character-commit>` directory name when extracting: CMake
+uses that packager-derived archive identity when `.git` is intentionally absent.
+If the extracted root must be renamed, configure with
+`-DCTR_NATIVE_SOURCE_COMMIT=<full-or-12-character-commit>` so the rebuilt app
+retains the published source identity.
+
+The generated `CTRPad.app` and IPA contain no retail data. On a first launch with no
+media, CTRPad presents a native **Choose CTR disc image** screen. Select your
+own NTSC-U single-track raw MODE2/2352 BIN through Files. CTRPad copies the
+selection to `Documents/CTRPad/assets/ctr-u.bin`, validates its disc identity
+and required contents, and starts the game in the same app process. Cancelling
+or choosing an invalid file leaves the chooser available, and an invalid
+selection never replaces an existing verified import. As a manual fallback,
+Files sharing still permits placing the correctly named image directly in that
+directory.
+
+Imported media takes priority over any development-only bundle fallback.
+Logs, memory cards, and private diagnostics are stored separately in
+Application Support and persist independently of the app bundle. Simulator
+acceptance covers the picker, cancellation, invalid-format rejection, a full
+valid import, same-process startup, cold relaunch, a game-created memory-card
+save, background/foreground survival, app-update retention, and a later cold
+read of that profile through the retail Load screen after explicitly seeding
+the accepted report bytes into the default private root. Live wrong-region and
+incomplete-image rejection are also accepted on Simulator. Inaccessible-
+provider callbacks, physical-device Files/save behavior, distribution signing,
+and the final sideloaded-device acceptance remain roadmap work. See
+`docs/parity/2026-07-31-ios-files-import.md` and
+`docs/parity/2026-07-31-ios-memory-card-atomicity.md` for the runtime boundaries,
+and `docs/parity/2026-07-31-ios-sideload-package.md` for exact packaging evidence.
+
+The active runtime log is `Crash Team Racing.log` beneath CTRPad's Application
+Support directory. Each entry includes UTC time, elapsed session time and
+severity. Startup records the exact version/build target and resolved storage
+paths; mapped keyboard/touch edges, lifecycle transitions, renderer messages
+and asset/cache failures share the same timeline. A new run keeps the four
+most recent complete sessions as `.1` through `.4` instead of overwriting the
+only prior diagnosis. The active file is flushed after every entry and at
+lifecycle boundaries. Simulator system diagnostics still belong to the
+launch/unified-log capture; they are not silently copied into the app log.
+
+For development builds run from `build/`, put the same `assets/ctr-u.bin` next to the source tree:
+
+```
+ctr-native/
+  build/
+    ctr_native.exe
+  assets/
+    ctr-u.bin
+```
+
+### Keyboard Controls
+
+The native desktop and iOS builds accept both the original compact key map and
+a more comfortable two-hand test layout. The aliases are additive: existing
+scripts and testers can keep using the original keys.
+
+| PS1 input | Test layout | Original layout | Common racing use |
+|---|---|---|---|
+| D-pad | `W` `A` `S` `D` | Arrow keys | steer, aim items, navigate menus |
+| Triangle | `I` | `Z` | skip race fly-in, menu action |
+| Square | `J` | `X` | brake/reverse, menu action |
+| Cross | `K` | `C` | accelerate, menu action |
+| Circle | `L` | `V` | use item, menu action |
+| L1 / R1 | `Q` / `E` | Left Shift / Right Shift | hop and drift |
+| L2 / R2 | Left Ctrl / Right Ctrl | Left Ctrl / Right Ctrl | camera / mapped retail input |
+| L3 / R3 | `[` / `]` | `[` / `]` | mapped retail input |
+| Start | `P` | Return | pause or advance |
+| Select | Tab | Space | Select |
+
+For a basic race test, steer with `A`/`D`, hold `K` to accelerate, use `J`
+to brake, tap `L` for an item, and use `Q` or `E` to hop/drift. Keyboard
+presses are translated to the same PS1-shaped pad packets as a controller;
+no keyboard-only physics path is used.
+
+Click the game window before testing. In iOS Simulator, also enable its
+hardware-keyboard capture for the running app. macOS keyboard play is accepted.
+An exact iOS Simulator trace also used only `P`, `S`, and `K` to navigate from
+the presentations to a Time Trial starting grid, with every press and release
+recorded in player one. A physical keyboard on a real iPad has not yet passed
+the device acceptance gate; see
+`docs/parity/2026-07-31-ios-hardware-keyboard.md` for the exact boundary.
+The iOS **CONTROLS** sheet repeats the practical `WASD` / `IJKL` / `Q` / `E`
+/ `P` / Tab layout so a hardware-keyboard tester does not need this README
+open while playing.
+
+### iOS/iPadOS Touch Controls
+
+The iOS build presents a native safe-area-aware touch overlay after the game
+surface starts. Touch is composed as player one's peer input, so a connected
+MFi controller can remain active without disabling the overlay.
+
+| Touch control | Retail input | Use |
+|---|---|---|
+| Left virtual stick | Left analog stick | continuous steering |
+| Stick outer ring | D-pad | reliable menu navigation while retaining analog steering |
+| **GAS ✕** | Cross | accelerate / confirm |
+| **BRAKE □** | Square | brake, reverse / menu action |
+| **ITEM ○** | Circle | use item / menu action |
+| **VIEW △** | Triangle | camera or skip / menu action |
+| **L DRIFT / BOOST** | L1 | hop, hold drift, fire boosts |
+| **R DRIFT / BOOST** | R1 | alternate hop/drift side |
+| **PAUSE** | Start | pause or advance |
+| **SELECT** | Select | retail Select input |
+
+Open **CONTROLS** above the game surface to choose left- or right-hand
+steering, Small/Standard/Large controls, and Low/Standard/High opacity.
+Changes take effect immediately and persist on that device; **Reset defaults**
+returns to left-hand steering with standard size and opacity. The sheet is
+scrollable on short landscape displays, and its segmented controls and actions
+retain at least 44-point targets. Opening, rebuilding, dismissing, or resetting
+the sheet neutralizes active touch contacts so a customization change cannot
+leave steering or a button stuck.
+
+Quick keyboard and touch edges remain active until the retail
+`GAMEPAD_ProcessHold` consumer acknowledges its poll. This prevents repeated
+native VSync packet refreshes from erasing a tap while slow game logic is
+still rendering the preceding frame. Simulator tests have navigated the main
+menu in both directions, selected Adventure, opened **Load**, and displayed a
+persisted profile using only the overlay. A later touch-only run entered Time Trial,
+selected Crash and Crash Cove, skipped the fly-in, accelerated off the grid,
+paused, reflowed the controls after device rotation, and resumed. Physical-
+iPad ergonomics, performance, human simultaneous steering/acceleration, and
+repeated three-boost drift chains remain open. On iPadOS 26 the app supports
+all scene orientations and dynamic resizing: portrait and landscape cold
+launches are valid, and the renderer plus touch overlay reflow to the current
+safe-area bounds. iPhone and older full-screen iPadOS builds retain the
+landscape preference. The current overlay is a functional prototype, not the
+final control layout. See `docs/parity/2026-07-31-ios-touch-controls.md`.
+
+### Extracted Asset Override
+
+You do not need extracted assets for normal play.
+
+Extracted files are still supported for development, modding, and debugging. If present, they override files from `ctr-u.bin`.
+
+Extracted-asset override structure:
+
+```
+CTR-Native/
+  ctr_native.exe
+  assets/
+    BIGFILE.BIG
+    SOUNDS/KART.HWL
+    TEST.STR
+    XA/
+      ENG.XNF
+      ENG/EXTRA/S00.XA ... S05.XA
+      ENG/GAME/S00.XA ... S20.XA
+      MUSIC/S00.XA ... S01.XA
+```
+
+The full extracted asset list is:
+
+- `BIGFILE.BIG`
+- `SOUNDS/KART.HWL`
+- `TEST.STR`
+- `XA/ENG.XNF`
+- `XA/ENG/EXTRA/S00.XA` through `S05.XA`
+- `XA/ENG/GAME/S00.XA` through `S20.XA`
+- `XA/MUSIC/S00.XA` through `S01.XA`
+
+## Bug Replays
+
+Internal builds can record a small bug report folder. See `docs/REPLAYS.md`.
+
+## Architecture
+
+```
+main.c (entrypoint)
+  |
+  +-- platform/native_* (platform shell, audio, input, memcard, CD, renderer, PSX facade glue)
+  |
+  +-- game/game_unity.h
+        |
+        +-- game/ (all decompiled game source)
+              |
+              +-- include/ (headers: structs, globals, declarations)
+```
+
+- `CTR_NATIVE` is defined for native host/platform-specific code
+- First-party native code targets portable C17 with compiler extensions disabled
+- The default build uses 32-bit mode while remaining PSX address-shaped data and host-pointer contracts are audited. GPU primitive links are bridged through 24-bit native tokens; see `docs/MEMORY_MODEL.md`.
+
+## Roadmap
+
+- Clean up `game/` copies strip byte budget hacks and route platform-specific code through `CTR_NATIVE`
+- Keep reducing 32-bit host-pointer assumptions in PSX-shaped data, and keep pruning inherited compatibility code now owned in `include/` and `platform/`.
+
+## Credits
+
+- [CTR-ModSDK](https://github.com/CTR-tools/CTR-ModSDK) — the decompilation project this is built on
+- [PsyCross](https://github.com/OpenDriver2/PsyCross) — original PS1 compatibility code from which parts of CTR Native's owned platform layer and PsyQ facade headers are derived
+- [SDL3](https://github.com/libsdl-org/SDL) — cross-platform multimedia
+- Crash Team Racing is a trademark of Sony Computer Entertainment / Naughty Dog

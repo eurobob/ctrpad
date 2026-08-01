@@ -319,20 +319,20 @@ The critical nuance the brief missed: **each file passes if it exists either ext
 
 Not designing controls, per the brief. Enumerating what the game demands.
 
-**Full input map.** Bindings are hardcoded in `NativeInput_DefaultMappings` at `platform/native_input.c:258-306`; there is no user binding config. The raw-to-logical conversion table is `data.gamepadMapBtn` at `game/zGlobal_DATA.c:2915-3000`, consumed at `game/GAMEPAD.c:335-341`.
+**Full input map.** Bindings are hardcoded in `NativeInput_DefaultMappings` at `platform/native_input.c:290-349`; there is no user binding config. The raw-to-logical conversion table is `data.gamepadMapBtn` at `game/zGlobal_DATA.c:2915-3000`, consumed at `game/GAMEPAD.c:335-341`.
 
 | Action | PS1 button | Game-side reader | Keyboard | Gamepad |
 |---|---|---|---|---|
-| Accelerate | Cross, held | `game/Vehicle/VehPhysProc.c:634,886-891` | `C` (`:263`) | South (`:284`) |
+| Accelerate | Cross, held | `game/Vehicle/VehPhysProc.c:634,886-891` | `K` or `C` (`:295-299`) | South (`:328`) |
 | Analog throttle and reverse | Right stick Y | `VehPhysProc.c:798-806,897` | none | Right stick Y (`:304-305`) |
-| Brake and reverse | Square, held | `VehPhysProc.c:635,952-1015` | `X` (`:260`) | West (`:281`) |
-| Hop and drift | L1 or R1 | `VehPhysProc.c:16-17,737-786` | LShift, RShift (`:265,269`) | Shoulders (`:286,290`) |
-| Fire or use item | Circle, tapped | `VehPhysProc.c:644-728` | `V` (`:261`) | East (`:282`) |
-| Item aim modifier | D-pad up forward, down backward | `game/Vehicle/VehPickupItem.c:951,734` | Arrows (`:273-276`) | D-pad (`:294-297`) |
-| Steering | D-pad left/right or left stick X | `VehPhysProc.c:1124-1227` | Arrows | Left stick X or D-pad |
-| Camera near/far | L2, tapped | `game/CAM.c:1853-1871` | LCtrl (`:266`) | Left trigger (`:287`) |
-| Skip race-start fly-in | Triangle | `game/CAM.c:1665-1669` | `Z` (`:262`) | North (`:283`) |
-| Pause | Start | `game/MAIN/MainFrame.c:397,435-444` | Enter (`:279`) | Start (`:300`) |
+| Brake and reverse | Square, held | `VehPhysProc.c:635,952-1015` | `J` or `X` (`:292,296`) | West (`:325`) |
+| Hop and drift | L1 or R1 | `VehPhysProc.c:16-17,737-786` | `Q`/`E` or Left/Right Shift (`:301,305,308-309`) | Shoulders (`:330,334`) |
+| Fire or use item | Circle, tapped | `VehPhysProc.c:644-728` | `L` or `V` (`:293,297`) | East (`:326`) |
+| Item aim modifier | D-pad up forward, down backward | `game/Vehicle/VehPickupItem.c:951,734` | `W`/`S` or arrows (`:311-318`) | D-pad (`:338-341`) |
+| Steering | D-pad left/right or left stick X | `VehPhysProc.c:1124-1227` | `A`/`D` or arrows | Left stick X or D-pad |
+| Camera near/far | L2, tapped | `game/CAM.c:1853-1871` | Left Ctrl (`:302`) | Left trigger (`:331`) |
+| Skip race-start fly-in | Triangle | `game/CAM.c:1665-1669` | `I` or `Z` (`:294,298`) | North (`:327`) |
+| Pause | Start | `game/MAIN/MainFrame.c:397,435-444` | `P` or Return (`:321,323`) | Start (`:344`) |
 | Menu navigation | D-pad plus Cross, Triangle or Square to cancel | `game/230/MM_Characters.c:38-40`, `game/RECTMENU.c:826` | | |
 
 **There is no look-behind control.** R2 is present in the mapping table (`game/zGlobal_DATA.c:2967-2970`) but has no gameplay consumer; grep for `BTN_R2` in `game/` finds only the map table and cheat-code data. The brief lists look-behind as part of the input map; in this codebase it does not exist. That removes one control from the touch budget.
