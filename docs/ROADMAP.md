@@ -11,6 +11,7 @@ timing.
 exact retail-consumer keyboard input and bounded two-track graphics/lifecycle
 are accepted; coherent framebuffer fetch is exact-oracle/live accepted, and
 same-state fetch batching is exact desktop/iOS/oracle/retail accepted, while
+unified-state batching and direct RGB5551 fragment decode are profile-rejected;
 Simulator cadence, broad visual churn and every physical-iPad M8/M9 gate remain
 open
 
@@ -25,7 +26,8 @@ The human-readable running status and elapsed-time ledger is
 record is maintained in `docs/history/ENGINEERING-JOURNAL.md`; it records
 commands, evidence, failures, decisions, validation, and remaining limitations
 so the project can be reconstructed historically rather than only understood
-from its final state.
+from its final state. `docs/history/THREE-DAY-CHECKPOINT.md` provides the
+readable end-to-end map through the 258,100-second checkpoint.
 
 ## Non-negotiable constraints
 
@@ -1465,6 +1467,10 @@ The next dependency-ordered work is:
    about five times the 30-FPS budget. Do not pursue the rejected unified-state
    shader route: dynamic and format-specialized variants reduced the same state
    to 26 and 52 calls but regressed total cost to 248.567 and 236.441 ms;
+   also do not replace the RGB5551 lookup texture with the tested direct
+   integer fragment decode, which preserved every oracle but regressed the
+   identical 66-call / 119-split / 78-fetch / 56-merge state from 187.002 to
+   198.412 ms;
 5. reopen physical-device work only after the Simulator route is usable,
    visually complete and diagnosable.
 
@@ -1474,4 +1480,7 @@ Evidence and exact hashes are in
 ordered-overlap oracle, live hashes, matched methodology and command chronology
 are in `docs/parity/2026-08-01-ios-framebuffer-fetch-batching.md`. The two
 correct-but-slower follow-on designs and full restoration boundary are in
-`docs/parity/2026-08-01-ios-unified-fetch-state-rejection.md`.
+`docs/parity/2026-08-01-ios-unified-fetch-state-rejection.md`. The later
+pixel-exact but slower direct decoder, launch-argument correction, complete
+profile hashes, matched comparison, preservation checks, and restoration are
+in `docs/parity/2026-08-01-ios-direct-rgb5551-decode-rejection.md`.

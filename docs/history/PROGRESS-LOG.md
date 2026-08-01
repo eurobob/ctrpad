@@ -2776,3 +2776,57 @@ The exact-replay reading was 255,884 seconds: 2 days, 23 hours, 4 minutes,
 evidence is in
 `docs/parity/2026-08-01-ios-unified-fetch-state-rejection.md`. The checkpoint
 is exact-accepted; the overall goal remains active.
+
+### 2026-08-01 — Rejected direct RGB5551 decode and wrote the three-day history
+
+- Inspected the accepted renderer and rejected resolution reduction because
+  the main target already uses the retail logical display size. Prototyped the
+  narrower one-file removal of the dependent RGB5551 lookup texture.
+- Closed both devices/GUI before compilation. A stale Computer Use window
+  caused one failed Command-Q and two state timeouts; direct PID inspection and
+  normal SIGTERM closed the exact GUI. All builds retained nice 15 / one job.
+- The dirty macOS build took 71.99 seconds, repeated the 32 known warnings,
+  passed 22/22 tests in 3.61 seconds, and independently passed the pixel oracle
+  in 1.24 seconds. The fresh iOS thin-ARM64 executable is `ddc83538...773d`;
+  its isolated strict-verified ad-hoc copy is `65d64ad3...7c86`.
+- The disposable-device update preserved the 605,698,800-byte retail BIN and
+  6,016-byte save at their canonical inodes/hashes. The actual iOS oracle kept
+  12 fallback / 5 active draws and logical `851169f2644a1675`, blend
+  `0c0d08324ae06c35`, and presentation `172d49a34571b64c`.
+- Computer Use verified copyright/menu, Crash/kart/portraits, Crash Cove
+  preview/map, No Ghost, fly-in and a complete grid/HUD/minimap/overlay. An
+  animated fly-in label initially looked clipped; the settled frame proved it
+  was a transition, not missing data.
+- The first normal launch used an invalid `--profile-renderer` shorthand and
+  correctly produced no CSV. Source inspection found `--perf-dir`; one
+  controlled restart on the same device created the intended profile. This
+  mistake is retained rather than laundering the first run into evidence.
+- Correct-ID termination finalized 1,931 complete 59-field rows plus one
+  excluded 54-field partial row at `7b574948...40b`, a header-only GPU file,
+  and clean rotating logs. In the identical 66-call / 119-split / 78-fetch /
+  56-merge state, 248 candidate frames average 198.412 ms versus 187.002 ms for
+  200 accepted frames: a 6.10% regression.
+- Rejected the candidate and restored the lookup-texture source with
+  `apply_patch`. The worktree returned exactly to accepted
+  `07bbc599bccc`; ignored candidate build/install evidence is not a release
+  artifact.
+- Added `docs/history/THREE-DAY-CHECKPOINT.md`, an end-to-end milestone,
+  evidence, limitation, rebuild, failure and elapsed-time map, plus the focused
+  direct-decoder rejection report and cross-links from README, Roadmap,
+  Decisions, parity index, progress log, and engineering journal.
+- The first local-link audit reused zsh's special `path` variable in a
+  subshell, which hid `rg` from the final whitespace command. The shell exited
+  without persistent environment change. The corrected `doc_path` audit found
+  balanced fences, no missing referenced Markdown file and no trailing space.
+- The connected GitHub app returned 404 for the private PR. The permitted CLI
+  fallback's first unqualified read-only query resolved upstream
+  `CTR-tools/ctr-native` and its unrelated closed PR #1. No mutation occurred.
+  Repeating with explicit `--repo chrissotraidis/ctrpad` proved the intended
+  private draft PR #1 open, clean and mergeable from `codex/arm64-apple` to
+  `main`; every publication command is repository-qualified.
+
+The rejection/history reading was 258,100 seconds: 2 days, 23 hours,
+41 minutes, 40 seconds cumulative, 2,216 seconds (36 minutes, 56 seconds) after
+the exact-replay boundary. The overall goal remains active: Simulator cadence,
+broader churn, physical-iPad execution, human touch ergonomics, user-owned
+signing, and final package/source pairing are still open.

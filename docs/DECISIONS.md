@@ -579,3 +579,28 @@ independent pixel oracle. Full chronology is in
 `docs/parity/2026-08-01-ios-unified-fetch-state-rejection.md`. A different
 optimization must pass the same matched-state performance gate before it is
 retained.
+
+## 2026-08-01 — Retain the RGB5551 lookup texture
+
+**Decision:** keep the accepted 256x256 RG8-to-RGBA lookup texture in the
+4/8/16-bit PS1 fragment paths. Do not replace it with the tested high-precision
+integer RGB5551 decoder on the Apple Software Renderer.
+
+**Why:** direct decode is logically attractive because nearest filtering avoids
+one dependent lookup and bilinear filtering avoids four. It preserved the
+historical `channel5 << 3` color and `STP << 7` alpha semantics, every desktop
+and iOS pixel hash, draw/split structure, and the bounded retail appearance.
+Nevertheless, the exact 66-call / 119-split / 78-fetch / 56-merge Crash Cove
+state rose from 187.002 to 198.412 ms. Triangle time rose from 144.237 to
+153.395 ms. Removing a texture access is not an optimization when the target
+software rasterizer handles integer bit manipulation more slowly.
+
+**Verification boundary:** the dirty macOS build passed 22/22 tests and the
+desktop pixel oracle; the actual 1032x1376 iOS surface passed the coherent-
+fetch-versus-fallback oracle and established logical/blend/presentation hashes;
+Computer Use showed coherent menu/character/track/ghost/fly-in/grid content;
+two rotating logs had zero targeted faults; update installation preserved the
+retail BIN and save; and 248 matched candidate frames were compared with 200
+accepted frames. The candidate source was restored before publication. Full
+chronology is in
+`docs/parity/2026-08-01-ios-direct-rgb5551-decode-rejection.md`.

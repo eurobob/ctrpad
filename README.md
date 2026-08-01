@@ -2,6 +2,18 @@
 
 A native PC port of Crash Team Racing (PS1, 1999), built on top of the [CTR-ModSDK](https://github.com/CTR-tools/CTR-ModSDK) decompilation project.
 
+## Apple port status
+
+CTRPad now builds natively for ARM64 macOS, iOS, and iPadOS; imports a
+user-owned NTSC-U retail BIN; persists saves; and provides controller,
+keyboard, and touch-first input. The bounded iPad Simulator retail route is
+functional and visually coherent, but heavy scenes remain approximately
+5–6 FPS under Apple's software renderer and the physical-iPad acceptance gate
+is still open. Read `docs/history/THREE-DAY-CHECKPOINT.md` for the complete
+implementation chronology, evidence map, exact current boundary, rebuild path,
+rejected experiments, and remaining work. Do not interpret a successful build
+as final device acceptance.
+
 ## Philosophy
 
 - **No byte budget.** Game source lives in `game/` as our own copies. Edit freely.

@@ -145,6 +145,11 @@ Current evidence and procedures:
   Renderer regressions despite lower draw counts, complete failed-command and
   recovery chronology, source restoration, preservation hashes and the reason
   the published same-state renderer remains accepted.
+- `2026-08-01-ios-direct-rgb5551-decode-rejection.md` records the later
+  pixel-identical direct packed-color fragment decoder, exact desktop/iOS
+  oracles, one-Simulator visual route, corrected profiler invocation, complete
+  CSV/log/build/preservation hashes, matched 6.10% regression, and source
+  restoration to the accepted lookup-texture renderer.
 - `2026-07-31-ios-sandbox-storage.md` records the bundle/Documents/Application
   Support ownership split, Documents-priority retail startup, private log and
   memory-card roots, Files metadata, exact cross-target matrix, rejected

@@ -13890,3 +13890,101 @@ reading was 255,884 seconds (2 days, 23 hours, 4 minutes, 44 seconds), 1,064
 seconds after rejection/restoration. The exact checkpoint is accepted; cadence,
 wider churn, touch-race ergonomics and all physical-device/final-package gates
 remain open.
+
+## 2026-08-01 — Direct RGB5551 decode rejection and publication-history boundary
+
+Source inspection showed that `NativeRenderer_BindMainRenderTarget` already
+renders the retail scene at `activeDispEnv.disp` dimensions, so lowering that
+target would trade fidelity for speed and was not implemented. The remaining
+obvious per-fragment redundancy was the 256x256 RG8-to-RGBA lookup after PS1
+4/8/16-bit texture sampling. Nearest uses one dependent lookup; bilinear uses
+four. The bounded prototype replaced only that lookup with `highp` integer
+decode and intentionally emitted the existing lookup's `channel5 << 3` and
+`STP << 7` values. Vertex ABI, logical trace, batching, state, feedback,
+resolution and presentation stayed unchanged.
+
+Both named devices were shut down before compilation. Computer Use's first
+`super+q` had no active Simulator target; follow-up app-state requests timed
+out after device shutdown. Direct process inspection identified PID 32966 and
+normal `SIGTERM` closed the GUI. The nice-15 one-job macOS build completed in
+71.99 seconds with the same 32 warnings. All 22 tests passed in 3.61 seconds;
+the standalone 1.24-second pixel test retained logical `851169f2644a1675`,
+blend `0c0d08324ae06c35`, presentation `a7798c5a6ddee965`, and fallback/active
+12/12.
+
+The iOS build completed and linked a fresh thin ARM64 app at 14:27:03 CDT, but
+tool-output compaction discarded its final console chunk. The exact elapsed
+time and warning count are therefore unknown and are not inferred. Direct
+inspection found unsigned hash `ddc83538...773d`. An isolated copy was
+ad-hoc-signed, passed strict/deep verification, and hashed `65d64ad3...7c86`.
+
+Only disposable `26F3...09C06` booted. The first two compound boot/install
+commands ended after boot evidence; the isolated install command completed in
+2.71 seconds. It was an update install and remapped data to container 402596C0.
+Retail inode 111450682 / 605,698,800 bytes / `f780bf23...7c0` and save inode
+111309627 / 6,016 bytes / `6a01b0f5...9a3` survived unchanged. The actual GLES
+oracle reported fallback/active 12/5 with established logical, blend/oracle and
+`172d49a34571b64c` presentation hashes.
+
+The initial normal launch used `--profile-renderer=perf-direct-decode-dirty-07bbc`.
+It was visually useful but not a profiler option. Computer Use advanced by
+accessible touch Cross and keyboard Down/C through copyright, main menu,
+character, Crash Cove, No Ghost, fly-in and grid. It recovered one transient
+`noWindowsAvailable` by targeting the full Simulator path. A fly-in capture
+showed transition-clipped labels; a settled capture proved the full HUD, kart,
+track, waterfall, sky, banner, minimap and overlay coherent. The first rotating
+log later finalized at `a4914173...13be`; targeted faults are zero.
+
+Reading `platform/native_perf.c` identified the accepted `--perf-dir PATH`
+interface. The app restarted once on the same device with an unused writable
+path. The log explicitly announced both CSV files. The verified screen-by-
+screen route returned to a stationary Crash Cove grid and accumulated more
+than 500 complete level-3 rows. Correct bundle-ID termination left no app
+process and finalized frame CSV `7b574948...40b` (644,630 bytes, 1,932 lines),
+GPU header `af0f3466...91f6`, and app log `68eec948...789f` (53 lines, 6,870
+bytes). The CSV has 1,931 complete 59-field rows and one excluded 54-field tail;
+both logs have zero targeted faults.
+
+The matched selector requires level 3, 66 draw calls, 119 logical splits, 78
+fetch splits and 56 merged splits. The accepted `perf-exact-125966b21` gives
+200 rows at 187.002 ms total, 156.406 ms work, 144.237 ms triangles, 8.990 ms
+present and 5.348 reciprocal FPS. The direct decoder gives 248 rows at 198.412,
+164.397, 153.395, 8.455 ms and 5.040 FPS. The 0.535-ms presentation decrease
+does not offset the 9.158-ms triangle increase; total regresses 6.10%.
+
+The experiment was rejected. `apply_patch` restored the lookup uniform/helper,
+four bilinear lookup calls and nearest lookup. `git diff --check` passed and
+source returned exactly to published `07bbc599bccc`. The ignored build and
+installed app remain candidate evidence and must not be mistaken for a clean
+release artifact.
+
+At the user's explicit request to push all accepted work and merge it into
+GitHub `main` before further optimization, documentation became the immediate
+gate. `docs/history/THREE-DAY-CHECKPOINT.md` now connects the complete M0–M11
+campaign, exact accepted/rejected paths, resource discipline, evidence model,
+current limitations, rebuild/sign/install instructions, and future gate. The
+focused rejection report retains hashes, profiler correction, Computer Use
+recovery, visual boundary, preservation proof and matched decision.
+
+The first read-only documentation audit used `path` as the loop variable.
+Because zsh treats lowercase `path` as its special array paired with `PATH`, the
+loop hid `rg` before the final whitespace command and produced `command not
+found`. That subshell exited without changing the parent environment. The
+corrected loop used `doc_path`; both new documents had balanced code fences,
+every referenced local Markdown file existed, no trailing whitespace was
+found, and `git diff --check` remained clean.
+
+The GitHub connector returned 404 when asked for private
+`chrissotraidis/ctrpad` PR #1, so the publication workflow used its documented
+authenticated `gh` fallback. The first unqualified `gh repo view` / `gh pr
+view 1` resolved the configured upstream repository and printed
+`CTR-tools/ctr-native`'s unrelated closed PR #1. Those calls were read-only.
+The corrected commands passed `--repo chrissotraidis/ctrpad` explicitly and
+proved the intended private draft PR open, mergeable, `mergeStateStatus=CLEAN`,
+head `07bbc599bccc`, branch `codex/arm64-apple`, and base `main`. All subsequent
+GitHub reads and mutations are repository-qualified.
+
+The documentation-open reading was 258,100 seconds (2 days, 23 hours,
+41 minutes, 40 seconds), 2,216 seconds (36 minutes, 56 seconds) after the
+published exact-replay boundary. It is cumulative goal time, not a build
+benchmark or person-hour estimate. The overall goal remains active.
