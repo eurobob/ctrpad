@@ -137,8 +137,16 @@ extern int SDL_AppleTVRemoteOpenedAsJoystick;
 
         data.viewcontroller.view = view;
 
-        data.uiwindow.rootViewController = nil;
-        data.uiwindow.rootViewController = data.viewcontroller;
+        // CTRPad targets iOS 15 and later. Preserve the installed root view
+        // controller so current UIKit can finish its appearance transition,
+        // then attach the controller's replacement view directly.
+        if (data.uiwindow.rootViewController == data.viewcontroller) {
+            if (view && !view.superview) {
+                [data.uiwindow addSubview:view];
+            }
+        } else {
+            data.uiwindow.rootViewController = data.viewcontroller;
+        }
 
         [data.uiwindow layoutIfNeeded];
     }
@@ -156,13 +164,18 @@ extern int SDL_AppleTVRemoteOpenedAsJoystick;
         [data.viewcontroller.view removeFromSuperview];
         data.viewcontroller.view = self;
 
-        /* The root view controller handles rotation and the status bar.
-         * Assigning it also adds the controller's view to the window. We
-         * explicitly re-set it to make sure the view is properly attached to
-         * the window. Just adding the sub-view if the root view controller is
-         * already correct causes orientation issues on iOS 7 and below. */
-        data.uiwindow.rootViewController = nil;
-        data.uiwindow.rootViewController = data.viewcontroller;
+        /* The root view controller handles rotation and the status bar. SDL's
+         * historical iOS 7 path clears and immediately restores that
+         * controller to attach a replacement view. CTRPad's iOS 15 minimum
+         * can preserve the controller's balanced appearance lifecycle and
+         * attach the replacement view directly instead. */
+        if (data.uiwindow.rootViewController == data.viewcontroller) {
+            if (!self.superview) {
+                [data.uiwindow addSubview:self];
+            }
+        } else {
+            data.uiwindow.rootViewController = data.viewcontroller;
+        }
 
         /* The view's bounds may not be correct until the next event cycle. That
          * might happen after the current dimensions are queried, so we force a
