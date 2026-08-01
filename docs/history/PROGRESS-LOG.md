@@ -3054,3 +3054,9 @@ source archive at SHA-256 `b9dfcc85...cba4`. Internal and independent checksum
 checks passed; the tool/template/report were present and both retail/runtime
 and private/package scans returned zero. The 18:00:26 reading was 268,628
 seconds (3 days, 2 hours, 37 minutes, 8 seconds).
+
+At 18:01–18:02 CDT both commits reached GitHub. The connector returned its
+private-repository HTTP 404, then authenticated `gh` fallback opened draft PR
+#7. Its exact 12-file/two-commit scope was `MERGEABLE`/`CLEAN` with no configured
+checks. The 18:02:05 reading was 268,724 seconds (3 days, 2 hours, 38 minutes,
+44 seconds); merge was still pending.

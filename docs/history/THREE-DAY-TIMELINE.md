@@ -47,6 +47,7 @@ adds a complete durable commit ledger.
 | Physical-campaign publication audit | 2026-08-01 17:55:51 | Active goal time reached 3 days, 2 hours, 32 minutes, 43 seconds after the final local regression and exact Simulator-identity recheck. |
 | Collection-linkage audit | 2026-08-01 17:59:07 | Active goal time reached 3 days, 2 hours, 35 minutes, 49 seconds after binding collection to the exact successful prepare manifest and rerunning negative guards. |
 | Physical-handoff source package | 2026-08-01 18:00:26 | Active goal time reached 3 days, 2 hours, 37 minutes, 8 seconds after committing the handoff and verifying its clean 3,253-member corresponding-source archive. |
+| Physical-handoff PR audit | 2026-08-01 18:02:05 | Active goal time reached 3 days, 2 hours, 38 minutes, 44 seconds after pushing both commits and auditing draft PR #7 as clean and mergeable. |
 
 ## Executive chronology
 
@@ -111,6 +112,7 @@ adds a complete durable commit ledger.
 | 17:32–17:33 | Installer commit and source-package proof | Committed `67b4c6276`, produced a 3,249-member source archive containing the helper/report, and corrected a redundant checksum caller's working directory before publication. |
 | 17:38–17:59 | Physical-iPad campaign handoff | Added signed-IPA preflight, non-destructive CoreDevice install/launch, prepare-bound local log/save collection and a redacted human acceptance template; corrected certificate extraction/linkage and dotted-entitlement reads; unsigned IPA, unbound evidence and nonexistent-device probes failed at the intended boundaries; 22/22 regressions and the sole exact Simulator identity passed before publication, so physical acceptance remains open. |
 | 18:00 | Handoff commit and source-package proof | Committed `4349bae8d`; its 3,253-member source archive included the new campaign files, passed two checksum checks and contained no retail/runtime or credential/package matches. |
+| 18:01–18:02 | Physical-handoff GitHub review | Pushed the two-commit checkpoint; the private-repo connector returned 404, authenticated CLI fallback opened draft PR #7, and its exact 12-file scope was clean/mergeable with no configured checks. |
 
 ## Complete durable commit ledger
 

@@ -228,3 +228,11 @@ report, the acceptance template and `ios-device-campaign.sh`; direct scans
 found zero retail/runtime-like or credential/package-like members. The
 18:00:26 goal reading was 268,628 seconds (3 days, 2 hours, 37 minutes and 8
 seconds).
+
+At 18:01–18:02 CDT the two handoff commits were pushed. The preferred GitHub
+connector returned HTTP 404 for the private repository; authenticated `gh`
+fallback created draft PR #7. GitHub then reported exactly two commits and 12
+intended files, head `e7af0bc323034e51ba8e4e0426abd0c7c28f0e79`, base
+`main`, `MERGEABLE`/`CLEAN`, and no configured checks. The 18:02:05 goal reading
+was 268,724 seconds (3 days, 2 hours, 38 minutes and 44 seconds); this was the
+pre-merge boundary.
