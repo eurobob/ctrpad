@@ -175,22 +175,39 @@ preflight_signed_ipa() {
     profile_path="$app_path/embedded.mobileprovision"
     [[ -f "$profile_path" ]] || fail "signed app has no embedded.mobileprovision"
     [[ -d "$app_path/_CodeSignature" ]] || fail "signed app has no _CodeSignature directory"
-    codesign --verify --deep --strict --verbose=2 "$app_path" \
-        >"$evidence_dir/codesign-verify.txt" 2>&1
+    app_trust_dir="$evidence_dir/app-signing-trust"
+    "$signing_trust_tool" app --app "$app_path" \
+        --output-dir "$app_trust_dir" >/dev/null
     codesign --display --verbose=4 "$app_path" \
         >"$evidence_dir/codesign-display.txt" 2>&1
-    app_certificate_prefix="$tmp_dir/app-certificate-"
-    codesign --display "--extract-certificates=$app_certificate_prefix" "$app_path" \
-        >"$evidence_dir/codesign-certificate-extract.txt" 2>&1
-    [[ -f "${app_certificate_prefix}0" ]] || \
-        fail "app signature has no extractable leaf signing certificate"
-    app_certificate_hash="$(shasum -a 256 "${app_certificate_prefix}0" | awk '{print $1}')"
+    app_certificate_hash="$(awk -F= \
+        '$1 == "LEAF_CERTIFICATE_SHA256" { print $2 }' \
+        "$app_trust_dir/trust-manifest.txt")"
+    app_trusted_root_hash="$(awk -F= \
+        '$1 == "TRUSTED_ROOT_CERTIFICATE_SHA256" { print $2 }' \
+        "$app_trust_dir/trust-manifest.txt")"
+    [[ "$app_certificate_hash" =~ ^[0-9a-f]{64}$ ]] || \
+        fail "could not read the trusted app signing certificate hash"
+    [[ "$app_trusted_root_hash" =~ ^[0-9a-f]{64}$ ]] || \
+        fail "could not read the app trusted-root hash"
     signed_entitlements="$tmp_dir/signed-entitlements.plist"
     codesign --display --entitlements - --xml "$app_path" \
         >"$signed_entitlements" 2>"$evidence_dir/codesign-entitlements-display.txt"
 
-    profile_plist="$tmp_dir/profile.plist"
-    security cms -D -i "$profile_path" -o "$profile_plist"
+    profile_trust_dir="$evidence_dir/profile-signing-trust"
+    "$signing_trust_tool" profile --profile "$profile_path" \
+        --output-dir "$profile_trust_dir" >/dev/null
+    profile_plist="$profile_trust_dir/profile-decoded.plist"
+    profile_signer_hash="$(awk -F= \
+        '$1 == "SIGNER_CERTIFICATE_SHA256" { print $2 }' \
+        "$profile_trust_dir/trust-manifest.txt")"
+    profile_trusted_root_hash="$(awk -F= \
+        '$1 == "TRUSTED_ROOT_CERTIFICATE_SHA256" { print $2 }' \
+        "$profile_trust_dir/trust-manifest.txt")"
+    [[ "$profile_signer_hash" =~ ^[0-9a-f]{64}$ ]] || \
+        fail "could not read the trusted profile signer hash"
+    [[ "$profile_trusted_root_hash" =~ ^[0-9a-f]{64}$ ]] || \
+        fail "could not read the profile trusted-root hash"
     profile_platforms="$(plutil -extract Platform json -o - "$profile_plist")"
     grep -q 'iOS' <<<"$profile_platforms" || fail "embedded profile is not valid for iOS"
     profile_name="$(plutil -extract Name raw -o - "$profile_plist")"
@@ -264,7 +281,12 @@ preflight_signed_ipa() {
         printf 'PROFILE_EXPIRATION=%s\n' "$profile_expiration"
         printf 'PROFILE_APPLICATION_ID=%s\n' "$profile_application_id"
         printf 'PROFILE_TEAM=%s\n' "$profile_team"
+        printf 'PROFILE_CMS_SIGNER_CERTIFICATE_SHA256=%s\n' "$profile_signer_hash"
+        printf 'PROFILE_TRUSTED_ROOT_CERTIFICATE_SHA256=%s\n' "$profile_trusted_root_hash"
+        printf 'PROFILE_CMS_TRUST_STATUS=verified\n'
         printf 'SIGNER_CERTIFICATE_SHA256=%s\n' "$app_certificate_hash"
+        printf 'APP_TRUSTED_ROOT_CERTIFICATE_SHA256=%s\n' "$app_trusted_root_hash"
+        printf 'APP_CERTIFICATE_TRUST_STATUS=verified\n'
         printf 'PROFILE_CERTIFICATE_COUNT=%s\n' "$profile_certificate_count"
         printf 'SIGNER_CERTIFICATE_PROFILE_STATUS=verified\n'
         printf 'DEVICE_UDID=%s\n' "${device_udid:-not-requested}"
@@ -274,6 +296,9 @@ preflight_signed_ipa() {
 
 script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 repo_root="$(cd "$script_dir/.." && pwd)"
+signing_trust_tool="$repo_root/tools/verify-ios-signing-trust.sh"
+[[ -x "$signing_trust_tool" ]] || \
+    fail "required signing-trust verifier not found: $signing_trust_tool"
 command_name="${1:-}"
 if [[ -z "$command_name" ]]; then
     usage

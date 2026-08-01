@@ -50,6 +50,8 @@ adds a complete durable commit ledger.
 | Physical-handoff PR audit | 2026-08-01 18:02:05 | Active goal time reached 3 days, 2 hours, 38 minutes, 44 seconds after pushing both commits and auditing draft PR #7 as clean and mergeable. |
 | Physical-handoff main merge | 2026-08-01 18:02:58 | PR #7 merged to `main` as `a19c1a5ef`; the post-merge goal reading reached 3 days, 2 hours, 40 minutes, 4 seconds. |
 | Final publication/source boundary | 2026-08-01 18:06:51 | PR #8's history merged as `7087cc6e0`; its final-main source package passed at 3,253 members / `a748e256...2b01`, and active goal time reached 3 days, 2 hours, 43 minutes, 33 seconds. |
+| Apple trust/preflight audit | 2026-08-01 18:26:33 | Active goal time reached 3 days, 3 hours, 3 minutes, 14 seconds after correcting untrusted-CMS acceptance and real-profile App ID prefix construction. |
+| Apple trust pre-commit repeat | 2026-08-01 18:31:32 | Active goal time reached 3 days, 3 hours, 8 minutes, 18 seconds; 22/22 tests and the Apple-positive/self-signed-negative trust probes passed again. |
 
 ## Executive chronology
 
@@ -117,6 +119,7 @@ adds a complete durable commit ledger.
 | 18:01–18:02 | Physical-handoff GitHub review | Pushed the two-commit checkpoint; the private-repo connector returned 404, authenticated CLI fallback opened draft PR #7, and its exact 12-file scope was clean/mergeable with no configured checks. |
 | 18:02–18:03 | PR #7 main merge and verification | A mistyped full protected-head SHA was refused without merging; the exact queried head then merged as `a19c1a5ef`, and fetched `origin/main` contained the tool, template and focused report. |
 | 18:04–18:06 | History merge and final-main source proof | PR #8 merged as `7087cc6e0`; local/remote heads aligned, the sole Simulator hash stayed exact, and an early asynchronous-package lookup was repeated unchanged after completion to accept the 3,253-member clean source archive. |
+| 18:11–18:31 | Apple trust and real-profile preflight | Reproduced untrusted CMS decoding, added Apple-root-pinned profile/app chain verification, corrected App ID prefix construction and app/profile certificate binding, rejected tampered/untrusted/ad-hoc inputs, retained deterministic unsigned packages and passed 22/22 tests; a final 18:31 repeat passed the Apple-positive and self-signed-negative probes, while the real signed/device positive remains open. |
 
 ## Complete durable commit ledger
 

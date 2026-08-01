@@ -14491,3 +14491,70 @@ all three handoff files and zero retail/runtime or credential/package matches.
 The 18:06:51 reading was 269,013 seconds (3 days, 2 hours, 43 minutes, 33
 seconds). This closes publication of the locally executable handoff, not the
 external signed-iPad campaign.
+
+## 2026-08-01 — Corrected Apple trust and real-profile signing preflight
+
+The next completion audit returned to the credentialed path itself. At 18:11
+CDT an isolated self-signed CMS profile reproduced a claim gap: `security cms
+-D` exited 0 and decoded the payload, while `security verify-cert` exited 1
+with `CSSMERR_TP_NOT_TRUSTED`. OpenSSL trusted verification likewise rejected
+the self-signed certificate. No keychain or trust setting was changed. The
+fixture hash was `09519ad6...be8`; a one-byte-tampered copy was
+`84b3c02f...5e63`.
+
+Source review found a separate real-profile compatibility bug in
+`package-ios.sh`: it required `ApplicationIdentifierPrefix.0` itself to end in
+a dot and concatenated it directly with the bundle ID. Apple's signed
+application identifier is `<prefix>.<bundle-id>` and the App ID prefix can
+differ from Team ID. The packager now normalizes the prefix, cross-checks it
+against the profile application ID and inserts the delimiter itself.
+
+New `tools/verify-ios-signing-trust.sh` verifies CMS integrity with stock
+`/usr/bin/openssl`, validates certificate chains with macOS Security, and
+compares the final root DER hash against the Apple Root CA set in the system
+root keychain. Profile mode additionally requires an Apple provisioning-
+profile signer subject. App mode uses code-signing policy and strict/deep code
+verification. Both signed packaging and physical preflight use the helper;
+the packager now also binds the final leaf certificate to
+`DeveloperCertificates` and reads back its application/team/keychain
+entitlements.
+
+The first candidate exposed two Bash 3.2 errors: top-level help continued into
+the output-dir requirement, and an empty certificate-chain array expanded as
+unbound under `set -u`. Both were corrected before integration. An initial
+positive probe against all of Xcode.app spent almost three minutes in deep
+signature traversal and was terminated as a task-owned process without an
+accepted result. The smaller Apple-signed Calculator app completed in roughly
+two seconds with a three-certificate chain, leaf `d84db96a...1ed57` and pinned
+root `b0b1730e...1f024`. The exact ad-hoc CTRPad Simulator app failed for no
+certificate chain. The untrusted CMS failed chain trust and the tampered CMS
+failed cryptographic verification.
+
+Unknown mode and tracked evidence paths also failed before mutation. A first
+timestamp convenience command used bare `stat`, unavailable on this PATH;
+repeating with `/usr/bin/stat` returned the exact retained timestamps. No
+source or runtime state depended on that harness error. `shellcheck` remained
+unavailable.
+
+At 18:23 CDT, the unchanged iPhoneOS bundle produced two byte-identical
+seven-member unsigned IPAs at `3354bb3e...49ed`; both sidecars passed and no
+profile, code signature, retail or runtime member appeared. Device preflight
+then rejected that IPA for missing `embedded.mobileprovision` before any device
+command. The exact bare-prefix fixture produced
+`SYNTH12345.io.github.chrissotraidis.ctrpad` as intended. After integration,
+the complete macOS ARM64 suite passed 22/22 in 5.56 seconds; syntax/help and
+diff hygiene passed; one Simulator remained booted; signing identities and
+physical devices remained zero.
+
+The 18:26:33 active-time reading was 270,194 seconds (3 days, 3 hours, 3
+minutes, 14 seconds). A real Apple profile and signed CTRPad positive remain
+unexecuted, as do installation and every physical acceptance item. Exact
+evidence is in `docs/parity/2026-08-01-ios-apple-trust-preflight.md`.
+
+At 18:31 CDT the pre-commit repeat passed all 22/22 macOS ARM64 tests in 2.68
+seconds. The final verifier again accepted Apple-signed Calculator.app with
+leaf `d84db96a...1ed57` and pinned root `b0b1730e...1f024`, and again rejected
+the isolated self-signed profile as not trusted under basic policy. The
+18:31:32 active-time reading was 270,498 seconds (3 days, 3 hours, 8 minutes,
+18 seconds). This repeat validates the checked-in candidate; it does not add a
+real Apple development profile, signed CTRPad build or physical-device result.
