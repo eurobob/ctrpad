@@ -1227,6 +1227,17 @@ identities, no provisioning-profile files, and no connected devices, so this
 strengthens current-source package readiness without claiming the physical
 signature/install gate.
 
+The visibility-corrected iPhoneOS executable embedding `4a4b148dd8d1` was then
+repackaged twice from documentation head `8eeebdd48820` with zero booted
+Simulators. The IPAs are byte-identical at SHA-256 `fb684064...d7d6`, pass ZIP
+validation, contain only the standard seven app/legal/install members, and
+retain thin ARM64/iOS 15.0 identity plus exact version/build strings. Package
+staging strips the raw linker's incomplete ad-hoc resource signature; unsigned
+output contains no `_CodeSignature` or profile, while the credentialed branch
+remains responsible for full DER signing and strict verification. Fresh state
+still has zero identities, profiles or connected devices, so physical signing
+is the remaining external boundary rather than a software package ambiguity.
+
 Work:
 
 - Run the complete cross-architecture parity suite and prolonged playtesting.

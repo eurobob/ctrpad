@@ -1968,3 +1968,33 @@ The resumed-runtime reading was 220,500 seconds: 2 days, 13 hours, 15 minutes,
 (34 minutes, 57 seconds) from the final blocker reading, including 529 seconds
 (8 minutes, 49 seconds) for the closing evidence audit. Goal time includes
 pauses/resumes and is not a build benchmark or person-hour estimate.
+
+### 2026-08-01 — Current unsigned IPA reproduced; physical signing inventory unchanged
+
+- Audited the distinction between the raw device-build linker signature and
+  the repository's actual package path. `package-ios.sh` deliberately removes
+  stale signature/profile state before validating and packaging; its signed
+  branch applies a supplied profile, minimal entitlements, DER signing and
+  strict verification.
+- Fresh read-only inventory found zero valid Apple signing identities, no
+  provisioning profiles in either standard Xcode location and no connected
+  physical devices. Both Simulators remained shut down. No credential/device
+  result was invented and no account/keychain/device state was changed.
+- Packaged the exact accepted iPhoneOS executable embedding `4a4b148dd8d1`
+  twice with the same normalized timestamp. Both unsigned IPAs hash to
+  `fb684064...d7d6`; `cmp` passed byte-for-byte and `unzip -t` passed.
+- The archive has exactly seven standard app/legal/install members. Extraction
+  proves thin ARM64, iOS platform, minimum 15.0, exact version/build/SDL
+  identity, and no retail-like file, runtime data directory, profile or
+  `_CodeSignature`. The outputs remain local-only under `/tmp`.
+- Current-source unsigned package reproducibility is accepted. A compatible
+  Apple identity, matching provisioning profile and connected iPad remain the
+  external dependency for signed physical installation; the goal stays active.
+
+The package-result reading was 221,477 seconds: 2 days, 13 hours, 31 minutes,
+17 seconds cumulative. The documentation-close reading was 221,583 seconds:
+2 days, 13 hours, 33 minutes, 3 seconds cumulative. This adds 554 seconds
+(9 minutes, 14 seconds) from the preceding 221,029-second documentation
+boundary, including 106 seconds (1 minute, 46 seconds) for the package closeout.
+Goal time includes pauses/resumes and is not a build benchmark or person-hour
+estimate.

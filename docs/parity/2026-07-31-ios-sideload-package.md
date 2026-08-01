@@ -311,3 +311,52 @@ identity, and a same-source Simulator update/runtime regression. It still does
 not accept Apple-authorized signing, direct iPad installation, on-device Files
 and update persistence, physical touch/keyboard behavior, a complete race, or
 device cadence/thermal/performance.
+
+## Visibility-corrected current-head package revalidation
+
+After the level-visibility correction was compiled and accepted, the exact
+iPhoneOS executable embedding `4a4b148dd8d1` was packaged twice from clean
+documentation head `8eeebdd48820094fc2bd19654cab47f09b7a2944`. No Simulator
+was booted. Both invocations used the same explicit `SOURCE_DATE_EPOCH`, unique
+output names and the unchanged published `package-ios.sh` path. They produced
+byte-identical unsigned IPAs:
+
+```text
+fb6840647df8ce59fee6f7b8eef0173961b3bd93a1d45d531ff9b1304430d7d6
+```
+
+`cmp` returned success and `unzip -t` reported no errors. Each archive contains
+exactly the same seven standard members:
+
+```text
+Payload/
+Payload/CTRPad.app/
+Payload/CTRPad.app/LICENSE
+Payload/CTRPad.app/THIRD_PARTY_NOTICES.md
+Payload/CTRPad.app/INSTALL-IOS.md
+Payload/CTRPad.app/CTRPad
+Payload/CTRPad.app/Info.plist
+```
+
+The extracted executable is thin ARM64 Mach-O, has `LC_BUILD_VERSION` platform
+`IOS`, minimum iOS 15.0 and SDK 26.5, and embeds version
+`0.1.0-beta.7.1`, build ID `4a4b148dd8d1` and SDL identity
+`SDL-3.4.10-beta-7.1-157-g4a4b148dd`. The plist retains bundle identifier
+`io.github.chrissotraidis.ctrpad`, both iPhone/iPad device families, Files
+sharing/open-in-place metadata and the supported orientation declarations.
+
+Scans found no retail-like file, Documents/Application Support/memcards
+directory, provisioning profile or `_CodeSignature`. This clarifies the raw
+CMake-bundle observation in the later visibility report: its incomplete linker
+ad-hoc resource signature is deliberately stripped from package staging. The
+unsigned IPA truthfully has no authorization. When an identity and matching
+profile are supplied, the signed branch replaces it with a full signature,
+DER entitlements and strict verification before archiving.
+
+Fresh local authorization inventory still reports zero valid code-signing
+identities, no provisioning-profile files in either standard Xcode location,
+and `No devices found` from `devicectl`. No signer, profile, UDID or install was
+invented. The two IPAs, sidecars and extracted tree remain local under a unique
+`/tmp` directory; they are not a GitHub binary release. Current-source unsigned
+package reproducibility is accepted. Apple-authorized signing and physical-
+iPad installation remain an external device/credential gate.

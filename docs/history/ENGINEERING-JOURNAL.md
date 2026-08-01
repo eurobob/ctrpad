@@ -12578,3 +12578,66 @@ seconds: 2 days, 13 hours, 23 minutes, 49 seconds. That adds 2,097 seconds
 including 529 seconds (8 minutes, 49 seconds) for the closing documentation
 audit. Goal time includes pauses/resumes and is not a build benchmark or
 person-hour estimate.
+
+## 2026-08-01 — Current iPhoneOS package reproducibility and signing inventory
+
+The next dependency after visual acceptance was the signed sideload boundary.
+The raw device CMake bundle had compiled, but its linker-created ad-hoc
+signature was not a complete resource-sealed app signature. Source inspection
+found that this is not the release path: `package-ios.sh` copies the device app
+to an isolated `Payload/CTRPad.app`, removes `_CodeSignature` and
+`embedded.mobileprovision`, validates the thin ARM64/iOS/legal/retail-free
+contract, then either emits an explicitly unsigned IPA or applies a supplied
+identity/profile, DER entitlements and strict verification.
+
+Fresh read-only host inventory returned:
+
+```text
+security find-identity -v -p codesigning  0 valid identities found
+standard provisioning-profile locations  no files
+xcrun devicectl list devices              No devices found
+CTRPad Import Negatives                   Shutdown
+CTRPad Import Validation                  Shutdown
+```
+
+Therefore no Apple-authorized signature or physical install could be performed
+honestly. No keychain, Xcode account, profile or device state was changed.
+
+The already accepted iPhoneOS product embedding `4a4b148dd8d1` was passed to
+two separate packager invocations at nice priority 15. Both used the same
+explicit source timestamp and unique output names under
+`/tmp/ctrpad-package-current.QbdUlr`. The complete procedure was:
+
+```text
+SOURCE_DATE_EPOCH=<8eeebdd48 commit time> ./package-ios.sh \
+  --app build-ios-device-arm64/CTRPad.app --output <first unique IPA>
+SOURCE_DATE_EPOCH=<same> ./package-ios.sh \
+  --app build-ios-device-arm64/CTRPad.app --output <second unique IPA>
+cmp <first> <second>
+unzip -t <first>
+```
+
+Both outputs had exact SHA-256:
+
+```text
+fb6840647df8ce59fee6f7b8eef0173961b3bd93a1d45d531ff9b1304430d7d6
+```
+
+`cmp` returned success. `unzip -t` reported no errors. The seven archive
+members were only the standard `Payload/CTRPad.app` directories, executable,
+`Info.plist`, GPL license, notices and installation guide. The extracted
+executable remained thin ARM64, platform iOS, minimum iOS 15.0, SDK 26.5 and
+embedded exact version `0.1.0-beta.7.1`, build ID `4a4b148dd8d1` and SDL
+identity `SDL-3.4.10-beta-7.1-157-g4a4b148dd`.
+
+Direct scans found no retail-like extension, runtime data directory,
+`embedded.mobileprovision` or `_CodeSignature`. This is intentional unsigned
+output for later user-side or profile-aware signing, not a misleading
+installable claim. It also resolves the raw-bundle signature observation: the
+incomplete linker ad-hoc signature does not survive packaging, and the signed
+branch must replace it with the supplied authorization before it can pass.
+
+The IPAs, SHA sidecars and extracted tree remain local-only. No Simulator was
+booted for this package audit. Current-source unsigned package reproducibility
+is accepted; a compatible Apple identity, provisioning profile and connected
+iPad remain required for the signed physical-install gate.
