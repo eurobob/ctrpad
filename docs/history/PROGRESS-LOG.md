@@ -2539,3 +2539,46 @@ The evidence-analysis goal reading was 245,597 seconds: 2 days, 20 hours,
 the prior 242,344-second boundary. Goal time includes builds, rejected attempts,
 user inspection and pauses/resumes; it is not a build benchmark or person-hour
 estimate. The goal remains active.
+
+### 2026-08-01 — Pushed and exact-replayed coherent framebuffer fetch
+
+- Committed the reviewed implementation and complete dirty chronology as
+  `d3b5bd410` and pushed `codex/arm64-apple`. Confirmed the existing draft PR
+  remains open at `chrissotraidis/ctrpad#1`; an initial unqualified `gh` query
+  resolved the upstream remote, so the final query named the downstream repo
+  explicitly rather than creating a duplicate PR.
+- With both devices and the GUI off, exact macOS configure/build took 2.00 /
+  65.03 seconds and repeated only 32 established warnings. Executable
+  `1a15c334...8c44` embeds `d3b5bd410e9a`; the pixel hashes remained logical
+  `851169f2644a1675`, blend/fallback `f6dc5a2e558bc7b5`, presentation
+  `a7798c5a6ddee965`; all 22 tests passed in 2.54 seconds.
+- Exact iOS configure/build took 1.78 / 77.44 seconds with the same warnings.
+  The thin-ARM64 unsigned executable hashes to `565ff441...8b8`; an isolated
+  signed copy hashes to `80d3b864...785` and passed strict/deep verification.
+  Its enabled GLES oracle matched every fallback byte on the actual 1032×1376
+  surface. Correct-ID termination ended the resident UIKit self-test shell.
+- Booted only the disposable device and exact-replayed `S K K K K I`, followed
+  by K gas and D/K turn taps. Crash Cove remained coherent from logo/menu
+  through motion against the inside cliff; exact retail-poll input was logged.
+  The 285-second run flushed 2,124 frame rows and a 130-line log. CSV SHA is
+  `1c74e036...04b`, log SHA is `f517e967...fbf`, targeted faults are zero.
+- The exact CSV has 976 Crash Cove frames at 6.92 reciprocal FPS overall and
+  7.45 over the final 300. Every semitransparent split in that window records a
+  framebuffer fetch. This accepts the exact implementation route but still
+  rejects the 30-FPS Simulator product gate.
+- Verified the retail BIN retained inode `111450682`, 605,698,800 bytes and
+  canonical SHA `f780bf23...07c0`; the save retained inode `111309627`, 6,016
+  bytes and canonical SHA `6a01b0f5...19a3`. Quit the GUI, confirmed both
+  devices off and deleted six explicit disposable signed-app directories. No
+  product, app data, build result or repository file was removed.
+- Transparently retained two harmless command failures in the detailed record:
+  an analysis filter requested an absent exact 126/79 state and divided by
+  zero, then the corrected query used actual groups; the first best-effort
+  cleanup shutdown line had one extra UDID digit, then the verified command and
+  final status succeeded.
+
+The exact-acceptance goal reading was 247,009 seconds: 2 days, 20 hours,
+36 minutes, 49 seconds cumulative, 1,412 seconds (23 minutes, 32 seconds) after
+the dirty evidence boundary. Goal time includes publication, builds, Simulator
+boot/oracles/live replay, cleanup and analysis; it is not a build benchmark or
+person-hour estimate. The goal remains active.

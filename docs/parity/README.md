@@ -128,8 +128,9 @@ Current evidence and procedures:
   semitransparency design, portable fallback, three rejected pixel-test
   iterations, byte-identical two-pass/GLES oracle, exact diagnostic hashes,
   one-Simulator keyboard/motion/visual route, matched-scene 38.54% draw-call
-  and 8.15% frame-time reductions, and deliberately open exact-replay,
-  performance, scene-churn and physical-device gates.
+  and 8.15% frame-time reductions, exact post-commit desktop/iOS/live
+  acceptance, and deliberately open performance, scene-churn and physical-
+  device gates.
 - `2026-07-31-ios-sandbox-storage.md` records the bundle/Documents/Application
   Support ownership split, Documents-priority retail startup, private log and
   memory-card roots, Files metadata, exact cross-target matrix, rejected

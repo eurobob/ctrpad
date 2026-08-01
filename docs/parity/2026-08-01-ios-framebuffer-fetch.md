@@ -8,18 +8,21 @@ PS1 textured semitransparent split with one ordered GLES draw when coherent
 `GL_EXT_shader_framebuffer_fetch` is available. The portable desktop GL and
 unsupported-GLES path retains the established two-pass implementation.
 
-The result is pixel-equivalent and measurably reduces draw submission, but it
-does **not** close the Simulator performance gate. The dirty diagnostic still
-averages only 5.80 FPS in the structurally matched Crash Cove state. Physical-
-device work remains closed, and exact post-commit replay is required before
-this implementation checkpoint can be accepted.
+The result is pixel-equivalent and measurably reduces draw submission. Exact
+post-commit desktop and iOS oracles plus one-Simulator live replay accept this
+implementation checkpoint, but it does **not** close the Simulator performance
+gate. The matched diagnostic still averages only 5.80 FPS. Physical-device
+work remains closed.
 
 ## Source and device boundary
 
 The diagnostic source tree was based on published commit `ff26c0815a04` and
 identified itself at runtime as `ff26c0815a04-dirty`. The preceding staged-
 presentation profile is the comparison source. No dirty binary is release or
-publication evidence.
+publication evidence. The implementation and this initial record were then
+committed and pushed as `d3b5bd410e9ae3aefcb439b105e67ff95e1ca534` on
+`codex/arm64-apple`; the existing draft PR is
+<https://github.com/chrissotraidis/ctrpad/pull/1>.
 
 Compilation was sequential at nice 15 with one job while both named Simulator
 devices and the Simulator GUI were shut down. Live testing booted only the
@@ -219,7 +222,7 @@ is runtime characterization rather than an optimization comparison.
 
 ## Gate decision
 
-The one-pass path is retained for exact post-commit acceptance because:
+The one-pass path is accepted at the exact implementation checkpoint because:
 
 - every tested output byte matches the portable two-pass oracle;
 - desktop and unsupported GLES retain the portable route;
@@ -229,9 +232,106 @@ The one-pass path is retained for exact post-commit acceptance because:
 
 It is not enough to accept the Simulator gate. The matched 172.324-ms frame is
 still about 5.17 times the 33.333-ms 30-FPS budget. The next dependency is
-exact post-commit replay, then additional submission/state reduction and wider
-scene/effect churn. Physical-device signing, installation, performance,
-multi-touch ergonomics, and final sideload acceptance remain closed.
+additional submission/state reduction and wider scene/effect churn. Physical-
+device signing, installation, performance, multi-touch ergonomics, and final
+sideload acceptance remain closed.
+
+## Exact post-commit acceptance
+
+After `d3b5bd410` was pushed, both named devices and the Simulator GUI remained
+off while the exact products were reconfigured and built sequentially at nice
+15 with one job.
+
+The exact macOS configure took 2.00 seconds and embedded
+`d3b5bd410e9a`. Its incremental revision-dependent build took 65.03 seconds,
+repeated only the 32 established warnings, and produced executable SHA-256:
+
+```text
+1a15c3345e16a03b674a527115a615d4ef934cc0920bccccce19153cb5178c44
+```
+
+The complete native suite passed 22/22 in 2.54 seconds. A separate exact pixel
+run from a disposable directory retained the portable marker and hashes:
+logical `851169f2644a1675`, blend/fallback `f6dc5a2e558bc7b5`, presentation
+`a7798c5a6ddee965`, `framebuffer-fetch=two-pass`, and
+`present=resolve+blit@64x32`. Its temporary log directory was deleted after the
+marker was captured.
+
+The exact iOS Simulator configure took 1.78 seconds and its one-job build took
+77.44 seconds with the same 32 warnings. The product is thin ARM64, identifies
+bundle `io.github.chrissotraidis.ctrpad`, and embeds `d3b5bd410e9a`. The
+unmodified unsigned executable SHA-256 is:
+
+```text
+565ff4417722a1c7e6b31be64bab47ad4bff11f7b134e86906bc017871e2d8b8
+```
+
+A disposable ad-hoc-signed copy passed strict/deep verification and changed
+only the signed-copy executable hash to:
+
+```text
+80d3b864b1750d8505a695a6fd9430ee6cda101d83490f01320a6fde7044b785
+```
+
+Only the disposable device booted. The exact iOS oracle again advertised the
+extension, compiled all four PSX shaders and both VRAM pipelines, and matched
+every fallback byte at blend hash `f6dc5a2e558bc7b5`. The logical and actual-
+surface presentation hashes remained `851169f2644a1675` and
+`172d49a34571b64c`. The UIKit shell stayed resident after the short-lived
+`SDL_main` test returned; explicit correct-ID termination ended PID 3541. The
+same documented immediate-test appearance/accessibility framework diagnostics
+followed app-owned output.
+
+The normal exact retail app then launched with
+`--perf --perf-dir perf-fetch-exact-d3b5bd410`. Computer Use enabled keyboard
+capture and repeated `S K K K K I` to reach Crash Cove. Repeated K followed by
+paired D/K taps moved and turned the kart into the first inside cliff. Logo,
+mode menu, portraits/model, track chooser/preview, prompt, fly-in, grid, kart,
+lighting, HUD, map, banner, terrain, horizon, water, fence and overlay remained
+coherent. The exact app log correlates the keyboard masks at the retail poll.
+
+Correct-ID termination after at least 285.035 seconds flushed:
+
+```text
+frame CSV       705,266 bytes / 2,125 lines including header
+frame CSV SHA   1c74e036b8fa21f21c0346169727dde449fed90d5b7a7c3af078c54ce1b7104b
+GPU CSV         28 bytes / header only
+GPU CSV SHA     af0f3466758a717080c8ac7d955fb6c432274898fb065e304a8d36cf3c9d91f6
+app log         14,753 bytes / 130 lines
+app log SHA     f517e967e6453b4d353c74af5c644b997c27d6d1efba75f3a93d77ca331b7fbf
+targeted faults 0
+```
+
+The exact CSV contains 976 normal Crash Cove frames, averaging 144.598 ms
+(6.92 reciprocal FPS). Its last 300 average 134.157 ms (7.45 FPS), 128.675 ms
+non-wait work, 117.697 ms renderer-triangle time, 166.13 draw calls, 163.14
+splits, 120.28 semitransparent splits, and exactly 120.28 fetch splits. This
+scene mix is not structurally identical to the earlier 126-call matched state,
+so it is exact runtime acceptance rather than a second before/after claim.
+
+An initial exact analysis query requested the dirty profile's absent
+126-draw/79-semitransparent group and divided by zero after reporting the group
+distribution. The corrected query characterized the actual captured states
+and did not alter either CSV. During final cleanup, the first best-effort
+shutdown line contained an extra terminal `6` in the disposable UDID; stderr
+was intentionally ignored, the immediately following line used the verified
+UDID, and the final device list proved both named devices shut down. Neither
+mistake launched, deleted, or changed a device or product.
+
+Update installation preserved the retail/save identities:
+
+```text
+NTSC-U BIN inode 111450682, 605,698,800 bytes
+SHA-256          f780bf2331476aabfc00772fa758b12dd95ebfbc907968132cbd3cdd4e2c07c0
+memory card      inode 111309627, 6,016 bytes
+SHA-256          6a01b0f5562ed7a279d8f8e51e3b1874ac39a6120f55db4fe3873288950619a3
+```
+
+Computer Use released keyboard capture and quit the Simulator GUI before the
+device shutdown. Both named devices were confirmed off. Six explicitly named
+task-owned temporary signed-app directories were then deleted; repository,
+build products, retail data, saves and the preserved app evidence were not
+removed.
 
 The evidence-analysis goal reading was 245,597 seconds: 2 days, 20 hours,
 13 minutes, 17 seconds cumulative. This is 3,253 seconds (54 minutes, 13
@@ -239,3 +339,9 @@ seconds) after the previous 242,344-second in-progress boundary. Goal time
 includes builds, rejected attempts, live user inspection, pauses/resumes, and
 documentation; it is not a build benchmark or person-hour estimate. The goal
 remains active.
+
+The exact-acceptance reading was 247,009 seconds: 2 days, 20 hours, 36 minutes,
+49 seconds cumulative, adding 1,412 seconds (23 minutes, 32 seconds). This
+includes publication, exact builds, Simulator boot/oracles/live replay,
+cleanup and evidence analysis. It is not a build benchmark or person-hour
+estimate. The goal remains active.

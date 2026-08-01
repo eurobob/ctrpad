@@ -13567,3 +13567,73 @@ markers and gate decision are in
 `docs/parity/2026-08-01-ios-framebuffer-fetch.md`. The evidence-analysis goal
 reading was 245,597 seconds (2 days, 20 hours, 13 minutes, 17 seconds), 3,253
 seconds after the previous boundary. The goal remains active.
+
+## 2026-08-01 — Converted the fetch prototype into an exact published checkpoint
+
+After the dirty profile passed review, the implementation, new parity report,
+roadmap and both history ledgers were staged by explicit path. The cached
+macOS tree needed no work and the complete suite passed 22/22 in 2.40 seconds.
+Commit `d3b5bd410e9ae3aefcb439b105e67ff95e1ca534` was pushed to
+`origin/codex/arm64-apple`. An unqualified `gh repo view` chose the upstream
+remote and therefore found no current branch PR; the corrected downstream-
+qualified query proved `chrissotraidis/ctrpad#1` already open as a draft. No
+duplicate PR was created.
+
+Every exact build ran with both named devices and Simulator GUI off, nice 15
+and one job. Reconfiguring macOS embedded `d3b5bd410e9a` in 2.00 seconds. The
+revision-dependent relink took 65.03 seconds, repeated the same 32 warnings and
+produced executable `1a15c334...8c44`. All 22 tests passed in 2.54 seconds. An
+independent exact pixel invocation from a disposable directory retained
+logical `851169f2644a1675`, blend and fallback `f6dc5a2e558bc7b5`, staged
+presentation `a7798c5a6ddee965`, and the desktop two-pass route. The directory
+was then deleted.
+
+The exact iOS Simulator configure/build took 1.78 / 77.44 seconds with the same
+warning set. Its unsigned thin-ARM64 executable embeds the exact revision and
+hashes to `565ff441...8b8`. A disposable ad-hoc-signed copy changed that copy's
+hash to `80d3b864...785` and passed strict/deep verification; the unsigned
+artifact stayed unchanged. Only the disposable device booted. The exact GLES
+self-test advertised coherent fetch, compiled all four PSX shaders and both
+VRAM pipelines, matched every fallback byte at `f6dc5a2e558bc7b5`, retained
+logical `851169f2644a1675`, and tested the real 1032×1376 presentation at
+`172d49a34571b64c`. Explicit correct-ID termination ended the UIKit shell that
+remains resident after the self-test's `SDL_main` returns. The known immediate-
+teardown UIKit/accessibility diagnostics followed app-owned success output.
+
+The normal exact app launched with `perf-fetch-exact-d3b5bd410`. Computer Use
+enabled keyboard capture, watched the coherent boot/logo/menu sequence, and
+repeated `S K K K K I`. K gas taps and D/K turn taps moved Crash into the first
+inside cliff, exercising kart lighting, canyon texture, horizon, water, fence,
+HUD/map and touch overlay under motion. The persistent log identifies exact
+build `d3b5bd410e9a`, the Apple Software Renderer, enabled fetch, ready shaders/
+pipelines, UIKit/touch loops and combined `0x4020` retail-poll masks.
+
+Correct-ID termination after at least 285.035 seconds flushed 2,124 frame rows
+at `1c74e036...04b`, a 28-byte header-only GPU CSV at `af0f3466...91f6`, and a
+130-line / 14,753-byte app log at `f517e967...fbf`. The targeted renderer,
+asset, cache, texture, shader, pipeline, application-error and crash scan is
+empty. The CSV contains 976 normal Crash Cove frames averaging 144.598 ms
+(6.92 reciprocal FPS); its last 300 average 134.157 ms (7.45 FPS), and every
+120.28 average semitransparent split records fetch. This exact scene mix differs
+from the diagnostic matched state and is therefore runtime acceptance, not a
+manufactured second performance comparison.
+
+The first exact analysis filter looked for the dirty run's absent 126-draw /
+79-semitransparent state and reached awk's division-by-zero exit after printing
+the actual distribution. The replacement analyzed the captured groups and
+left the CSV untouched. During cleanup, an explicitly best-effort shutdown
+line had an extra terminal `6` in the disposable UDID; its stderr was ignored,
+the next line used the verified UDID, and the final list proved both named
+devices off. Neither mistake changed a device or product.
+
+The update preserved retail BIN inode `111450682`, 605,698,800-byte size and
+canonical `f780bf23...07c0`, plus save inode `111309627`, 6,016-byte size and
+canonical `6a01b0f5...19a3`. Computer Use released keyboard capture and quit
+the GUI. Six explicitly named temporary signed-app directories were deleted;
+the repo, ordinary builds, app data and evidence remain. The implementation
+checkpoint is exact-accepted while the Simulator performance and physical-
+device gates stay open.
+
+The exact-acceptance goal reading was 247,009 seconds (2 days, 20 hours,
+36 minutes, 49 seconds), 1,412 seconds after the dirty evidence boundary. The
+goal remains active.
