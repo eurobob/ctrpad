@@ -12,7 +12,8 @@ functional and visually coherent, but heavy scenes remain approximately
 is still open. Read `docs/history/THREE-DAY-CHECKPOINT.md` for the complete
 implementation chronology, evidence map, exact current boundary, rebuild path,
 rejected experiments, and remaining work. Do not interpret a successful build
-as final device acceptance.
+as final device acceptance. The exact timestamped index and complete
+151-commit campaign ledger are in `docs/history/THREE-DAY-TIMELINE.md`.
 
 ## Philosophy
 
