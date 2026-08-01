@@ -75,6 +75,16 @@ Current evidence and procedures:
   reselect path, rejected hot-swap boundary, real Files cancel/invalid/valid
   outcomes, atomic disc replacement, exact save preservation, cold relaunch,
   cross-target hashes, and deliberately open physical-device/provider gates.
+- `2026-08-01-ios-control-settings.md` records persisted handedness, size and
+  opacity controls, the in-game keyboard legend, minimum setting targets,
+  Reset/Done and short-height scrolling, the rejected stale-window clipping
+  diagnosis and unarmed keyboard report, update preservation, exact builds,
+  and deliberately open physical-iPad ergonomics/multi-touch gates.
+- `2026-08-01-level-visibility-cache.md` records the user-visible missing-
+  scene report, the exact 268-error cache-exhaustion signature, the eight-entry
+  LP64 sidecar lifetime root cause, range-aware memory-pack correction,
+  targeted/range/all recycling coverage, resource-throttled validation status,
+  and deliberately pending post-fix live churn gate.
 - `2026-07-31-ios-sandbox-storage.md` records the bundle/Documents/Application
   Support ownership split, Documents-priority retail startup, private log and
   memory-card roots, Files metadata, exact cross-target matrix, rejected

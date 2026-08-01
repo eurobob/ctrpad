@@ -3,7 +3,8 @@
 - Date: 2026-08-01
 - Discovery target: `CTRPad Import Validation`, iOS 26.5 ARM64 Simulator
 - Discovery build: published pre-correction branch state
-- Correction status: implementation complete; build/runtime acceptance pending
+- Correction status: provisionally published at `eeaf2c72c`; build/runtime
+  acceptance pending
 
 ## User-visible defect
 
@@ -109,4 +110,5 @@ The root cause and source correction are complete. Compilation, deterministic
 tests, a disposable one-Simulator runtime, absence of the 268-error signature
 after more than eight distinct level allocations, exact-build publication and
 post-fix visual acceptance remain pending. Until those pass, the renderer/
-asset defect is diagnosed and corrected in source but not accepted.
+asset defect is diagnosed and corrected in source but not accepted. Checkpoint
+`eeaf2c72c` is a remote backup and review boundary only.

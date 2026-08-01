@@ -7,10 +7,11 @@ timing.
 
 **Roadmap status:** active
 
-**Current milestone:** M10 — touch-control iteration, while M8/M9 await their
-physical-iPad signing, controller, Files, performance, and lifecycle gates
+**Current milestone:** M7 level-visibility regression correction, then M10
+touch-control iteration; M8/M9 still await physical-iPad signing, controller,
+Files, performance, and lifecycle gates
 
-**Last updated:** 2026-07-31
+**Last updated:** 2026-08-01
 
 This is the working source of truth for the port. Milestone status changes only
 after its acceptance evidence has been recorded. A successful compile is
@@ -818,6 +819,23 @@ pass. The implemented mask claim is deliberately limited to CTR's bit-0
 packet path. Full rejected-fixture, failure, hash and preservation evidence is
 in `docs/parity/2026-07-31-renderer-pixel-semantics.md`.
 
+On 2026-08-01 a direct user report correctly challenged the earlier broad
+"coherent pixels" descriptions. The protected Simulator log contains 268
+asset-reference failures: 134 paired level-visibility cache exhaustions in
+`LOAD_TenStages` and `MainInit`, with no second model/texture/file failure
+class. The eight-entry LP64 sidecar cache outlived the LEV allocations released
+by memory-pack pop/clear operations; once full, `visMem1` became null and
+`RenderAllLevelGeometry` skipped the entire level while instances could remain.
+A range-aware invalidation correction is implemented at every low-memory pack
+reset with targeted/range/all media-free recycling coverage. Provisional
+checkpoint `eeaf2c72c` preserves that reviewed source and its explicit pending
+status on GitHub. Build and live
+more-than-eight-level churn remain pending because validation was stopped to
+honor the user's one-Simulator and low-system-load constraints. M7 visual
+acceptance is reopened until that post-fix gate passes. Full evidence and the
+superseded call-site-only draft are in
+`docs/parity/2026-08-01-level-visibility-cache.md`.
+
 Work:
 
 - Diff Simon358's GLES branch against the exact upstream baseline and port only
@@ -1125,6 +1143,20 @@ grid. Exact root cause, build hashes, rejected diagnostic routes and packet
 frames are in `docs/parity/2026-07-31-ios-hardware-keyboard.md`. Physical-iPad
 keyboard delivery remains open.
 
+Checkpoint `828d095809fc` adds an accessible, scrollable **CONTROLS** sheet.
+Left/right steering handedness mirrors the steering and face-button clusters;
+Small/Standard/Large scale and Low/Standard/High opacity apply immediately and
+persist through `NSUserDefaults`. Every interactive setting target remains at
+least 44 points, Reset removes the preference keys and restores the defaults,
+and presenting, rebuilding or dismissing the sheet resets active touch state.
+The sheet also exposes the already-published `WASD`, `IJKL`, `Q/E`, `P` and Tab
+keyboard test map; the shared SDL-to-PS1 keyboard transport was not duplicated.
+Live Simulator validation covered both handedness layouts, all three settings,
+short-height scrolling, Reset/Done accessibility, all eleven overlay controls,
+and unchanged retail BIN/save identities. Physical-iPad feel and simultaneous
+three-boost drift remain open. Exact evidence is in
+`docs/parity/2026-08-01-ios-control-settings.md`.
+
 Work:
 
 - Retain the implemented touch peer in the platform input composition path so
@@ -1136,8 +1168,9 @@ Work:
   (`docs/ctr-native-viability.md:319-358`).
 - Cover menu navigation, accelerate, brake/reverse, hop/drift, fire/aim,
   camera, pause, and race-start skip without obscuring critical play space.
-- Add safe-area, hand-size, handedness, opacity, scale, and remapping options as
-  testing justifies them.
+- Retain the accepted safe-area layout, handedness, opacity and scale settings;
+  evaluate per-control remapping only after physical-iPad testing identifies a
+  concrete need.
 
 Acceptance:
 

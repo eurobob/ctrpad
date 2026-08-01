@@ -246,6 +246,9 @@ the presentations to a Time Trial starting grid, with every press and release
 recorded in player one. A physical keyboard on a real iPad has not yet passed
 the device acceptance gate; see
 `docs/parity/2026-07-31-ios-hardware-keyboard.md` for the exact boundary.
+The iOS **CONTROLS** sheet repeats the practical `WASD` / `IJKL` / `Q` / `E`
+/ `P` / Tab layout so a hardware-keyboard tester does not need this README
+open while playing.
 
 ### iOS/iPadOS Touch Controls
 
@@ -265,6 +268,15 @@ MFi controller can remain active without disabling the overlay.
 | **R DRIFT / BOOST** | R1 | alternate hop/drift side |
 | **PAUSE** | Start | pause or advance |
 | **SELECT** | Select | retail Select input |
+
+Open **CONTROLS** above the game surface to choose left- or right-hand
+steering, Small/Standard/Large controls, and Low/Standard/High opacity.
+Changes take effect immediately and persist on that device; **Reset defaults**
+returns to left-hand steering with standard size and opacity. The sheet is
+scrollable on short landscape displays, and its segmented controls and actions
+retain at least 44-point targets. Opening, rebuilding, dismissing, or resetting
+the sheet neutralizes active touch contacts so a customization change cannot
+leave steering or a button stuck.
 
 Quick keyboard and touch edges remain active for two host snapshots so an
 input update immediately before the next approximately 29.9 Hz retail pad

@@ -9844,6 +9844,151 @@ documentation reading was 176,394 seconds: 2 days, 0 hours, 59 minutes,
 It includes paused/resumed task lifetime and is not a build benchmark or
 person-hour estimate.
 
+## 2026-08-01 — Custom controls, keyboard discoverability, and visibility-cache diagnosis
+
+### Control-settings implementation and first backup
+
+The continuation began from clean published documentation tip `e8e8e0e1f`.
+The existing UIKit overlay had no preferences surface. A new modal form sheet
+was implemented in `platform/apple/native_ios_touch.m` with clamped integer
+preferences for left/right steering, three size choices and three opacity
+choices. Rebuilding first neutralizes touch input, removes old controls, reads
+preferences and recreates the overlay. Steering handedness mirrors the stick
+and face-button constraints; both independent drift controls stay fixed.
+
+The user's new keyboard request triggered an input audit before any second
+event path was added. `NativeInput_DefaultMappings`, `NativeInput_ReadKeyboard`
+and `NativeInput_ApplyKeyboard` already supplied the desired arrows/WASD,
+ZXCV/IJKL, Q/E, P/Return and Tab/Space controls through the shared active-low
+PS1 packet. The README and the exact 1,869-frame iOS keyboard report already
+accepted that path. The correct incremental change was a visible/spoken key
+legend in **CONTROLS**, not a UIKit keyboard bridge.
+
+The first settings layout fit iPad but needed a scroll view and explicit
+minimum heights for short iPhone landscape. The finalized sheet uses safe-area
+frame/content guides; segmented controls and Reset are at least 44 points and
+Done at least 50. Reset removes the three keys, updates the controls and posts
+an accessibility announcement. Present/done/disappear each neutralize touch.
+
+Dirty iOS Simulator and device builds compiled. The disposable
+`CTRPad Import Negatives` clone alone was updated. Its pre-install canonical
+identities were BIN inode `111450682`, 605,698,800 bytes, SHA-256
+`f780bf2331...07c0`, and save inode `111309627`, 6,016 bytes, SHA-256
+`6a01b0f556...619a`.
+
+Computer Use opened the real sheet and selected Steer right, Large and High by
+screenshot-grounded segment coordinates when segment children were absent
+from AX. The underlying cluster mirrored, grew and brightened immediately.
+After Done, Simulator focused protected `CTRPad Import Validation`; it was read
+only and rejected as evidence. The Window menu refocused the disposable clone.
+
+The refocused screen initially appeared to omit all trailing-anchored controls
+in both orientations. This was not waved away. An LLDB attach stopped the app
+without usable expressions; `SIGCONT` restored it, and that route was rejected.
+A diagnostic include first named nonexistent `platform/native_platform.h` and
+failed the build; it was corrected to `platform/native_log.h`. Live logging
+then measured scene/window/parent/overlay `1376x1032`, safe frame
+`(0,0 1376x1012)`, right stick `(1154,790 195x195)` and right drift
+`(1195,11 161x60)`. All frames were inside. Fresh focused Computer Use state
+showed all eleven controls; the apparent clipping was stale/wrong-window state.
+All logging was removed.
+
+The keyboard legend was visible and spoken. The sheet scrolled from its short
+form to expose Reset and Done in AX. Reset restored left/standard/standard and
+left an empty preferences dictionary. Done returned to animated gameplay.
+An F9/P/F10 attempt was rejected because the ordinary launch lacked
+`--record --toggle`; the accepted earlier keyboard report remained canonical.
+
+Dirty Simulator/device/macOS builds passed. Desktop and ASan/UBSan matrices
+each passed 22/22. Preservation hashes/inodes remained exact. The one-file
+implementation was reviewed, committed as `828d095809fc` and pushed. Exact
+directories were configured with that clean build ID. Simulator and iPhoneOS
+products completed, but the five-target command was interrupted on the macOS
+desktop compile when the user reported slowness and two Simulator devices.
+
+### Resource correction
+
+The disposable clone was shut down; only protected `CTRPad Import Validation`
+remained booted. All compilers stopped. Remaining validation was retried with
+nice priority 15 and one job. The compiler yielded at roughly 1–4% CPU, but
+`vm_stat` later showed only about 64 MB of free pages, so it too was stopped.
+Subsequent inspection showed Docker/virtualization and Jump Desktop activity,
+but no unrelated user process was killed or changed. Work continued with
+low-memory reads and patches only.
+
+### User-visible missing geometry and exact failure signature
+
+The user then asked whether the iPad screen clearly had many non-rendering
+assets. The first protected screenshot was an expected checkerboard Loading
+transition and was not counted. The next live demo frame retained kart/HUD
+instances but showed the incomplete-scene symptom. A read-only query resolved
+the protected app data container and audited its production log.
+
+The 2,623-line log has exactly 268 AssetRef lines. Normalization/counting found
+134 `level visibility cache exhausted` errors from `LOAD_TenStages` and 134
+from `MainInit`, all capacity eight. There are no other missing-asset, model,
+texture or asset-reference failure lines.
+
+Source tracing established the causal chain:
+
+1. LP64 `Level_GetVisMem` creates a host-sized `VisMem`/BSP sidecar in the
+   fixed eight-entry `s_levelRuntimeVisMem` table.
+2. `LOAD_Callback_LEV` invalidates only the exact new destination address.
+3. `MEMPACK_PopToState`, `PopState` and `ClearLowMem` discard allocation
+   ranges without removing sidecars keyed by old, differently placed levels.
+4. The ninth distinct level returns null at both load and MainInit.
+5. `MainInit_VisMem` leaves `gGT->visMem1` null.
+6. `RenderAllLevelGeometry` immediately returns for null `visMem1`, suppressing
+   BSP terrain/water/scenery while separate instances can remain visible.
+
+The first correction draft invalidated all at ordinary load and the inactive
+level at hub load. A complete call-site audit found `LOAD_Level`,
+`CS_LoadBoss` and bookmark rollback paths, so the draft was superseded before
+acceptance. The final correction adds `LevelRuntime_InvalidateRange` and calls
+it from the three allocator operations before their pointer/bookmark mutation.
+Address comparisons use `uintptr_t`; only sidecars within the discarded range
+are freed. Hub replacement clears dangling `visMem2`; exact-destination and
+global invalidation remain.
+
+The asset-relocation self-test now registers nine level fixtures, fills all
+eight cache slots, recycles by exact key, refills/recycles by contiguous range,
+proves the five entries outside that range retain their exact sidecars, then
+recycles all. CTest now requires the literal marker
+`cache-recycle=targeted+range+all` so an early-returning test cannot pass on the
+old prefix alone.
+
+### Current boundary
+
+The correction is source-complete and `git diff --check` passes, but its unity
+compile was deliberately stopped for system headroom. It is provisionally
+published as `eeaf2c72c` but is not described as accepted. The protected
+Simulator remains untouched. Required next work is a low-impact build/test
+window, then a disposable single-Simulator run through more than eight level
+allocations with zero exhaustion lines and visual course-geometry evidence.
+M7, M10 and the overall goal remain active.
+
+A narrower validation route was considered after the stop: build only a
+standalone `platform/native_asset_ref.c.o`. Ninja rejected the request with
+`unknown target 'CMakeFiles/ctr_native.dir/platform/native_asset_ref.c.o'`
+because this configuration compiles the project as one unity `main.c.o`.
+No compiler launched and no extra memory pressure was created. The only
+meaningful compile remains the deferred single-job unity target.
+
+Timer reading at this interim boundary: 217,521 seconds, or 2 days, 12 hours,
+25 minutes, 21 seconds cumulative. The prior published boundary was 212,262;
+the interval is 5,259 seconds (1 hour, 27 minutes, 39 seconds). Goal time is
+cumulative and includes pauses, diagnostics, resource throttling and this
+record; it is not a person-hour estimate.
+
+Before provisional source publication the goal API read 218,058 seconds, or
+2 days, 12 hours, 34 minutes, 18 seconds cumulative. This is 537 seconds
+(8 minutes, 57 seconds) after the interim reading and 5,796 seconds (1 hour,
+36 minutes, 36 seconds) after the preceding published boundary. The reviewed
+source/test/report scope was committed as `eeaf2c72c` (`fix: recycle level
+visibility sidecars`) and pushed to `codex/arm64-apple`; publication is a
+recoverability/review boundary, not substitute evidence for its pending unity
+compile or live geometry gate.
+
 ## 2026-07-31 — Touch-only Time Trial, rotation and direct analog delivery
 
 ### Re-established exact starting state

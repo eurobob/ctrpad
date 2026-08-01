@@ -1798,3 +1798,76 @@ close reading was 212,262 seconds: 2 days, 10 hours, 57 minutes, 42 seconds,
 adding 3,434 seconds (57 minutes, 14 seconds) from the preceding published
 checkpoint and 384 seconds (6 minutes, 24 seconds) during the closing audit.
 Goal time includes pauses and resumes and is not a benchmark or labor estimate.
+
+### 2026-08-01 — Control settings and reopened level-geometry gate (in progress)
+
+- Added and pushed implementation `828d095809fc` (`feat: add customizable iOS
+  controls`). The in-game **CONTROLS** sheet mirrors steering/action clusters,
+  applies three size/opacity choices immediately, persists them locally,
+  restores true defaults by removing preference keys, scrolls on short
+  landscape displays and maintains 44-point-or-larger setting actions.
+- The user's requested basic keyboard controls already existed in the shared
+  SDL-to-PS1 path. Rather than add a conflicting bridge, the sheet now exposes
+  the practical WASD/IJKL/Q/E/P/Tab legend. Existing exact Simulator keyboard
+  delivery and ordinary/sanitizer input CTests remain the evidence boundary.
+- Dirty Simulator UI covered right/large/high, all eleven controls, short-sheet
+  scrolling, accessible Reset/Done and return to left/standard/standard. Disc
+  inode/hash `111450682`/`f780bf23...07c0` and save
+  `111309627`/`6a01b0f5...619a` remained unchanged. A stale/wrong-window view
+  initially suggested trailing controls were clipped; geometry logging proved
+  every frame in-bounds and a correctly focused state showed all controls.
+- Rejected one LLDB-stopped geometry attempt, one nonexistent-header build
+  failure, the protected-device screenshot brought forward by Simulator focus,
+  and an F9/P/F10 attempt on a launch that was not armed for reports. Temporary
+  geometry logging was removed before commit.
+- Dirty Simulator/device/macOS builds passed. Ordinary and ASan/UBSan desktop
+  suites each passed 22/22. The implementation was pushed before exact
+  acceptance. The initial five-target exact command was interrupted when the
+  user reported system slowness and two open simulators.
+- Shut down the disposable clone and left exactly one booted device, protected
+  `CTRPad Import Validation`. Heavy builds were stopped. A later nice-15,
+  single-job compile was also stopped when free VM pages were roughly 64 MB.
+  No build/compiler process remains, and no additional simulator will be
+  booted without first preserving the one-device limit.
+- The user then correctly challenged visible missing game assets. Read-only
+  inspection separated the expected checkerboard Loading transition from a
+  running incomplete scene. The protected 2,623-line log contains exactly 268
+  AssetRef errors: 134 `LOAD_TenStages` plus 134 `MainInit` level-visibility
+  cache exhaustions, all at capacity eight, and no second file/model/texture
+  failure class.
+- Root cause: low-memory pack resets invalidated LEV allocations but not their
+  LP64 host-sized visibility/BSP sidecars. After eight distinct destination
+  addresses, `Level_GetVisMem` returned null; `RenderAllLevelGeometry` then
+  skipped the whole course while HUD/kart instances could remain.
+- Replaced a first call-site-only draft with range-aware invalidation at the
+  allocator lifetime boundary. Native ClearLowMem, PopState and PopToState now
+  release only sidecars whose level lies in the discarded range, preserving a
+  live Adventure-hub pack. The inactive hub `visMem2` pointer is cleared.
+  Media-free coverage fills the eight slots and requires targeted, range and
+  full recycling through CTest's exact success marker.
+- M7 visual acceptance is reopened. The source correction is implemented but
+  remains unbuilt/unaccepted under the current resource constraint. Required
+  next gates are compile, focused/full tests, a disposable single-Simulator
+  run through more than eight distinct level allocations, zero new exhaustion
+  lines, exact build publication and visual comparison. M10 and the overall
+  goal remain active.
+- A proposed lightweight compile of only
+  `platform/native_asset_ref.c.o` was rejected cleanly before any compiler ran:
+  this project unity-builds the platform sources through `main.c.o`, so Ninja
+  reported that the standalone object target does not exist. The first
+  meaningful compile therefore remains the larger, deferred unity target.
+- The reviewed correction and deterministic cache test were committed as
+  provisional checkpoint `eeaf2c72c` (`fix: recycle level visibility
+  sidecars`) and pushed to `codex/arm64-apple`. This is a recoverability and
+  review boundary, not a compile, test or runtime acceptance claim.
+
+The preceding published reading was 212,262 goal seconds. This in-progress
+documentation reading was 217,521 seconds: 2 days, 12 hours, 25 minutes,
+21 seconds cumulative, adding 5,259 seconds (1 hour, 27 minutes, 39 seconds).
+The timer includes pauses/resumes, diagnostics, user-directed resource
+correction and documentation; it is not a person-hour estimate.
+
+The provisional-source prepublication reading was 218,058 seconds: 2 days,
+12 hours, 34 minutes, 18 seconds cumulative. That adds 537 seconds (8 minutes,
+57 seconds) from the interim reading and 5,796 seconds (1 hour, 36 minutes,
+36 seconds) from the preceding published boundary.
