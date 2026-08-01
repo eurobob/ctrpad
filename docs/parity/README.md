@@ -108,6 +108,11 @@ Current evidence and procedures:
   one-Simulator/resource safeguards, expected external retail-data boundary,
   rejected command routes and deliberately open clean-machine/signing/device
   gates.
+- `2026-08-01-extracted-source-build.md` records the extracted archive's
+  `unknown-dirty` identity defect, source-root/override correction, Git and
+  input rejection controls, byte-identical exact source archives, fully fresh
+  no-`.git` ARM64 build and 22/22 tests, renamed-root proof, SDL diagnostic
+  limitation, resource safeguards and independent-clean-machine boundary.
 - `2026-07-31-ios-sandbox-storage.md` records the bundle/Documents/Application
   Support ownership split, Documents-priority retail startup, private log and
   memory-card roots, Files metadata, exact cross-target matrix, rejected

@@ -2209,3 +2209,52 @@ published boundary, including 503 seconds (8 minutes, 23 seconds) for the
 closing audit and first documentation commit. Goal time includes
 pauses/resumes and is not a build benchmark or person-hour estimate. The goal
 remains active.
+
+### 2026-08-01 — Fresh extracted corresponding source built and tested
+
+- Packaged documented head `34ea4415cda8` into a fresh temporary directory.
+  Its archive was valid and retail-free, but inspecting its no-`.git` CMake
+  path showed the app would embed `unknown-dirty`. Rejected the expensive
+  compile before relying on a wrong source identity.
+- The first independent sidecar check also ran from the wrong working
+  directory and could not resolve its basename-relative archive. Repeating
+  beside the sidecar passed; this was a command-location error, not corrupt
+  output.
+- Added a guarded source identity path in `4673e1f9fcab`: exact source-root Git
+  remains authoritative and dirty-aware; generated `CTRPad-source-<12-hex>`
+  roots recover the packager identity without `.git`; renamed roots can supply
+  a validated 12–40-hex commit. Parent Git repositories are ignored.
+- A dirty-checkout candidate retained `34ea4415cda8-dirty`. A mismatched
+  12-hex override and non-hex override each exited 1 before generating a build
+  graph. Updated README and Installation Information with the extracted-root
+  procedure.
+- Committed and pushed the implementation before the long exact test. Two
+  exact source archives from `4673e1f9fcab` compare byte-for-byte: 17,505,454
+  bytes, 3,236 members, SHA-256 `5cdbbf9d...1a2cd`. Both sidecars and archive
+  validation passed; retail/runtime/package/profile/key material was absent.
+- Fresh extraction had no `.git`, passed both shell syntax checks and listed
+  all four Apple presets. Its configure emitted exact archive-root identity
+  `4673e1f9fcab` and completed in 73.09 seconds.
+- The single-job nice-15 build compiled all 242 targets in 209.27 seconds,
+  repeated 32 established warnings and linked a thin ARM64 binary at SHA-256
+  `a645cdec...ade2`. It reported version
+  `0.1.0-beta.7.1 (4673e1f9fcab)` and passed 22/22 CTests in 3.06 seconds
+  (3.29 seconds outer wall).
+- Recorded rather than hid vendored SDL's no-Git diagnostic
+  `SDL-3.4.10-HEAD-HASH-NOTFOUND`; CTRPad's app identity is exact and the
+  hashed archive contains all SDL source.
+- A second no-`.git` extraction renamed to `renamed-source` accepted the full
+  explicit commit, emitted its dedicated identity diagnostic and generated
+  exact compile ID `4673e1f9fcab`. A redundant second unity build was skipped.
+- Kept zero open Simulators and zero booted devices. Closing memory pressure
+  reported 48% system-wide free and zero throttled pages. Deleted about 279 MiB
+  of task-owned temporary archives, extracted trees and build output by exact
+  path; repository and retail data were untouched.
+- This accepts fresh extracted-source build/test on the development host, not
+  an independently provisioned clean Mac, refreshed app/iOS products, Apple
+  signing or physical-iPad behavior.
+
+The extracted-source evidence-open reading was 228,335 seconds: 2 days,
+15 hours, 25 minutes, 35 seconds cumulative. The closing reading is recorded
+after the acceptance documentation commit. Goal time includes pauses/resumes
+and is not a build benchmark or person-hour estimate. The goal remains active.

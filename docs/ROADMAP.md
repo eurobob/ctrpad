@@ -1207,9 +1207,10 @@ Acceptance:
 corresponding-source packaging, profile-aware DER signing preparation,
 embedded legal/install resources and direct/AltStore-style installation
 information have landed; an exact-current ordinary/sanitizer/iOS build and
-unsigned-package refresh passes, while user-owned Apple signing, clean
-extracted-source build, physical-iPad install and final device acceptance
-remain open; depends on all prior milestones
+unsigned-package refresh plus a fully fresh extracted-source ARM64 build pass,
+while user-owned Apple signing, independent clean-machine reproduction,
+physical-iPad install and final device acceptance remain open; depends on all
+prior milestones
 
 Checkpoints `6db6116fe67a`, `a37cdf2aa5af` and `207121134a05` add a guarded
 device packager and its corrections. The script verifies the ARM64/iOS bundle,
@@ -1258,7 +1259,8 @@ the corrected path prepares and validates both in private staging before
 publication. Two clean corrected archives are byte-identical at SHA-256
 `d1c4b4fb...64df1`, contain 3,233 members, retain executable packager modes and
 enumerate all four Apple presets after fresh extraction. A clean extracted-
-source compile remains deferred for safe host headroom. Exact evidence is in
+source compile was deferred at that checkpoint for safe host headroom and is
+resolved by the later full extracted build below. Exact packaging evidence is in
 `docs/parity/2026-08-01-corresponding-source-package.md`.
 
 Final guard checkpoint `21fb81296bd0` also excludes Apple `.p8`/`.pfx` keys,
@@ -1289,6 +1291,20 @@ extracted-source or clean-machine acceptance, and it does not change the real
 Apple signing/physical-device boundary. Exact commands, hashes, rejected
 routes, resource readings and limits are in
 `docs/parity/2026-08-01-current-head-apple-matrix.md`.
+
+The first full no-`.git` archive configure exposed a release-identity defect
+before compilation: CMake would label corresponding-source builds
+`unknown-dirty`. Checkpoint `4673e1f9fcab` now verifies source-root Git, keeps
+checkout dirty/mismatch behavior, derives the clean 12-character identity from
+the generated archive root and supports a validated explicit commit for a
+renamed tree. Two exact source archives are byte-identical at SHA-256
+`5cdbbf9d...1a2cd`. One untouched extraction configured in 73.09 seconds,
+built all 242 thin-ARM64 targets in 209.27 seconds and passed 22/22 tests with
+exact app identity `4673e1f9fcab`; the renamed-root override generated that
+same compile identity. This accepts a fresh extracted-source build on the
+development host, not an independently provisioned clean Mac. Exact failures,
+hashes, timings, SDL diagnostic boundary and cleanup are in
+`docs/parity/2026-08-01-extracted-source-build.md`.
 
 Work:
 

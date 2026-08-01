@@ -13083,3 +13083,92 @@ This accepts the current-head ordinary/sanitizer/iOS/unsigned-package refresh,
 not a clean extracted-source build, current macOS app bundle, Apple signature
 or physical-iPad behavior. Exact commands and all hashes are in
 `docs/parity/2026-08-01-current-head-apple-matrix.md`. The goal remains active.
+
+## 2026-08-01 — Closed the fresh extracted-source build gate
+
+### The first archive exposed a build-identity gap
+
+After the exact Apple matrix, `package-source.sh` produced a 17,505,157-byte,
+3,236-member archive from documented head `34ea4415cda8` at SHA-256
+`369152ea...d80d`. It passed gzip/tar, extraction, no-`.git`, shell-syntax and
+four-preset checks. An independent `shasum -c` first ran from the repository,
+so its basename-relative sidecar could not find `source.tar.gz`; rerunning from
+the output directory passed.
+
+Static inspection before compilation found a real release problem. Existing
+CMake only asked Git for the source hash and dirty status. With `.git`
+intentionally absent, the extracted application would embed `unknown-dirty`,
+breaking the documented promise that its build identity names the source
+archive. The route was rejected before a long compile.
+
+### Identity correction and negative controls
+
+CMake now accepts an optional `CTR_NATIVE_SOURCE_COMMIT`, validates 12–40 hex
+characters and verifies that any override in a real checkout matches the
+actual checkout. Git is authoritative only when its top level equals the CMake
+source root, preventing an archive nested under an unrelated repository from
+inheriting the parent identity. Without root Git, CMake accepts the exact
+12-hex generated archive-root suffix or a validated explicit override for a
+renamed tree. Other roots remain `unknown-dirty`.
+
+A candidate Git configure used the real `34ea4415cda8` commit and retained
+`-dirty` for the three tracked changes. Override `000000000000` failed with a
+checkout mismatch; `not-hex` failed the format rule. Neither generated a build
+graph. README and Installation Information now document normal and renamed
+extraction.
+
+Commit `4673e1f9fcab` was pushed before exact archive/build proof.
+
+### Exact archive, build and test
+
+Two sequential source packages from full commit
+`4673e1f9fcabbb27526f8422dc9c35aaf356f50e` compare byte-for-byte. Each is
+17,505,454 bytes with 3,236 members and SHA-256:
+
+```text
+5cdbbf9d8939b4aa63b157bdcd1e865328531909da3763862aa9e37bcb51a2cd
+```
+
+Both sidecars passed from their containing directory. The packager's archive,
+required-member and retail/runtime/package/profile/key checks passed. Fresh
+extraction had no `.git`, both packagers passed `bash -n`, and all Apple
+presets enumerated.
+
+The untouched `CTRPad-source-4673e1f9fcab` root configured with the standard
+macOS preset at nice 15. It emitted exact source identity `4673e1f9fcab` from
+the corresponding-source root and completed in 73.09 seconds. The fresh
+one-job build compiled 242 targets in 209.27 seconds, repeated 32 established
+warnings and linked:
+
+```text
+Mach-O    64-bit executable arm64
+version   CTR Native 0.1.0-beta.7.1 (4673e1f9fcab)
+SHA-256   a645cdece83a697ff1cd628ec93dee4c393fe353fa8476f3dd6b471e80bfade2
+```
+
+All 22 CTests passed in 3.06 seconds; the outer wall measurement was 3.29
+seconds. No retail media was present or read.
+
+SDL's separate revision helper emitted `SDL-3.4.10-HEAD-HASH-NOTFOUND` because
+its vendored tree also lacked Git metadata. The exact app source ID and hashed
+complete SDL source remain sufficient for this gate; the diagnostic difference
+is retained as optional polish rather than rewritten as parity.
+
+### Renamed root, resources and cleanup
+
+A second extraction was renamed to `renamed-source`. With the full explicit
+commit it configured in 76.72 seconds, emitted the dedicated override identity
+message and generated exact compile definition `4673e1f9fcab`. The same source
+had already completed the full build, so a redundant unity compile was skipped.
+
+All work was sequential, nice 15 and one job. No Simulator application opened
+and no device booted. Closing memory state was 48% system-wide free, zero
+throttled pages and 9,700.94 MiB swap used. Three exact task-owned temporary
+trees totaling about 279 MiB were deleted after evidence collection; no
+repository, retail or Simulator-container path was targeted.
+
+This accepts same-host fresh extracted-source configure/build/test and exact
+archive-root/override identity. An independently provisioned clean Mac, current
+macOS app/iOS products, real Apple signature and physical device remain open.
+Full evidence is in `docs/parity/2026-08-01-extracted-source-build.md`; M11 and
+the overall goal remain active.
