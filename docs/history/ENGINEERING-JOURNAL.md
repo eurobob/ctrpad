@@ -14203,3 +14203,65 @@ seconds), 714 seconds (11 minutes, 54 seconds) after the clean-smoke close
 boundary. Exact reasoning and reopening criteria are recorded in
 `docs/parity/2026-08-01-ios-uikit-view-lifecycle.md` and `docs/DECISIONS.md`.
 The overall goal remains open at the user-owned signed physical-iPad campaign.
+
+## 2026-08-01 — Corrected the stale Simulator installation before judging touch
+
+The user-visible follow-up deliberately reopened the single `CTRPad Import
+Validation` Simulator after the physical-device re-baseline. The first visible
+session rendered copyright, logos, main menus, Adventure cinematics and the
+Crash character/kart screen, but Computer Use interactions appeared
+inconsistent at roughly 5–7 FPS. That observation was not accepted as a
+product defect because the session had not yet correlated UIKit input with the
+native log.
+
+The subsequent exact audit found that the installed executable was stale. Its
+SHA-256 was `ed53ba9f26eba0a8e501f1e02aaabead1016e3b729751ce97d34c0b28879c11c`
+and its embedded input-self-test text predated the accepted
+`until-retail-poll` latch and timestamped touch/retail-consumer logging. This
+explains why the earlier visible app produced no `[CTR Input]` rows despite
+looking substantially current. No source edit was made from that ambiguous
+session.
+
+The clean re-baseline build tree still contained the exact raw Simulator
+executable `1699c36d136c7bf5ce173ea5701e6313f9d40abc038b77fc27d83a3a08ca7091`
+with the required instrumentation. Its staged build-tree bundle signature was
+intentionally rejected by strict verification because resources had changed
+after the prior signature. An isolated copy under
+`/tmp/ctrpad-current-source.KyGMSK/CTRPad.app` was re-signed ad hoc, strictly
+verified and reproduced the accepted installed-executable hash
+`c6d40aaf3c0cfc989e47a79b74ff86f9e52b95a74505c58abaf77d323319187f`.
+
+Only `CTRPad Import Validation` booted. CoreSimulator boot/container/install
+operations were unusually slow, so no second device or competing operation
+was started. The update install completed successfully after approximately
+148 seconds. The installed bundle moved from container `595B67A4-...` to
+`4AE8084E-...`; its executable exactly matched `c6d40aaf...187f` and embedded
+the touch-edge, retail-poll and `until-retail-poll` strings.
+
+The update remapped the data container from `932EF994-...` to
+`D6D9B51A-...` without replacing the retained files. Before and after, the
+retail image remained inode `111131200`, size 605,698,800 and SHA-256
+`f780bf2331476aabfc00772fa758b12dd95ebfbc907968132cbd3cdd4e2c07c0`.
+The save remained inode `111222179`, size 6,016 and SHA-256
+`6a01b0f5562ed7a279d8f8e51e3b1874ac39a6120f55db4fe3873288950619a3`.
+
+The exact current app launched as PID 62455. One 100-millisecond accessible
+Cross activation produced timestamped touch down `0x4000` at elapsed
+`+99.540s`, retail-poll consumption of the same mask in that timestamp, and
+touch up at `+99.686s`. A later accessible Circle activation produced down
+`0x2000` at `+188.494s`, retail consumption at `+188.497s`, and up at
+`+188.600s`. Cross therefore reached the retail consumer even while the
+nearest logged Simulator cadence was 5.56 FPS. The source latch behaved as
+designed.
+
+Computer Use's synthetic `C` key did not appear in the native log even after
+Simulator keyboard capture was explicitly enabled. This is retained only as
+an automation limitation; it is not keyboard-product evidence in either
+direction. Capture was disabled again before handoff. The existing focused
+`ctr_native_input` CTest passed 1/1 in 0.17 seconds. Application source remained
+unchanged.
+
+The correction reading was 265,868 seconds (3 days, 1 hour, 51 minutes, 8
+seconds), 3,630 seconds (1 hour, 30 seconds) after the 262,238-second physical-
+device boundary. The Simulator is now running the exact current build; real
+Apple signing and physical-iPad acceptance remain open.
