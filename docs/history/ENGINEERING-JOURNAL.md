@@ -11923,3 +11923,219 @@ documentation-close reading was 208,828 seconds: 2 days, 10 hours, 0 minutes,
 28 seconds cumulative, adding 3,027 seconds (50 minutes, 27 seconds). This is
 cumulative goal lifetime including pauses, not a build benchmark or person-hour
 estimate.
+
+## 2026-08-01 — Explicit disc re-selection without live-media mutation
+
+### Selected the next locally closable M9 gate
+
+The continuation began by reading all 511 lines of
+`docs/ctr-native-viability.md` again, then comparing the milestone status to the
+current source and prior evidence. M8/M10's remaining physical signing,
+controller, keyboard, true simultaneous touch, completed-race, cadence and
+energy gates cannot be closed honestly without the user's iPad and Apple
+credentials. M9 still named explicit active-image re-selection as a software-
+side gap, so that became the bounded checkpoint.
+
+The user's keyboard request was not ignored. The repository already has the
+basic keyboard route requested: arrows/WASD, C/K gas, X/J brake, V/L item, Q/E
+drift, P/Enter Start and Tab/Space Select. It feeds the same player-one input
+composition used by touch and had prior live iOS/desktop evidence. Replacing it
+with a second keyboard layer would have created conflicting ownership. Exact
+CTest 6 revalidated all aliases, quick taps and held composition during this
+checkpoint in both ordinary and sanitizer matrices.
+
+### Rejected an unsafe hot swap
+
+The importer validation callback selects and opens assets through global
+`NativeAssets`/`NativeDiscImage` state. The running game also continuously uses
+that state. Therefore two superficially convenient implementations were
+rejected before editing:
+
+- copying/replacing `ctr-u.bin` while the display loop continued; and
+- validating the stage in-process while leaving the old game alive.
+
+Both could race active reads or mutate the global disc under gameplay. There is
+also no established retail reboot/reset entry point that proves all game state
+is reconstructed. The accepted design stops the game first and requires a cold
+relaunch after successful replacement. This is less seamless but matches the
+real lifecycle that the code can currently guarantee.
+
+### Implemented a main-thread stop-and-reselect handshake
+
+Five source files changed:
+
+- `native_ios_import.h` gained import-purpose and completion-result enums;
+- `native_ios_touch.h` gained a bounded disc-reselection callback;
+- `native_ios_touch.m` added accessible `ctrpad.touch.disc`, confirmation text,
+  and callback cleanup;
+- `main.c` records the request and consumes it at the next UIKit display-loop
+  boundary; and
+- `native_ios_import.m` reuses the existing transaction with replacement-
+  specific copy and a relaunch-required completion state.
+
+The confirmation explains that CTRPad must stop, memory-card saves are kept and
+unsaved race progress is lost. Its accepted action waits 0.35 seconds for alert
+dismissal before requesting teardown. The next display callback stops the
+display link, ends the overlay, shuts down platform/audio/renderer state,
+closes the disc and opens the replacement screen. The importer remains on the
+main thread while its coordinated copy and validation remain on the existing
+worker queue.
+
+On success the importer disables its button and requires full app-switcher
+close/reopen. Initial onboarding still starts in the same process; that proven
+path did not regress. Callback state is cleared when touch ends or attachment
+fails, preventing a stale UI callback from surviving overlay teardown.
+
+### Dirty-source proof before publication
+
+ARM64 iOS Simulator, iPhoneOS and macOS builds linked, desktop GL passed 22/22,
+and `git diff --check` passed before live validation. A clean copy of the dirty
+Simulator app was ad-hoc signed and installed only on disposable **CTRPad Import
+Negatives** (`26F3DEE8-8840-446D-85FE-C882009C9C06`). Protected **CTRPad Import
+Validation** remained booted and untouched.
+
+The live game reached `UIKit display loop active` and visibly rendered the
+animated title/demo. Accessibility exposed `Change retail disc image`. The
+first confirmation was canceled and the subsequent screenshot showed a later
+animation frame, proving gameplay remained active. The second confirmation
+produced ordered log markers:
+
+```text
+[CTR Import] confirmed runtime disc re-selection request
+[CTR Import] stopping the current game before disc re-selection
+```
+
+The replacement screen appeared coherently and the canonical disc/save still
+had inodes `111313696`/`111309627` and exact hashes
+`f780bf23...07c0`/`6a01b0f5...619a`.
+
+The first real Files presentation repeated the known local provider's blank
+white sheet. Dismissing the picker through its accessibility dismiss region
+returned the app to an enabled cancel state saying the current disc remained
+installed. A second presentation loaded the retained fixtures. Selecting the
+full 605,698,800-byte NTSC-U image produced a relaunch-required state, disc
+inode `111448009` with the same exact hash, and the unchanged save inode/size/
+hash. Cold relaunch rendered CTR from that new inode.
+
+Review of the successful flow exposed one messaging weakness: copy, format or
+region failures did not all explicitly reassure a replacement user. A central
+re-selection-only suffix was added to every importer error, and the temporary
+verification status was changed from `Starting Crash Team Racing` to
+`Installing the replacement`. Both iOS products rebuilt cleanly after this
+refinement.
+
+### Published the implementation before final acceptance
+
+The worktree contained only the five intended files. GitHub CLI 2.96.0 was
+authenticated as the repository owner. The explicit files were staged,
+reviewed and committed as:
+
+```text
+300499d7cd00050d83dbb2dc2236a25b0529473b
+feat: add safe iOS disc reselection
+```
+
+The branch `codex/arm64-apple` pushed successfully. A direct GitHub API read of
+draft PR #1 reported open/draft, base `main`, head `codex/arm64-apple`, and head
+SHA `300499d7cd00050d83dbb2dc2236a25b0529473b`. This closed the requested remote
+backup before the longer exact matrix.
+
+### Exact five-product rebuild and tests
+
+All final directories were regenerated after commit so Git-derived version
+source contained `300499d7cd00`. The key procedure was:
+
+```text
+cmake -S . -B <each existing configured build directory>
+cmake --build <directory> --parallel 8
+ctest --test-dir build-macos-arm64-app --output-on-failure
+ctest --test-dir build-macos-arm64-sanitizers --output-on-failure
+```
+
+The five large optimized `main.c` translations ran concurrently and stayed
+CPU-active. Four configurations completed first; ASan/UBSan completed last.
+The bounded wall interval was about 12.5 minutes, not a stuck build. Rerunning
+each build reported `ninja: no work to do`, proving all jobs had completed.
+
+Exact unsigned executable results:
+
+```text
+iOS Simulator ARM64   a09932ffc3ad9ca6759c89778cefc4595133ca73c4e7791f643f5a9327be2c08
+iPhoneOS ARM64        20dfcf892ffecdd2c23e602acc451aebe77cd9c4bec55fa5ce1f5aba431e5c11
+macOS desktop GL      89eb5d224542819c261c490f902391c06231937efbfb40d415b39ec13a9140f3
+macOS GLES config     2fc21b1008e4ff30d1b26435585610373618d9b9e91fa03a7157bf995cbd194c
+macOS ASan/UBSan      1900f3ea57d6989cad1db9532031ce039e5b1cc9eedfdb9058c8c32a0d6a9f46
+```
+
+Every product was ARM64 Mach-O and contained the exact build string. Desktop
+GL passed 22/22 in 4.28 seconds. ASan/UBSan passed 22/22 in 10.50 seconds with
+no runtime finding. Known legacy conversion/deprecation warnings did not become
+new failures.
+
+The 3.5 MB Simulator bundle contained no assets, only the executable,
+`Info.plist`, GPL license, installation instructions and notices. An isolated
+copy was forced to an ad-hoc signature and passed deep/strict verification. Its
+signed executable hash was `688865c7...f2e`. Updating the disposable Simulator
+changed its bundle/data container UUIDs but retained disc inode `111448009` and
+save inode `111309627` plus their exact sizes/hashes.
+
+### Exact real-UI acceptance
+
+Computer Use was used because this gate depended on the actual Simulator alert,
+Files document picker and visible renderer. Accessibility state was refreshed
+after every action; screenshot-grounded coordinates were used only for Files
+items because the document-service file cells were absent from the returned
+accessibility tree.
+
+The exact signed app reported version `0.1.0-beta.7.1 (300499d7cd00)`, opened
+presentation FBO/RBO 1, compiled all PSX/VRAM pipelines, activated the UIKit
+display loop and visibly rendered coherent textured animation. The accessible
+disc button opened the correct warning. Cancel returned to a later live frame.
+
+The accepted confirmation cleanly transitioned to the replacement screen. The
+118-byte `not-a-disc.bin` fixture then exercised the newly refined error path:
+
+```text
+That file is not a readable raw MODE2/2352 disc image. Select the BIN data
+track, not a CUE or compressed archive. Your current disc remains installed.
+```
+
+The chooser re-enabled. Disc inode `111448009`, size 605,698,800 and hash
+`f780bf23...07c0`; save inode `111309627`, size 6,016 and hash
+`6a01b0f5...619a`; and the absence of a new reserved stage all remained exact.
+
+The real picker then selected the full NTSC-U fixture. The success screen
+disabled the picker and required relaunch. Atomic replacement created disc
+inode `111450682` with the same size/hash. The save retained its old inode,
+size, modification time and hash. No new `.ctrpad-import-*` directory survived.
+
+After explicit bounded termination, the exact signed executable cold-launched,
+read the new disc inode, activated UIKit/GLES and visibly rendered the Naughty
+Dog/title animation plus touch overlay. The local-only 610,956-byte PNG hashed
+to `a33b033bab59e1ff6e31d4b6e48b5828272da36395a891c2c349dce4c901ca70`.
+Final disc/save identities were unchanged from the post-replacement values.
+
+The attached console contained the Simulator runtime's duplicate WebCore/
+WebKit accessibility-bundle warning, which is outside CTRPad, but no unbalanced
+UIKit appearance transition through game stop, importer presentation,
+replacement or relaunch. Fixtures, app copies, signatures, screenshots and
+container data stayed outside Git.
+
+### Acceptance boundary and elapsed time
+
+Explicit asset re-selection and save preservation are accepted on Simulator.
+Cancel does not interrupt gameplay; invalid media cannot replace the current
+disc; valid media replaces atomically; the memory card is not rewritten; and a
+cold launch consumes the replacement. The provider's blank-sheet presentation
+was already documented and canceled safely, but a true inaccessible-file URL
+callback remains open. Physical Files/signing/save/background/termination,
+real hardware input/race/audio/video, cadence and energy also remain open.
+
+The preceding published timer was 208,828 goal seconds. The documentation-open
+reading was 211,878 seconds: 2 days, 10 hours, 51 minutes, 18 seconds
+cumulative, adding 3,050 seconds (50 minutes, 50 seconds). The documentation-
+close reading was 212,262 seconds: 2 days, 10 hours, 57 minutes, 42 seconds,
+adding 3,434 seconds (57 minutes, 14 seconds) from the preceding published
+checkpoint and 384 seconds (6 minutes, 24 seconds) during the closing audit.
+Goal time is cumulative across pauses and resumes and is not a build benchmark
+or person-hour estimate.

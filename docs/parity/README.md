@@ -71,6 +71,10 @@ Current evidence and procedures:
   Home/resume/rotation evidence, exact renderer/cross-target/sanitizer hashes,
   preservation checks, the residual immediate-self-test teardown warning, and
   deliberately open physical-device/natural-termination gates.
+- `2026-08-01-ios-disc-reselection.md` records the confirmed in-game stop-and-
+  reselect path, rejected hot-swap boundary, real Files cancel/invalid/valid
+  outcomes, atomic disc replacement, exact save preservation, cold relaunch,
+  cross-target hashes, and deliberately open physical-device/provider gates.
 - `2026-07-31-ios-sandbox-storage.md` records the bundle/Documents/Application
   Support ownership split, Documents-priority retail startup, private log and
   memory-card roots, Files metadata, exact cross-target matrix, rejected

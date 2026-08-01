@@ -1747,3 +1747,54 @@ The preceding published reading was 205,801 goal seconds. The
 documentation-close reading was 208,828 seconds: 2 days, 10 hours, 0 minutes,
 28 seconds cumulative, adding 3,027 seconds (50 minutes, 27 seconds). The timer
 is cumulative goal time, including pauses, not a benchmark or labor estimate.
+
+### 2026-08-01 — Safe in-game iOS disc re-selection
+
+- Re-read the full native viability record, then selected M9's explicit asset-
+  reselection gap because it was the next software-only gate; physical signing,
+  device cadence and genuine multi-touch still require hardware/credentials.
+- Rejected hot-swapping the global disc/asset state under a live game. Added an
+  accessible **CHANGE DISC** control that confirms save/unsaved-progress
+  consequences, posts a request to the next UIKit display callback, shuts down
+  the renderer/audio/touch/disc in order, and only then opens Files.
+- Reused the existing coordinated same-volume validate-before-replace importer.
+  Initial setup still starts in-process; runtime replacement requires a cold
+  relaunch and disables the picker after success. Cancel and every error now
+  state that the current disc remains installed.
+- Dirty-source Simulator proof covered confirmation cancel, coherent animated
+  resume, safe stop, the known first-presentation File Provider blank sheet,
+  picker cancellation, full NTSC-U replacement and rendered cold relaunch.
+  iOS Simulator/device and macOS compiled; desktop CTest passed 22/22.
+- Reviewed the five-file diff and published implementation
+  `300499d7cd00` (`feat: add safe iOS disc reselection`). Draft PR #1 was
+  verified at the same full SHA before exact acceptance.
+- Reconfigured all five final directories. Exact ARM64 Simulator, iPhoneOS,
+  desktop GL, macOS GLES and ASan/UBSan products embed `300499d7cd00`.
+  Desktop and sanitizer matrices each pass 22/22. The exact hashes are in
+  `docs/parity/2026-08-01-ios-disc-reselection.md`.
+- Exact Computer Use validation drove the real Simulator and Files UI. Cancel
+  preserved animated gameplay. A 118-byte invalid fixture was rejected with
+  the new preservation assurance and left disc/save inode, size and hash
+  unchanged. The complete 605,698,800-byte NTSC-U fixture then installed at
+  inode `111450682` with hash `f780bf23...07c0`; save inode `111309627`, size
+  6,016 and hash `6a01b0f5...619a` remained unchanged.
+- Exact cold relaunch visibly consumed the replacement and rendered coherent
+  textured CTR output plus the complete touch overlay. A 610,956-byte local-
+  only screenshot hashed to `a33b033b...ca70`. No new staging residue or UIKit
+  appearance warning appeared. Retail media and screenshots stayed outside
+  Git; the protected validation Simulator remained untouched.
+- Basic keyboard controls remain available through the already published
+  shared player-one path: arrows/WASD, C/K gas, X/J brake, V/L item, Q/E drift,
+  P/Enter Start and Tab/Space Select. Exact CTest 6 passed in both ordinary and
+  sanitizer suites; no redundant input subsystem was added.
+- M9 asset re-selection is accepted on Simulator. Physical Files/signing/save,
+  inaccessible-provider callbacks, hardware input/race/audio/video, cadence
+  and energy remain open. The overall goal remains active.
+
+The preceding published reading was 208,828 goal seconds. The documentation-
+open reading was 211,878 seconds: 2 days, 10 hours, 51 minutes, 18 seconds
+cumulative, adding 3,050 seconds (50 minutes, 50 seconds). The documentation-
+close reading was 212,262 seconds: 2 days, 10 hours, 57 minutes, 42 seconds,
+adding 3,434 seconds (57 minutes, 14 seconds) from the preceding published
+checkpoint and 384 seconds (6 minutes, 24 seconds) during the closing audit.
+Goal time includes pauses and resumes and is not a benchmark or labor estimate.

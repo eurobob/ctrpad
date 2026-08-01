@@ -926,8 +926,10 @@ an explicit default-root seed was retained across app updates and cold-read;
 live Simulator wrong-region and incomplete-image failures are now accepted;
 reserved interrupted-import staging is recovered safely on every launch;
 an actual Simulator Files import was killed after the full staged image became
-visible and recovered on relaunch; physical Files/signing/save behavior,
-inaccessible-provider coverage, and explicit asset re-selection remain open;
+visible and recovered on relaunch; explicit asset re-selection now stops the
+active runtime, rejects invalid media without replacement, atomically installs
+a valid image, preserves the save and cold-relaunches on Simulator; physical
+Files/signing/save behavior and inaccessible-provider coverage remain open;
 depends on M8
 
 Checkpoint `02a6623f80a0` establishes the storage ownership boundary without
@@ -1010,6 +1012,19 @@ updates. Complete implementation, build, visual, keyboard-delivery,
 rejected-shortcut, and live-save evidence is in
 `docs/parity/2026-07-31-ios-memory-card-atomicity.md`.
 
+Checkpoint `300499d7cd00` closes explicit active-image re-selection on
+Simulator. An accessible touch-overlay control confirms before stopping the
+game, performs ordered runtime/disc shutdown at the UIKit display-loop
+boundary, and then reuses the existing security-scoped staged importer. Cancel
+returned to animated gameplay. The real Files picker rejected a 118-byte
+invalid fixture while preserving the current BIN/save by inode and SHA-256,
+then atomically installed the complete NTSC-U fixture at a new inode, retained
+the 6,016-byte save unchanged, disabled further selection and required a cold
+relaunch. The exact build visibly rendered CTR from the replacement. Desktop
+GL and ASan/UBSan pass 22/22; all five final products are ARM64 and embed the
+exact commit. Evidence is in
+`docs/parity/2026-08-01-ios-disc-reselection.md`.
+
 Work:
 
 - Retain the landed split between immutable bundle resources, imported retail
@@ -1021,8 +1036,8 @@ Work:
   physical-device repetition plus inaccessible-file and device background/
   termination-during-copy coverage.
 - Retain the accepted Simulator game-driven save, suspend/resume, app-update
-  retention and cold retail Load-screen read; repeat the required subset on
-  physical hardware and cover asset re-selection explicitly.
+  retention, cold retail Load-screen read and explicit asset re-selection;
+  repeat the required subset on physical hardware.
 - Retain atomic same-directory memory-card replacement and private Application
   Support ownership for memcards, settings, logs, and crash diagnostics.
 
@@ -1040,8 +1055,9 @@ Acceptance:
   Inaccessible-provider behavior and physical hardware remain open.**
 - Saves persist across launch, backgrounding, app updates, and asset
   re-selection. **Save creation, backgrounding, update retention and cold read
-  are accepted on Simulator; asset re-selection and physical hardware remain
-  open.**
+  are accepted on Simulator. Re-selection preserves the exact save inode,
+  size and hash across invalid and valid Files outcomes plus cold relaunch.
+  Physical hardware remains open.**
 - No retail byte is included in the application bundle or Git history.
 
 ### M10 — Touch-first controls
