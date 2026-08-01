@@ -2387,6 +2387,9 @@ reading was 236,875 seconds: 2 days, 17 hours, 47 minutes, 55 seconds, adding
 694 seconds (11 minutes, 34 seconds) for the closing documentation/audit and
 4,317 seconds (1 hour, 11 minutes, 57 seconds) from the previous 232,558-second
 in-progress ledger reading. Two exact 3.5 MB temporary signed-app copies were
-deleted; the final log and visual evidence remain. The post-push publication
-reading follows. Goal time includes pauses/resumes and is not a build benchmark
-or person-hour estimate. The goal remains active.
+deleted; the final log and visual evidence remain. Evidence commit
+`b1663fe5b62b454e4098fa84da42028ca6fb0ce2` was then pushed and confirmed as
+the draft PR head. The post-push publication reading was 236,994 seconds: 2
+days, 17 hours, 49 minutes, 54 seconds, adding 119 seconds (1 minute, 59
+seconds) after the pre-publication audit. Goal time includes pauses/resumes and
+is not a build benchmark or person-hour estimate. The goal remains active.
