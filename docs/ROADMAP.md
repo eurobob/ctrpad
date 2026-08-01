@@ -928,6 +928,17 @@ recorded; natural app-initiated termination and physical-hardware lifecycle
 remain open. Full chronology, hashes and commands are in
 `docs/parity/2026-08-01-ios-uikit-view-lifecycle.md`.
 
+The external signed-iPad step now has a repository-owned campaign workflow:
+offline signature/profile/UDID preflight, non-destructive update install and
+launch with versioned CoreDevice JSON, post-human-test Application Support
+collection, and a redacted acceptance template. Local negative evidence proves
+the unsigned IPA and missing device are rejected; it does not accept any
+physical criterion. Raw evidence is forced into an ignored path and the retail
+Documents tree is never collected. See
+`docs/parity/2026-08-01-ios-physical-campaign-handoff.md` and
+`docs/templates/IOS-DEVICE-ACCEPTANCE.md`. The roadmap remains open at the same
+user-owned Apple identity/profile/iPad campaign.
+
 The post-handoff stale-install correction is now enforced by
 `tools/install-ios-simulator.sh`. It refuses anything other than one booted
 Simulator, validates a thin ARM64 `IOSSIMULATOR` product, signs only an isolated

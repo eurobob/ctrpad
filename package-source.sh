@@ -112,13 +112,15 @@ for required_file in \
     docs/DECISIONS.md \
     docs/INSTALL-IOS.md \
     docs/ROADMAP.md \
+    docs/templates/IOS-DEVICE-ACCEPTANCE.md \
     docs/history/ENGINEERING-JOURNAL.md \
     docs/history/PROGRESS-LOG.md \
     externals/SDL/LICENSE.txt \
     main.c \
     package-ios.sh \
     package-source.sh \
-    tools/install-ios-simulator.sh; do
+    tools/install-ios-simulator.sh \
+    tools/ios-device-campaign.sh; do
     grep -Fxq "${archive_root}/${required_file}" "$archive_list" || \
         fail "source archive is missing required file: $required_file"
 done

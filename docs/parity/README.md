@@ -184,6 +184,11 @@ Current evidence and procedures:
   workflow, embedded GPL/notices/Installation Information, profile and DER
   signing guards, rejected archive/signing bugs, exact artifact hashes, and the
   deliberately open user-owned Apple signature/device-install gate.
+- `2026-08-01-ios-physical-campaign-handoff.md` records the three-phase signed-
+  IPA preflight, non-destructive physical install/launch and post-test
+  collection workflow; versioned `devicectl` evidence, privacy/media guards,
+  exact negative probes, the redacted human acceptance template and the still-
+  open Apple identity/profile/device execution gate.
 - `2026-07-31-macos-arm64-keyboard-tap.md` records the missing quick-tap root
   cause, historical one-snapshot press-edge transport, its later two-snapshot
   supersession, direct live PSX packet traces, and exact-commit

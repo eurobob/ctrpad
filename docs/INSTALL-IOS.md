@@ -136,6 +136,67 @@ by the embedded profile. Do not use the example temporary path as a permanent
 backup. Apple documents registered-device development/distribution at
 <https://developer.apple.com/documentation/Xcode/distributing-your-app-to-registered-devices>.
 
+## Run the physical-device acceptance campaign
+
+For the release campaign, prefer the repository helper to separate offline
+signature/profile proof from device mutation and to retain versioned
+`devicectl` JSON rather than scraping its human-formatted output.
+
+First validate the signed IPA without contacting an iPad:
+
+```sh
+./tools/ios-device-campaign.sh preflight \
+  --ipa dist/CTRPad-0.1.0-1-signed.ipa \
+  --device-udid YOUR_PHYSICAL_IPAD_UDID \
+  --evidence-dir dist/device-acceptance-preflight
+```
+
+The preflight requires a standard one-app IPA, valid sidecar when present,
+thin ARM64 `IOS` executable, strict non-ad-hoc signature, embedded non-expired
+iOS profile, exact App ID/team/signed entitlements, target UDID authorization,
+leaf signing-certificate membership in the profile, distribution resources
+and retail/runtime-data exclusion. It does not prove that installation or
+launch works.
+
+With the iPad unlocked, trusted and in Developer Mode, update-install and
+launch without uninstalling:
+
+```sh
+./tools/ios-device-campaign.sh prepare \
+  --ipa dist/CTRPad-0.1.0-1-signed.ipa \
+  --device-udid YOUR_PHYSICAL_IPAD_UDID \
+  --evidence-dir dist/device-acceptance-initial
+```
+
+The helper saves `devicectl` 518-compatible versioned JSON and log files for
+device discovery, details, installation, installed-app lookup and launch. It
+hashes the signed packaged executable but does not claim it can read back the
+installed executable from iPadOS. It never calls `uninstall` and never copies
+the retail image to or from the Mac.
+
+After the human touch/race/lifecycle test, collect CTRPad's rotating logs,
+diagnostics and saves:
+
+```sh
+./tools/ios-device-campaign.sh collect \
+  --device-udid YOUR_PHYSICAL_IPAD_UDID \
+  --bundle-id io.github.chrissotraidis.ctrpad \
+  --evidence-dir dist/device-acceptance-initial
+```
+
+Collection reads only CTRPad's Application Support domain. It deliberately
+does not copy `Documents/CTRPad`, where the 605 MB retail image lives. Raw
+evidence contains a device identifier and user save data, so the tool permits
+in-repository output only under a gitignored path such as `dist/`; review and
+redact it before sharing. Collection first requires the successful matching
+prepare manifest and exact device/bundle values, then writes targeted-fault,
+FPS, campaign-event and save-hash summaries beside the versioned CoreDevice
+files. Copy
+`docs/templates/IOS-DEVICE-ACCEPTANCE.md` into a dated `docs/parity/` report and
+fill every result from observation. The script cannot certify human touch
+ergonomics, a complete race, audio quality, sustained cadence, thermals, Files
+behavior or update persistence automatically.
+
 ## Install an exact Simulator build
 
 Simulator installation does not use an Apple development certificate or a
