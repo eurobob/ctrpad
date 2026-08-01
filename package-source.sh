@@ -53,7 +53,7 @@ while (($#)); do
     esac
 done
 
-for command_name in basename dirname git grep gzip head mkdir mktemp mv rm shasum tar tr wc; do
+for command_name in basename cut dirname git grep gzip head mkdir mktemp mv rm shasum tar tr wc; do
     require_command "$command_name"
 done
 
@@ -95,6 +95,7 @@ trap cleanup EXIT INT TERM
 archive_tar="$tmp_dir/${archive_root}.tar"
 archive_list="$tmp_dir/archive-members.txt"
 archive_gzip="$tmp_dir/${archive_root}.tar.gz"
+archive_sidecar="$tmp_dir/${archive_root}.tar.gz.sha256"
 
 git -C "$repo_root" archive --format=tar --prefix="${archive_root}/" \
     "$source_commit" >"$archive_tar"
@@ -145,8 +146,16 @@ gzip -t "$archive_gzip"
 tar -tzf "$archive_gzip" >/dev/null
 
 member_count="$(wc -l <"$archive_list" | tr -d '[:space:]')"
+archive_hash="$(shasum -a 256 "$archive_gzip" | cut -d ' ' -f 1)"
+[[ "$archive_hash" =~ ^[0-9a-f]{64}$ ]] || fail "could not hash completed source archive"
+printf '%s  %s\n' "$archive_hash" "$(basename "$output_path")" >"$archive_sidecar"
+
 mv "$archive_gzip" "$output_path"
-shasum -a 256 "$output_path" >"$output_path.sha256"
+mv "$archive_sidecar" "$output_path.sha256"
+(
+    cd "$output_dir"
+    shasum -a 256 -c "$(basename "$output_path").sha256" >/dev/null
+)
 
 printf 'Wrote %s\n' "$output_path"
 printf 'Wrote %s\n' "$output_path.sha256"
