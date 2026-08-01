@@ -218,3 +218,13 @@ copy. The post-change syntax/help/package syntax and diff checks passed. The
 17:59:07 active-time reading was 268,549 seconds (3 days, 2 hours, 35 minutes
 and 49 seconds). The synthetic manifest and raw JSON/log remain ignored and
 are not signed-device evidence.
+
+At 18:00 CDT, clean commit
+`4349bae8dd938447b9f67fff04b34dd4b574f09b` produced matching corresponding
+source `CTRPad-source-4349bae8dd93.tar.gz`: 3,253 members, SHA-256
+`b9dfcc85c35b9cb36d82f9eed942e7a0ab2449d2b36cb5f8de1170ff77c9cba4`.
+Its internal and independent sidecar checks passed. The archive contained this
+report, the acceptance template and `ios-device-campaign.sh`; direct scans
+found zero retail/runtime-like or credential/package-like members. The
+18:00:26 goal reading was 268,628 seconds (3 days, 2 hours, 37 minutes and 8
+seconds).

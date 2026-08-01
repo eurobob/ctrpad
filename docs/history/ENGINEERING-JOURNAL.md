@@ -14445,3 +14445,12 @@ again returned error 1000 and wrote its failure JSON/log before any app lookup
 or copy. Syntax/help/package syntax and diff hygiene passed after the change.
 The 17:59:07 reading was 268,549 seconds (3 days, 2 hours, 35 minutes, 49
 seconds). Neither synthetic manifest nor raw negative evidence is tracked.
+
+At 18:00 CDT, the complete handoff became clean commit
+`4349bae8dd938447b9f67fff04b34dd4b574f09b`. Packaging that exact commit
+produced `CTRPad-source-4349bae8dd93.tar.gz` with 3,253 members and SHA-256
+`b9dfcc85c35b9cb36d82f9eed942e7a0ab2449d2b36cb5f8de1170ff77c9cba4`.
+The built-in and independent `dist/`-relative sidecar checks passed. Direct
+member inspection found the campaign tool, acceptance template and focused
+report; retail/runtime and credential/package scans each returned zero. The
+18:00:26 reading was 268,628 seconds (3 days, 2 hours, 37 minutes, 8 seconds).

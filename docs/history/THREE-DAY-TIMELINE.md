@@ -46,6 +46,7 @@ adds a complete durable commit ledger.
 | Physical-campaign claim-audit reading | 2026-08-01 17:53:34 | Active goal time reached 3 days, 2 hours, 30 minutes, 14 seconds after correcting certificate linkage and revalidating claim boundaries. |
 | Physical-campaign publication audit | 2026-08-01 17:55:51 | Active goal time reached 3 days, 2 hours, 32 minutes, 43 seconds after the final local regression and exact Simulator-identity recheck. |
 | Collection-linkage audit | 2026-08-01 17:59:07 | Active goal time reached 3 days, 2 hours, 35 minutes, 49 seconds after binding collection to the exact successful prepare manifest and rerunning negative guards. |
+| Physical-handoff source package | 2026-08-01 18:00:26 | Active goal time reached 3 days, 2 hours, 37 minutes, 8 seconds after committing the handoff and verifying its clean 3,253-member corresponding-source archive. |
 
 ## Executive chronology
 
@@ -109,6 +110,7 @@ adds a complete durable commit ledger.
 | 17:25–17:27 | Reproducible exact Simulator installer | Added the one-booted-device, isolated-sign and installed-hash contract; safe negative probes passed, an exact live update preserved retail/save identity, PID 66389 relaunched, and current controls plus rendered retail pixels appeared with clean targeted logs. |
 | 17:32–17:33 | Installer commit and source-package proof | Committed `67b4c6276`, produced a 3,249-member source archive containing the helper/report, and corrected a redundant checksum caller's working directory before publication. |
 | 17:38–17:59 | Physical-iPad campaign handoff | Added signed-IPA preflight, non-destructive CoreDevice install/launch, prepare-bound local log/save collection and a redacted human acceptance template; corrected certificate extraction/linkage and dotted-entitlement reads; unsigned IPA, unbound evidence and nonexistent-device probes failed at the intended boundaries; 22/22 regressions and the sole exact Simulator identity passed before publication, so physical acceptance remains open. |
+| 18:00 | Handoff commit and source-package proof | Committed `4349bae8d`; its 3,253-member source archive included the new campaign files, passed two checksum checks and contained no retail/runtime or credential/package matches. |
 
 ## Complete durable commit ledger
 

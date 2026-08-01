@@ -3048,3 +3048,9 @@ an ignored synthetic matching-manifest negative advanced to and failed at the
 fake device with CoreDevice error 1000 before app lookup/copy. Final syntax and
 diff checks passed. The 17:59:07 reading was 268,549 seconds (3 days, 2 hours,
 35 minutes, 49 seconds); neither raw negative is tracked.
+
+At 18:00 CDT commit `4349bae8d` produced a clean 3,253-member corresponding-
+source archive at SHA-256 `b9dfcc85...cba4`. Internal and independent checksum
+checks passed; the tool/template/report were present and both retail/runtime
+and private/package scans returned zero. The 18:00:26 reading was 268,628
+seconds (3 days, 2 hours, 37 minutes, 8 seconds).
