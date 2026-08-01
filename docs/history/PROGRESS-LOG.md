@@ -2830,3 +2830,29 @@ The rejection/history reading was 258,100 seconds: 2 days, 23 hours,
 the exact-replay boundary. The overall goal remains active: Simulator cadence,
 broader churn, physical-iPad execution, human touch ergonomics, user-owned
 signing, and final package/source pairing are still open.
+
+### 2026-08-01 — Merged the documented Apple port into GitHub main
+
+- Committed the eight-file, 761-addition/two-replacement historical checkpoint
+  as `f5140b7eb409`. No source, build product, retail file, save, IPA, profile,
+  certificate or keychain material was in the commit.
+- The exact commit passed the clean GPL source packager in 18.44 seconds:
+  3,244 members, prohibited material excluded, archive `dc9d5ad2...3406`.
+- Pushed `codex/arm64-apple`; local and remote branch IDs matched. GitHub's
+  first PR read was briefly stale at the old head, so merging paused. The API
+  then converged on `f5140b7eb409`, `mergeable=true`, `state=clean`.
+- Audited the intended large import relative to the original viability-only
+  `main`: 6,774 commits, 2,684 changed files, 2,620 source/non-document files,
+  and zero sensitive paths. Marked private PR #1 ready and merged with a normal
+  history-preserving merge commit.
+- Verified `origin/main`, the GitHub branch API and repository default branch
+  at `0758e7a804390ebd8a7cc74ba4cdcaf864270717`. The reviewed head is its
+  ancestor and all rebuild/install/history files exist in the merged tree.
+- Created and pushed `codex/simulator-performance-next` directly from that
+  merge before resuming optimization. The merged commit's own source package
+  passed in 22.06 seconds with 3,244 members and archive
+  `873de12d...120e`; prohibited material remained excluded.
+
+The publication-close reading was 258,793 seconds: 2 days, 23 hours,
+53 minutes, 13 seconds cumulative, 693 seconds (11 minutes, 33 seconds) after
+the rejection/history boundary. The overall goal remains active.

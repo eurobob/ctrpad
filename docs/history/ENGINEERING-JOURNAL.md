@@ -13988,3 +13988,54 @@ The documentation-open reading was 258,100 seconds (2 days, 23 hours,
 41 minutes, 40 seconds), 2,216 seconds (36 minutes, 56 seconds) after the
 published exact-replay boundary. It is cumulative goal time, not a build
 benchmark or person-hour estimate. The overall goal remains active.
+
+## 2026-08-01 — Exact GitHub main merge and next-branch boundary
+
+The final staged scope was eight documentation files, 761 additions and two
+replacements. `git diff --cached --check` passed. Commit
+`f5140b7eb40945ed706502ade83dd7f2ed9048cd` added the three-day checkpoint and
+direct-decoder rejection report while updating README, Roadmap, Decisions,
+parity index, progress log, and this journal. The worktree was clean after
+commit.
+
+`package-source.sh` validated that exact commit in 18.44 seconds. It archived
+3,244 members, excluded retail media, runtime state, packages, provisioning
+profiles and key material, and produced
+`CTRPad-source-f5140b7eb409.tar.gz` at `dc9d5ad2...3406`. The SHA sidecar file's
+own hash was `f4da65fb...e249`. Both are ignored artifacts.
+
+`git push origin codex/arm64-apple` advanced the remote from `07bbc599b` to
+`f5140b7eb`. `git ls-remote` matched local HEAD exactly. An immediate
+`gh pr view` response still cached the previous PR head and unknown merge state,
+so no merge was attempted. Explicit branch and PR API polling converged on
+`f5140b7eb409`, `mergeable=true`, `mergeable_state=clean`, draft/open.
+
+The premerge audit fetched both refs and found original `main`
+`95417c723518`, intended head `f5140b7eb409`, 6,774 commits, 2,684 changed
+files, 2,620 source/non-documentation paths, zero retail/signing-sensitive
+paths, and a clean worktree. This large count is expected because the original
+repository had only three viability files and the PR preserves imported
+upstream source/history plus the Apple port.
+
+PR #1 was explicitly marked ready, then merged with `--merge` and
+`--match-head-commit f5140b7eb409...`; the branch was not deleted. GitHub
+returned merge commit `0758e7a804390ebd8a7cc74ba4cdcaf864270717` at
+2026-08-01T19:58:15Z. A fresh `git fetch`, GitHub branch API, and
+`origin/main` agreed on that object. `git merge-base --is-ancestor` proved the
+reviewed head included. Direct tree queries proved `package-ios.sh`,
+`package-source.sh`, `docs/INSTALL-IOS.md`, the renderer, checkpoint, and
+rejection report present on remote main. GitHub reports `main` as the private
+repository's default branch.
+
+New branch `codex/simulator-performance-next` was created only after those
+checks, directly at the main merge commit, and pushed with upstream tracking.
+Its clean `package-source.sh` run took 22.06 seconds, again archived 3,244
+members with prohibited material excluded, and produced
+`CTRPad-source-0758e7a80439.tar.gz` at `873de12d...120e`; its sidecar contains
+that exact digest. This proves the merged identity's source-publication path,
+not device installation.
+
+The publication-close reading was 258,793 seconds (2 days, 23 hours,
+53 minutes, 13 seconds), 693 seconds (11 minutes, 33 seconds) after the
+rejection/history boundary. The overall goal remains active; optimization now
+continues only on the new branch.

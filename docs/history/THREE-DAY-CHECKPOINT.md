@@ -354,3 +354,34 @@ retail resolution, ordering, blend/STP, mask, feedback, physics, or timing; pass
 22 tests and both desktop/iOS pixel oracles; profile matched Crash Cove states;
 exercise wider scene/effect/cache churn; and keep the physical-device gate
 closed until the Simulator route is stable and diagnosable.
+
+## GitHub publication outcome
+
+The reviewed eight-file history checkpoint was committed as
+`f5140b7eb40945ed706502ade83dd7f2ed9048cd`. Its clean-tree source-package
+preflight took 18.44 seconds, included 3,244 members, excluded retail/runtime/
+package/profile/key material, and produced archive SHA-256
+`dc9d5ad2bd29faddf273d1981e95009de47351e144f452b41fa4c95b2f353406`.
+The branch push was verified by comparing the local, remote-tracking, and
+`ls-remote` object IDs.
+
+GitHub then reported private PR #1 clean and mergeable at that exact head. It
+was marked ready and merged with history preserved into `main` as
+`0758e7a804390ebd8a7cc74ba4cdcaf864270717`. A fresh fetch, the GitHub branch
+API, and `origin/main` all returned that object; the reviewed head is its
+ancestor, the repository default branch is `main`, and the merged tree contains
+the device/source packagers, Installation Information, renderer, focused
+rejection report, and this checkpoint.
+
+Further work moved to GitHub-backed branch
+`codex/simulator-performance-next`, created directly from the merge commit.
+Packaging that exact merged commit took 22.06 seconds and again included 3,244
+members with prohibited material excluded. Its source archive is
+`CTRPad-source-0758e7a80439.tar.gz` at SHA-256
+`873de12d84d7f9dd55ff9bc5ea73fe8f7538282d93906f1915554560e690120e`.
+Generated archives remain ignored local artifacts; the authoritative rebuild
+input is the merged Git source.
+
+The publication-close reading was 258,793 seconds: 2 days, 23 hours,
+53 minutes, 13 seconds cumulative, 693 seconds (11 minutes, 33 seconds) after
+the rejection/history boundary. The overall goal remains active.
