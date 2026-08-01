@@ -86,6 +86,12 @@ Current evidence and procedures:
   targeted/range/all recycling coverage, resource-throttled provisional
   boundary, resumed exact ordinary/sanitizer/iOS matrix, one-Simulator visual
   acceptance and deliberately open physical-iPad/signing/performance gates.
+- `2026-08-01-ios-orientation-hint.md` records the current portrait clipping
+  frame that narrowed earlier rotation claims, the plist/SDL-hint intersection
+  root cause, one-line iPad orientation correction, dirty and exact sequential
+  iOS builds, exact portrait/landscape/portrait visual acceptance, data
+  preservation, residual Simulator/Foundation diagnostic and open physical-
+  iPad windowing/rotation boundary.
 - `2026-07-31-ios-sandbox-storage.md` records the bundle/Documents/Application
   Support ownership split, Documents-priority retail startup, private log and
   memory-card roots, Files metadata, exact cross-target matrix, rejected

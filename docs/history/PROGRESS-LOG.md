@@ -1998,3 +1998,52 @@ The package-result reading was 221,477 seconds: 2 days, 13 hours, 31 minutes,
 boundary, including 106 seconds (1 minute, 46 seconds) for the package closeout.
 Goal time includes pauses/resumes and is not a build benchmark or person-hour
 estimate.
+
+### 2026-08-01 — Current iPad portrait clipping corrected and accepted in Simulator
+
+- Reopened the broad rotation/layout claim after the geometry-acceptance frame
+  showed a portrait iPad shell containing a clipped `1376x1032` landscape
+  controller, a large black lower region and no visible right action cluster.
+  The restored forest/building/ground textures remained valid evidence for the
+  preceding level fix; they were not mistaken for a complete layout result.
+- Traced the mismatch to SDL's unconditional landscape-only runtime orientation
+  hint. SDL intersects that hint with the target plist, so it preserved the
+  intended iPhone landscape policy but incorrectly reduced iPad's declared
+  four-orientation mask to landscape too.
+- Changed the iOS hint to advertise portrait, upside-down portrait and both
+  landscapes. The target plist remains authoritative: iPhone still intersects
+  to both landscapes and iPad retains all four. No device-specific bridge,
+  forced scene request, manual transform or duplicate layout path was added.
+- Built candidate Simulator and iPhoneOS ARM64 products sequentially at nice
+  priority 15 and one Ninja job with both Simulators shut down. Booted only
+  disposable `CTRPad Import Negatives`; cold portrait now logged `1032x1376`
+  and portrait/landscape/portrait showed a full renderer plus all controls.
+- Committed and pushed the source correction as `2c78c040b`, then explicitly
+  reconfigured and rebuilt both products. Exact Simulator and iPhoneOS hashes
+  are `87188026...9c` and `3dc6e3c7...c1`; both are ARM64 and embed clean build
+  identity `2c78c040bf2a` and version `0.1.0-beta.7.1`.
+- Repeated the exact run on only the disposable Simulator. Cold portrait,
+  landscape and returned portrait frames were visually reviewed from fresh
+  Computer Use state; the return accessibility tree contained all 11 control
+  identifiers. Exact screenshot hashes, dimensions and console evidence are in
+  `docs/parity/2026-08-01-ios-orientation-hint.md`; retail-derived frames remain
+  outside Git.
+- Exact install/run/termination preserved the active BIN and canonical save
+  identities. The file log had no AssetRef/cache/error/fatal/unbalanced line.
+  One Foundation `NSMapGet(...): map table argument is NULL` diagnostic appeared
+  after the first rotation in both candidate and exact runs, did not recur on
+  return, and did not interrupt rendering, controls, FPS output or termination;
+  it remains explicitly open as a Simulator-side diagnostic.
+- Terminated the app and shut down the disposable device. Final state is zero
+  booted Simulators; protected `CTRPad Import Validation` was never booted or
+  modified. Simulator portrait clipping is accepted as corrected. Physical
+  iPad orientation/window resizing, Stage Manager, performance and human
+  multi-touch remain open, so M10 and the overall goal stay active.
+
+The orientation documentation-open reading was 222,662 seconds: 2 days,
+13 hours, 51 minutes, 2 seconds cumulative. The documentation-close reading
+was 223,161 seconds: 2 days, 13 hours, 59 minutes, 21 seconds cumulative. That
+adds 1,578 seconds (26 minutes, 18 seconds) from the preceding 221,583-second
+published boundary, including 499 seconds (8 minutes, 19 seconds) for the
+closing evidence audit. Goal time includes pauses/resumes and is not a build
+benchmark or person-hour estimate.

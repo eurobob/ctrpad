@@ -17,8 +17,13 @@ Checkpoint `db45004f909d` resolves the later portrait-launch question as an
 iPadOS 26 compatibility requirement rather than a failed rotation hint. The
 iPad target now declares every iPad orientation and ignores the deprecated
 full-screen compatibility key starting with version 26, while retaining the
-landscape preference for iPhone and older full-screen iPadOS. Exact portrait
-and landscape Simulator scenes both render coherently and reflow the controls.
+landscape preference for iPhone and older full-screen iPadOS. A current-head
+re-audit later found that SDL's runtime hint still reduced the iPad controller
+to landscape-only, clipping it inside a portrait shell. Commit
+`2c78c040bf2a` corrects that separate hint intersection; exact
+portrait/landscape/portrait scenes now render coherently and retain every
+control. The correction evidence is in
+`2026-08-01-ios-orientation-hint.md`.
 
 This accepts the implementation, adaptive iPadOS 26 Simulator layout and
 Simulator interaction boundary. It does not accept physical-iPad performance

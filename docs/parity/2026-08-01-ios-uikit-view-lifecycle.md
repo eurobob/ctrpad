@@ -9,6 +9,14 @@ Documentation parent: `6b268157888fbe66b8a4910ae6bf02db6b095d2b`
 Result: **accepted for the locally testable Simulator appearance-transition,
 Home/resume and rotation boundary; M8 and the overall goal remain in progress**
 
+Current-layout correction: this report's controller-lifecycle and coherent-
+rendering result remains valid, but its broad touch-overlay reflow claim was
+reopened by a current-head portrait frame. SDL still advertised landscape-only
+despite the iPad plist's four orientations, clipping the landscape controller
+inside a portrait scene. Commit `2c78c040bf2a` corrects that separate hint
+intersection and now passes exact portrait/landscape/portrait layout with all
+11 controls. See `2026-08-01-ios-orientation-hint.md`.
+
 ## Scope and verdict
 
 CTRPad no longer resets SDL's installed UIKit root view controller merely to

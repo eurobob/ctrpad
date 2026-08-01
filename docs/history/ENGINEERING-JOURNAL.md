@@ -12641,3 +12641,136 @@ The IPAs, SHA sidecars and extracted tree remain local-only. No Simulator was
 booted for this package audit. Current-source unsigned package reproducibility
 is accepted; a compatible Apple identity, provisioning profile and connected
 iPad remain required for the signed physical-install gate.
+
+## 2026-08-01 — Reopened and corrected current iPad portrait clipping
+
+### The geometry fix exposed a separate layout failure
+
+The accepted level-visibility run showed complete textures and world geometry,
+but its fresh Computer Use frame also showed the iPad shell in portrait with
+the game clipped into the upper region. The right View/Item/Brake/Gas cluster
+was absent and a large black region remained below. The renderer log explained
+the shape: it still initialized a `1376x1032` landscape window inside the
+portrait shell.
+
+This was not another missing-asset failure. The scene itself contained the
+forest, building, ground, foliage, kart and character. It was a UIKit/SDL
+orientation-policy mismatch, and the prior broad claim that every portrait
+control reflowed was reopened instead of protected by documentation inertia.
+The lifecycle fix's balanced appearance transitions and retained drawable were
+not invalidated.
+
+### The plist and runtime hint contradicted one another
+
+The generated iPhone plist declares only both landscape orientations. Its iPad
+override declares portrait, upside-down portrait and both landscape
+orientations, as required by the already documented iPadOS 26 windowing policy.
+
+Immediately before `SDL_Init`, however, `Platform_Init` still called:
+
+```text
+SDL_SetHint(SDL_HINT_ORIENTATIONS, "LandscapeLeft LandscapeRight")
+```
+
+SDL's UIKit controller intersects this hint with the plist mask. The result is
+appropriate for iPhone but reduces iPad to landscape-only too. On current
+iPadOS, the outer scene may be portrait while that controller remains
+landscape, producing the exact clipped dimensions observed.
+
+The correction advertises all four orientations in SDL's hint. The target-
+specific plist remains authoritative, so iPhone still intersects to landscape
+while iPad retains all four. No device-specific Objective-C bridge, forced
+scene request, transform or second renderer layout was introduced.
+
+### Dirty-source proof before commit
+
+Both Simulators remained shut down for compilation. iOS Simulator and
+iPhoneOS were built sequentially at nice priority 15 and one Ninja job. Both
+linked with the established 32 legacy C warnings and no new Objective-C
+warning. Candidate executable hashes were:
+
+```text
+iOS Simulator  23edbc1ad3f969ccc0194a9e1f63ea296488acb01b3e0dfbf0ca8ead457180a8
+iPhoneOS        790727855a50471b9a2e8defb249bf209f5e5660f10d9e9de6de6a95cc9791cb
+```
+
+The Simulator candidate embedded `faa32dc04ffc-dirty`. Only disposable
+`CTRPad Import Negatives` was booted; protected `CTRPad Import Validation`
+stayed shut down. Install migrated the data container from
+`F5B6B88F-640E-440B-888D-FC9514311E11` to
+`A5E280A9-E7D6-4E99-AF2A-0CF9DC890CF8` while preserving disc/save identities.
+
+Cold launch in the already portrait device now reported `1032x1376`. The legal
+screen filled the portrait surface and showed both drift buttons, utilities,
+stick and all four right actions. One refreshed Computer Use rotation produced
+a full landscape Crash/trophy/checkered scene. One newly addressed return
+rotation produced a complete portrait title/menu with all 11 control
+identifiers. This directly exercised the route that the previous build failed.
+
+The candidate was boundedly terminated and the disposable device shut down.
+The active log contained no asset/lifecycle error and the canonical save still
+hashed to `6a01b0f5...619a`.
+
+### Published source and exact clean builds
+
+The one-file implementation was committed and pushed as
+`2c78c040bf2a766d3a12e8fdbff11306e04eb517` before exact rebuilding. Both iOS
+presets were explicitly reconfigured so CTRPad and SDL embedded the clean
+identity `2c78c040b`. Compilation again ran sequentially, at nice priority 15
+and one Ninja job, with both Simulators shut down. Exact executable hashes
+were:
+
+```text
+iOS Simulator  87188026542dfee99e7e060f64ef77bff6a81924b477fec704f4ba729ba06b9c
+iPhoneOS        3dc6e3c7706e996d59668ffb2c91024473d22b068c0565317fabdc87ccd9ebc1
+```
+
+Both are thin ARM64 Mach-O products, report version `0.1.0-beta.7.1`, and
+embed SDL identity `SDL-3.4.10-beta-7.1-160-g2c78c040b`. Generated-plist
+inspection confirmed that iPhone still has only both landscape entries while
+iPad has portrait, upside-down portrait and both landscape entries. The 32
+established legacy C warnings repeated without a new Objective-C warning.
+
+### Exact portrait/landscape/portrait acceptance
+
+Only disposable `CTRPad Import Negatives` was booted for the exact run;
+protected `CTRPad Import Validation` stayed shut down and untouched. Installing
+the clean app migrated the disposable data container while retaining the exact
+BIN inode, size and modification time and the exact save inode, size,
+modification time and SHA-256 `6a01b0f5...619a`.
+
+The attached console reported build `2c78c040bf2a`, portrait window
+`1032x1376`, Apple Software Renderer, GLES 3.0, all PSX/VRAM pipelines, the
+touch overlay, UIKit display loop and CoreAudio. Computer Use refreshed state
+before every action. Cold portrait filled the legal scene and retained all
+controls; one fresh Rotate action filled landscape with the textured Naughty
+Dog/title scene and all controls; one newly addressed return rotation filled
+portrait and exposed all 11 control identifiers in the accessibility tree.
+
+Exact local-only frame hashes were:
+
+```text
+portrait cold    43e62bf243f7f89a9f1e7b61c486ad5773b50b2cbb990e487d09f9c2619a1ec7
+landscape        092ccc06911f02f115d32c192535438fef162a713f30405d7a0436ac2bb0852a
+portrait return  0953cef917839a96a05c1904d6a8b469dba80952beccc239ae66c555430d478a
+```
+
+They remain outside Git so retail-derived pixels are not published. The active
+file log contained no `[CTR AssetRef]`, cache-exhaustion, `ERROR`, `FATAL` or
+unbalanced-appearance line and hashed to
+`e18608c228102db26e901efe76c5f6108b50869e4aed2d2363bbff35c3cfa9b6`.
+The attached Simulator console emitted its known duplicate WebCore/WebKit
+accessibility-class warning and one Foundation
+`NSMapGet(...): map table argument is NULL` diagnostic after the first
+rotation. The Foundation line occurred once in both candidate and exact runs,
+did not recur on the return rotation, and did not interrupt pixels,
+accessibility, periodic FPS output or bounded termination. It remains an
+explicit Simulator-side diagnostic rather than a hidden success condition.
+
+After termination the BIN and save identities were still exact. The disposable
+Simulator was shut down, leaving both named devices shut down. The current
+Simulator clipping defect is accepted as corrected without relabeling this as
+physical-iPad acceptance. Live-device orientation/window resizing, Stage
+Manager behavior, cadence, energy and simultaneous human touch remain open;
+M10 and the overall goal remain active. Full evidence is in
+`docs/parity/2026-08-01-ios-orientation-hint.md`.

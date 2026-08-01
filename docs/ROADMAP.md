@@ -1118,9 +1118,17 @@ documentation subsequently established that iPadOS 26 supports resizable
 windowed scenes and no longer treats a forced landscape full-screen launch as
 the correct product contract. Checkpoint `db45004f909d` supports all four iPad
 orientations from iPadOS 26 while retaining the older landscape/full-screen
-preference. Exact portrait and landscape Simulator runs reflowed the renderer
-and every safe-area control with no runtime configuration fault. Physical-
-device orientation and feel remain open.
+plist declaration while retaining the older landscape/full-screen preference.
+A current-head visual re-audit then found that the runtime SDL hint still
+intersected that declaration down to landscape-only: a portrait shell clipped
+the `1376x1032` controller view and lost the right action cluster. Checkpoint
+`2c78c040bf2a` advertises all orientations to SDL and lets the target plist
+retain iPhone landscape-only while iPad keeps all four. Exact iOS 26.5
+portrait/landscape/portrait runs now use `1032x1376` portrait bounds and retain
+all 11 controls after the formerly broken return rotation. Full evidence and
+the retained one-per-run Foundation diagnostic are in
+`docs/parity/2026-08-01-ios-orientation-hint.md`. Physical-device orientation,
+Stage Manager/window resizing and feel remain open.
 
 A current-implementation follow-up at branch documentation tip `db78d5a25`
 repeated the full touch route to a live Crash Cove grid using the exact audited
