@@ -14630,3 +14630,20 @@ The final candidate additionally required actual Boolean plist types for
 focused test passed in 4.51 seconds and the complete suite repeated 23/23 in
 8.13 seconds. At 18:51:23 CDT, active goal time was 271,689 seconds (3 days, 3
 hours, 28 minutes, 9 seconds). No real-profile or device claim changed.
+
+At 18:52:18 CDT the exact 16-file checkpoint became commit `c89bdfc235e0`.
+Its first clean source archive contained 3,258 members, passed checksum,
+required-file, exclusion and extracted-source self-test checks, and had SHA-256
+`db3be6dd...16892`. The unchanged head was pushed. The preferred GitHub
+connector again returned a private-repository 404; authenticated CLI fallback
+opened draft PR #12 at 18:54:11. Its audit found one commit, the intended 16
+files, 653 additions, 34 deletions, `MERGEABLE` / `CLEAN` and no configured
+checks.
+
+PR #12 merged the exact protected head at 18:54:33 CDT as `d9e3c59440ca`.
+Fetching `origin/main` confirmed both new tools and the focused report before
+the local branch fast-forwarded. Final-main packaging again produced 3,258
+members; sidecar, independent SHA-256 at `760dcee6...68d0`, forbidden-member
+scan and extracted-source test all passed. At 18:55:55, active goal time was
+271,962 seconds (3 days, 3 hours, 32 minutes, 42 seconds). Apple credentials
+and a physical device remained absent.

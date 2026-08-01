@@ -94,3 +94,24 @@ validation, the focused test passed in 4.51 seconds and the complete suite
 again passed 23/23 in 8.13 seconds. At 18:51:23 CDT, active goal time was
 271,689 seconds: 3 days, 3 hours, 28 minutes and 9 seconds. These are the final
 pre-commit candidate results; the external boundary is unchanged.
+
+## Publication
+
+The exact 16-file checkpoint became commit `c89bdfc235e0` at 18:52:18 CDT.
+Its clean 3,258-member source archive passed its sidecar, independent hash and
+extracted-source self-test at SHA-256
+`db3be6dd4f8ca7fe15c1cfbec9f147431babeb78eb94e3023e68a78c01116892`;
+the forbidden-member scan returned zero.
+
+The commit was pushed unchanged. The preferred private-repository connector
+returned HTTP 404, then authenticated CLI fallback opened draft PR #12 at
+18:54:11. GitHub reported exactly one commit, the intended 16 files, 653
+additions, 34 deletions, `MERGEABLE` / `CLEAN` and no configured checks. The
+exact protected head merged at 18:54:33 as `d9e3c59440ca`.
+
+Packaging fetched `main` produced another 3,258-member archive at SHA-256
+`760dcee662b993ebe417ba0cd3b6b077430538c9f43a72e979648e2bb4eb68d0`.
+Its sidecar, independent hash, exclusion scan and extracted-source entitlement
+self-test passed. At 18:55:55 CDT, active goal time was 271,962 seconds: 3 days,
+3 hours, 32 minutes and 42 seconds. Publication closes this offline defect, not
+the real signed-profile or physical-iPad branch.
