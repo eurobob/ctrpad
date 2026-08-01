@@ -2905,3 +2905,25 @@ The clean-smoke close reading was 261,192 seconds: 3 days, 33 minutes, 12
 seconds cumulative, 1,326 seconds (22 minutes, 6 seconds) after the re-baseline
 documentation boundary. The overall goal remains active because real Apple
 signing and physical-iPad acceptance are still open.
+
+### 2026-08-01 — Closed the self-test warning assessment without a risky patch
+
+- Re-audited the clean tree, GitHub `main`, both Simulator states, signing
+  identities and connected devices; the source was clean, both devices and GUI
+  were closed, and real signing/device inputs remained absent.
+- Traced the retained UIKit warning through synchronous renderer-test
+  `Platform_Init` → draw/readback → `Platform_Shutdown` before a UIKit run-loop
+  return. The ordinary production display-loop route does not use that
+  teardown sequence.
+- Rejected manual UIKit transition balancing, arbitrary nested-loop delay,
+  skipped cleanup and an iOS-only asynchronous test refactor because each
+  changes working production or deterministic test semantics without a
+  physical defect.
+- Kept application source unchanged and documented the exact condition that
+  would reopen the issue: the signed physical app reproducing the warning on a
+  normal route.
+
+The teardown-assessment reading was 261,906 seconds: 3 days, 45 minutes, 6
+seconds cumulative, 714 seconds (11 minutes, 54 seconds) after the clean-smoke
+close boundary. The overall goal remains open only at the real
+signing/physical-iPad campaign.

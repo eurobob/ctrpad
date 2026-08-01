@@ -1507,3 +1507,11 @@ one UIKit appearance-transition console warning, retained as an open focused
 observation. Signing and every physical-iPad requirement remain open. Exact
 evidence is in
 `docs/parity/2026-08-01-release-rebaseline-clean-smoke.md`.
+
+Post-rebaseline source audit confirms the retained UIKit warning belongs to the
+synchronous renderer self-test creating and destroying its window before a
+UIKit run-loop return. The accepted production path remains warning-free on
+the exercised startup/Home/foreground/rotation route. Manual appearance calls,
+arbitrary nested-run-loop delay, skipped shutdown and a test-only asynchronous
+state machine are rejected absent a physical production reproduction. See
+`docs/parity/2026-08-01-ios-uikit-view-lifecycle.md`.

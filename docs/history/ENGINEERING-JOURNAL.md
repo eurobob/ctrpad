@@ -14163,3 +14163,43 @@ warning and limitation boundary is in
 remains active; this machine still has zero valid Apple signing identities,
 provisioning profiles and connected devices, so the signed physical campaign
 is not inferred from the successful unsigned handoff.
+
+## 2026-08-01 — Renderer self-test UIKit teardown audit
+
+The automatic goal continuation began from clean documentation head
+`cd41e62c5d8820d957f770ee28df6c4e1833b884`, while repository-qualified GitHub
+API reported remote `main` merge `9b4a175f5fcfa4a8b3335fc177f5dea29cbf5fcb`.
+Both CTRPad devices were shutdown; exact Simulator GUI/CTRPad process queries
+were empty; signing inventory still returned zero valid identities and
+`devicectl` still returned `No devices found.`
+
+The one locally actionable open observation was the immediate renderer pixel
+self-test's UIKit appearance warning. The earlier lifecycle report already
+explicitly retained it, so this was a source-ownership audit rather than a new
+regression claim. `main.c` calls `NativeRenderer_RunPixelSelfTest` synchronously
+from `SDL_main`. That function calls `Platform_Init`, completes all pixel and
+presentation work, then calls `Platform_Shutdown` before returning. Shutdown
+destroys the SDL UIKit window and quits SDL inside the same app-delegate/run-
+loop callback that installed the root controller. UIKit therefore receives no
+run-loop return between creation and destruction on this test-only route.
+
+The normal iOS runtime differs materially: it starts the display link and
+returns from `SDL_main` with the platform alive. UIKit completes appearance
+before the already accepted Home/foreground, rotation and bounded termination
+events. Clean `d5772375fabc` again passed that ordinary route and five-log scan;
+the warning appeared only after the complete self-test success line.
+
+No source candidate was created. Manually invoking UIKit appearance methods
+was rejected because no supported public property establishes the private root
+transition's pending balance. A sleep or nested run-loop spin would make a
+deterministic oracle reentrant and timing-dependent. Skipping shutdown would
+leak and change the test contract. A correct asynchronous continuation would
+require splitting the monolithic renderer test into iOS-specific phases, which
+is disproportionate without a physical production reproduction. The accepted
+production lifecycle remains unchanged.
+
+The teardown-assessment reading was 261,906 seconds (3 days, 45 minutes, 6
+seconds), 714 seconds (11 minutes, 54 seconds) after the clean-smoke close
+boundary. Exact reasoning and reopening criteria are recorded in
+`docs/parity/2026-08-01-ios-uikit-view-lifecycle.md` and `docs/DECISIONS.md`.
+The overall goal remains open at the user-owned signed physical-iPad campaign.
