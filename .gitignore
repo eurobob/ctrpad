@@ -33,6 +33,16 @@ ref/CTR/
 **/*.str
 **/*.STR
 
+# Apple signing authorization and private-key material. These are user-owned
+# release inputs and must never enter source or release archives.
+**/*.mobileprovision
+**/*.provisionprofile
+**/*.p12
+**/*.p8
+**/*.pfx
+**/*.pem
+**/*.key
+
 # Build output, generated files, runtime state, and local editor files.
 build/
 build-*/

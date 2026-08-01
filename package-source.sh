@@ -102,6 +102,7 @@ git -C "$repo_root" archive --format=tar --prefix="${archive_root}/" \
 tar -tf "$archive_tar" >"$archive_list"
 
 for required_file in \
+    .gitignore \
     CMakeLists.txt \
     CMakePresets.json \
     LICENSE \
@@ -132,7 +133,7 @@ retail_match="$(grep -Ei \
 [[ -z "$retail_match" ]] || fail "retail/runtime-like file found in source archive: $retail_match"
 
 private_match="$(grep -Ei \
-    '/([^/]+\.(ipa|mobileprovision|p12|cer|pem|key)|id_rsa|id_ed25519|\.env)$' \
+    '/([^/]+\.(ipa|mobileprovision|provisionprofile|p12|p8|pfx|cer|crt|der|pem|key)|id_rsa|id_ed25519|\.env)$' \
     "$archive_list" | head -1 || true)"
 [[ -z "$private_match" ]] || fail "credential/package-like file found in source archive: $private_match"
 
