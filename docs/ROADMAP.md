@@ -1021,6 +1021,18 @@ preference. Exact portrait and landscape Simulator runs reflowed the renderer
 and every safe-area control with no runtime configuration fault. Physical-
 device orientation and feel remain open.
 
+A current-implementation follow-up at branch documentation tip `db78d5a25`
+repeated the full touch route to a live Crash Cove grid using the exact audited
+`560f6dd20` Simulator product. Gas UI actions moved Crash forward; an
+auto-continuing LLDB breakpoint observed stick X reach `32763` and then return
+to neutral on release. Native state showed Cross absent from `heldButtons` at
+every stick callback, so Option-assisted, click/drag overlap and concurrent-
+drag automation routes were rejected as serialized rather than counted as
+multi-touch. Exact trace, screenshot hashes and failed-tooling history are in
+`docs/parity/2026-07-31-ios-touch-controls.md`. This strengthens live
+single-control delivery but leaves physical held Gas/steer/drift unchanged as
+the M10 exit gate.
+
 Work:
 
 - Retain the implemented touch peer in the platform input composition path so
@@ -1040,7 +1052,9 @@ Acceptance:
 - Touch-only users can start the app, select content, race, pause, and save.
 - **Startup, menu navigation, selection, cold Load-screen access, Time Trial
   entry, forward race movement, Pause and post-rotation Resume are accepted on
-  Simulator; a complete human multi-touch race/save is still open.**
+  Simulator. Current-tip live traces also accept Gas movement and near-full
+  analog steering with neutral release as separate contacts; a complete human
+  multi-touch race/save is still open.**
 - Steering remains continuously analog while accelerate and drift are held.
 - A tester can intentionally execute repeated three-boost drift chains in both
   turn directions without grip changes or missed simultaneous contacts.

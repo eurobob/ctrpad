@@ -1480,3 +1480,38 @@ documentation reading was 188,683 seconds: 2 days, 4 hours, 24 minutes,
 43 seconds cumulative, adding 673 seconds (11 minutes, 13 seconds). The timer is
 cumulative product-task time, including pauses, not a benchmark or labor
 estimate.
+
+### 2026-07-31 — Current-tip live Gas and analog-steering trace
+
+- Reused the exact audited Simulator product for implementation tip
+  `560f6dd20` while the branch documentation tip was `db78d5a25`. Installed
+  executable SHA-256 remained `df2d6249...41ee`; no source rebuild or product
+  change was inferred from the later documentation commits.
+- Launched the disposable clone with wait-for-debugger and used the overlay to
+  reach Time Trial → Crash → Crash Cove → No Ghost → live lap 1/3. The game,
+  textures, HUD, minimap and complete accessibility-labelled overlay remained
+  visible.
+- Twelve Gas UI actions moved Crash forward from the starting line. A live
+  stick drag reached signed X `32763`, then released to `(0,0,inactive)`.
+- LLDB inspected the native touch state at every stick callback. Cross was
+  never present in `heldButtons`; attempted Option-assisted two-contact,
+  click/drag overlap and dual-drag routes were therefore rejected as
+  serialized automation rather than multi-touch.
+- A normal LLDB attach hung for roughly 90 seconds and was stopped. An
+  optimized conditional breakpoint also stopped every input poll and was
+  deleted. The accepted wait-for-debugger run used an auto-continuing
+  `Platform_InputTouchLeftStick` breakpoint.
+- Local-only 2064-by-2752 baseline/after screenshots hashed to
+  `f6a35759...5ac8` and `4e1ac6f...421`. Neither screenshot entered Git.
+- After clean debugger detach, Pause opened the retail Pause menu. Clone and
+  source BIN/save sizes, hashes and inodes remained unchanged; the disposable
+  clone was shut down without deletion and source PID `93637` remained running.
+- Single-control current-tip gameplay is strengthened. Natural simultaneous
+  Gas/steer/drift, a full touch-only race, physical-iPad keyboard behavior,
+  signing and device performance remain open; the goal remains active.
+
+The preceding published reading was 188,683 goal seconds. The pre-publication
+documentation reading was 191,189 seconds: 2 days, 5 hours, 6 minutes,
+29 seconds cumulative, adding 2,506 seconds (41 minutes, 46 seconds). The timer
+is cumulative product-task time, including pauses, not a benchmark or labor
+estimate.

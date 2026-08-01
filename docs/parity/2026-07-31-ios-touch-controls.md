@@ -314,6 +314,74 @@ and the 6,016-byte save at
 Adaptive Simulator orientation is accepted; physical-device windowing,
 rotation feel and performance remain open.
 
+## Current implementation live-race input trace
+
+Branch documentation tip `db78d5a25` contained no production change after
+implementation tip `560f6dd20`. The already audited Simulator sibling was
+therefore reused: its unsigned executable SHA-256 was
+`a84eb77d9f170372e732a44f3e752acaeb14eac65ae80ecc61d61677a891a4b3`,
+and the installed ad-hoc signed executable was
+`df2d6249f96497817af14382bfcc122b1795123a388c32bfaa8f95ead2cc41ee`.
+This signature authorized only local Simulator execution.
+
+The exact app was launched on the disposable `CTRPad Import Negatives` clone
+with LLDB's wait-for-debugger route. Touch-only UI actions advanced the retail
+presentations, selected Time Trial, Crash, Crash Cove and No Ghost, skipped the
+fly-in with View, and reached a live lap-1/3 starting grid. The timer advanced,
+textures/HUD/minimap remained coherent, and all nine accessibility-labelled
+touch controls remained visible. The two full-resolution local-only captures
+were:
+
+```text
+before input  2064x2752, 1,460,372 bytes
+SHA-256       f6a357590df2c7353004e72b63694251dd53cebc7e390d5911d2e6db33fb5ac8
+after input   2064x2752, 1,442,161 bytes
+SHA-256       4e1ac6f19133a42bcc2a439713523b45d0677789a0aee5a98b0e5d6dd325b421
+```
+
+The after frame visibly placed Crash farther beneath the start banner. This
+followed twelve Gas UI actions and accepts live Gas-to-gameplay delivery and
+forward movement at the current implementation tip.
+
+An auto-continuing breakpoint on `Platform_InputTouchLeftStick` observed the
+gameplay steering drag. The first movement was `(341, 683, active=1)`; a later
+movement reached `(32763, 516, active=1)`, nearly full positive X, and release
+arrived as `(0, 0, active=0)`. Immediately before release the touch state held
+the prior analog pair and outer-ring Right latch:
+
+```text
+held=0x0000 latched=0x0020 next=0x0020 x=32763 y=516 active=1
+```
+
+This accepts UIKit stick movement, analog range and neutral release during a
+live race. It also supplied an authoritative negative result for the attempted
+simultaneity test. Cross would have appeared in the first `heldButtons` field
+as `0x4000` (little-endian bytes `0040`). It remained `0x0000` at every stick
+callback. Gas taps later moved the kart, but the automation service serialized
+them with the stick drag; neither tap/drag overlap nor two concurrent drag
+requests represented two held UIKit contacts.
+
+The Simulator Option-key route was also bounded. A modifier-only request was
+rejected by the Computer Use service because it requires a non-modifier key;
+the corrected Alt/Shift/U request completed without affecting the mapped game
+keyboard path. The subsequent Option-assisted Gas-side drag caused no stick
+callback and no visible movement. It is rejected rather than used as
+multi-touch evidence.
+
+After the trace, LLDB detached cleanly and the first stable Pause touch opened
+the retail Pause menu. The clone BIN remained inode `111313696`, 605,698,800
+bytes and SHA-256 `f780bf2331476aabfc00772fa758b12dd95ebfbc907968132cbd3cdd4e2c07c0`;
+the save remained inode `111309627`, 6,016 bytes and SHA-256
+`6a01b0f5562ed7a279d8f8e51e3b1874ac39a6120f55db4fe3873288950619a3`.
+The clone was terminated and shut down without deletion. Source validation PID
+`93637` remained running with source BIN/save inodes `111131200`/`111222179`
+and the same hashes.
+
+This checkpoint strengthens current-tip single-control live gameplay evidence.
+It does **not** accept natural held Gas plus steering, Gas plus drift, repeated
+three-boost chains, a complete touch-only race, or any physical-iPad behavior.
+Those remain device acceptance gates.
+
 ## Correction and tooling history
 
 All rejected or corrected routes are retained here:
@@ -351,6 +419,19 @@ All rejected or corrected routes are retained here:
    after a state change instead of the Simulator Rotate control. The mistaken
    click was discarded; the accessibility tree was refreshed before exact
    portrait/landscape evidence was captured.
+10. A normal live-process LLDB attach remained hung for about 90 seconds and
+    was stopped. The accepted rerun used `simctl launch --wait-for-debugger`.
+11. An optimized `NativeInput_ApplyTouch` breakpoint could not evaluate its
+    local-variable condition and stopped every input poll, leaving a slow white
+    launch. It was deleted. The accepted breakpoint used the non-optimized
+    `Platform_InputTouchLeftStick` API boundary and auto-continued.
+12. A modifier-only Alt/Shift Computer Use request was rejected before it
+    reached Simulator. Adding an otherwise unmapped non-modifier satisfied the
+    tool contract, but the resulting Option-assisted drag still produced no
+    second contact and was rejected.
+13. Concurrent Gas clicks and stick drag requests produced forward movement
+    and analog callbacks separately. Live memory showed `heldButtons=0` at
+    every stick callback, proving serialization rather than multi-touch.
 
 ## Publication and evidence boundary
 

@@ -10936,3 +10936,125 @@ documentation reading was 188,683 seconds: 2 days, 4 hours, 24 minutes,
 43 seconds cumulative, adding 673 seconds (11 minutes, 13 seconds). It includes
 paused/resumed task lifetime and is not a build benchmark or person-hour
 estimate.
+
+## 2026-07-31 — Traced live Gas and steering at the current implementation tip
+
+### Scope and immutable product identity
+
+The user asked for continued work, visible game status, frequent GitHub backup,
+and a complete historical process record. The worktree and remote branch both
+started at clean documentation tip `db78d5a25`. The production implementation
+had not changed since `560f6dd20`, so the already audited sibling products were
+the exact executable evidence for this continuation:
+
+```text
+Simulator unsigned  a84eb77d9f170372e732a44f3e752acaeb14eac65ae80ecc61d61677a891a4b3
+Simulator installed df2d6249f96497817af14382bfcc122b1795123a388c32bfaa8f95ead2cc41ee
+```
+
+The second hash is an ad-hoc Simulator signature, never Apple device
+authorization. No production source was edited during this experiment.
+
+The requested practical keyboard layout was also audited in the repository:
+published commit `2c10b00b34df` maps `WASD` to D-pad, `IJKL` to the four face
+buttons, `Q/E` to L1/R1, `P` to Start and Tab to Select through the ordinary
+PS1-shaped input path. macOS automation and live movement remain accepted;
+physical-iPad hardware-keyboard delivery remains open.
+
+### Rejected live-attach route and corrected debugger setup
+
+The first attempt attached LLDB normally to already-running PID `99375`. It
+remained hung for approximately 90 seconds, so it was explicitly stopped and
+not used as evidence. The clone app was terminated and relaunched with
+`simctl launch --wait-for-debugger`; that produced PID `1218` and allowed a
+deterministic attach before application startup.
+
+The first breakpoint targeted optimized `NativeInput_ApplyTouch` with a
+condition involving `touchButtons` and `s_touchState`. The optimized local was
+unavailable and LLDB had split the aggregate global; condition evaluation
+failed, every input poll stopped, and startup appeared as a slow white frame.
+The breakpoint was deleted. No product failure was inferred.
+
+The corrected boundary was `Platform_InputTouchLeftStick`, which resolved to
+three locations. The app image slide was `0x02b90000`; file symbol
+`_s_touchState.0` at `0x100839e74` therefore placed the runtime state at
+`0x1033c9e74`. An auto-continuing Python breakpoint command printed `w0`, `w1`,
+`w2` plus the 16-byte state before each call. This avoided stopping the game
+and made held-button state observable alongside live stick movement.
+
+### Normal touch-only route into a race
+
+With the corrected debugger active, the overlay advanced the presentations,
+used outer-ring stick Down to select Time Trial, and used Gas to select Time
+Trial, Crash, Crash Cove and No Ghost. View skipped the fly-in. The app reached
+a live Crash Cove starting grid with timer, lap 1/3, HUD, minimap, textured
+world and every touch control coherent.
+
+The first full-resolution framebuffer was 2064 by 2752 pixels, 1,460,372
+bytes, SHA-256
+`f6a357590df2c7353004e72b63694251dd53cebc7e390d5911d2e6db33fb5ac8`.
+It remained local at `/private/tmp/ctrpad-live-multitouch-before.png`.
+
+### Bounded multi-touch attempts
+
+The first intended Simulator two-contact sequence tried to position the
+Option/Shift touch-pair center. Computer Use rejected an Alt/Shift-only key
+request because its key contract requires a non-modifier. A corrected
+Alt/Shift/U sequence completed; `U` is not a CTRPad mapping and Alt events are
+excluded from the ordinary keyboard-to-pad route. The subsequent Option-
+assisted drag from the Gas side produced no native stick callback and no
+visible movement. This route was rejected.
+
+The next bounded fallback overlapped a right-stick drag with twelve Gas UI
+actions. Crash visibly advanced beneath the start banner. The debugger printed
+the stick sequence:
+
+```text
+x=341   y=683 active=1  prior_state=00000000000000000000000000000000
+x=32763 y=516 active=1  prior_state=0000000000005501ab02000001000000
+x=0     y=0   active=0  prior_state=000020002000fb7f0402000001000000
+```
+
+Decoding the final prior state gives `held=0x0000`, `latched=0x0020`,
+`latchedNext=0x0020`, `leftX=32763`, `leftY=516`, `active=1`. The `0x0020`
+value is outer-ring Right, not Cross. Cross would be `0x4000`, which would
+begin the little-endian memory dump with bytes `0040`; the held field began
+with `0000` for every callback.
+
+A final pair of concurrent Gas/stick drag requests again produced a stick
+begin/release sequence with `held=0`. The UI automation service therefore
+serialized these requests. Forward movement and analog callbacks are accepted
+as separate live-control results; simultaneous UIKit contact is not.
+
+The after framebuffer was again 2064 by 2752 pixels, 1,442,161 bytes, SHA-256
+`4e1ac6f19133a42bcc2a439713523b45d0677789a0aee5a98b0e5d6dd325b421`.
+It remained local at `/private/tmp/ctrpad-live-multitouch-after.png` and visibly
+showed the advanced kart/camera position.
+
+### Cleanup and acceptance boundary
+
+LLDB was interrupted, detached from PID `1218`, and quit. The app continued;
+the first stable Pause touch opened the retail Pause menu. The disposable clone
+then retained:
+
+```text
+BIN   inode 111313696, 605698800 bytes, f780bf2331476aabfc00772fa758b12dd95ebfbc907968132cbd3cdd4e2c07c0
+save  inode 111309627,      6016 bytes, 6a01b0f5562ed7a279d8f8e51e3b1874ac39a6120f55db4fe3873288950619a3
+```
+
+The clone app was terminated and the Simulator was shut down without deletion.
+The protected validation Simulator remained booted with existing PID `93637`;
+its BIN/save inodes `111131200`/`111222179`, sizes and hashes were unchanged.
+No retail file, save, screenshot, debugger command, app container or temporary
+signed bundle entered Git.
+
+This accepts current-implementation Gas movement, live analog stick range,
+neutral release and post-debugger responsiveness. It does not accept held
+Gas-plus-steer, held drift-plus-steer, three-boost ergonomics, a complete
+touch-only race, physical keyboard delivery, device signing, or physical-iPad
+performance. The goal remains active.
+
+The preceding published timer was 188,683 seconds. The pre-publication reading
+was 191,189 seconds: 2 days, 5 hours, 6 minutes, 29 seconds cumulative, adding
+2,506 seconds (41 minutes, 46 seconds). It includes paused/resumed task lifetime
+and is not a build benchmark or person-hour estimate.
