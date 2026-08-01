@@ -14463,3 +14463,15 @@ head `e7af0bc323034e51ba8e4e0426abd0c7c28f0e79`, base `main`, `MERGEABLE` /
 `CLEAN`, and no configured checks. The 18:02:05 active-time reading was 268,724
 seconds (3 days, 2 hours, 38 minutes, 44 seconds). Merge remained the next
 explicit operation.
+
+PR #7 was marked ready. The first head-protected merge attempt supplied an
+incorrect expansion after the displayed nine-character prefix
+(`0458baff2db...` rather than the actual `0458baff2ea...`); GitHub refused it
+with `Head branch was modified`, and no merge occurred. The exact full head was
+then queried, compared with local `HEAD`, and passed back unchanged. PR #7
+merged at 18:02:58 CDT as
+`a19c1a5ef89b12c2ca77eb38eaaa9a71f2569f34`. Fetching `origin/main` confirmed
+parents `e2dfe9709...` and `0458baff2...` plus all three new handoff files. The
+working branch fast-forwarded to the merge. The post-merge goal reading was
+268,804 seconds (3 days, 2 hours, 40 minutes, 4 seconds); the physical-device
+acceptance boundary remained unchanged.

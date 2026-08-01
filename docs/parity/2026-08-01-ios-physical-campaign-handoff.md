@@ -236,3 +236,12 @@ intended files, head `e7af0bc323034e51ba8e4e0426abd0c7c28f0e79`, base
 `main`, `MERGEABLE`/`CLEAN`, and no configured checks. The 18:02:05 goal reading
 was 268,724 seconds (3 days, 2 hours, 38 minutes and 44 seconds); this was the
 pre-merge boundary.
+
+After the PR was marked ready, an initial head-protected merge used an
+incorrect full-SHA expansion after the short prefix and GitHub refused it
+without merging. The retry first queried and locally matched exact head
+`0458baff2ea770dffd4867a15736141894e4b123`. PR #7 then merged at 18:02:58
+CDT as `a19c1a5ef89b12c2ca77eb38eaaa9a71f2569f34`. Fetched `origin/main`
+showed the expected old-main/head parents and all three new handoff files. The
+post-merge reading was 268,804 seconds (3 days, 2 hours, 40 minutes and 4
+seconds). Publication is accepted; physical-device execution is not.
