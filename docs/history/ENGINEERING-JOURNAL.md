@@ -13338,17 +13338,23 @@ sample. Input correctness at that speed is accepted; Simulator usability is
 not.
 
 The app produced logs for about 19 minutes 38 seconds and survived the tested
-lifecycle cycle. When cleanup ran, `simctl terminate` nevertheless returned
-`found nothing to terminate`. No crash artifact or app fault explained the
-absence. A narrowly filtered headless RunningBoard query then hung, so its
-exact diagnostic process was allowed to end and the device was shut down
-rather than left consuming system resources. Final reads showed both CTRPad
-devices shut down and no CTRPad/Simulator GUI process. Two verified task-owned
-temporary signed-app directories, 3.5 MB each, were deleted by exact path;
-the final text log and two hashed screenshot files were retained in `/tmp`.
+lifecycle cycle. The first cleanup command targeted
+`com.chrissotraidis.ctrpad`, while the actual built plist identifier is
+`io.github.chrissotraidis.ctrpad`. Its `found nothing to terminate` response
+therefore says only that the wrong identifier was not running; it does not show
+that PID `65296` exited. This was discovered by reading the built plist before
+the next diagnostic and corrects the earlier pushed interpretation.
+
+A narrowly filtered headless RunningBoard query had already outlived its
+initial wait, but it was unnecessary once the identifier mismatch was found.
+The device was shut down rather than left consuming system resources. Final
+reads showed both CTRPad devices shut down and no CTRPad/Simulator GUI process.
+Two verified task-owned temporary signed-app directories, 3.5 MB each, were
+deleted by exact path; the final text log and two hashed screenshot files were
+retained in `/tmp`.
 
 This accepts the exact consumer latch, the inspected two-track graphical churn,
 rotation/Home recovery and retained logging. Poor software-renderer cadence,
-the unexplained final process absence, broader level/effect coverage, human
-multi-touch and every physical-iPad gate remain open. Full proof and hashes are
-in `docs/parity/2026-08-01-simulator-stability-logging.md`.
+broader level/effect coverage, an observed correct-ID or natural termination,
+human multi-touch and every physical-iPad gate remain open. Full proof and
+hashes are in `docs/parity/2026-08-01-simulator-stability-logging.md`.

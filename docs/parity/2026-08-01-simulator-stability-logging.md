@@ -9,8 +9,8 @@
 - Sole device: `CTRPad Import Negatives`
 - Protected device kept shut down: `CTRPad Import Validation`
 - Status: **bounded input, lifecycle and inspected-scene graphics accepted;
-  performance, unexplained process absence and broad graphical churn keep the
-  Simulator and physical-device gates open**
+  performance, broad graphical churn and an observable correct-ID shutdown
+  keep the Simulator and physical-device gates open**
 
 ## Why this checkpoint exists
 
@@ -432,21 +432,22 @@ showed about 86% CPU and 221,264 KB RSS. This is too slow to call the Simulator
 a usable stability test even though the fixed input route worked.
 
 The app remained responsive and kept logging for about 19 minutes 38 seconds,
-and the same PID survived the explicit lifecycle cycle. During cleanup,
-however, `simctl terminate` reported that no target was running. There was no
-crash report, application fault entry or app-log failure marker, but the exit
-cause was not recovered. A later bounded RunningBoard query outlived its
-initial wait and ended without recovering the exit cause; the device was shut
-down rather than left consuming resources. This unexplained process absence is
-retained as an open stability finding.
+and the same PID survived the explicit lifecycle cycle. The first cleanup
+command mistakenly targeted `com.chrissotraidis.ctrpad`; the built plist's
+actual identifier is `io.github.chrissotraidis.ctrpad`. Therefore `simctl`'s
+`found nothing to terminate` response referred only to a nonexistent bundle
+identifier and is not evidence that PID `65296` exited. The later RunningBoard
+query was unnecessary and outlived its initial wait; the device was shut down
+without obtaining a correct-ID explicit-termination observation. No crash
+report, application fault entry or app-log failure marker exists.
 
 The exact replay therefore accepts keyboard consumption, two distinct track
 loads, inspected Adventure/Time Trial pixels, rotation, Home/resume and the
 five-generation log contract. It does not generalize two tracks to every level
-or effect, accept the poor frame rate, explain the process exit, or authorize a
-physical-iPad attempt. The next Simulator work must profile/improve the
-software-renderer path and repeat longer, broader level/effect churn with an
-observable normal shutdown.
+or effect, accept the poor frame rate, prove a correct-ID explicit or natural
+termination, or authorize a physical-iPad attempt. The next Simulator work
+must profile/improve the software-renderer path and repeat longer, broader
+level/effect churn with an observable normal shutdown.
 
 ## Goal-time accounting
 

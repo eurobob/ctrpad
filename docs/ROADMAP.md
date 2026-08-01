@@ -9,8 +9,8 @@ timing.
 
 **Current milestone:** M10 Simulator stability and touch-control iteration;
 exact retail-consumer keyboard input and bounded two-track graphics/lifecycle
-are accepted, while Simulator cadence, unexplained process exit, broad visual
-churn and all physical-iPad M8/M9 gates remain open
+are accepted, while Simulator cadence, broad visual churn, observable correct-
+ID shutdown and all physical-iPad M8/M9 gates remain open
 
 **Last updated:** 2026-08-01
 
@@ -1088,7 +1088,7 @@ Acceptance:
 peer input composition, continuous analog steering, consumer-acknowledged
 quick keys, menu D-pad edges and core button layout have landed; exact
 two-track input/visual/lifecycle coverage is accepted, but Simulator
-performance, broader graphics, normal process exit and physical-iPad
+performance, broader graphics, correct-ID process termination and physical-iPad
 ergonomics/drift-boost acceptance remain open; depends on M8 and M9
 
 Checkpoint `c496c27f04c8` adds an iOS UIKit overlay with a virtual analog
@@ -1210,9 +1210,10 @@ coherent. The current 13,642-byte log plus four archives contain none of the
 targeted asset/cache/application-fault markers. This accepts the input fix and
 the inspected graphical/lifecycle route, not the whole Simulator gate: 63 FPS
 samples averaged 7.37 and fell to about 4.61-5.30 late, only two tracks were
-churned, and cleanup found the app already absent without a recovered crash
-cause. Performance profiling, broader level/effect churn and an observable
-normal shutdown remain prerequisites for physical-device work. See
+churned, and the first cleanup command used the wrong bundle identifier. Its
+`found nothing` response was a command-target error, not an app-exit finding.
+Performance profiling, broader level/effect churn and an observable correct-ID
+shutdown remain prerequisites for physical-device work. See
 `docs/parity/2026-08-01-simulator-stability-logging.md`.
 
 Work:
@@ -1237,7 +1238,7 @@ Acceptance:
   Time Trial entry, movement, Pause/rotation/Resume and a keyboard-only route
   across Crash Cove and Roo's Tubes with retained logs, coherent inspected
   graphics and reliable keyboard delivery. The current Simulator product gate
-  remains open for usable cadence, normal process termination and broader
+  remains open for usable cadence, correct-ID process termination and broader
   level/effect churn. Physical keyboard and a complete human multi-touch
   race/save remain open.
 - Steering remains continuously analog while accelerate and drift are held.

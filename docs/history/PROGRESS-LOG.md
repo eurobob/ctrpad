@@ -2372,14 +2372,16 @@ remains active.
   The unified log contains five framework-level CFBundle/CoreAudio Simulator
   limitations and no new CTRPad crash report.
 - Kept the full gate open. Sixty-three FPS samples range 4.61-22.80 and average
-  7.37, with the late run near 4.61-5.30 FPS. Cleanup also found the app already
-  absent despite no recovered crash cause. Two tracks do not prove every
-  level/effect. Performance profiling, an explained normal shutdown and
+  7.37, with the late run near 4.61-5.30 FPS. Two tracks do not prove every
+  level/effect. Performance profiling, an observed correct-ID shutdown and
   broader graphical churn are required before physical-device work.
-- A bounded RunningBoard query outlived its initial wait but ended without an
-  exit cause. The one disposable device was then shut down. Final state is both
-  CTRPad devices shut down with no game or Simulator GUI process left consuming
-  the host.
+- Corrected a pushed cleanup interpretation: the command targeted
+  `com.chrissotraidis.ctrpad`, but the built plist identifier is
+  `io.github.chrissotraidis.ctrpad`. `found nothing to terminate` was a wrong-
+  target command result, not evidence of a crash or unexplained app exit. The
+  subsequent bounded RunningBoard query was unnecessary. The one disposable
+  device was shut down; final state was both devices off with no game or
+  Simulator GUI process consuming the host.
 
 The exact post-fix documentation-open reading was 236,181 seconds: 2 days,
 17 hours, 36 minutes, 21 seconds cumulative. The pre-publication verification

@@ -525,6 +525,9 @@ consumer checkpoint `ba80d153ae55` made 20/20 keyboard edges reach
 `GAMEPAD_ProcessHold`, churned coherent Crash Cove and Roo's Tubes plus
 rotation/Home-resume, and retained five logs without known asset/cache/app-
 fault markers. This accepts that bounded input/visual/lifecycle route. It does
-not accept average 7.37 FPS, an unexplained already-absent process at cleanup,
-all levels/effects, human multi-touch or a physical device; those gates remain
-open.
+not accept average 7.37 FPS, all levels/effects, human multi-touch or a physical
+device; those gates remain open. The initial cleanup used
+`com.chrissotraidis.ctrpad` instead of plist identifier
+`io.github.chrissotraidis.ctrpad`, so its `found nothing` response is rejected
+as command-target error rather than app-exit evidence. Correct-ID termination
+remains to be observed.
