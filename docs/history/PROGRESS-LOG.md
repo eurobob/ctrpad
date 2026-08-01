@@ -2202,6 +2202,10 @@ not a build benchmark or person-hour estimate. The goal remains active.
   physical-iPad behavior remain open.
 
 The matrix evidence-open reading was 226,759 seconds: 2 days, 14 hours,
-59 minutes, 19 seconds cumulative. The closing reading is recorded after the
-documentation commit below. Goal time includes pauses/resumes and is not a
-build benchmark or person-hour estimate. The goal remains active.
+59 minutes, 19 seconds cumulative. The documentation-close reading was
+227,262 seconds: 2 days, 15 hours, 7 minutes, 42 seconds cumulative. That adds
+1,334 seconds (22 minutes, 14 seconds) from the preceding 225,928-second
+published boundary, including 503 seconds (8 minutes, 23 seconds) for the
+closing audit and first documentation commit. Goal time includes
+pauses/resumes and is not a build benchmark or person-hour estimate. The goal
+remains active.
