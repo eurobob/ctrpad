@@ -245,3 +245,16 @@ CDT as `a19c1a5ef89b12c2ca77eb38eaaa9a71f2569f34`. Fetched `origin/main`
 showed the expected old-main/head parents and all three new handoff files. The
 post-merge reading was 268,804 seconds (3 days, 2 hours, 40 minutes and 4
 seconds). Publication is accepted; physical-device execution is not.
+
+The four-document merge record itself was audited in PR #8 and merged at
+18:04:39 CDT as `7087cc6e0a0a56da80373206ee3e954a8cdbb4b1`. Branch and
+`main` were aligned, and the sole Simulator retained exact executable
+`c6d40aaf...187f`. Packaging that final-main commit completed asynchronously;
+the first verification reached the expected path before the output appeared,
+then the unchanged retry passed. `CTRPad-source-7087cc6e0a0a.tar.gz` contains
+3,253 members at SHA-256
+`a748e256e017c15842102c82055b0597f69cccd481e03484c974a48c3a4e2b01`,
+including the tool/template/report and zero retail/runtime or
+credential/package matches. At 18:06:51 CDT active time was 269,013 seconds (3
+days, 2 hours, 43 minutes and 33 seconds). The remaining boundary is still the
+user-owned signed physical-iPad campaign.
