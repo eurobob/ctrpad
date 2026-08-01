@@ -14,6 +14,7 @@ Options:
   --bundle-id ID          Expected bundle ID; passed to CMake with --build.
   --identity IDENTITY     Apple Development/Distribution codesign identity.
   --profile PATH          Matching .mobileprovision file.
+  --keychain PATH         Search/sign with this unlocked keychain only.
   --device UDID           Require a signed profile to contain this device UDID.
   -h, --help              Show this help.
 
@@ -41,6 +42,7 @@ output_path=""
 expected_bundle_id=""
 signing_identity=""
 profile_path=""
+signing_keychain=""
 device_udid=""
 build_first=0
 
@@ -50,7 +52,7 @@ while (($#)); do
             build_first=1
             shift
             ;;
-        --app|--output|--bundle-id|--identity|--profile|--device)
+        --app|--output|--bundle-id|--identity|--profile|--keychain|--device)
             (($# >= 2)) || fail "$1 requires a value"
             case "$1" in
                 --app) app_path="$2" ;;
@@ -58,6 +60,7 @@ while (($#)); do
                 --bundle-id) expected_bundle_id="$2" ;;
                 --identity) signing_identity="$2" ;;
                 --profile) profile_path="$2" ;;
+                --keychain) signing_keychain="$2" ;;
                 --device) device_udid="$2" ;;
             esac
             shift 2
@@ -87,6 +90,12 @@ fi
 
 if [[ -n "$device_udid" && -z "$profile_path" ]]; then
     fail "--device requires --identity and --profile"
+fi
+
+if [[ -n "$signing_keychain" ]]; then
+    [[ -n "$signing_identity" && -n "$profile_path" ]] || \
+        fail "--keychain requires --identity and --profile"
+    [[ -f "$signing_keychain" ]] || fail "keychain not found: $signing_keychain"
 fi
 
 if ((build_first)); then
@@ -164,9 +173,13 @@ runtime_match="$(find "$staged_app" -type d \( \
 
 mode="unsigned"
 if [[ -n "$signing_identity" ]]; then
-    identity_rows="$(security find-identity -v -p codesigning)"
+    identity_command=(security find-identity -v -p codesigning)
+    if [[ -n "$signing_keychain" ]]; then
+        identity_command+=("$signing_keychain")
+    fi
+    identity_rows="$("${identity_command[@]}")"
     grep -Fq "$signing_identity" <<<"$identity_rows" || \
-        fail "codesign identity is not available in the current keychain"
+        fail "codesign identity is not available in the requested keychain search"
 
     profile_plist="$tmp_dir/profile.plist"
     security cms -D -i "$profile_path" -o "$profile_plist"
@@ -214,8 +227,13 @@ if [[ -n "$signing_identity" ]]; then
     fi
 
     ditto --norsrc --noextattr --noqtn --noacl "$profile_path" "$staged_app/embedded.mobileprovision"
-    codesign --force --sign "$signing_identity" --entitlements "$entitlements_plist" \
-        --generate-entitlement-der --timestamp=none "$staged_app"
+    codesign_command=(codesign --force --sign "$signing_identity")
+    if [[ -n "$signing_keychain" ]]; then
+        codesign_command+=(--keychain "$signing_keychain")
+    fi
+    codesign_command+=(--entitlements "$entitlements_plist" \
+        --generate-entitlement-der --timestamp=none "$staged_app")
+    "${codesign_command[@]}"
     codesign --verify --deep --strict --verbose=2 "$staged_app"
     signed_entitlements="$tmp_dir/signed-entitlements.plist"
     codesign --display --entitlements - --xml "$staged_app" >"$signed_entitlements" 2>/dev/null

@@ -96,6 +96,11 @@ security find-identity -v -p codesigning
   --device YOUR_DEVICE_UDID
 ```
 
+For an identity held in an already unlocked non-default keychain, add
+`--keychain /absolute/path/to/signing.keychain-db`. The packager then limits
+identity discovery and signing to that keychain; it does not modify the user's
+default keychain or search list.
+
 The script decodes the signed profile, rejects expiration/platform/App-ID/
 optional-device mismatches, embeds it, constructs only CTRPad's minimal
 application/team/keychain entitlements, requests DER entitlements from
