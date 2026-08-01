@@ -113,6 +113,12 @@ Current evidence and procedures:
   input rejection controls, byte-identical exact source archives, fully fresh
   no-`.git` ARM64 build and 22/22 tests, renamed-root proof, SDL diagnostic
   limitation, resource safeguards and independent-clean-machine boundary.
+- `2026-08-01-simulator-stability-logging.md` records the user-reopened
+  Simulator release gate, one-device/resource discipline, current graphical
+  observations, low-FPS and intermittent-input evidence, retained timestamped
+  session logs, accessible-button down/up correction, exact live lifecycle and
+  input evidence, clean asset/error scan and deliberately unaccepted
+  post-commit stability/scene-churn boundary.
 - `2026-07-31-ios-sandbox-storage.md` records the bundle/Documents/Application
   Support ownership split, Documents-priority retail startup, private log and
   memory-card roots, Files metadata, exact cross-target matrix, rejected

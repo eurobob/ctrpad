@@ -113,6 +113,18 @@
 #define CTR_NATIVE_BUILD_ID "unknown"
 #endif
 
+#if defined(SDL_PLATFORM_IOS)
+#define CTR_NATIVE_TARGET_NAME "ios"
+#elif defined(__APPLE__)
+#define CTR_NATIVE_TARGET_NAME "macos"
+#elif defined(_WIN32)
+#define CTR_NATIVE_TARGET_NAME "windows"
+#elif defined(__linux__)
+#define CTR_NATIVE_TARGET_NAME "linux"
+#else
+#define CTR_NATIVE_TARGET_NAME "unknown"
+#endif
+
 static int NativeConsole_ShouldPauseOnError(void)
 {
 #if defined(_WIN32)
@@ -412,6 +424,13 @@ static int NativeApp_StartRuntime(const struct NativeLaunchOptions *options)
 	{
 		return NativeConsole_Return(1);
 	}
+	Platform_Log("[CTR Session] version=%s build=%s compiler=%s target=%s\n", CTR_NATIVE_VERSION, CTR_NATIVE_BUILD_ID, CC,
+	             CTR_NATIVE_TARGET_NAME);
+	Platform_Log("[CTR Session] base=%s\n", NativeAssets_GetBaseDir());
+	Platform_Log("[CTR Session] assets=%s\n", NativeAssets_GetAssetDir());
+	Platform_Log("[CTR Session] writable=%s\n", NativeStorage_GetWritableRoot());
+	Platform_Log("[CTR Session] log=%s previous=%s\n", Platform_LogGetPath(),
+	             Platform_LogGetArchivePath()[0] != '\0' ? Platform_LogGetArchivePath() : "none");
 
 #if defined(CTR_INTERNAL)
 	if (NativePerf_ConfigureFromArgs(options->argc, options->argv) != 0)

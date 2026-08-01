@@ -13172,3 +13172,65 @@ archive-root/override identity. An independently provisioned clean Mac, current
 macOS app/iOS products, real Apple signature and physical device remain open.
 Full evidence is in `docs/parity/2026-08-01-extracted-source-build.md`; M11 and
 the overall goal remain active.
+
+## 2026-08-01 — Reopened Simulator stability before physical-device work
+
+### Why earlier evidence was insufficient
+
+The user made the acceptance boundary explicit: no physical iPad until the
+Simulator is stable, visibly complete and diagnosable. Earlier evidence had
+proved the corrected visibility cache in bounded scenes, but it had not proved
+long scene churn, reliable keyboard/accessibility input or a usable diagnostic
+history. A current baseline therefore had to be run instead of treating the
+previous checkpoint as permanent acceptance.
+
+The exact `43245107c279` baseline was compiled with one job at nice 15 while all
+Simulator processes and devices were shut down. Only the disposable import-
+negative device was later booted. Title, menu, character, track, Crash Cove and
+pause frames were coherent, and the complete 88-line app log contained none of
+the known asset/cache/error markers. This did not close the gate: runtime
+frequently fell to roughly 4-8 FPS, some short inputs needed repetition, and
+the logger had already destroyed the preceding session by opening with `w`.
+
+### Durable evidence and input semantics
+
+The native logger now rotates four prior sessions before opening the current
+file. Persistent entries carry UTC wall time, elapsed session time and severity
+and are flushed after every call. Startup identifies the version, build,
+compiler, platform target, base/assets/writable paths and current/previous log
+paths. Native input records only mapped key and touch transitions, including
+the effective mask; it does not dump retail data or invent UI text input.
+
+UIKit's accessible game-button action previously animated a button without
+guaranteeing the `UIControlEventTouchDown` transition that owns the emulated
+pad state. The dedicated game-button subclass now sends a touch-down followed
+by a delayed touch-up-inside through the existing targets. This preserves the
+same state machine as physical touch and leaves onboarding/utility buttons on
+ordinary UIKit behavior.
+
+Two isolated renderer self-test invocations proved log rotation and retained
+both sessions while the renderer pixel hash stayed `851169f2644a1675`. The
+ordinary macOS build passed 22/22 CTests. A live iOS diagnostic then showed
+single accessible Start/Cross actions causing the expected retail transitions
+and logged their exact press/release pairs. The same PID survived
+Home/background/foreground and retained name-entry state. Both the new current
+log and retained baseline were free of the targeted asset, cache, error, fatal
+and unbalanced markers.
+
+### Rejected claims and remaining route
+
+The diagnostic iOS binary came from dirty source while its existing CMake graph
+still embedded the previously configured clean commit. It is useful behavioral
+evidence but cannot identify the correction exactly and therefore cannot be
+release evidence. Similarly, coherent pixels in the inspected screens do not
+prove every track, kart, HUD, effect or recycled memory-pack state. Anticipated
+physical-device performance does not waive poor Simulator usability.
+
+The next accepted checkpoint must start from a committed clean source identity,
+compile with no booted Simulator, boot exactly one disposable device, exercise
+presentation, menus, Adventure/Load, Time Trial and several scene/level
+transitions, and correlate keyboard/touch, rotation and Home/resume against the
+complete current and rotated logs. It must report frame behavior and every
+visual or diagnostic defect honestly. Only that can reopen physical-device
+work. Full current evidence is in
+`docs/parity/2026-08-01-simulator-stability-logging.md`.

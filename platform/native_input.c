@@ -2,6 +2,7 @@
 
 #include <macros.h>
 #include "psx/libpad.h"
+#include "platform/native_log.h"
 
 #include <SDL3/SDL.h>
 #include <stdio.h>
@@ -448,6 +449,11 @@ void Platform_InputTouchButton(unsigned int buttonMask, int down)
 	{
 		return;
 	}
+	if (Platform_LogIsOpen())
+	{
+		Platform_Log("[CTR Input] source=touch edge=%s mask=0x%04x held-before=0x%04x\n", down != 0 ? "down" : "up",
+		             (unsigned int)mask, (unsigned int)s_touchState.heldButtons);
+	}
 
 	if (down != 0)
 	{
@@ -507,6 +513,10 @@ void Platform_InputKeyboardEvent(int key, int down)
 	buttonBit = NativeInput_KeyboardButtonBit(key);
 	if (buttonBit != 0)
 	{
+		if (Platform_LogIsOpen())
+		{
+			Platform_Log("[CTR Input] source=keyboard edge=down scancode=%d mask=0x%04x\n", key, (unsigned int)buttonBit);
+		}
 		s_keyboardLatchedButtons &= (u16)~buttonBit;
 		s_keyboardLatchedButtonsNext &= (u16)~buttonBit;
 	}

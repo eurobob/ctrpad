@@ -500,3 +500,28 @@ it is not Apple signing evidence. The temporary keychain was deleted and user
 search/trust state remained unchanged. A valid Apple identity/profile and
 physical device remain required. Full evidence is in
 `docs/parity/2026-08-01-ios-isolated-keychain-signing.md`.
+
+## 2026-08-01 — Make Simulator stability the physical-device gate and retain logs
+
+**Decision:** do not proceed to a physical iPad until an exact clean Simulator
+build is visually coherent and operationally stable across repeated retail
+scene/level transitions, mapped keyboard and touch input, rotation and
+background/foreground. Retain the current native application log plus four
+prior sessions with UTC, elapsed-session and severity context, flushing every
+entry.
+
+**Why:** compile success and one coherent frame cannot detect recycled asset
+corruption, intermittent input or lifecycle failure. Overwriting the previous
+log also destroys the before/after evidence needed for intermittent graphical
+failures. Four retained sessions provide a bounded useful history without an
+unlimited Application Support footprint.
+
+**Verification boundary:** exact baseline `43245107c279` rendered the inspected
+title/menu/Crash Cove frames coherently, but ran at roughly 4-8 FPS and exposed
+intermittent short actions plus destructive single-session logging. The
+corrected dirty-source diagnostic retained two real sessions, produced exact
+mapped input/lifecycle timestamps, made accessible Start/Cross actions affect
+the game, and showed no known asset/cache/error marker in either log. Because
+that diagnostic retained the old configured build identity and did not cover
+broad scene churn, it is not acceptance. The required exact post-commit run and
+physical-device gate remain open.

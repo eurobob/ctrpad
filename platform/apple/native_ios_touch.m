@@ -34,6 +34,9 @@ static NSString *const s_touchOpacityKey = @"CTRPadTouchOpacity";
 @interface CTRPadTouchPassthroughView : UIView
 @end
 
+@interface CTRPadInputButton : UIButton
+@end
+
 @interface CTRPadTouchStickView : UIView
 @property(nonatomic, strong) UIView *knob;
 @property(nonatomic, strong) UILabel *label;
@@ -106,6 +109,23 @@ static CGFloat CTRPadTouch_OpacityForChoice(CTRPadTouchOpacity choice)
 {
 	UIView *result = [super hitTest:point withEvent:event];
 	return result == self ? nil : result;
+}
+
+@end
+
+@implementation CTRPadInputButton
+
+- (BOOL)accessibilityActivate
+{
+	// Voice Control, Switch Control and Simulator accessibility actions invoke
+	// a button's primary action without synthesizing UIControlEventTouchDown.
+	// Publish the same down/up pair as a physical finger so accessible controls
+	// cannot silently appear to press while the retail pad receives no edge.
+	[self sendActionsForControlEvents:UIControlEventTouchDown];
+	dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.10 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+		[self sendActionsForControlEvents:UIControlEventTouchUpInside];
+	});
+	return YES;
 }
 
 @end
@@ -423,7 +443,7 @@ static CGFloat CTRPadTouch_OpacityForChoice(CTRPadTouchOpacity choice)
 
 - (UIButton *)buttonWithTitle:(NSString *)title mask:(enum PlatformInputTouchButton)mask color:(UIColor *)color
 {
-	UIButton *button = [UIButton buttonWithType:UIButtonTypeCustom];
+	UIButton *button = [CTRPadInputButton buttonWithType:UIButtonTypeCustom];
 	button.translatesAutoresizingMaskIntoConstraints = NO;
 	button.tag = mask;
 	button.exclusiveTouch = NO;

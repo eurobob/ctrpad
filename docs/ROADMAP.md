@@ -1085,8 +1085,9 @@ Acceptance:
 
 **Status:** in progress; a functional safe-area-aware Simulator prototype,
 peer input composition, continuous analog steering, menu D-pad edges and core
-button layout have landed; physical-iPad ergonomics and drift-boost acceptance
-remain open; depends on M8 and M9
+button layout have landed; the user has reopened current-build Simulator
+stability/visual acceptance, and physical-iPad ergonomics and drift-boost
+acceptance remain open; depends on M8 and M9
 
 Checkpoint `c496c27f04c8` adds an iOS UIKit overlay with a virtual analog
 stick, Cross/Square/Circle/Triangle, L1/R1, Start and Select. Touch is composed
@@ -1168,6 +1169,24 @@ and unchanged retail BIN/save identities. Physical-iPad feel and simultaneous
 three-boost drift remain open. Exact evidence is in
 `docs/parity/2026-08-01-ios-control-settings.md`.
 
+The 2026-08-01 current-build re-audit deliberately reopened Simulator
+acceptance before any physical-device attempt. Baseline commit `43245107c279`
+rendered coherent title/main-menu, Time Trial character/track/ghost, Crash Cove
+preview/grid/race, Adventure submenu/character/name and Home/resume frames and
+repeated no `[CTR AssetRef]` or visibility-cache error. It nevertheless ran at
+roughly 4-8 FPS under Apple Software Renderer and made short injected keyboard
+and UIKit accessibility actions unreliable. The existing persistent log also
+overwrote the only previous session and lacked a timestamp/build timeline.
+The diagnostic correction retains four prior sessions, adds UTC/elapsed/
+severity and exact session metadata, logs mapped input edges, and makes a
+button accessibility activation publish the same down/up pair as a finger.
+One live diagnostic run proved accessible Start/Cross consumption and ordered
+background/foreground audio recovery while preserving the prior log. This is
+not current-source acceptance: an exact clean post-commit build, repeated
+level/scene churn, performance/input stability and a complete graphical scan
+remain required. See
+`docs/parity/2026-08-01-simulator-stability-logging.md`.
+
 Work:
 
 - Retain the implemented touch peer in the platform input composition path so
@@ -1186,13 +1205,13 @@ Work:
 Acceptance:
 
 - Touch-only users can start the app, select content, race, pause, and save.
-- **Startup, menu navigation, selection, cold Load-screen access, Time Trial
-  entry, forward race movement, Pause and post-rotation Resume are accepted on
-  Simulator. Current-tip live traces also accept Gas movement and near-full
-  analog steering with neutral release as separate contacts. Hardware-keyboard
-  Start/Down/Cross delivery and release are accepted through a keyboard-only
-  route to the race grid; physical keyboard and a complete human multi-touch
-  race/save are still open.**
+- Historical exact runs cover startup, menu navigation, cold Load-screen
+  access, Time Trial entry, movement, Pause/rotation/Resume and a keyboard-only
+  route to the race grid. The current Simulator product gate is reopened:
+  repeat those routes on one exact clean build with the retained logs, no
+  missing/corrupt graphical assets and reliable keyboard/touch delivery before
+  treating that historical coverage as current acceptance. Physical keyboard
+  and a complete human multi-touch race/save remain open.
 - Steering remains continuously analog while accelerate and drift are held.
 - A tester can intentionally execute repeated three-boost drift chains in both
   turn directions without grip changes or missed simultaneous contacts.

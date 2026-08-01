@@ -2210,6 +2210,60 @@ closing audit and first documentation commit. Goal time includes
 pauses/resumes and is not a build benchmark or person-hour estimate. The goal
 remains active.
 
+### 2026-08-01 — Simulator stability gate reopened; logging and accessible input corrected
+
+- The user explicitly made a stable, visibly correct Simulator run with robust
+  logging a prerequisite for physical-iPad work. This supersedes any inference
+  that a successful compile, launch or earlier bounded visual pass was enough.
+- Rebuilt exact clean baseline `43245107c279` with one job at nice 15 while all
+  Simulators were shut down. Its thin ARM64 executable hashed to
+  `d37cdf88...c493`; a strictly verified ad-hoc-signed install copy hashed to
+  `5f22d274...b176a` after the expected signature transform.
+- Booted only disposable device `CTRPad Import Negatives`; the protected
+  validation device stayed shut down. Update installation preserved the
+  complete 605,698,800-byte imported BIN. The observed title/menu, character,
+  Crash Cove list/preview/fly-in/grid/live-lap and pause frames were coherent,
+  and the 88-line log had no AssetRef/cache/error/fatal/unbalanced marker.
+- Did not accept that run. The software-rendered game commonly sustained only
+  about 4-8 FPS, several short keyboard/accessibility actions needed repeats,
+  and the 3,704-byte production log overwrote its predecessor while providing
+  no timestamps, severity, session identity or input correlation.
+- Changed the logger to prefix persistent entries with UTC, elapsed session
+  time and severity; flush every entry; report exact build/target/path/session
+  metadata; and rotate the last four sessions as `.1` through `.4`. Added
+  bounded mapped touch and keyboard event lines. Console presentation remains
+  human-readable and system-console diagnostics remain external.
+- Corrected UIKit accessibility activation for game buttons by issuing the
+  same press/release state transitions used by touch. Utility controls were
+  deliberately left unchanged. The fix did not add a hidden text-input route
+  or remap retail controls.
+- The macOS one-job build completed in 107.14 seconds with the established 32
+  warnings; all 22 CTests passed. Two isolated logger runs retained current and
+  prior logs at SHA-256 `ae03ee0...058d` and `bb937fcf...05ac`; both renderer
+  pixel tests passed hash `851169f2644a1675`.
+- A dirty-source iOS diagnostic build completed in 36.47 seconds. It exercised
+  the correction, but CMake still embedded the configured clean
+  `43245107c279` identity, so neither its executable nor runtime is exact
+  post-commit evidence. This limitation is recorded rather than hidden.
+- In the sole-device diagnostic, one accessible Start skipped presentation,
+  one accessible Cross opened Adventure, later Cross entered the character and
+  name screens, and Cross inserted `A` into the retail name field. The
+  10,396-byte log correlated exact down/up masks and retained the exact baseline
+  as `.1`; it had no AssetRef/cache/error/fatal/unbalanced marker. Home/resume
+  preserved the PID and name-entry state while logging the four lifecycle
+  transitions.
+- Shut down both CTRPad devices, the app and Simulator after the run. A clean
+  post-commit Simulator build still must cover broader level/scene churn,
+  keyboard reliability, rotation/Home/resume, graphical and log scans, and a
+  usable stability-test frame rate before physical-device work resumes.
+
+The checkpoint evidence-open reading was 232,171 seconds: 2 days, 16 hours,
+29 minutes, 31 seconds cumulative. An in-progress documentation reading was
+232,558 seconds: 2 days, 16 hours, 35 minutes, 58 seconds cumulative. Final
+checkpoint close and publication times will be recorded after exact clean-build
+acceptance. Goal time includes pauses/resumes and is not a build benchmark or
+person-hour estimate. The goal remains active.
+
 ### 2026-08-01 — Fresh extracted corresponding source built and tested
 
 - Packaged documented head `34ea4415cda8` into a fresh temporary directory.

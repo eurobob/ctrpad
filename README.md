@@ -225,6 +225,16 @@ and the final sideloaded-device acceptance remain roadmap work. See
 `docs/parity/2026-07-31-ios-memory-card-atomicity.md` for the runtime boundaries,
 and `docs/parity/2026-07-31-ios-sideload-package.md` for exact packaging evidence.
 
+The active runtime log is `Crash Team Racing.log` beneath CTRPad's Application
+Support directory. Each entry includes UTC time, elapsed session time and
+severity. Startup records the exact version/build target and resolved storage
+paths; mapped keyboard/touch edges, lifecycle transitions, renderer messages
+and asset/cache failures share the same timeline. A new run keeps the four
+most recent complete sessions as `.1` through `.4` instead of overwriting the
+only prior diagnosis. The active file is flushed after every entry and at
+lifecycle boundaries. Simulator system diagnostics still belong to the
+launch/unified-log capture; they are not silently copied into the app log.
+
 For development builds run from `build/`, put the same `assets/ctr-u.bin` next to the source tree:
 
 ```
