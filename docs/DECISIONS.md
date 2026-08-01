@@ -604,3 +604,27 @@ retail BIN and save; and 248 matched candidate frames were compared with 200
 accepted frames. The candidate source was restored before publication. Full
 chronology is in
 `docs/parity/2026-08-01-ios-direct-rgb5551-decode-rejection.md`.
+
+## 2026-08-01 — Move cadence and touch-feel acceptance to physical iPad
+
+**Decision:** retain the iPad Simulator as the ARM64 build, UIKit/GLES,
+pixel-semantics, bounded visual, import/save, input/lifecycle and logging gate.
+Do not require the Apple Software Renderer to meet retail 30-FPS cadence before
+starting physical-device validation. Sustained cadence, frame pacing, thermals
+and multi-touch drift/boost ergonomics are accepted only on the target iPad.
+
+**Why:** the Simulator route is now coherent and diagnosable on the inspected
+two-track churn, while matched profiles remain about five times over the retail
+frame budget. The evidence proves a software-rasterizer bottleneck, not a
+physical-iPad GPU result. Continuing to optimize that proxy delays the only
+test capable of resolving the real release risk. This changes ownership of the
+performance gate; it does not waive Simulator correctness or logging.
+
+**Verification boundary:** before device work, rebuild the clean accepted
+source with all Simulators shut down, pass the native and renderer-pixel tests,
+update-install it on exactly one Simulator, replay the bounded route, terminate
+the exact bundle identifier and inspect retained logs. Physical acceptance then
+requires a user-owned signed install, retail Files import, complete touch race
+including a three-boost drift, audio/lifecycle/update/save persistence, cadence
+and thermal evidence. Exact scope and contingency are in
+`docs/history/RELEASE-REBASELINE.md`.

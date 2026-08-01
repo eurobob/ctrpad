@@ -2856,3 +2856,25 @@ signing, and final package/source pairing are still open.
 The publication-close reading was 258,793 seconds: 2 days, 23 hours,
 53 minutes, 13 seconds cumulative, 693 seconds (11 minutes, 33 seconds) after
 the rejection/history boundary. The overall goal remains active.
+
+### 2026-08-01 — Re-baselined the project around physical release evidence
+
+- Stopped speculative Simulator renderer tuning and mapped every major layer
+  to the actual signed-iPad definition of done.
+- Recorded that retail state/parity, shared Apple builds, focused GLES pixels,
+  import/save, lifecycle, touch/keyboard/controller composition and bounded
+  coherent graphics are implemented, while signed physical-device acceptance
+  remains unproved.
+- Corrected the acceptance model: Simulator remains responsible for build,
+  pixel, bounded visual, input, lifecycle and logging correctness; sustained
+  cadence, thermals and multi-touch feel now belong to the target iPad.
+- Defined the minimum physical release campaign and the contingency that a
+  larger renderer change is considered only if physical profiling reproduces
+  the Simulator bottleneck.
+- Re-audited the machine: both CTRPad Simulators were shut down, the worktree
+  began clean, and there were zero valid code-signing identities,
+  provisioning profiles or connected physical devices.
+
+The re-baseline documentation reading was 259,866 seconds: 3 days, 11 minutes,
+6 seconds cumulative, 1,073 seconds (17 minutes, 53 seconds) after the
+publication-close boundary. The overall goal remains active.

@@ -14039,3 +14039,47 @@ The publication-close reading was 258,793 seconds (2 days, 23 hours,
 53 minutes, 13 seconds), 693 seconds (11 minutes, 33 seconds) after the
 rejection/history boundary. The overall goal remains active; optimization now
 continues only on the new branch.
+
+## 2026-08-01 — Holistic release re-baseline
+
+The user explicitly asked to step back from local rendering symptoms and
+identify what the project is actually trying to solve, why it still feels
+broken, which technical problems remain and what the simplest completion path
+is. Renderer experimentation stopped immediately. Source had already been
+restored from the rejected `texelFetch` probe; `git status --short` was empty at
+`32e82d8da1bd76e0330ce8d78f4d4ef9af6cf96a`. Both named CTRPad iPad Simulators
+were shutdown and no CTRPad or Simulator GUI process was running.
+
+The audit compared the goal contract with `docs/ROADMAP.md`, the three-day
+checkpoint, focused parity reports and the installation guide. It separated
+five layers: retail/gameplay correctness, Apple platform integration, bounded
+graphical correctness, Simulator throughput and physical release acceptance.
+The first three have strong focused evidence. Apple Software Renderer remains
+roughly five times over the retail frame budget, but that observation cannot
+establish physical-iPad performance. The final layer has no direct evidence:
+`security find-identity -v -p codesigning` again returned zero valid identities,
+the documented provisioning-profile locations contained no profiles, and
+`xcrun devicectl list devices` returned `No devices found.`
+
+This exposed a planning contradiction. The historical renderer checkpoint
+kept physical work closed until Simulator cadence was usable, while
+`docs/INSTALL-IOS.md` correctly states that Simulator evidence cannot replace
+physical cadence, touch feel, full-race or signing acceptance. The roadmap now
+assigns coherent bounded rendering, diagnostics and input/lifecycle correctness
+to one Simulator, but assigns sustained cadence, thermals, signed update,
+Files/audio/persistence and human drift-boost ergonomics to the target iPad.
+No existing correctness criterion was waived.
+
+`docs/history/RELEASE-REBASELINE.md` records the evidence map, genuine defects
+already fixed, minimum release contract, non-gating optional coverage,
+dependency-ordered next actions and physical-performance contingency.
+`docs/DECISIONS.md` retains the ownership change as a durable decision, and
+`docs/ROADMAP.md` now identifies M8-M11 physical-device/release acceptance as
+the current milestone. The old renderer checkpoint remains historical and is
+explicitly superseded instead of silently rewritten.
+
+The re-baseline documentation reading was 259,866 seconds (3 days, 11 minutes,
+6 seconds), 1,073 seconds (17 minutes, 53 seconds) after the publication-close
+boundary. The overall goal remains active. The next exact action is to commit
+this documentation so the accepted source can be rebuilt with a clean embedded
+identity before replacing the stale exploratory Simulator installation.
