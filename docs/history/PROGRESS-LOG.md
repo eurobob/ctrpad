@@ -3137,3 +3137,11 @@ The final Boolean-type/wildcard hardening retained the same fixture outcomes;
 the focused test passed in 4.51 seconds and the full suite repeated 23/23 in
 8.13 seconds. The 18:51:23 active-time reading was 271,689 seconds (3 days, 3
 hours, 28 minutes, 9 seconds).
+
+At 18:52–18:55 CDT, commit `c89bdfc23` and its 16-file entitlement checkpoint
+were packaged, pushed, audited and merged through PR #12 as `d9e3c5944`. The
+connector returned its documented private-repository 404 before CLI fallback.
+The final-main 3,258-member source archive passed checksum/exclusion and
+extracted-source tests at `760dcee6...68d0`. The 18:55:55 active-time reading
+was 271,962 seconds (3 days, 3 hours, 32 minutes, 42 seconds); real signing and
+physical acceptance remain open.
