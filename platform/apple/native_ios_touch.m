@@ -5,6 +5,32 @@
 #include "platform/native_input.h"
 #include "platform/native_ios_touch.h"
 
+typedef NS_ENUM(NSInteger, CTRPadTouchHandedness)
+{
+	CTRPadTouchHandednessSteerLeft = 0,
+	CTRPadTouchHandednessSteerRight,
+};
+
+typedef NS_ENUM(NSInteger, CTRPadTouchSize)
+{
+	CTRPadTouchSizeSmall = 0,
+	CTRPadTouchSizeStandard,
+	CTRPadTouchSizeLarge,
+};
+
+typedef NS_ENUM(NSInteger, CTRPadTouchOpacity)
+{
+	CTRPadTouchOpacityLow = 0,
+	CTRPadTouchOpacityStandard,
+	CTRPadTouchOpacityHigh,
+};
+
+static NSString *const s_touchHandednessKey = @"CTRPadTouchHandedness";
+static NSString *const s_touchSizeKey = @"CTRPadTouchSize";
+static NSString *const s_touchOpacityKey = @"CTRPadTouchOpacity";
+
+@class CTRPadTouchOverlayViewController;
+
 @interface CTRPadTouchPassthroughView : UIView
 @end
 
@@ -13,14 +39,66 @@
 @property(nonatomic, strong) UILabel *label;
 @property(nonatomic, assign) BOOL trackingTouch;
 @property(nonatomic, assign) unsigned int directionMask;
+- (void)applyControlOpacity:(CGFloat)opacity;
 @end
 
 @interface CTRPadTouchOverlayViewController : UIViewController
+@property(nonatomic, assign) CTRPadTouchHandedness handedness;
+@property(nonatomic, assign) CGFloat controlScale;
+@property(nonatomic, assign) CGFloat controlOpacity;
+- (void)applyPreferencesAndRebuildControls;
+@end
+
+@interface CTRPadTouchSettingsViewController : UIViewController
+@property(nonatomic, weak) CTRPadTouchOverlayViewController *overlayController;
+@property(nonatomic, strong) UISegmentedControl *handednessControl;
+@property(nonatomic, strong) UISegmentedControl *sizeControl;
+@property(nonatomic, strong) UISegmentedControl *opacityControl;
 @end
 
 static CTRPadTouchOverlayViewController *s_touchOverlayController;
 static NativeIOSTouchDiscReselectionCallback s_discReselectionCallback;
 static void *s_discReselectionUserdata;
+
+static NSInteger CTRPadTouch_ReadPreference(NSString *key, NSInteger defaultValue, NSInteger maximumValue)
+{
+	id value = [NSUserDefaults.standardUserDefaults objectForKey:key];
+	if (![value isKindOfClass:NSNumber.class])
+	{
+		return defaultValue;
+	}
+
+	NSInteger choice = [value integerValue];
+	return ((choice >= 0) && (choice <= maximumValue)) ? choice : defaultValue;
+}
+
+static CGFloat CTRPadTouch_ScaleForChoice(CTRPadTouchSize choice)
+{
+	switch (choice)
+	{
+	case CTRPadTouchSizeSmall:
+		return 0.88;
+	case CTRPadTouchSizeLarge:
+		return 1.12;
+	case CTRPadTouchSizeStandard:
+		return 1.0;
+	}
+	return 1.0;
+}
+
+static CGFloat CTRPadTouch_OpacityForChoice(CTRPadTouchOpacity choice)
+{
+	switch (choice)
+	{
+	case CTRPadTouchOpacityLow:
+		return 0.36;
+	case CTRPadTouchOpacityHigh:
+		return 0.80;
+	case CTRPadTouchOpacityStandard:
+		return 0.58;
+	}
+	return 0.58;
+}
 
 @implementation CTRPadTouchPassthroughView
 
@@ -68,6 +146,13 @@ static void *s_discReselectionUserdata;
 		]];
 	}
 	return self;
+}
+
+- (void)applyControlOpacity:(CGFloat)opacity
+{
+	self.backgroundColor = [UIColor colorWithWhite:0.04 alpha:opacity * 0.72];
+	self.layer.borderColor = [UIColor colorWithWhite:1.0 alpha:MAX(0.42, opacity * 0.82)].CGColor;
+	self.knob.backgroundColor = [UIColor colorWithRed:0.16 green:0.48 blue:0.95 alpha:MIN(1.0, opacity + 0.18)];
 }
 
 - (void)layoutSubviews
@@ -169,6 +254,163 @@ static void *s_discReselectionUserdata;
 
 @end
 
+@implementation CTRPadTouchSettingsViewController
+
+- (UILabel *)sectionLabelWithText:(NSString *)text
+{
+	UILabel *label = [[UILabel alloc] init];
+	label.text = text;
+	label.textColor = [UIColor colorWithWhite:0.86 alpha:1.0];
+	label.font = [UIFont systemFontOfSize:15.0 weight:UIFontWeightSemibold];
+	return label;
+}
+
+- (void)viewDidLoad
+{
+	[super viewDidLoad];
+	self.view.backgroundColor = [UIColor colorWithRed:0.025 green:0.035 blue:0.075 alpha:1.0];
+	self.preferredContentSize = CGSizeMake(520.0, 560.0);
+
+	UILabel *titleLabel = [[UILabel alloc] init];
+	titleLabel.text = @"Controls";
+	titleLabel.textColor = UIColor.whiteColor;
+	titleLabel.font = [UIFont systemFontOfSize:28.0 weight:UIFontWeightBold];
+	titleLabel.textAlignment = NSTextAlignmentCenter;
+
+	UILabel *bodyLabel = [[UILabel alloc] init];
+	bodyLabel.text = @"Touch changes apply immediately and stay on this device. Every interactive target remains at least 44 points.";
+	bodyLabel.textColor = [UIColor colorWithWhite:0.72 alpha:1.0];
+	bodyLabel.font = [UIFont systemFontOfSize:15.0 weight:UIFontWeightRegular];
+	bodyLabel.textAlignment = NSTextAlignmentCenter;
+	bodyLabel.numberOfLines = 0;
+
+	self.handednessControl = [[UISegmentedControl alloc] initWithItems:@[ @"Steer left", @"Steer right" ]];
+	self.handednessControl.selectedSegmentIndex = CTRPadTouch_ReadPreference(s_touchHandednessKey,
+	                                                                        CTRPadTouchHandednessSteerLeft,
+	                                                                        CTRPadTouchHandednessSteerRight);
+	self.handednessControl.accessibilityIdentifier = @"ctrpad.touch.settings.handedness";
+	[self.handednessControl addTarget:self action:@selector(preferencesChanged) forControlEvents:UIControlEventValueChanged];
+
+	self.sizeControl = [[UISegmentedControl alloc] initWithItems:@[ @"Small", @"Standard", @"Large" ]];
+	self.sizeControl.selectedSegmentIndex = CTRPadTouch_ReadPreference(s_touchSizeKey, CTRPadTouchSizeStandard, CTRPadTouchSizeLarge);
+	self.sizeControl.accessibilityIdentifier = @"ctrpad.touch.settings.size";
+	[self.sizeControl addTarget:self action:@selector(preferencesChanged) forControlEvents:UIControlEventValueChanged];
+
+	self.opacityControl = [[UISegmentedControl alloc] initWithItems:@[ @"Low", @"Standard", @"High" ]];
+	self.opacityControl.selectedSegmentIndex = CTRPadTouch_ReadPreference(s_touchOpacityKey,
+	                                                                     CTRPadTouchOpacityStandard,
+	                                                                     CTRPadTouchOpacityHigh);
+	self.opacityControl.accessibilityIdentifier = @"ctrpad.touch.settings.opacity";
+	[self.opacityControl addTarget:self action:@selector(preferencesChanged) forControlEvents:UIControlEventValueChanged];
+
+	UILabel *keyboardLabel = [self sectionLabelWithText:@"Keyboard test layout"];
+	UILabel *keyboardMap = [[UILabel alloc] init];
+	keyboardMap.text = @"Steer / menus   W A S D\n"
+	                   @"View Brake Gas Item   I J K L\n"
+	                   @"Drift / boost   Q / E\n"
+	                   @"Pause / Select   P / Tab";
+	keyboardMap.textColor = [UIColor colorWithWhite:0.76 alpha:1.0];
+	keyboardMap.font = [UIFont monospacedSystemFontOfSize:14.0 weight:UIFontWeightRegular];
+	keyboardMap.numberOfLines = 0;
+	keyboardMap.accessibilityLabel = @"Keyboard controls. W A S D steer and navigate menus. I J K L are view, brake, gas, and item. Q and E drift and boost. P pauses. Tab selects.";
+
+	UIButtonConfiguration *resetConfiguration = [UIButtonConfiguration tintedButtonConfiguration];
+	resetConfiguration.title = @"Reset defaults";
+	resetConfiguration.baseForegroundColor = [UIColor colorWithRed:1.0 green:0.66 blue:0.19 alpha:1.0];
+	UIButton *resetButton = [UIButton buttonWithConfiguration:resetConfiguration primaryAction:nil];
+	resetButton.accessibilityIdentifier = @"ctrpad.touch.settings.reset";
+	[resetButton addTarget:self action:@selector(resetDefaults) forControlEvents:UIControlEventTouchUpInside];
+
+	UIButtonConfiguration *doneConfiguration = [UIButtonConfiguration filledButtonConfiguration];
+	doneConfiguration.title = @"Done";
+	doneConfiguration.baseBackgroundColor = [UIColor colorWithRed:0.13 green:0.42 blue:0.84 alpha:1.0];
+	UIButton *doneButton = [UIButton buttonWithConfiguration:doneConfiguration primaryAction:nil];
+	doneButton.accessibilityIdentifier = @"ctrpad.touch.settings.done";
+	[doneButton addTarget:self action:@selector(done) forControlEvents:UIControlEventTouchUpInside];
+
+	UIStackView *stack = [[UIStackView alloc] initWithArrangedSubviews:@[
+		titleLabel,
+		bodyLabel,
+		[self sectionLabelWithText:@"Handedness"],
+		self.handednessControl,
+		[self sectionLabelWithText:@"Control size"],
+		self.sizeControl,
+		[self sectionLabelWithText:@"Control opacity"],
+		self.opacityControl,
+		keyboardLabel,
+		keyboardMap,
+		resetButton,
+		doneButton,
+	]];
+	stack.translatesAutoresizingMaskIntoConstraints = NO;
+	stack.axis = UILayoutConstraintAxisVertical;
+	stack.alignment = UIStackViewAlignmentFill;
+	stack.spacing = 12.0;
+	[stack setCustomSpacing:22.0 afterView:bodyLabel];
+	[stack setCustomSpacing:22.0 afterView:self.opacityControl];
+	[stack setCustomSpacing:20.0 afterView:keyboardMap];
+	UIScrollView *scrollView = [[UIScrollView alloc] init];
+	scrollView.translatesAutoresizingMaskIntoConstraints = NO;
+	scrollView.alwaysBounceVertical = NO;
+	[self.view addSubview:scrollView];
+	[scrollView addSubview:stack];
+
+	UILayoutGuide *safe = self.view.safeAreaLayoutGuide;
+	[NSLayoutConstraint activateConstraints:@[
+		[scrollView.leadingAnchor constraintEqualToAnchor:safe.leadingAnchor],
+		[scrollView.trailingAnchor constraintEqualToAnchor:safe.trailingAnchor],
+		[scrollView.topAnchor constraintEqualToAnchor:safe.topAnchor],
+		[scrollView.bottomAnchor constraintEqualToAnchor:safe.bottomAnchor],
+		[stack.leadingAnchor constraintGreaterThanOrEqualToAnchor:scrollView.frameLayoutGuide.leadingAnchor constant:24.0],
+		[stack.trailingAnchor constraintLessThanOrEqualToAnchor:scrollView.frameLayoutGuide.trailingAnchor constant:-24.0],
+		[stack.topAnchor constraintEqualToAnchor:scrollView.contentLayoutGuide.topAnchor constant:24.0],
+		[stack.bottomAnchor constraintEqualToAnchor:scrollView.contentLayoutGuide.bottomAnchor constant:-24.0],
+		[stack.centerXAnchor constraintEqualToAnchor:scrollView.frameLayoutGuide.centerXAnchor],
+		[stack.widthAnchor constraintLessThanOrEqualToConstant:460.0],
+		[self.handednessControl.heightAnchor constraintGreaterThanOrEqualToConstant:44.0],
+		[self.sizeControl.heightAnchor constraintGreaterThanOrEqualToConstant:44.0],
+		[self.opacityControl.heightAnchor constraintGreaterThanOrEqualToConstant:44.0],
+		[resetButton.heightAnchor constraintGreaterThanOrEqualToConstant:44.0],
+		[doneButton.heightAnchor constraintGreaterThanOrEqualToConstant:50.0],
+	]];
+}
+
+- (void)preferencesChanged
+{
+	NSUserDefaults *defaults = NSUserDefaults.standardUserDefaults;
+	[defaults setInteger:self.handednessControl.selectedSegmentIndex forKey:s_touchHandednessKey];
+	[defaults setInteger:self.sizeControl.selectedSegmentIndex forKey:s_touchSizeKey];
+	[defaults setInteger:self.opacityControl.selectedSegmentIndex forKey:s_touchOpacityKey];
+	[self.overlayController applyPreferencesAndRebuildControls];
+}
+
+- (void)resetDefaults
+{
+	NSUserDefaults *defaults = NSUserDefaults.standardUserDefaults;
+	[defaults removeObjectForKey:s_touchHandednessKey];
+	[defaults removeObjectForKey:s_touchSizeKey];
+	[defaults removeObjectForKey:s_touchOpacityKey];
+	self.handednessControl.selectedSegmentIndex = CTRPadTouchHandednessSteerLeft;
+	self.sizeControl.selectedSegmentIndex = CTRPadTouchSizeStandard;
+	self.opacityControl.selectedSegmentIndex = CTRPadTouchOpacityStandard;
+	[self.overlayController applyPreferencesAndRebuildControls];
+	UIAccessibilityPostNotification(UIAccessibilityAnnouncementNotification, @"Touch controls reset to defaults.");
+}
+
+- (void)done
+{
+	Platform_InputTouchReset();
+	[self dismissViewControllerAnimated:YES completion:nil];
+}
+
+- (void)viewWillDisappear:(BOOL)animated
+{
+	[super viewWillDisappear:animated];
+	Platform_InputTouchReset();
+}
+
+@end
+
 @implementation CTRPadTouchOverlayViewController
 
 - (void)loadView
@@ -185,7 +427,7 @@ static void *s_discReselectionUserdata;
 	button.translatesAutoresizingMaskIntoConstraints = NO;
 	button.tag = mask;
 	button.exclusiveTouch = NO;
-	button.backgroundColor = [color colorWithAlphaComponent:0.58];
+	button.backgroundColor = [color colorWithAlphaComponent:self.controlOpacity];
 	button.layer.borderColor = [UIColor colorWithWhite:1.0 alpha:0.68].CGColor;
 	button.layer.borderWidth = 2.0;
 	button.titleLabel.font = [UIFont systemFontOfSize:14.0 weight:UIFontWeightBold];
@@ -200,6 +442,22 @@ static void *s_discReselectionUserdata;
 	return button;
 }
 
+- (UIButton *)utilityButtonWithTitle:(NSString *)title action:(SEL)action
+{
+	UIButton *button = [UIButton buttonWithType:UIButtonTypeCustom];
+	button.translatesAutoresizingMaskIntoConstraints = NO;
+	button.exclusiveTouch = YES;
+	button.backgroundColor = [[UIColor colorWithWhite:0.08 alpha:1.0] colorWithAlphaComponent:self.controlOpacity];
+	button.layer.borderColor = [UIColor colorWithWhite:1.0 alpha:0.68].CGColor;
+	button.layer.borderWidth = 2.0;
+	button.layer.cornerRadius = 12.0;
+	button.titleLabel.font = [UIFont systemFontOfSize:12.0 weight:UIFontWeightBold];
+	[button setTitle:title forState:UIControlStateNormal];
+	[button setTitleColor:UIColor.whiteColor forState:UIControlStateNormal];
+	[button addTarget:self action:action forControlEvents:UIControlEventTouchUpInside];
+	return button;
+}
+
 - (void)buttonDown:(UIButton *)sender
 {
 	sender.alpha = 0.92;
@@ -210,6 +468,20 @@ static void *s_discReselectionUserdata;
 {
 	sender.alpha = 1.0;
 	Platform_InputTouchButton((unsigned int)sender.tag, 0);
+}
+
+- (void)presentTouchSettings
+{
+	if (self.presentedViewController != nil)
+	{
+		return;
+	}
+
+	Platform_InputTouchReset();
+	CTRPadTouchSettingsViewController *settings = [[CTRPadTouchSettingsViewController alloc] init];
+	settings.overlayController = self;
+	settings.modalPresentationStyle = UIModalPresentationFormSheet;
+	[self presentViewController:settings animated:YES completion:nil];
 }
 
 - (void)presentDiscReselectionConfirmation
@@ -243,8 +515,31 @@ static void *s_discReselectionUserdata;
 - (void)viewDidLoad
 {
 	[super viewDidLoad];
+	[self applyPreferencesAndRebuildControls];
+}
+
+- (void)applyPreferencesAndRebuildControls
+{
+	Platform_InputTouchReset();
+	for (UIView *subview in self.view.subviews.copy)
+	{
+		[subview removeFromSuperview];
+	}
+
+	self.handedness = (CTRPadTouchHandedness)CTRPadTouch_ReadPreference(s_touchHandednessKey,
+	                                                                  CTRPadTouchHandednessSteerLeft,
+	                                                                  CTRPadTouchHandednessSteerRight);
+	CTRPadTouchSize sizeChoice = (CTRPadTouchSize)CTRPadTouch_ReadPreference(s_touchSizeKey,
+	                                                                       CTRPadTouchSizeStandard,
+	                                                                       CTRPadTouchSizeLarge);
+	CTRPadTouchOpacity opacityChoice = (CTRPadTouchOpacity)CTRPadTouch_ReadPreference(s_touchOpacityKey,
+	                                                                                CTRPadTouchOpacityStandard,
+	                                                                                CTRPadTouchOpacityHigh);
+	self.controlScale = CTRPadTouch_ScaleForChoice(sizeChoice);
+	self.controlOpacity = CTRPadTouch_OpacityForChoice(opacityChoice);
 
 	CTRPadTouchStickView *stick = [[CTRPadTouchStickView alloc] init];
+	[stick applyControlOpacity:self.controlOpacity];
 	UIButton *cross = [self buttonWithTitle:@"GAS\n✕" mask:PLATFORM_INPUT_TOUCH_CROSS color:[UIColor colorWithRed:0.08 green:0.42 blue:0.95 alpha:1.0]];
 	UIButton *square = [self buttonWithTitle:@"BRAKE\n□" mask:PLATFORM_INPUT_TOUCH_SQUARE color:[UIColor colorWithRed:0.93 green:0.19 blue:0.52 alpha:1.0]];
 	UIButton *circle = [self buttonWithTitle:@"ITEM\n○" mask:PLATFORM_INPUT_TOUCH_CIRCLE color:[UIColor colorWithRed:0.93 green:0.16 blue:0.18 alpha:1.0]];
@@ -253,17 +548,8 @@ static void *s_discReselectionUserdata;
 	UIButton *rightDrift = [self buttonWithTitle:@"R DRIFT / BOOST" mask:PLATFORM_INPUT_TOUCH_R1 color:[UIColor colorWithRed:0.94 green:0.59 blue:0.10 alpha:1.0]];
 	UIButton *start = [self buttonWithTitle:@"PAUSE" mask:PLATFORM_INPUT_TOUCH_START color:[UIColor colorWithWhite:0.08 alpha:1.0]];
 	UIButton *select = [self buttonWithTitle:@"SELECT" mask:PLATFORM_INPUT_TOUCH_SELECT color:[UIColor colorWithWhite:0.08 alpha:1.0]];
-	UIButton *disc = [UIButton buttonWithType:UIButtonTypeCustom];
-	disc.translatesAutoresizingMaskIntoConstraints = NO;
-	disc.exclusiveTouch = YES;
-	disc.backgroundColor = [[UIColor colorWithWhite:0.08 alpha:1.0] colorWithAlphaComponent:0.58];
-	disc.layer.borderColor = [UIColor colorWithWhite:1.0 alpha:0.68].CGColor;
-	disc.layer.borderWidth = 2.0;
-	disc.layer.cornerRadius = 12.0;
-	disc.titleLabel.font = [UIFont systemFontOfSize:12.0 weight:UIFontWeightBold];
-	[disc setTitle:@"CHANGE DISC" forState:UIControlStateNormal];
-	[disc setTitleColor:UIColor.whiteColor forState:UIControlStateNormal];
-	[disc addTarget:self action:@selector(presentDiscReselectionConfirmation) forControlEvents:UIControlEventTouchUpInside];
+	UIButton *settings = [self utilityButtonWithTitle:@"CONTROLS" action:@selector(presentTouchSettings)];
+	UIButton *disc = [self utilityButtonWithTitle:@"CHANGE DISC" action:@selector(presentDiscReselectionConfirmation)];
 
 	cross.accessibilityIdentifier = @"ctrpad.touch.cross";
 	square.accessibilityIdentifier = @"ctrpad.touch.square";
@@ -273,69 +559,103 @@ static void *s_discReselectionUserdata;
 	rightDrift.accessibilityIdentifier = @"ctrpad.touch.r1";
 	start.accessibilityIdentifier = @"ctrpad.touch.start";
 	select.accessibilityIdentifier = @"ctrpad.touch.select";
+	settings.accessibilityIdentifier = @"ctrpad.touch.settings";
+	settings.accessibilityLabel = @"Configure touch controls";
 	disc.accessibilityIdentifier = @"ctrpad.touch.disc";
 	disc.accessibilityLabel = @"Change retail disc image";
 
-	NSArray<UIView *> *controls = @[ stick, cross, square, circle, triangle, leftDrift, rightDrift, start, select, disc ];
+	NSArray<UIView *> *controls = @[ stick, cross, square, circle, triangle, leftDrift, rightDrift, start, select, settings, disc ];
 	for (UIView *control in controls)
 	{
 		[self.view addSubview:control];
 	}
 
 	UILayoutGuide *safe = self.view.safeAreaLayoutGuide;
-	[NSLayoutConstraint activateConstraints:@[
-		[stick.leadingAnchor constraintEqualToAnchor:safe.leadingAnchor constant:24.0],
-		[stick.bottomAnchor constraintEqualToAnchor:safe.bottomAnchor constant:-24.0],
-		[stick.widthAnchor constraintEqualToConstant:174.0],
+	CGFloat scale = self.controlScale;
+	CGFloat stickSize = round(174.0 * scale);
+	CGFloat driftWidth = round(144.0 * scale);
+	CGFloat driftHeight = MAX(48.0, round(54.0 * scale));
+	CGFloat startWidth = round(82.0 * scale);
+	CGFloat startHeight = MAX(44.0, round(40.0 * scale));
+	CGFloat startCenterOffset = startWidth * 0.5 + 5.0;
+	CGFloat utilityWidth = MAX(100.0, round(112.0 * scale));
+	CGFloat utilityHeight = 44.0;
+	CGFloat utilityCenterOffset = utilityWidth * 0.5 + 5.0;
+	CGFloat crossSize = round(92.0 * scale);
+	CGFloat faceSize = MAX(56.0, round(64.0 * scale));
+
+	NSMutableArray<NSLayoutConstraint *> *constraints = [@[
+		[stick.bottomAnchor constraintEqualToAnchor:safe.bottomAnchor constant:-24.0 * scale],
+		[stick.widthAnchor constraintEqualToConstant:stickSize],
 		[stick.heightAnchor constraintEqualToAnchor:stick.widthAnchor],
 
-		[leftDrift.leadingAnchor constraintEqualToAnchor:safe.leadingAnchor constant:18.0],
-		[leftDrift.topAnchor constraintEqualToAnchor:safe.topAnchor constant:10.0],
-		[leftDrift.widthAnchor constraintEqualToConstant:144.0],
-		[leftDrift.heightAnchor constraintEqualToConstant:54.0],
+		[leftDrift.leadingAnchor constraintEqualToAnchor:safe.leadingAnchor constant:18.0 * scale],
+		[leftDrift.topAnchor constraintEqualToAnchor:safe.topAnchor constant:10.0 * scale],
+		[leftDrift.widthAnchor constraintEqualToConstant:driftWidth],
+		[leftDrift.heightAnchor constraintEqualToConstant:driftHeight],
 
-		[rightDrift.trailingAnchor constraintEqualToAnchor:safe.trailingAnchor constant:-18.0],
-		[rightDrift.topAnchor constraintEqualToAnchor:safe.topAnchor constant:10.0],
-		[rightDrift.widthAnchor constraintEqualToConstant:144.0],
-		[rightDrift.heightAnchor constraintEqualToConstant:54.0],
+		[rightDrift.trailingAnchor constraintEqualToAnchor:safe.trailingAnchor constant:-18.0 * scale],
+		[rightDrift.topAnchor constraintEqualToAnchor:safe.topAnchor constant:10.0 * scale],
+		[rightDrift.widthAnchor constraintEqualToConstant:driftWidth],
+		[rightDrift.heightAnchor constraintEqualToConstant:driftHeight],
 
-		[start.topAnchor constraintEqualToAnchor:safe.topAnchor constant:12.0],
-		[start.centerXAnchor constraintEqualToAnchor:safe.centerXAnchor constant:48.0],
-		[start.widthAnchor constraintEqualToConstant:82.0],
-		[start.heightAnchor constraintEqualToConstant:40.0],
-		[select.topAnchor constraintEqualToAnchor:safe.topAnchor constant:12.0],
-		[select.centerXAnchor constraintEqualToAnchor:safe.centerXAnchor constant:-48.0],
-		[select.widthAnchor constraintEqualToConstant:82.0],
-		[select.heightAnchor constraintEqualToConstant:40.0],
-		[disc.topAnchor constraintEqualToAnchor:start.bottomAnchor constant:8.0],
-		[disc.centerXAnchor constraintEqualToAnchor:safe.centerXAnchor],
-		[disc.widthAnchor constraintEqualToConstant:112.0],
-		[disc.heightAnchor constraintEqualToConstant:34.0],
+		[start.topAnchor constraintEqualToAnchor:safe.topAnchor constant:12.0 * scale],
+		[start.centerXAnchor constraintEqualToAnchor:safe.centerXAnchor constant:startCenterOffset],
+		[start.widthAnchor constraintEqualToConstant:startWidth],
+		[start.heightAnchor constraintEqualToConstant:startHeight],
+		[select.topAnchor constraintEqualToAnchor:safe.topAnchor constant:12.0 * scale],
+		[select.centerXAnchor constraintEqualToAnchor:safe.centerXAnchor constant:-startCenterOffset],
+		[select.widthAnchor constraintEqualToConstant:startWidth],
+		[select.heightAnchor constraintEqualToConstant:startHeight],
 
-		[cross.trailingAnchor constraintEqualToAnchor:safe.trailingAnchor constant:-24.0],
-		[cross.bottomAnchor constraintEqualToAnchor:safe.bottomAnchor constant:-22.0],
-		[cross.widthAnchor constraintEqualToConstant:92.0],
+		[settings.topAnchor constraintEqualToAnchor:start.bottomAnchor constant:8.0 * scale],
+		[settings.centerXAnchor constraintEqualToAnchor:safe.centerXAnchor constant:-utilityCenterOffset],
+		[settings.widthAnchor constraintEqualToConstant:utilityWidth],
+		[settings.heightAnchor constraintEqualToConstant:utilityHeight],
+		[disc.topAnchor constraintEqualToAnchor:start.bottomAnchor constant:8.0 * scale],
+		[disc.centerXAnchor constraintEqualToAnchor:safe.centerXAnchor constant:utilityCenterOffset],
+		[disc.widthAnchor constraintEqualToConstant:utilityWidth],
+		[disc.heightAnchor constraintEqualToConstant:utilityHeight],
+
+		[cross.bottomAnchor constraintEqualToAnchor:safe.bottomAnchor constant:-22.0 * scale],
+		[cross.widthAnchor constraintEqualToConstant:crossSize],
 		[cross.heightAnchor constraintEqualToAnchor:cross.widthAnchor],
-
-		[square.trailingAnchor constraintEqualToAnchor:cross.leadingAnchor constant:-18.0],
-		[square.bottomAnchor constraintEqualToAnchor:safe.bottomAnchor constant:-34.0],
-		[square.widthAnchor constraintEqualToConstant:64.0],
+		[square.bottomAnchor constraintEqualToAnchor:safe.bottomAnchor constant:-34.0 * scale],
+		[square.widthAnchor constraintEqualToConstant:faceSize],
 		[square.heightAnchor constraintEqualToAnchor:square.widthAnchor],
-
-		[circle.trailingAnchor constraintEqualToAnchor:safe.trailingAnchor constant:-36.0],
-		[circle.bottomAnchor constraintEqualToAnchor:cross.topAnchor constant:-16.0],
-		[circle.widthAnchor constraintEqualToConstant:64.0],
+		[circle.bottomAnchor constraintEqualToAnchor:cross.topAnchor constant:-16.0 * scale],
+		[circle.widthAnchor constraintEqualToConstant:faceSize],
 		[circle.heightAnchor constraintEqualToAnchor:circle.widthAnchor],
-
-		[triangle.trailingAnchor constraintEqualToAnchor:circle.leadingAnchor constant:-14.0],
 		[triangle.centerYAnchor constraintEqualToAnchor:circle.centerYAnchor],
-		[triangle.widthAnchor constraintEqualToConstant:64.0],
+		[triangle.widthAnchor constraintEqualToConstant:faceSize],
 		[triangle.heightAnchor constraintEqualToAnchor:triangle.widthAnchor],
-	]];
+	] mutableCopy];
+
+	if (self.handedness == CTRPadTouchHandednessSteerRight)
+	{
+		[constraints addObjectsFromArray:@[
+			[stick.trailingAnchor constraintEqualToAnchor:safe.trailingAnchor constant:-24.0 * scale],
+			[cross.leadingAnchor constraintEqualToAnchor:safe.leadingAnchor constant:24.0 * scale],
+			[square.leadingAnchor constraintEqualToAnchor:cross.trailingAnchor constant:18.0 * scale],
+			[circle.leadingAnchor constraintEqualToAnchor:safe.leadingAnchor constant:36.0 * scale],
+			[triangle.leadingAnchor constraintEqualToAnchor:circle.trailingAnchor constant:14.0 * scale],
+		]];
+	}
+	else
+	{
+		[constraints addObjectsFromArray:@[
+			[stick.leadingAnchor constraintEqualToAnchor:safe.leadingAnchor constant:24.0 * scale],
+			[cross.trailingAnchor constraintEqualToAnchor:safe.trailingAnchor constant:-24.0 * scale],
+			[square.trailingAnchor constraintEqualToAnchor:cross.leadingAnchor constant:-18.0 * scale],
+			[circle.trailingAnchor constraintEqualToAnchor:safe.trailingAnchor constant:-36.0 * scale],
+			[triangle.trailingAnchor constraintEqualToAnchor:circle.leadingAnchor constant:-14.0 * scale],
+		]];
+	}
+	[NSLayoutConstraint activateConstraints:constraints];
 
 	for (UIButton *button in @[ cross, square, circle, triangle ])
 	{
-		button.layer.cornerRadius = button == cross ? 46.0 : 32.0;
+		button.layer.cornerRadius = button == cross ? crossSize * 0.5 : faceSize * 0.5;
 	}
 	for (UIButton *button in @[ leftDrift, rightDrift, start, select ])
 	{
