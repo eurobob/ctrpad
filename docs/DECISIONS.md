@@ -637,3 +637,25 @@ The thin iPhoneOS executable and unsigned IPA/source pair also build. The one
 self-test-exit UIKit console warning and every real signing/physical-device
 criterion remain open. Exact evidence is in
 `docs/parity/2026-08-01-release-rebaseline-clean-smoke.md`.
+
+## 2026-08-01 — Do not distort production lifecycle for self-test teardown
+
+**Decision:** retain the single immediate renderer-self-test UIKit appearance
+warning as a documented Simulator harness limitation. Do not manually drive
+UIKit appearance methods, spin an arbitrary nested run loop, skip platform
+shutdown or add an iOS-only asynchronous renderer-test state machine without
+physical production evidence requiring it.
+
+**Why:** the pixel test creates, exercises and destroys its window inside one
+synchronous `SDL_main` call, before returning to UIKit's run loop. Production
+returns with the display loop active and has repeatedly completed startup,
+Home/foreground, rotation and bounded termination without the warning. The
+candidate workarounds either manipulate private transition state, weaken
+deterministic cleanup or add test-only platform complexity.
+
+**Verification boundary:** clean `d5772375fabc` passes the complete
+actual-surface GLES oracle before the warning, then separately passes the
+normal retail lifecycle and five-log fault scan. Reopen this decision if the
+signed physical application emits the warning on its normal route. Detailed
+source ownership and rejected alternatives are in
+`docs/parity/2026-08-01-ios-uikit-view-lifecycle.md`.

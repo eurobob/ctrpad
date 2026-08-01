@@ -242,6 +242,51 @@ cmake --build build-macos-arm64-sanitizers --parallel
 ctest --test-dir build-macos-arm64-sanitizers --output-on-failure
 ```
 
+## Post-rebaseline self-test teardown assessment
+
+The clean `d5772375fabc` actual-surface replay repeated the single warning
+after the renderer pixel test had printed its complete passing result. A
+source-level re-audit at documentation head `cd41e62c5d88` confirms the narrow
+ownership:
+
+- `main.c` selects `NativeRenderer_RunPixelSelfTest` synchronously from
+  `SDL_main`;
+- that one function calls `Platform_Init`, performs every draw/readback and
+  calls `Platform_Shutdown` before returning;
+- `Platform_Shutdown` synchronously destroys the SDL window and calls
+  `SDL_Quit`; and
+- UIKit window destruction detaches the root controller while the window was
+  created in the same app-delegate/run-loop callback.
+
+There is no UIKit run-loop return between installing and destroying the
+controller. Ordinary production returns from `SDL_main` with the display loop
+active, so UIKit completes its appearance lifecycle before later
+Home/foreground, rotation or termination. The exact clean production route
+again completed those events without this warning.
+
+Four apparent fixes were rejected without editing source:
+
+1. manually calling `beginAppearanceTransition:` or
+   `endAppearanceTransition` has no supported public test for UIKit's private
+   pending root transition and can introduce a second imbalance;
+2. spinning or sleeping a nested run loop makes a deterministic pixel oracle
+   depend on an arbitrary delay and reentrant application events;
+3. skipping `Platform_Shutdown` leaks the renderer/window and changes the
+   self-test's teardown and exit contract; and
+4. splitting the monolithic renderer test into an iOS asynchronous state
+   machine is substantial test-only platform code with no evidence of a
+   production defect.
+
+**Decision:** retain the warning as an honest Simulator self-test teardown
+limitation. Do not patch the accepted production UIKit lifecycle or vendored
+SDL teardown merely to suppress it. Reopen only if the normal signed physical
+app emits the same warning, or if a future reusable asynchronous test harness
+can preserve deterministic result and cleanup semantics.
+
+Exact post-rebaseline build, pixel, retail, Home/foreground, rotation, log and
+package evidence is in
+`docs/parity/2026-08-01-release-rebaseline-clean-smoke.md`.
+
 ## Remaining boundary
 
 This checkpoint closes the repeated ordinary Simulator appearance warning and
