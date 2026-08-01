@@ -12978,3 +12978,108 @@ This accepts explicit isolated-keychain mechanics, fail-closed identity
 handling and unchanged unsigned behavior. It does not accept a real signed IPA,
 Apple authorization, physical installation or device execution. M11 and the
 goal remain active.
+
+## 2026-08-01 — Refreshed the exact current-head Apple matrix
+
+### Resource gate and ordinary ARM64 acceptance
+
+Work resumed at clean local/upstream/draft-PR head
+`bbb17478c76d7f8868ebfd3a6bf1b6d4cc90bfa5`. Initial raw free pages were low,
+but `memory_pressure` reported 53% system-wide free and zero throttled pages.
+There was no Simulator application and `simctl` reported no booted device.
+
+`macos-arm64` was explicitly reconfigured, then built at nice 15 with one job.
+The large unity translation completed with 32 established legacy warnings and
+no error. Free pages dipped into the low thousands during compilation, but no
+sample showed throttling and swap did not grow. Exact product identity:
+
+```text
+file     Mach-O 64-bit executable arm64
+version  CTR Native 0.1.0-beta.7.1 (bbb17478c76d)
+SDL      SDL-3.4.10-beta-7.1-169-gbbb17478c
+SHA-256  279a7965a616995f1c4525322568ad81a4a66519890fb349fb73c05fcfa4aea2
+```
+
+The complete ordinary suite passed 22/22 in 3.52 seconds; `/usr/bin/time`
+measured 3.69 seconds wall, 0.56 user and 0.94 system.
+
+### Sanitizer route and exact result
+
+The first convenience command,
+`cmake --preset macos-arm64-sanitizers`, was rejected before compilation
+because that preset does not exist. Available presets were inspected rather
+than assuming a typo was a product failure. The established sanitizer cache
+specified RelWithDebInfo, ARM64, AddressSanitizer plus UndefinedBehaviorSanitizer
+and frame pointers. It was explicitly reconfigured with those flags and built
+at nice 15 / one job.
+
+That unity compile took several minutes and repeated 59 established warnings.
+Sampled system-wide free memory stayed at 42–47%, throttled pages stayed zero,
+and no Simulator was opened. Exact product identity:
+
+```text
+file     Mach-O 64-bit executable arm64
+version  CTR Native 0.1.0-beta.7.1 (bbb17478c76d)
+SHA-256  5172e794d772adc76bffd397f96790fe999cb0bd6a479f7a057ea869df3ca28d
+```
+
+With `ASAN_OPTIONS=symbolize=0:abort_on_error=1:detect_leaks=0` and
+`UBSAN_OPTIONS=halt_on_error=1:print_stacktrace=1`, all 22 tests passed in
+6.53 seconds. The outer wall time was 6.59 seconds. Leak detection remains off
+only because Apple's ARM64 runtime does not implement LeakSanitizer; there was
+no address or undefined-behavior finding.
+
+### Sequential iOS compile/link evidence
+
+`ios-simulator-arm64` and `ios-device-arm64` were each reconfigured and built
+sequentially at nice 15 / one job. Both compiled UIKit/GLES Objective-C
+sources, linked a thin ARM64 executable, repeated the 32 established Apple
+warnings and embedded exact version, source and SDL identities.
+
+```text
+iOS Simulator  47984fe3f417a3c19060ec4a69d3c26093f24110100dbc1fcc31fefc54c81333
+iPhoneOS        7229ffd73d3e86f45f3c853bfee8270467e68f3a77e9e078c85f0f9088112490
+```
+
+Both plist products report `io.github.chrissotraidis.ctrpad`, iOS 15.0 and the
+intended iPad orientation mask. The about-3.5-MiB bundles contain only the
+executable, plist and GPL/notices/Installation Information. No retail file is
+present by design: the Files workflow imports the user-owned BIN to
+Documents/assets/ctr-u.bin.
+
+The Simulator executable is linker-ad-hoc signed with identifier `CTRPad` and
+no team. Deep/strict bundle verification repeated the known
+`code has no resources but signature indicates they must be present` result.
+The Simulator accepts that development state; it is not a physical signature.
+The iPhoneOS bundle correctly reported `code object is not signed at all`.
+
+The first shell wrapper for those statuses used zsh's read-only `status`
+parameter and exited before a result. It was repeated with task-specific
+variables. A cleanup attempt later passed multiple files to macOS `unlink` and
+removed none; the private temporary files were enumerated and unlinked
+individually instead. These operational corrections changed no product or user
+data.
+
+### Exact unsigned packaging and boundary
+
+Two sequential unsigned packages used the exact device app and fixed commit
+epoch `1785581547`. Runs took 14.32 and 5.02 seconds. `cmp`, ZIP validation and
+both checksum sidecars passed. Each seven-member IPA was exactly 1,449,260
+bytes and SHA-256:
+
+```text
+05ff4601973413f279b7295f1fd885f74b52ddf011360aae7adb2a8f41c97dab
+```
+
+The members were only `Payload/`, `Payload/CTRPad.app/`, executable, plist and
+the three distribution documents. There was no retail/runtime/profile/signature
+state. The temporary IPAs and sidecars were deleted after acceptance.
+
+Closing resource state was 47% system-wide free, zero throttled pages and
+9,836.94 MiB swap used, slightly below the start. Final process reads still
+showed zero Simulator applications and zero booted devices.
+
+This accepts the current-head ordinary/sanitizer/iOS/unsigned-package refresh,
+not a clean extracted-source build, current macOS app bundle, Apple signature
+or physical-iPad behavior. Exact commands and all hashes are in
+`docs/parity/2026-08-01-current-head-apple-matrix.md`. The goal remains active.

@@ -1206,9 +1206,10 @@ Acceptance:
 **Status:** in progress; reproducible retail-free unsigned IPA and exact
 corresponding-source packaging, profile-aware DER signing preparation,
 embedded legal/install resources and direct/AltStore-style installation
-information have landed; user-owned Apple signing, clean extracted-source
-build, physical-iPad install and final device acceptance remain open; depends
-on all prior milestones
+information have landed; an exact-current ordinary/sanitizer/iOS build and
+unsigned-package refresh passes, while user-owned Apple signing, clean
+extracted-source build, physical-iPad install and final device acceptance
+remain open; depends on all prior milestones
 
 Checkpoints `6db6116fe67a`, `a37cdf2aa5af` and `207121134a05` add a guarded
 device packager and its corrections. The script verifies the ARM64/iOS bundle,
@@ -1276,6 +1277,18 @@ deep/strict verification with all four intended values, while CodeDirectory
 metadata proved it had no team identity. The temporary keychain was deleted and
 global identity/trust state remained empty. This strengthens the mechanics but
 does not replace the still-open real Apple identity/profile/device branch.
+
+Current GitHub head `bbb17478c76d` was then reconfigured and rebuilt
+sequentially at nice 15 / one job with zero open Simulators and zero booted
+devices. The ordinary and ASan/UBSan thin ARM64 macOS binaries passed 22/22
+tests; both thin ARM64 iOS SDK products linked with exact build identity; and
+two unsigned IPAs were byte-identical at SHA-256 `05ff4601...c97dab`. The iOS
+bundles remain intentionally retail-free because the user's disc is imported
+to Documents at runtime. This is a current-head in-place refresh, not a fresh
+extracted-source or clean-machine acceptance, and it does not change the real
+Apple signing/physical-device boundary. Exact commands, hashes, rejected
+routes, resource readings and limits are in
+`docs/parity/2026-08-01-current-head-apple-matrix.md`.
 
 Work:
 

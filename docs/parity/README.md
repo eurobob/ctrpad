@@ -102,6 +102,12 @@ Current evidence and procedures:
   trust elevation, CMS/profile decoding, diagnostic DER entitlements and strict
   ad-hoc sealing, unchanged reproducible unsigned packaging, full temporary-
   keychain cleanup and the still-open Apple authorization/device gate.
+- `2026-08-01-current-head-apple-matrix.md` records the sequential nice-15 /
+  one-job current-GitHub-head ordinary and ASan/UBSan macOS builds, 22/22 test
+  results, both iOS SDK products, exact executable and unsigned-IPA hashes,
+  one-Simulator/resource safeguards, expected external retail-data boundary,
+  rejected command routes and deliberately open clean-machine/signing/device
+  gates.
 - `2026-07-31-ios-sandbox-storage.md` records the bundle/Documents/Application
   Support ownership split, Documents-priority retail startup, private log and
   memory-card roots, Files metadata, exact cross-target matrix, rejected

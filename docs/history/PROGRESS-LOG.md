@@ -2165,3 +2165,43 @@ adds 830 seconds (13 minutes, 50 seconds) from the preceding 225,098-second
 published boundary, including 205 seconds (3 minutes, 25 seconds) for the
 closing evidence and cleanup audit. Goal time includes pauses/resumes and is
 not a build benchmark or person-hour estimate. The goal remains active.
+
+### 2026-08-01 — Exact current-head Apple matrix and unsigned IPA refreshed
+
+- Resumed from exact clean GitHub head
+  `bbb17478c76d7f8868ebfd3a6bf1b6d4cc90bfa5`; local, upstream and draft-PR
+  heads matched before the matrix.
+- Kept zero Simulator application processes and zero booted devices for the
+  entire checkpoint. Configures, builds, tests and packages ran sequentially
+  at nice 15 with one build/test job. Sampled `memory_pressure` stayed between
+  42% and 53% system-wide free and always reported zero throttled pages.
+- Reconfigured/rebuilt the exact ordinary macOS ARM64 product. The thin binary
+  hashes to `279a7965...a4aea2`, embeds `bbb17478c76d`, and passed 22/22 CTests
+  in 3.52 seconds (3.69 seconds outer wall).
+- Rejected the nonexistent `macos-arm64-sanitizers` preset before compilation,
+  then reconfigured the established explicit ASan/UBSan directory instead.
+  Its thin binary hashes to `5172e794...a28d`, embeds the same identity, and
+  passed 22/22 in 6.53 seconds with no sanitizer finding.
+- Reconfigured/rebuilt both iOS SDK products. Simulator SHA-256 is
+  `47984fe3...1333`; iPhoneOS SHA-256 is `7229ffd7...2490`. Both are thin
+  ARM64, iOS 15+, UIKit/GLES, and embed the current build/SDL markers.
+- Confirmed the applications intentionally contain the executable, plist and
+  three distribution documents, not retail media. The user's BIN is imported
+  to Documents at runtime; absence from the bundle is not evidence for the
+  already-corrected visibility-cache regression.
+- Retained the known signing boundary: strict verification rejects the
+  Simulator's linker-ad-hoc resource state, and the device app is unsigned.
+  Neither was relabeled as a real Apple-signed bundle.
+- Packaged the exact device app twice with one fixed source epoch. The
+  1,449,260-byte seven-member IPAs compare byte-for-byte and hash to
+  `05ff4601...c97dab`; both sidecars and ZIP validation passed, with no retail
+  media, profile, signature or save/container data. Temporary packages were
+  removed after recording their reproducible identity.
+- This accepts a bounded current-head in-place refresh. Fresh extracted-source
+  build, macOS app-bundle refresh, Apple signing, real device install and all
+  physical-iPad behavior remain open.
+
+The matrix evidence-open reading was 226,759 seconds: 2 days, 14 hours,
+59 minutes, 19 seconds cumulative. The closing reading is recorded after the
+documentation commit below. Goal time includes pauses/resumes and is not a
+build benchmark or person-hour estimate. The goal remains active.
