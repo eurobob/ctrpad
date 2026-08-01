@@ -1361,6 +1361,20 @@ metadata proved it had no team identity. The temporary keychain was deleted and
 global identity/trust state remained empty. This strengthens the mechanics but
 does not replace the still-open real Apple identity/profile/device branch.
 
+The subsequent signed-boundary audit proved that the profile decoder alone did
+not establish trust: a self-signed CMS decoded at exit 0 while certificate
+evaluation rejected it. It also found that signed packaging required the raw
+App ID prefix to contain a trailing dot, contrary to the final
+`<prefix>.<bundle-id>` entitlement form. A shared trust verifier now performs
+cryptographic CMS verification, Apple-root-pinned profile/app chain checks and
+profile-signer-purpose validation; the packager uses a canonical bare prefix,
+binds the final app leaf to `DeveloperCertificates` and reads back its App ID,
+team and keychain group. A tampered CMS, untrusted CMS and ad-hoc Simulator app
+fail; a three-certificate Apple-signed system app passes; two unsigned IPAs
+remain byte-identical at `3354bb3e...49ed`; and 22/22 regressions pass. A real
+Apple development profile and signed CTRPad positive remain open. Exact
+evidence is in `docs/parity/2026-08-01-ios-apple-trust-preflight.md`.
+
 Current GitHub head `bbb17478c76d` was then reconfigured and rebuilt
 sequentially at nice 15 / one job with zero open Simulators and zero booted
 devices. The ordinary and ASan/UBSan thin ARM64 macOS binaries passed 22/22

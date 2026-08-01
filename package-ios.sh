@@ -75,11 +75,15 @@ while (($#)); do
     esac
 done
 
-for command_name in cmake ditto file find grep lipo plutil security shasum strings unzip xcrun; do
+for command_name in awk base64 cmake ditto file find grep lipo plutil security \
+    shasum strings unzip xcrun; do
     require_command "$command_name"
 done
 plist_buddy='/usr/libexec/PlistBuddy'
 [[ -x "$plist_buddy" ]] || fail "required tool not found: $plist_buddy"
+signing_trust_tool="$repo_root/tools/verify-ios-signing-trust.sh"
+[[ -x "$signing_trust_tool" ]] || \
+    fail "required signing-trust verifier not found: $signing_trust_tool"
 
 if [[ -n "$signing_identity" || -n "$profile_path" ]]; then
     [[ -n "$signing_identity" && -n "$profile_path" ]] || \
@@ -181,8 +185,10 @@ if [[ -n "$signing_identity" ]]; then
     grep -Fq "$signing_identity" <<<"$identity_rows" || \
         fail "codesign identity is not available in the requested keychain search"
 
-    profile_plist="$tmp_dir/profile.plist"
-    security cms -D -i "$profile_path" -o "$profile_plist"
+    profile_trust_dir="$tmp_dir/profile-trust"
+    "$signing_trust_tool" profile --profile "$profile_path" \
+        --output-dir "$profile_trust_dir" >/dev/null
+    profile_plist="$profile_trust_dir/profile-decoded.plist"
     profile_platforms="$(plutil -extract Platform json -o - "$profile_plist")"
     grep -q 'iOS' <<<"$profile_platforms" || fail "profile is not valid for iOS"
 
@@ -210,11 +216,15 @@ if [[ -n "$signing_identity" ]]; then
 
     team_identifier="$(plutil -extract TeamIdentifier.0 raw -o - "$profile_plist")"
     application_prefix="$(plutil -extract ApplicationIdentifierPrefix.0 raw -o - "$profile_plist")"
+    application_prefix="${application_prefix%.}"
+    profile_identifier_prefix="${profile_application_id%%.*}"
     [[ "$team_identifier" =~ ^[A-Za-z0-9]+$ ]] || \
         fail "profile team identifier contains unsupported characters"
-    [[ "$application_prefix" =~ ^[A-Za-z0-9]+\.$ ]] || \
+    [[ "$application_prefix" =~ ^[A-Za-z0-9]+$ ]] || \
         fail "profile application identifier prefix is malformed: $application_prefix"
-    signed_application_id="${application_prefix}${bundle_id}"
+    [[ "$profile_identifier_prefix" == "$application_prefix" ]] || \
+        fail "profile application identifier prefix does not match application-identifier"
+    signed_application_id="${application_prefix}.${bundle_id}"
     entitlements_plist="$tmp_dir/CTRPad.entitlements"
     plutil -create xml1 "$entitlements_plist"
     "$plist_buddy" -c "Add :application-identifier string $signed_application_id" "$entitlements_plist"
@@ -235,11 +245,44 @@ if [[ -n "$signing_identity" ]]; then
         --generate-entitlement-der --timestamp=none "$staged_app")
     "${codesign_command[@]}"
     codesign --verify --deep --strict --verbose=2 "$staged_app"
+    app_trust_dir="$tmp_dir/app-trust"
+    "$signing_trust_tool" app --app "$staged_app" \
+        --output-dir "$app_trust_dir" >/dev/null
+    app_certificate_hash="$(awk -F= \
+        '$1 == "LEAF_CERTIFICATE_SHA256" { print $2 }' \
+        "$app_trust_dir/trust-manifest.txt")"
+    [[ "$app_certificate_hash" =~ ^[0-9a-f]{64}$ ]] || \
+        fail "could not read the trusted app signing certificate hash"
+    profile_certificate_match=0
+    profile_certificate_count=0
+    while profile_certificate_base64="$(plutil -extract \
+        "DeveloperCertificates.$profile_certificate_count" raw -o - \
+        "$profile_plist" 2>/dev/null)"; do
+        profile_certificate_path="$tmp_dir/profile-certificate-$profile_certificate_count.cer"
+        printf '%s' "$profile_certificate_base64" | base64 -D >"$profile_certificate_path"
+        profile_certificate_hash="$(shasum -a 256 "$profile_certificate_path" | awk '{print $1}')"
+        if [[ "$profile_certificate_hash" == "$app_certificate_hash" ]]; then
+            profile_certificate_match=1
+        fi
+        profile_certificate_count=$((profile_certificate_count + 1))
+    done
+    ((profile_certificate_count > 0)) || \
+        fail "provisioning profile contains no developer certificates"
+    ((profile_certificate_match == 1)) || \
+        fail "app signing certificate is not authorized by the provisioning profile"
     signed_entitlements="$tmp_dir/signed-entitlements.plist"
     codesign --display --entitlements - --xml "$staged_app" >"$signed_entitlements" 2>/dev/null
     actual_application_id="$(plutil -extract application-identifier raw -o - "$signed_entitlements")"
+    actual_team_identifier="$("$plist_buddy" -c \
+        'Print :com.apple.developer.team-identifier' "$signed_entitlements")"
+    actual_keychain_group="$("$plist_buddy" -c \
+        'Print :keychain-access-groups:0' "$signed_entitlements")"
     [[ "$actual_application_id" == "$signed_application_id" ]] || \
         fail "signed application identifier mismatch: $actual_application_id"
+    [[ "$actual_team_identifier" == "$team_identifier" ]] || \
+        fail "signed team identifier mismatch: $actual_team_identifier"
+    [[ "$actual_keychain_group" == "$signed_application_id" ]] || \
+        fail "signed keychain access group mismatch: $actual_keychain_group"
     mode="signed"
 fi
 

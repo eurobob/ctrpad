@@ -189,6 +189,11 @@ Current evidence and procedures:
   collection workflow; versioned `devicectl` evidence, privacy/media guards,
   exact negative probes, the redacted human acceptance template and the still-
   open Apple identity/profile/device execution gate.
+- `2026-08-01-ios-apple-trust-preflight.md` records the untrusted-CMS and App ID
+  prefix defects, the Apple-root-pinned profile/app verifier, exact signer/
+  profile/entitlement binding, synthetic and ad-hoc rejections, Apple-signed
+  chain positive, unchanged unsigned packages and still-open real-profile/
+  physical-device positive.
 - `2026-07-31-macos-arm64-keyboard-tap.md` records the missing quick-tap root
   cause, historical one-snapshot press-edge transport, its later two-snapshot
   supersession, direct live PSX packet traces, and exact-commit

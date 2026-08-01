@@ -105,13 +105,17 @@ For an identity held in an already unlocked non-default keychain, add
 identity discovery and signing to that keychain; it does not modify the user's
 default keychain or search list.
 
-The script decodes the signed profile, rejects expiration/platform/App-ID/
-optional-device mismatches, embeds it, constructs only CTRPad's minimal
-application/team/keychain entitlements, requests DER entitlements from
-`codesign`, verifies the signed app strictly, and packages it. It never copies
-the private key out of the keychain. The profile is necessarily embedded in a
-directly installable signed app; it is authorization metadata, not the signing
-private key.
+The script cryptographically verifies the profile CMS, validates its signer
+chain and purpose, and pins its root to an Apple Root CA in the macOS system
+root keychain before reading authorization values. It rejects
+expiration/platform/App-ID/optional-device mismatches, constructs only CTRPad's
+minimal application/team/keychain entitlements in Apple's
+`<App ID prefix>.<bundle ID>` form, requests DER entitlements, and signs. It
+then verifies the app's code-signing chain against an Apple root, requires its
+leaf certificate to appear in the profile's `DeveloperCertificates`, reads the
+three final entitlements back, and packages. Public trust evidence stays in
+temporary staging; the private key never leaves the keychain. A decodable CMS
+or user-trusted self-signed root is not accepted as Apple authorization.
 
 CTRPad uses no Apple service capability such as Game Center, iCloud, push, an
 app group, or background execution. If a later modification adds one, do not
@@ -153,10 +157,13 @@ First validate the signed IPA without contacting an iPad:
 
 The preflight requires a standard one-app IPA, valid sidecar when present,
 thin ARM64 `IOS` executable, strict non-ad-hoc signature, embedded non-expired
-iOS profile, exact App ID/team/signed entitlements, target UDID authorization,
-leaf signing-certificate membership in the profile, distribution resources
-and retail/runtime-data exclusion. It does not prove that installation or
-launch works.
+iOS profile, cryptographically valid profile CMS, Apple-root-pinned profile and
+app certificate chains, provisioning-profile signer purpose, exact App
+ID/team/signed entitlements, target UDID authorization, leaf
+signing-certificate membership in the profile, distribution resources and
+retail/runtime-data exclusion. It does not prove that installation or launch
+works. Raw profile/device trust evidence belongs only in the ignored evidence
+directory.
 
 With the iPad unlocked, trusted and in Developer Mode, update-install and
 launch without uninstalling:

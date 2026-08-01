@@ -707,3 +707,29 @@ Collection also rejects any evidence root without a successful prepare
 manifest matching the exact requested UDID and bundle identifier.
 Exact evidence is in
 `docs/parity/2026-08-01-ios-physical-campaign-handoff.md`.
+
+## 2026-08-01 — Pin signed iOS profiles and apps to Apple trust roots
+
+**Decision:** never treat `security cms -D`, a non-ad-hoc signature or local
+trust settings as sufficient Apple authorization. Verify the profile CMS
+cryptographically, validate its signer chain and provisioning-profile purpose,
+and require the terminal certificate to equal an Apple Root CA from the system
+root keychain. Apply code-signing policy plus the same root pin to the app,
+then require its leaf DER certificate in the profile's
+`DeveloperCertificates`.
+
+**Why:** a self-signed synthetic CMS decoded with exit 0 while actual
+certificate evaluation returned `CSSMERR_TP_NOT_TRUSTED`. The signed packager
+also expected a trailing dot inside `ApplicationIdentifierPrefix`; Apple
+defines the final entitlement as `<prefix>.<bundle-id>`, and the App ID prefix
+need not equal the Team ID. These gaps could reject a real profile while
+overstating an internally consistent synthetic one.
+
+**Verification boundary:** the new verifier rejects the untrusted and tampered
+CMS fixtures and the ad-hoc Simulator app; it accepts a three-certificate
+Apple-signed Calculator chain pinned to the system Apple root. Bare-prefix App
+ID construction produces the exact expected identifier, two unsigned IPAs
+remain byte-identical and 22/22 tests pass. No real Apple development profile,
+CTRPad signed IPA or physical device exists locally, so those positive gates
+remain open. Exact evidence is in
+`docs/parity/2026-08-01-ios-apple-trust-preflight.md`.

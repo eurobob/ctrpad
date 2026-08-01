@@ -3075,3 +3075,35 @@ early verification saw the not-yet-visible path, then the unchanged retry
 passed at 3,253 members / `a748e256...2b01`, with the handoff files present and
 zero retail/runtime or private/package matches. The 18:06:51 reading was
 269,013 seconds (3 days, 2 hours, 43 minutes, 33 seconds).
+
+### 2026-08-01 — Hardened Apple trust and real-profile compatibility
+
+- Proved `security cms -D` decoded a self-signed CMS at exit 0 while actual
+  certificate evaluation returned `CSSMERR_TP_NOT_TRUSTED`.
+- Fixed the signed packager's trailing-dot App ID prefix assumption and now
+  construct/cross-check Apple's `<prefix>.<bundle-id>` form.
+- Added a shared CMS/code-signing verifier that validates the chain and pins
+  its final DER certificate to an Apple Root CA from the system root keychain;
+  profile mode also requires a provisioning-profile signing subject.
+- Made signed packaging bind the app leaf certificate to the profile and read
+  back application, team and keychain entitlements; device preflight retains
+  both trust manifests and root hashes.
+- Rejected tampered/untrusted CMS, ad-hoc CTRPad app, unknown mode and tracked
+  trust evidence. Corrected initial Bash 3.2 help/empty-array defects.
+- Terminated an overly broad Xcode.app deep-signature probe after almost three
+  minutes, then accepted the same mechanism on small Apple-signed Calculator
+  with three certificates and pinned root `b0b1730e...1f024`.
+- Produced two unchanged byte-identical seven-member unsigned IPAs at
+  `3354bb3e...49ed`; unsigned device preflight still fails before device access.
+- Passed 22/22 regressions in 5.56 seconds plus syntax/help/diff checks;
+  `shellcheck` was unavailable.
+
+The 18:26:33 reading was 270,194 seconds: 3 days, 3 hours, 3 minutes, 14
+seconds. No real Apple profile, signed CTRPad IPA or physical result is inferred
+from the corrected offline gate. Exact evidence is in
+`docs/parity/2026-08-01-ios-apple-trust-preflight.md`.
+
+At 18:31 CDT, the checked-in candidate repeated 22/22 tests in 2.68 seconds,
+accepted the Apple-signed Calculator chain/root proof and rejected the
+self-signed profile. Active goal time was 270,498 seconds (3 days, 3 hours, 8
+minutes, 18 seconds); the external signing/device boundary is unchanged.

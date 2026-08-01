@@ -190,7 +190,10 @@ also validate a user-supplied Apple identity/profile and emit a signed IPA;
 without them it emits an unsigned IPA for a compatible user-side re-signing
 tool. The packager enforces thin ARM64/iOS metadata, the standard
 `Payload/CTRPad.app` layout, byte-reproducible archive timestamps, legal/source
-installation resources, and retail/runtime-data exclusion. See
+installation resources, and retail/runtime-data exclusion. Signed mode also
+cryptographically verifies the profile, pins profile/app certificate chains to
+Apple roots from the macOS system keychain, binds the app leaf certificate to
+the profile, and verifies the final application/team/keychain entitlements. See
 `docs/INSTALL-IOS.md` for signing, direct-device, and AltStore-style sideload
 instructions.
 
@@ -212,7 +215,10 @@ separate offline `preflight`, non-destructive update-install/launch `prepare`,
 and post-test `collect` phases. Raw device evidence and saves stay under
 ignored `dist/`; summarize the actual human/device results with
 `docs/templates/IOS-DEVICE-ACCEPTANCE.md`. This workflow does not turn an
-unsigned IPA or Simulator result into physical-device evidence.
+unsigned IPA or Simulator result into physical-device evidence. Its offline
+gate shares `tools/verify-ios-signing-trust.sh` with the packager so a merely
+decodable or locally trusted synthetic profile cannot masquerade as Apple
+authorization.
 
 Create the matching GPL corresponding-source archive from a clean committed
 checkout with:

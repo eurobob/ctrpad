@@ -31,6 +31,9 @@ that are necessary to reproduce the conclusion.
 
 - [ ] `ios-device-campaign.sh preflight` completed successfully.
 - [ ] The IPA sidecar, ZIP structure and strict signature verified.
+- [ ] The profile CMS signature, signer purpose and certificate chain verified
+      to an Apple Root CA from the system root keychain.
+- [ ] The app signing-certificate chain verified to an Apple Root CA.
 - [ ] The profile authorized the exact App ID, signing team and target UDID.
 - [ ] The app leaf signing certificate matched one of the profile's authorized
       `DeveloperCertificates`.
