@@ -3060,3 +3060,10 @@ private-repository HTTP 404, then authenticated `gh` fallback opened draft PR
 #7. Its exact 12-file/two-commit scope was `MERGEABLE`/`CLEAN` with no configured
 checks. The 18:02:05 reading was 268,724 seconds (3 days, 2 hours, 38 minutes,
 44 seconds); merge was still pending.
+
+The first protected merge used a mistyped full SHA after the short prefix and
+was safely refused without a merge. Re-querying and matching exact head
+`0458baff2ea...` succeeded: PR #7 merged into `main` at 18:02:58 CDT as
+`a19c1a5ef`. Remote-tree inspection found all three new handoff files. The
+post-merge active-time reading was 268,804 seconds (3 days, 2 hours, 40 minutes,
+4 seconds); signed physical acceptance remains open.

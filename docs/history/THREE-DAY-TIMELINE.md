@@ -48,6 +48,7 @@ adds a complete durable commit ledger.
 | Collection-linkage audit | 2026-08-01 17:59:07 | Active goal time reached 3 days, 2 hours, 35 minutes, 49 seconds after binding collection to the exact successful prepare manifest and rerunning negative guards. |
 | Physical-handoff source package | 2026-08-01 18:00:26 | Active goal time reached 3 days, 2 hours, 37 minutes, 8 seconds after committing the handoff and verifying its clean 3,253-member corresponding-source archive. |
 | Physical-handoff PR audit | 2026-08-01 18:02:05 | Active goal time reached 3 days, 2 hours, 38 minutes, 44 seconds after pushing both commits and auditing draft PR #7 as clean and mergeable. |
+| Physical-handoff main merge | 2026-08-01 18:02:58 | PR #7 merged to `main` as `a19c1a5ef`; the post-merge goal reading reached 3 days, 2 hours, 40 minutes, 4 seconds. |
 
 ## Executive chronology
 
@@ -113,6 +114,7 @@ adds a complete durable commit ledger.
 | 17:38–17:59 | Physical-iPad campaign handoff | Added signed-IPA preflight, non-destructive CoreDevice install/launch, prepare-bound local log/save collection and a redacted human acceptance template; corrected certificate extraction/linkage and dotted-entitlement reads; unsigned IPA, unbound evidence and nonexistent-device probes failed at the intended boundaries; 22/22 regressions and the sole exact Simulator identity passed before publication, so physical acceptance remains open. |
 | 18:00 | Handoff commit and source-package proof | Committed `4349bae8d`; its 3,253-member source archive included the new campaign files, passed two checksum checks and contained no retail/runtime or credential/package matches. |
 | 18:01–18:02 | Physical-handoff GitHub review | Pushed the two-commit checkpoint; the private-repo connector returned 404, authenticated CLI fallback opened draft PR #7, and its exact 12-file scope was clean/mergeable with no configured checks. |
+| 18:02–18:03 | PR #7 main merge and verification | A mistyped full protected-head SHA was refused without merging; the exact queried head then merged as `a19c1a5ef`, and fetched `origin/main` contained the tool, template and focused report. |
 
 ## Complete durable commit ledger
 
