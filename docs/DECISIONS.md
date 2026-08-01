@@ -470,3 +470,10 @@ presets. Low host headroom prevented a responsible extracted-source compile,
 so clean-machine build, legal review, same-identity IPA pairing, Apple signing
 and physical-device acceptance remain open. Exact and rejected-route evidence
 is in `docs/parity/2026-08-01-corresponding-source-package.md`.
+
+Follow-up `21fb81296bd0` explicitly extends the ingress guard to Apple `.p8`
+and `.pfx` keys, alternate provisioning-profile suffixes and common certificate
+encodings. Fully documented exact head `71b68f118b18` then repeated two
+byte-identical 17,488,503-byte, 3,234-member archives at SHA-256
+`1681c458...53f3`, with both sidecars, expanded scans and extraction smoke
+checks passing.

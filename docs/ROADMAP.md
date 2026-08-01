@@ -1260,6 +1260,13 @@ enumerate all four Apple presets after fresh extraction. A clean extracted-
 source compile remains deferred for safe host headroom. Exact evidence is in
 `docs/parity/2026-08-01-corresponding-source-package.md`.
 
+Final guard checkpoint `21fb81296bd0` also excludes Apple `.p8`/`.pfx` keys,
+alternate provisioning-profile names and common certificate encodings from
+both Git and future source packages. Fully documented pre-report head
+`71b68f118b18` repeated two byte-identical 3,234-member archives at SHA-256
+`1681c458...53f3`; fresh extraction repeated both shell checks, all four Apple
+presets and the expanded prohibited-file scan.
+
 Work:
 
 - Run the complete cross-architecture parity suite and prolonged playtesting.

@@ -1,7 +1,8 @@
 # GPL Corresponding-Source Package Acceptance
 
 - Date: 2026-08-01
-- Implementation: `4091b602ab2abc74db584a56de06faa23905a96a`
+- Hardened implementation: `21fb81296bd0fe96c21dde443b3fd0c774653c95`
+- Final exact pre-documentation head: `71b68f118b1892e569793b08f67d49192291b0fb`
 - Artifact: deterministic tracked-source `.tar.gz` plus SHA-256 sidecar
 - Result: accepted for exact source-archive generation and extraction;
   clean-machine compilation and physical-iPad release acceptance remain open
@@ -114,11 +115,41 @@ ios-device-arm64
 A second prohibited-extension scan over the extracted filesystem was empty.
 The two exact archives, sidecars and extracted tree remain local-only.
 
-This is deliberately not a clean-machine compile. At the acceptance boundary,
-only 3,693 free 16-KiB VM pages (about 58 MB) remained and swap use was about
-10.55 GB. No compiler or Simulator was started; final state remained zero
-Simulator processes and zero booted devices. A clean extracted-source build
-must wait for safe host headroom and remains an explicit M11 gate.
+## Final Apple-credential hardening and current-head repeat
+
+The initial exact archive contained no credential or authorization material,
+but a final policy audit found that the future guard named `.p12`, PEM and key
+files without explicitly covering Apple's `.p8` keys, `.pfx` containers,
+alternate provisioning-profile suffix or common certificate encodings.
+Checkpoint `21fb81296bd0` adds those suffixes to both `.gitignore` and the source
+archive rejection expression, and requires the ignore policy itself inside the
+archive. This was a future-ingress correction, not evidence of a credential in
+either accepted tarball.
+
+After the acceptance report and decision record were committed, fully
+documented pre-report head `71b68f118b1892e569793b08f67d49192291b0fb`
+was packaged twice at nice priority 15 in approximately 14.53 and 13.10
+seconds. Each final archive has:
+
+```text
+size        17,488,503 bytes
+members     3,234
+root        CTRPad-source-71b68f118b18/
+SHA-256     1681c4587c03e51618a42b4bee793d2dd62f3655f16b66b8dbc06f518cb553f3
+```
+
+`cmp`, both checksum sidecars, gzip validation and tar enumeration passed. The
+expanded archive and extracted-filesystem scans found no retail/runtime file,
+IPA, Apple profile, `.p8`/`.p12`/`.pfx`, certificate encoding, PEM/key or
+common private-key filename. Fresh extraction again had no `.git`, passed both
+packager syntax checks and enumerated all four Apple configure presets. These
+final artifacts and extraction remain local-only.
+
+This is deliberately not a clean-machine compile. At the final acceptance
+boundary, only 3,992 free 16-KiB VM pages (about 62 MB) remained and swap use
+was about 10.51 GB. No compiler or Simulator was started; final state remained
+zero Simulator processes and zero booted devices. A clean extracted-source
+build must wait for safe host headroom and remains an explicit M11 gate.
 
 ## Acceptance boundary
 

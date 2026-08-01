@@ -2114,7 +2114,18 @@ estimate. The goal remains active.
 - Final state remained zero Simulator processes and zero booted devices. Low
   headroom still defers a clean extracted-source compile; source packaging is
   accepted without overstating clean build, signing or device release.
+- Extended the future-ingress policy in `21fb81296bd0` to Apple `.p8`/`.pfx`
+  keys, alternate profile suffixes and certificate encodings; no accepted
+  archive had contained one. Committed the first acceptance record as
+  `71b68f118b18`, then repeated that fully documented head twice.
+- The final pair is byte-identical: 17,488,503 bytes, 3,234 members, SHA-256
+  `1681c458...53f3`. Both checksums, gzip/tar structure, expanded archive scan
+  and fresh extraction smoke checks passed. Zero Simulators remained open.
 
 The source-package documentation-open reading was 224,651 seconds: 2 days,
-14 hours, 24 minutes, 11 seconds cumulative. Goal time includes pauses/resumes
-and is not a build benchmark or person-hour estimate. The goal remains active.
+14 hours, 24 minutes, 11 seconds cumulative. The documentation-close reading
+was 225,098 seconds: 2 days, 14 hours, 31 minutes, 38 seconds cumulative. That
+adds 1,154 seconds (19 minutes, 14 seconds) from the preceding 223,944-second
+published boundary, including 447 seconds (7 minutes, 27 seconds) for the
+closing and final-current-head audit. Goal time includes pauses/resumes and is
+not a build benchmark or person-hour estimate. The goal remains active.

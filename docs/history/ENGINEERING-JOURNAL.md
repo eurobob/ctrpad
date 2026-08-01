@@ -12890,3 +12890,27 @@ swap used. No clean compile was attempted and no Simulator was opened. This
 accepts deterministic complete source-artifact generation and extraction, not
 a clean-machine build, legal review, same-identity IPA, signing or physical
 device acceptance. M11 and the overall goal remain active.
+
+### Final credential-policy hardening and documented-head repeat
+
+A last guard audit found no secret in either archive but did find incomplete
+future suffix coverage: Apple `.p8` and `.pfx` keys, alternate provisioning-
+profile names and common certificate encodings were not named. `.gitignore` and
+the source member rejection were extended together, and the archive now
+requires its own ignore policy. This landed as `21fb81296bd0` before the first
+acceptance documentation commit `71b68f118b18`.
+
+That fully documented pre-report head was then packaged twice, again
+sequentially at nice priority 15. Runs took about 14.53 and 13.10 seconds. Each
+archive had 3,234 members, exact size 17,488,503 bytes, root
+`CTRPad-source-71b68f118b18/` and SHA-256:
+
+```text
+1681c4587c03e51618a42b4bee793d2dd62f3655f16b66b8dbc06f518cb553f3
+```
+
+`cmp`, both sidecars, gzip, tar and the expanded Apple credential/profile/key
+scan passed. Fresh extraction again had no `.git`, passed both shell syntax
+checks, exposed all four Apple presets and had no prohibited member. Final
+headroom remained unsuitable for compilation at roughly 62 MB free and
+10.51 GB swap used, so the clean-build boundary remains unchanged.
