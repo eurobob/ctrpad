@@ -40,6 +40,8 @@ adds a complete durable commit ledger.
 | Active goal time | 3 days, 50 minutes, 38 seconds | Exact `timeUsedSeconds=262238` reading at the boundary. |
 | Paused/non-active difference | 1 hour, 19 minutes, 35 seconds | Wall span minus active goal time; not claimed as implementation time. |
 | Post-resume correction reading | 2026-08-01 17:14:21 | Active goal time reached 3 days, 1 hour, 51 minutes, 8 seconds after correcting the stale Simulator installation. |
+| Exact-installer acceptance reading | 2026-08-01 17:27:33 | Active goal time reached 3 days, 2 hours, 4 minutes, 19 seconds after making the correction reproducible. |
+| Exact-installer package reading | 2026-08-01 17:33:01 | Active goal time reached 3 days, 2 hours, 9 minutes, 48 seconds after committing and packaging the helper. |
 
 ## Executive chronology
 
@@ -100,6 +102,8 @@ adds a complete durable commit ledger.
 | 15:56:54 | Goal marked blocked at 262,238 seconds | Zero Apple signing identities, no provisioning profile and no connected physical device prevented the required signed-iPad acceptance. |
 | 16:00–16:33 | User-requested live recheck | Booted only `CTRPad Import Validation`, launched `io.github.chrissotraidis.ctrpad`, visibly rendered retail copyright/logo/menu/cutscene/character assets and exercised touch navigation. The Apple Software Renderer ran around 7 FPS, but a later exact audit proved this installed executable stale; its input behavior is not current-product evidence. |
 | 17:08–17:14 | Exact-install and touch-correlation correction | Replaced stale executable `ed53ba9f...79c11c` with exact current `c6d40aaf...187f`, preserved retail/save hashes and inodes, and logged Cross/Circle down → retail-poll → up on the current build. Focused input CTest passed; no source change was needed. Synthetic Computer Use keyboard input remained automation non-evidence. |
+| 17:25–17:27 | Reproducible exact Simulator installer | Added the one-booted-device, isolated-sign and installed-hash contract; safe negative probes passed, an exact live update preserved retail/save identity, PID 66389 relaunched, and current controls plus rendered retail pixels appeared with clean targeted logs. |
+| 17:32–17:33 | Installer commit and source-package proof | Committed `67b4c6276`, produced a 3,249-member source archive containing the helper/report, and corrected a redundant checksum caller's working directory before publication. |
 
 ## Complete durable commit ledger
 

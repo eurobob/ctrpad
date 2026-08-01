@@ -117,7 +117,8 @@ for required_file in \
     externals/SDL/LICENSE.txt \
     main.c \
     package-ios.sh \
-    package-source.sh; do
+    package-source.sh \
+    tools/install-ios-simulator.sh; do
     grep -Fxq "${archive_root}/${required_file}" "$archive_list" || \
         fail "source archive is missing required file: $required_file"
 done
