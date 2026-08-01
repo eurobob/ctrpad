@@ -13417,3 +13417,153 @@ the deliberately open clean-replay/broader-churn/device boundary are in
 The evidence-analysis goal reading was 239,829 seconds (2 days, 18 hours, 37
 minutes, 9 seconds), 2,835 seconds after the previous published boundary. The
 goal remains active.
+
+## 2026-08-01 — Kept the exact game visible while auditing the next renderer cut
+
+Published `ff26c0815a04` was rebuilt exactly with every Simulator off and
+installed into the existing disposable data container. Only
+`CTRPad Import Negatives` booted; `CTRPad Import Validation` remained off. The
+user-facing viewer stayed open rather than being sacrificed to an overlapping
+compile. Its session identifies `ff26c0815a04`, iOS, OpenGL ES 3.0 and Apple's
+software renderer. A live 1,553-second snapshot showed coherent Crash Cove
+pixels and successful retail consumption of keyboard and touch masks. Its
+130-line / 13,371-byte log hashed to `c7e02716...6816` and had no targeted
+asset, texture, cache, error, failure, assertion or crash line. The later
+visible `9:59.99` clock was checked against `UI_DrawRaceClock`: ordinary
+non-seven-lap races intentionally retain that maximum display while the game
+and FPS logging continue. It is not evidence that the session froze.
+
+That run remains a rejection for performance: steady race samples are near
+6 FPS. The preceding profile explains why. Crash Cove averages about 192 draw
+calls for only about 5,535 vertices; roughly 73 semitransparent textured splits
+are issued twice because PS1 ABE leaves non-STP texels opaque and blends STP
+texels. Reordering or merging those primitives was rejected because it would
+change retail overlap behavior.
+
+The current uncommitted prototype instead selects coherent
+`GL_EXT_shader_framebuffer_fetch` only when GLES advertises it. A fragment then
+reads the existing destination and evaluates the PS1 average, add, reverse-
+subtract or quarter-source equation only for sampled STP pixels; sampled
+non-STP pixels write opaque source color. The desktop and unsupported GLES
+route keeps the established two draws. A dedicated counter will prove which
+route ran rather than inferring it from extension availability.
+
+The Khronos extension definition provides the needed ordering contract:
+coherent fetch reflects prior overlapping samples in API primitive order. It
+also defines ES3 user-declared `inout` outputs and explicitly leaves ordinary
+blending orthogonal. Apple's current iPhoneOS and iPhoneSimulator ES3 headers
+both expose the extension token. This justifies attempting the optimization;
+it does not prove Apple Simulator shader acceptance or pixel equivalence.
+
+The pixel self-test now draws all four PS1 semitransparency modes over a common
+blue destination and checks opaque non-STP plus blended STP pixels. A separate
+bilinear sample exercises the exact half-STP/half-non-STP boundary where the
+old path writes both passes; this prevents accepting one-pass texture halos.
+Its marker will include a separate blend hash and the route actually used.
+Static review caught two pre-build defects. The generated blend helper appeared
+after its consumer macro, and shutdown cleared the availability flag before the
+marker was printed. Dependency order is now direct, and the actual active-path
+result is saved before shutdown.
+
+No build has been run from these dirty sources while the user is inspecting
+the exact viewer. The acceptance sequence is intentionally strict: close the
+sole Simulator, compile the portable desktop fallback, pass the focused oracle
+and all 22 CTests, compile the iOS Simulator product, require the GLES shader
+and enabled-path oracle to match the fallback, then profile and visually churn
+one Simulator. Failure or an absent runtime extension means fallback or revert,
+not a performance claim.
+
+The in-progress goal reading was 242,344 seconds (2 days, 19 hours, 19 minutes,
+4 seconds), 2,515 seconds after the previous evidence reading. The goal remains
+active.
+
+The exact viewer ultimately remained open about 37 minutes, 27 seconds before
+the next build boundary. Correct-ID termination flushed a final 166-line,
+16,467-byte log at SHA-256 `d07493d5...0f6`; the targeted renderer, asset,
+cache and application-fault scan stayed empty.
+
+## 2026-08-01 — Proved coherent GLES framebuffer fetch against the fallback
+
+The staged Crash Cove profile made the next experiment precise: roughly 79
+textured semitransparent splits in one stable state each issued an opaque/non-
+STP draw followed by a blended/STP draw. Reordering those primitives would
+violate retail ordering. The candidate instead detects coherent
+`GL_EXT_shader_framebuffer_fetch` through the ES 3 indexed extension list and
+compiles PSX fragment outputs as `inout`. Each STP fragment reads the current
+destination and evaluates average, add, reverse-subtract or quarter-source;
+visible non-STP output remains opaque. Unsupported GLES and desktop GL retain
+the established two-pass route. A CSV counter records every split that actually
+uses fetch.
+
+The first iOS oracle failure was not in the new blend code. SDL/iOS ignored the
+requested 64×32 test window and supplied the real 1032×1376 Simulator surface.
+Both direct and staged readback failed before capture because their fixed
+buffers described the requested size. Rebuilding exact clean `ff26c0815a04`
+as a control reproduced the same failure. The test now validates the actual
+host dimensions, checks overflow and allocates both presentation captures from
+that size. Desktop still exercises 64×32; iOS exercises every byte of
+1032×1376.
+
+The corrected host test exposed a subtler failure: all selected average/add/
+subtract/quarter pixels passed while the complete blend hash differed. A
+stronger GLES oracle now disables the runtime capability, draws the complete
+fixture through the portable path, reenables it, draws through fetch in the
+same context, and reports the first byte mismatch. It stopped at `(21,7)` red,
+expected 0 and actual 62. Bilinear combined visibility exceeded one half even
+though STP and non-STP contributions were each below one half. The portable
+path discarded both passes; the candidate had written quarter-source. The
+one-pass path now discards when both individual contributions are below the
+same threshold. The full buffers then matched byte-for-byte at
+`f6dc5a2e558bc7b5`.
+
+Both named devices and the Simulator GUI remained shut down for every compile;
+all builds ran sequentially at nice 15 with one job. The final macOS increment
+linked in 75.79 seconds, printed logical `851169f2644a1675`, blend
+`f6dc5a2e558bc7b5`, portable oracle match and staged-presentation
+`a7798c5a6ddee965`, then passed 22/22 CTests in 1.90 seconds. The final iOS
+increment linked in 65.07 seconds. Both repeated the same established 32
+warnings. The unsigned thin-ARM64 iOS executable hashed to `76473dce...a54`;
+the strict/deep-verified disposable signed copy hashed to `ff1a87b4...a08`.
+Its enabled marker retained the logical and blend hashes, reported
+`blend-oracle=match`, and tested the actual 1032×1376 presentation surface at
+hash `172d49a34571b64c`. The immediate-self-test UIKit appearance and duplicate
+accessibility-loader warnings remain documented harness/framework diagnostics.
+
+Only disposable device `26F3DEE8-8840-446D-85FE-C882009C9C06` booted for the
+live dirty run. The protected device stayed off. The signed app updated the
+existing container and launched with `--perf --perf-dir
+perf-fetch-dirty-ff26`. Computer Use found Simulator keyboard capture disabled,
+enabled it explicitly, and used `S K K K K I` to select Time Trial, Crash,
+Crash Cove, No Ghost and skip the fly-in. Repeated K taps drove from the grid;
+paired D/K taps turned along the first coastal opening. The app log correlated
+individual edges and combined `0x4020` masks at the retail poll.
+
+Every inspected screen retained its retail content: CTR mode menu, Crash and
+all portraits, track preview, ghost prompt, fly-in, grid, kart lighting, HUD,
+banner, cliffs, horizon, animated water, fence and touch overlay. The bounded
+route does not claim every asset or track. The final session exceeded 720.887
+seconds, producing 5,172 frame rows. Correct-ID termination flushed the
+1,722,887-byte CSV at `f8fbef54...ee5` and the 173-line / 18,813-byte log at
+`096615ca...c76`. Its targeted error/failure/missing/corruption/assertion/
+texture/shader/pipeline scan returned zero. After device shutdown removed the
+controllable app window, a normal SIGTERM closed only the explicitly verified
+Simulator GUI PID. Both named devices were rechecked off.
+
+The before/after comparison selects identical logical geometry rather than
+unlike track positions: 123 splits, 79 semitransparent splits and 5,405.94
+split vertices. The preceding two-pass sample has 279 frames; fetch has 700.
+Draw calls fall exactly 79, from 205 to 126, and submitted renderer vertices
+fall 5,885.87 to 5,423.94. Total time improves 187.614 to 172.324 ms, non-wait
+work 154.872 to 147.464 ms, renderer triangles 144.520 to 137.016 ms and split
+submission 135.412 to 127.764 ms. Reciprocal throughput rises 5.33 to 5.80
+FPS. The 8.15% total improvement is real but insufficient: the frame remains
+5.17 times the 30-FPS budget. A later coastal scene averaged 7.67 FPS over 942
+frames, but has no matched two-pass position and is recorded only as runtime
+characterization.
+
+This dirty gate justifies retaining the code for exact commit/replay, not
+accepting Simulator or moving to the device. The full chronology, hashes,
+markers and gate decision are in
+`docs/parity/2026-08-01-ios-framebuffer-fetch.md`. The evidence-analysis goal
+reading was 245,597 seconds (2 days, 20 hours, 13 minutes, 17 seconds), 3,253
+seconds after the previous boundary. The goal remains active.

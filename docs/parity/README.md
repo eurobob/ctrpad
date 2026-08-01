@@ -124,6 +124,12 @@ Current evidence and procedures:
   pixel oracle, one-device Crash Cove visual replay, exact CSV/log hashes, the
   measured 83.6% presentation and 21.5% total-frame reductions, clean fault
   scan and deliberately open split-submission/performance/device gates.
+- `2026-08-01-ios-framebuffer-fetch.md` records the coherent one-pass PS1
+  semitransparency design, portable fallback, three rejected pixel-test
+  iterations, byte-identical two-pass/GLES oracle, exact diagnostic hashes,
+  one-Simulator keyboard/motion/visual route, matched-scene 38.54% draw-call
+  and 8.15% frame-time reductions, and deliberately open exact-replay,
+  performance, scene-churn and physical-device gates.
 - `2026-07-31-ios-sandbox-storage.md` records the bundle/Documents/Application
   Support ownership split, Documents-priority retail startup, private log and
   memory-card roots, Files metadata, exact cross-target matrix, rejected

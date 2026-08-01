@@ -98,6 +98,7 @@ global_variable const struct NativePerfCounterInfo s_counterInfo[NATIVE_PERF_COU
     {"gpu_splits"},
     {"gpu_split_vertices"},
     {"gpu_semitrans_splits"},
+    {"gpu_framebuffer_fetch_splits"},
 };
 
 global_variable FILE *s_csvFile;

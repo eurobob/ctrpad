@@ -107,6 +107,15 @@ global_variable const struct NativeRendererDialect s_rendererDialect = {
     false,
     false,
 };
+
+global_variable const char *s_glesFramebufferFetchFragmentHeader =
+    "\t#version 300 es\n"
+    "\t#extension GL_EXT_shader_framebuffer_fetch : require\n"
+    "\tprecision mediump int;\n"
+    "\tprecision highp float;\n"
+    "\t#define varying     in\n"
+    "\t#define texture2D   texture\n"
+    "\tlayout(location = 0) inout vec4 fragColor;\n";
 #else
 global_variable const struct NativeRendererDialect s_rendererDialect = {
     3,
@@ -142,6 +151,7 @@ global_variable int s_previousOffscreenState = 0;
 global_variable RECT16 s_previousOffscreen = {0, 0, 0, 0};
 
 global_variable ShaderID s_previousShader = (ShaderID)-1;
+global_variable b32 s_psxFramebufferFetchEnabled = false;
 
 global_variable TextureID s_rgLutTexture = (TextureID)-1;
 // NOTE(penta3): Single persistent VRAM texture, matching real PS1's single
@@ -223,6 +233,7 @@ global_variable b32 s_rendererApiReady = false;
 
 internal int NativeRenderer_InitialiseGLContext(char *windowName, int fullscreen);
 internal int NativeRenderer_InitialiseGLExt(void);
+internal b32 NativeRenderer_HasExtension(const char *name);
 internal void NativeRenderer_UpdatePresentSurface(void);
 internal void NativeRenderer_BindPresentFramebuffer(void);
 internal void NativeRenderer_DestroyTexture(TextureID texture);
@@ -344,6 +355,28 @@ internal void NativeRenderer_BindPresentFramebuffer(void)
 	glBindFramebuffer(GL_FRAMEBUFFER, s_presentFramebuffer);
 }
 
+internal b32 NativeRenderer_HasExtension(const char *name)
+{
+	GLint extensionCount = 0;
+
+	if ((name == NULL) || (name[0] == 0) || (glGetStringi == NULL))
+	{
+		return false;
+	}
+
+	glGetIntegerv(GL_NUM_EXTENSIONS, &extensionCount);
+	for (GLint i = 0; i < extensionCount; i++)
+	{
+		const char *extension = (const char *)glGetStringi(GL_EXTENSIONS, (GLuint)i);
+		if ((extension != NULL) && (strcmp(extension, name) == 0))
+		{
+			return true;
+		}
+	}
+
+	return false;
+}
+
 internal int NativeRenderer_InitialiseGLExt(void)
 {
 #if defined(CTR_NATIVE_RENDERER_GLES)
@@ -363,7 +396,7 @@ internal int NativeRenderer_InitialiseGLExt(void)
 	// platform resolver does not supply the specific contract we consume.
 	if (!GLAD_GL_VERSION_3_0 || (glBindVertexArray == NULL) || (glGenVertexArrays == NULL) ||
 	    (glDeleteVertexArrays == NULL) || (glBindFramebuffer == NULL) || (glBlitFramebuffer == NULL) ||
-	    (glReadPixels == NULL) || (glPixelStorei == NULL))
+	    (glGetStringi == NULL) || (glReadPixels == NULL) || (glPixelStorei == NULL))
 	{
 		NATIVE_RENDERER_ERROR("%s\n", "OpenGL ES 3.0 loader contract is incomplete");
 		return 0;
@@ -379,6 +412,13 @@ internal int NativeRenderer_InitialiseGLExt(void)
 
 	const char *glslVersionStr = (const char *)glGetString(GL_SHADING_LANGUAGE_VERSION);
 	NATIVE_RENDERER_LOG("*GLSL version: %s\n", glslVersionStr);
+
+#if defined(CTR_NATIVE_RENDERER_GLES)
+	s_psxFramebufferFetchEnabled = NativeRenderer_HasExtension("GL_EXT_shader_framebuffer_fetch");
+	NATIVE_RENDERER_LOG("*PSX framebuffer fetch: %s\n", s_psxFramebufferFetchEnabled ? "enabled" : "unavailable; two-pass fallback");
+#else
+	s_psxFramebufferFetchEnabled = false;
+#endif
 
 	return 1;
 }
@@ -438,6 +478,7 @@ void NativeRenderer_Shutdown(void)
 	glDeleteBuffers(1, &s_vramQuadVBO);
 	s_presentFramebuffer = 0;
 	s_presentRenderbuffer = 0;
+	s_psxFramebufferFetchEnabled = false;
 }
 
 #if defined(CTR_NATIVE_GPU_TIMERS)
@@ -839,6 +880,7 @@ typedef struct
 	GLint texLoc;
 	GLint lutLoc;
 	GLint psxSemiTransPassLoc;
+	GLint psxFramebufferFetchBlendModeLoc;
 	GLint psxDrawMaskSetLoc;
 	GLint psxTextureOutputStpLoc;
 } GTEShader;
@@ -865,6 +907,7 @@ GLint u_projectionLoc;
 GLint u_bilinearFilterLoc;
 GLint u_texelSizeLoc;
 GLint u_psxSemiTransPassLoc;
+GLint u_psxFramebufferFetchBlendModeLoc;
 GLint u_psxDrawMaskSetLoc;
 GLint u_psxTextureOutputStpLoc;
 
@@ -904,16 +947,6 @@ GLint u_psxTextureOutputStpLoc;
 	"	uniform sampler2D s_texture;\n"                              \
 	"	vec2 VRAM(vec2 uv) { return texture2D(s_texture, uv).rg; }\n"
 
-#define GPU_STP_PASS_FUNC                                                                     \
-	"	float texelVisible(vec2 rg) { return float(rg.x + rg.y > 0.0); }\n"                     \
-	"	float stpWeight(vec2 rg) { return step(0.5, rg.y); }\n"                                 \
-	"	bool discardForSemiTransPass(float visible, float stpVisible, float nonStpVisible) {\n" \
-	"		if(visible < 0.5) { return true; }\n"                                                  \
-	"		if(psxSemiTransPass == 1 && nonStpVisible < 0.5) { return true; }\n"                   \
-	"		if(psxSemiTransPass == 2 && stpVisible < 0.5) { return true; }\n"                      \
-	"		return false;\n"                                                                       \
-	"	}\n"
-
 #define GPU_DITHERING                                             \
 	"	const mat4 c_dither = mat4(\n"                              \
 	"		-4.0,  +0.0,  -3.0,  +1.0,\n"                              \
@@ -928,6 +961,34 @@ GLint u_psxTextureOutputStpLoc;
 
 #define GPU_ARRAY_FUNC "	float _idx2(vec2 array, int idx) { return array[idx]; }\n"
 
+#define GPU_FRAMEBUFFER_FETCH_BLEND_FUNC                                                                     \
+	"\t#ifdef PSX_FRAMEBUFFER_FETCH\n"                                                                         \
+	"\tuniform int psxFramebufferFetchBlendMode;\n"                                                 \
+	"\tvec4 applyPSXFramebufferFetch(vec4 source) {\n"                                               \
+	"\t\tif(psxSemiTransPass != 3 || sampledStp < 0.5) { return source; }\n"                         \
+	"\t\tvec3 destination = (sampledNonStp >= 0.5) ? source.rgb : fragColor.rgb;\n"                \
+	"\t\tvec3 blended = source.rgb;\n"                                                              \
+	"\t\tif(psxFramebufferFetchBlendMode == 1) { blended = source.rgb * 0.5 + destination * 0.5; }\n" \
+	"\t\telse if(psxFramebufferFetchBlendMode == 2) { blended = source.rgb + destination; }\n"      \
+	"\t\telse if(psxFramebufferFetchBlendMode == 3) { blended = destination - source.rgb; }\n"      \
+	"\t\telse if(psxFramebufferFetchBlendMode == 4) { blended = source.rgb * 0.25 + destination; }\n" \
+	"\t\treturn vec4(blended, source.a);\n"                                                      \
+	"\t}\n"                                                                                            \
+	"\t#else\n"                                                                                       \
+	"\tvec4 applyPSXFramebufferFetch(vec4 source) { return source; }\n"                             \
+	"\t#endif\n"
+
+#define GPU_STP_PASS_FUNC                                                                     \
+	"	float texelVisible(vec2 rg) { return float(rg.x + rg.y > 0.0); }\n"                     \
+	"	float stpWeight(vec2 rg) { return step(0.5, rg.y); }\n"                                 \
+	"	bool discardForSemiTransPass(float visible, float stpVisible, float nonStpVisible) {\n" \
+	"		if(visible < 0.5) { return true; }\n"                                                  \
+	"		if(psxSemiTransPass == 1 && nonStpVisible < 0.5) { return true; }\n"                   \
+	"		if(psxSemiTransPass == 2 && stpVisible < 0.5) { return true; }\n"                      \
+	"		if(psxSemiTransPass == 3 && stpVisible < 0.5 && nonStpVisible < 0.5) { return true; }\n" \
+	"		return false;\n"                                                                       \
+	"	}\n" GPU_FRAMEBUFFER_FETCH_BLEND_FUNC
+
 #define GPU_FRAGMENT_SAMPLE_SHADER(bit)                                                                                                               \
 	GPU_FETCH_VRAM_FUNC                                                                                                                               \
 	GPU_ARRAY_FUNC                                                                                                                                    \
@@ -938,6 +999,7 @@ GLint u_psxTextureOutputStpLoc;
 	    "	uniform int psxDrawMaskSet;\n"                                                                                                              \
 	    "	uniform int psxTextureOutputStp;\n"                                                                                                         \
 	    "	float sampledStp = 0.0;\n"                                                                                                                  \
+	    "	float sampledNonStp = 0.0;\n"                                                                                                               \
 	    "	const vec2 c_LUTTexel = vec2(1.0 / 256.0, 1.0 / 256.0);\n"                                                                                  \
 	    "	vec4 lut(vec2 rg) { return texture2D(s_rgLut, rg - c_LUTTexel * 0.0001); }\n" GPU_STP_PASS_FUNC "	vec4 bilinearTextureSample(vec2 P) {\n" \
 	    "		vec2 frac = fract(P);\n"                                                                                                                   \
@@ -969,6 +1031,7 @@ GLint u_psxTextureOutputStpLoc;
 	    "		float nonStp = mix(nx1, nx2, frac.y);\n"                                                                                                   \
 	    "		vec2 rg = mix(mix(C11, C21, frac.x), mix(C12, C22, frac.x), frac.y);\n"                                                                    \
 	    "		sampledStp = stp;\n"                                                                                                                       \
+	    "		sampledNonStp = nonStp;\n"                                                                                                                 \
 	    "		if(discardForSemiTransPass(axm, stp, nonStp)) { discard; }\n"                                                                              \
 	    "		vec4 x1 = mix(lut(C11), lut(C21), frac.x);\n"                                                                                              \
 	    "		vec4 x2 = mix(lut(C12), lut(C22), frac.x);\n"                                                                                              \
@@ -980,6 +1043,7 @@ GLint u_psxTextureOutputStpLoc;
 	    "		vec2 rg = samplePSX(P);\n"                                                                                                                 \
 	    "		float visible = texelVisible(rg);\n"                                                                                                       \
 	    "		sampledStp = visible * stpWeight(rg);\n"                                                                                                   \
+	    "		sampledNonStp = visible - sampledStp;\n"                                                                                                    \
 	    "		if(discardForSemiTransPass(visible, sampledStp, visible - sampledStp)) { discard; }\n"                                                     \
 	    "		vec4 t = lut(rg);\n"                                                                                                                       \
 	    "		t.w = 1.0 - t.w;\n"                                                                                                                        \
@@ -987,8 +1051,9 @@ GLint u_psxTextureOutputStpLoc;
 	    "	}\n"                                                                                                                                        \
 	    "	void main() {\n"                                                                                                                            \
 	    "		vec4 color = (bilinearFilter > 0) ? bilinearTextureSample(v_texcoord.xy) : nearestTextureSample(v_texcoord.xy);\n"                         \
-	    "		fragColor = dither(color * v_color);\n"                                                                                                    \
-	    "		fragColor.a = (psxDrawMaskSet != 0 || (psxTextureOutputStp != 0 && sampledStp >= 0.5)) ? 1.0 : 0.0;\n"                                     \
+	    "		vec4 sourceColor = dither(color * v_color);\n"                                                                                              \
+	    "		sourceColor.a = (psxDrawMaskSet != 0 || (psxTextureOutputStp != 0 && sampledStp >= 0.5)) ? 1.0 : 0.0;\n"                                   \
+	    "		fragColor = applyPSXFramebufferFetch(sourceColor);\n"                                                                                      \
 	    "	}\n"
 
 global_variable const char *gpu_shader_common = "	varying vec4 v_texcoord;\n"
@@ -1089,6 +1154,13 @@ internal ShaderID NativeRenderer_Shader_Compile(const char *source, bool isPsxSh
 
 	strcat(extra_vs_defines, "#define VERTEX\n");
 	strcat(extra_fs_defines, "#define FRAGMENT\n");
+#if defined(CTR_NATIVE_RENDERER_GLES)
+	if (isPsxShader && s_psxFramebufferFetchEnabled)
+	{
+		GLSL_HEADER_FRAG = s_glesFramebufferFetchFragmentHeader;
+		strcat(extra_fs_defines, "#define PSX_FRAMEBUFFER_FETCH\n");
+	}
+#endif
 	if (g_cfg_bilinearFiltering)
 	{
 		strcat(extra_fs_defines, "#define BILINEAR_FILTER\n");
@@ -1202,6 +1274,7 @@ internal void NativeRenderer_CompilePSXShader(GTEShader *sh, const char *source)
 	sh->texLoc = glGetUniformLocation(sh->shader, "s_texture");
 	sh->lutLoc = glGetUniformLocation(sh->shader, "s_rgLut");
 	sh->psxSemiTransPassLoc = glGetUniformLocation(sh->shader, "psxSemiTransPass");
+	sh->psxFramebufferFetchBlendModeLoc = glGetUniformLocation(sh->shader, "psxFramebufferFetchBlendMode");
 	sh->psxDrawMaskSetLoc = glGetUniformLocation(sh->shader, "psxDrawMaskSet");
 	sh->psxTextureOutputStpLoc = glGetUniformLocation(sh->shader, "psxTextureOutputStp");
 }
@@ -1524,6 +1597,7 @@ void NativeRenderer_SetTexture(TextureID texture, TexFormat texFormat)
 		u_projectionLoc = s_gteShader4.projectionLoc;
 		u_texelSizeLoc = -1;
 		u_psxSemiTransPassLoc = s_gteShader4.psxSemiTransPassLoc;
+		u_psxFramebufferFetchBlendModeLoc = s_gteShader4.psxFramebufferFetchBlendModeLoc;
 		u_psxDrawMaskSetLoc = s_gteShader4.psxDrawMaskSetLoc;
 		u_psxTextureOutputStpLoc = s_gteShader4.psxTextureOutputStpLoc;
 		break;
@@ -1533,6 +1607,7 @@ void NativeRenderer_SetTexture(TextureID texture, TexFormat texFormat)
 		u_projectionLoc = s_gteShader8.projectionLoc;
 		u_texelSizeLoc = -1;
 		u_psxSemiTransPassLoc = s_gteShader8.psxSemiTransPassLoc;
+		u_psxFramebufferFetchBlendModeLoc = s_gteShader8.psxFramebufferFetchBlendModeLoc;
 		u_psxDrawMaskSetLoc = s_gteShader8.psxDrawMaskSetLoc;
 		u_psxTextureOutputStpLoc = s_gteShader8.psxTextureOutputStpLoc;
 		break;
@@ -1542,6 +1617,7 @@ void NativeRenderer_SetTexture(TextureID texture, TexFormat texFormat)
 		u_projectionLoc = s_gteShader16.projectionLoc;
 		u_texelSizeLoc = -1;
 		u_psxSemiTransPassLoc = s_gteShader16.psxSemiTransPassLoc;
+		u_psxFramebufferFetchBlendModeLoc = s_gteShader16.psxFramebufferFetchBlendModeLoc;
 		u_psxDrawMaskSetLoc = s_gteShader16.psxDrawMaskSetLoc;
 		u_psxTextureOutputStpLoc = s_gteShader16.psxTextureOutputStpLoc;
 		break;
@@ -1551,6 +1627,7 @@ void NativeRenderer_SetTexture(TextureID texture, TexFormat texFormat)
 		u_projectionLoc = s_gteShader32Rgba.projectionLoc;
 		u_texelSizeLoc = s_gteShader32Rgba.texelSizeLoc;
 		u_psxSemiTransPassLoc = s_gteShader32Rgba.psxSemiTransPassLoc;
+		u_psxFramebufferFetchBlendModeLoc = s_gteShader32Rgba.psxFramebufferFetchBlendModeLoc;
 		u_psxDrawMaskSetLoc = s_gteShader32Rgba.psxDrawMaskSetLoc;
 		u_psxTextureOutputStpLoc = s_gteShader32Rgba.psxTextureOutputStpLoc;
 		break;
@@ -1599,6 +1676,19 @@ void NativeRenderer_SetPSXTextureSemiTransPass(int pass)
 	{
 		glUniform1i(u_psxSemiTransPassLoc, pass);
 	}
+}
+
+void NativeRenderer_SetPSXFramebufferFetchBlendMode(int blendMode)
+{
+	if (u_psxFramebufferFetchBlendModeLoc >= 0)
+	{
+		glUniform1i(u_psxFramebufferFetchBlendModeLoc, blendMode);
+	}
+}
+
+int NativeRenderer_UsesFramebufferFetch(void)
+{
+	return s_psxFramebufferFetchEnabled && (u_psxFramebufferFetchBlendModeLoc >= 0);
 }
 
 void NativeRenderer_SetPSXTextureOutputSTP(int enabled)
@@ -2654,6 +2744,59 @@ internal void NativeRenderer_PixelTestInitQuad(POLY_FT4 *quad, int x, int y, int
 	setSemiTrans(quad, semiTrans);
 }
 
+internal void NativeRenderer_PixelTestClearBlendTarget(void)
+{
+	NativeRenderer_BindMainRenderTarget();
+	NativeRenderer_SetViewPort(0, 0, NATIVE_RENDERER_PIXEL_TEST_WIDTH, NATIVE_RENDERER_PIXEL_TEST_HEIGHT);
+	NativeRenderer_SetBlendMode(BM_NONE);
+	NativeRenderer_SetScissorState(0);
+	glClearColor(0.0f, 0.0f, 248.0f / 255.0f, 0.0f);
+	glClear(GL_COLOR_BUFFER_BIT);
+}
+
+internal void NativeRenderer_PixelTestDrawBlendFixture(void)
+{
+	POLY_FT4 blendQuads[4];
+	POLY_FT4 bilinearQuad;
+	const int previousBilinearFiltering = g_cfg_bilinearFiltering;
+
+	for (int blendMode = 0; blendMode < 4; blendMode++)
+	{
+		NativeRenderer_PixelTestInitQuad(&blendQuads[blendMode], blendMode * 4, 4, 4, 4, 0, blendMode, 256, 0, 0, 480, 1);
+		ParsePrimitivesLinkedList((u32 *)&blendQuads[blendMode], 1);
+	}
+	DrawAllSplits();
+	g_cfg_bilinearFiltering = 1;
+	NativeRenderer_PixelTestInitQuad(&bilinearQuad, 20, 4, 4, 4, 0, 0, 256, 0, 0, 480, 1);
+	ParsePrimitivesLinkedList((u32 *)&bilinearQuad, 1);
+	DrawAllSplits();
+	g_cfg_bilinearFiltering = previousBilinearFiltering;
+}
+
+internal int NativeRenderer_PixelTestExpectBufferMatch(const u8 *expected, const u8 *actual, size_t size, const char *label)
+{
+	if (memcmp(expected, actual, size) == 0)
+	{
+		return 1;
+	}
+
+	for (size_t i = 0; i < size; i++)
+	{
+		if (expected[i] != actual[i])
+		{
+			const size_t pixel = i / 4u;
+			const int x = (int)(pixel % NATIVE_RENDERER_PIXEL_TEST_WIDTH);
+			const int y = (int)(pixel / NATIVE_RENDERER_PIXEL_TEST_WIDTH);
+			const int channel = (int)(i % 4u);
+			fprintf(stderr, "[CTR Renderer] pixel self-test mismatch: %s at (%d,%d) channel=%d expected=%u actual=%u\n", label, x, y,
+			        channel, expected[i], actual[i]);
+			break;
+		}
+	}
+
+	return 0;
+}
+
 internal int NativeRenderer_PixelTestCaptureMainRGBA(u8 *dst)
 {
 	u8 bottomUp[NATIVE_RENDERER_PIXEL_TEST_WIDTH * NATIVE_RENDERER_PIXEL_TEST_HEIGHT * 4];
@@ -2750,8 +2893,10 @@ int NativeRenderer_RunPixelSelfTest(void)
 	u16 clut8[256];
 	u16 packed[NATIVE_RENDERER_PIXEL_TEST_WIDTH * NATIVE_RENDERER_PIXEL_TEST_HEIGHT];
 	u8 rgba[NATIVE_RENDERER_PIXEL_TEST_WIDTH * NATIVE_RENDERER_PIXEL_TEST_HEIGHT * 4];
-	u8 presentDirect[NATIVE_RENDERER_PIXEL_TEST_PRESENT_WIDTH * NATIVE_RENDERER_PIXEL_TEST_PRESENT_HEIGHT * 4];
-	u8 presentStaged[NATIVE_RENDERER_PIXEL_TEST_PRESENT_WIDTH * NATIVE_RENDERER_PIXEL_TEST_PRESENT_HEIGHT * 4];
+	u8 blendRgba[NATIVE_RENDERER_PIXEL_TEST_WIDTH * NATIVE_RENDERER_PIXEL_TEST_HEIGHT * 4];
+	u8 blendFallbackRgba[NATIVE_RENDERER_PIXEL_TEST_WIDTH * NATIVE_RENDERER_PIXEL_TEST_HEIGHT * 4];
+	u8 *presentDirect = NULL;
+	u8 *presentStaged = NULL;
 	POLY_FT4 quad4;
 	POLY_FT4 quad4Semi;
 	POLY_FT4 quad8;
@@ -2760,10 +2905,19 @@ int NativeRenderer_RunPixelSelfTest(void)
 	DR_STP mask;
 	TILE maskTile;
 	int passed = 1;
+	int framebufferFetchUsed = 0;
+	int presentWidth;
+	int presentHeight;
+	size_t presentBytes;
 	u64 hash;
 	u64 presentHash;
+	u64 blendHash;
+	u64 blendOracleHash;
+	b32 framebufferFetchAvailable;
 
 	memset(rgba, 0, sizeof(rgba));
+	memset(blendRgba, 0, sizeof(blendRgba));
+	memset(blendFallbackRgba, 0, sizeof(blendFallbackRgba));
 	memset(clut4, 0, sizeof(clut4));
 	memset(clut8, 0, sizeof(clut8));
 	clut4[1] = red;
@@ -2782,6 +2936,28 @@ int NativeRenderer_RunPixelSelfTest(void)
 		fprintf(stderr, "[CTR Renderer] pixel self-test failed: platform initialization\n");
 		return 1;
 	}
+	presentWidth = g_windowWidth;
+	presentHeight = g_windowHeight;
+	if ((presentWidth <= 0) || (presentHeight <= 0) ||
+	    ((size_t)presentWidth > (SIZE_MAX / 4u) / (size_t)presentHeight))
+	{
+		fprintf(stderr, "[CTR Renderer] pixel self-test failed: invalid presentation size %dx%d\n", presentWidth, presentHeight);
+		Platform_Shutdown();
+		return 1;
+	}
+	presentBytes = (size_t)presentWidth * (size_t)presentHeight * 4u;
+	presentDirect = (u8 *)SDL_malloc(presentBytes);
+	presentStaged = (u8 *)SDL_malloc(presentBytes);
+	if ((presentDirect == NULL) || (presentStaged == NULL))
+	{
+		fprintf(stderr, "[CTR Renderer] pixel self-test failed: presentation allocation (%zu bytes each)\n", presentBytes);
+		SDL_free(presentDirect);
+		SDL_free(presentStaged);
+		Platform_Shutdown();
+		return 1;
+	}
+	memset(presentDirect, 0, presentBytes);
+	memset(presentStaged, 0, presentBytes);
 
 	memset(&activeDispEnv, 0, sizeof(activeDispEnv));
 	memset(&activeDrawEnv, 0, sizeof(activeDrawEnv));
@@ -2804,6 +2980,8 @@ int NativeRenderer_RunPixelSelfTest(void)
 	if (!Platform_BeginScene())
 	{
 		fprintf(stderr, "[CTR Renderer] pixel self-test failed: scene initialization\n");
+		SDL_free(presentDirect);
+		SDL_free(presentStaged);
 		Platform_Shutdown();
 		return 1;
 	}
@@ -2873,27 +3051,77 @@ int NativeRenderer_RunPixelSelfTest(void)
 	passed &= NativeRenderer_PixelTestExpectVRAM(packed, 26, 1, greenStp, "feedback packed STP green");
 
 	NativeRenderer_PresentVRAMRectDirect(0, 0, NATIVE_RENDERER_PIXEL_TEST_WIDTH, NATIVE_RENDERER_PIXEL_TEST_HEIGHT);
-	if (!NativeRenderer_CapturePresentedRGBA(presentDirect, NATIVE_RENDERER_PIXEL_TEST_PRESENT_WIDTH,
-	                                        NATIVE_RENDERER_PIXEL_TEST_PRESENT_HEIGHT))
+	if (!NativeRenderer_CapturePresentedRGBA(presentDirect, presentWidth, presentHeight))
 	{
 		fprintf(stderr, "[CTR Renderer] pixel self-test failed: direct presentation readback\n");
 		passed = 0;
 	}
 	NativeRenderer_PresentVRAMRect(0, 0, NATIVE_RENDERER_PIXEL_TEST_WIDTH, NATIVE_RENDERER_PIXEL_TEST_HEIGHT);
-	if (!NativeRenderer_CapturePresentedRGBA(presentStaged, NATIVE_RENDERER_PIXEL_TEST_PRESENT_WIDTH,
-	                                        NATIVE_RENDERER_PIXEL_TEST_PRESENT_HEIGHT))
+	if (!NativeRenderer_CapturePresentedRGBA(presentStaged, presentWidth, presentHeight))
 	{
 		fprintf(stderr, "[CTR Renderer] pixel self-test failed: staged presentation readback\n");
 		passed = 0;
 	}
-	if (memcmp(presentDirect, presentStaged, sizeof(presentDirect)) != 0)
+	if (memcmp(presentDirect, presentStaged, presentBytes) != 0)
 	{
 		fprintf(stderr, "[CTR Renderer] pixel self-test failed: staged presentation differs from direct oracle\n");
 		passed = 0;
 	}
 
 	hash = NativeRenderer_PixelTestHash(rgba, sizeof(rgba));
-	presentHash = NativeRenderer_PixelTestHash(presentStaged, sizeof(presentStaged));
+	presentHash = NativeRenderer_PixelTestHash(presentStaged, presentBytes);
+
+	// Exercise every PS1 semitransparency equation over the same blue
+	// destination. On a framebuffer-fetch implementation, render the identical
+	// fixture through the portable two-pass oracle first and require every byte
+	// of the optimized draw to match it.
+	framebufferFetchAvailable = s_psxFramebufferFetchEnabled;
+	s_psxFramebufferFetchEnabled = false;
+	NativeRenderer_PixelTestClearBlendTarget();
+	NativeRenderer_PixelTestDrawBlendFixture();
+	if (!NativeRenderer_PixelTestCaptureMainRGBA(blendFallbackRgba))
+	{
+		fprintf(stderr, "[CTR Renderer] pixel self-test failed: two-pass blend oracle readback\n");
+		passed = 0;
+	}
+
+	if (framebufferFetchAvailable)
+	{
+		s_psxFramebufferFetchEnabled = true;
+		NativeRenderer_PixelTestClearBlendTarget();
+		NativeRenderer_PixelTestDrawBlendFixture();
+		framebufferFetchUsed = NativeRenderer_UsesFramebufferFetch();
+		if (!NativeRenderer_PixelTestCaptureMainRGBA(blendRgba))
+		{
+			fprintf(stderr, "[CTR Renderer] pixel self-test failed: framebuffer-fetch blend readback\n");
+			passed = 0;
+		}
+		passed &= NativeRenderer_PixelTestExpectBufferMatch(blendFallbackRgba, blendRgba, sizeof(blendRgba),
+		                                                      "framebuffer fetch differs from two-pass oracle");
+	}
+	else
+	{
+		memcpy(blendRgba, blendFallbackRgba, sizeof(blendRgba));
+	}
+	s_psxFramebufferFetchEnabled = framebufferFetchAvailable;
+	if (!NativeRenderer_PixelTestCaptureMainRGBA(blendRgba))
+	{
+		fprintf(stderr, "[CTR Renderer] pixel self-test failed: final blend-mode RGBA readback\n");
+		passed = 0;
+	}
+	passed &= NativeRenderer_PixelTestExpectRGBA(blendRgba, 1, 5, 248, 0, 0, 0, 2, "average non-STP opaque");
+	passed &= NativeRenderer_PixelTestExpectRGBA(blendRgba, 2, 5, 0, 124, 124, 255, 4, "average STP blend");
+	passed &= NativeRenderer_PixelTestExpectRGBA(blendRgba, 5, 5, 248, 0, 0, 0, 2, "add non-STP opaque");
+	passed &= NativeRenderer_PixelTestExpectRGBA(blendRgba, 6, 5, 0, 248, 248, 255, 4, "add STP blend");
+	passed &= NativeRenderer_PixelTestExpectRGBA(blendRgba, 9, 5, 248, 0, 0, 0, 2, "subtract non-STP opaque");
+	passed &= NativeRenderer_PixelTestExpectRGBA(blendRgba, 10, 5, 0, 0, 248, 255, 4, "subtract STP blend");
+	passed &= NativeRenderer_PixelTestExpectRGBA(blendRgba, 13, 5, 248, 0, 0, 0, 2, "quarter-add non-STP opaque");
+	passed &= NativeRenderer_PixelTestExpectRGBA(blendRgba, 14, 5, 0, 62, 248, 255, 4, "quarter-add STP blend");
+	passed &= NativeRenderer_PixelTestExpectRGBA(blendRgba, 21, 5, 124, 124, 0, 255, 4, "bilinear mixed STP/non-STP");
+	blendHash = NativeRenderer_PixelTestHash(blendRgba, sizeof(blendRgba));
+	blendOracleHash = NativeRenderer_PixelTestHash(blendFallbackRgba, sizeof(blendFallbackRgba));
+	SDL_free(presentDirect);
+	SDL_free(presentStaged);
 	Platform_EndScene();
 	Platform_LogFlush();
 	Platform_Shutdown();
@@ -2905,9 +3133,13 @@ int NativeRenderer_RunPixelSelfTest(void)
 		return 1;
 	}
 
-	printf("[CTR Renderer] pixel self-test passed: api=%s size=32x16 formats=4,8,16 clut=4,8 transparency=zero,stp blend=average "
-	       "mask=output-bit framebuffer=feedback vram=rgb5551 hash=%016llx present=resolve+blit@2x present-hash=%016llx\n",
-	       s_rendererDialect.apiName, (unsigned long long)hash, (unsigned long long)presentHash);
+	printf("[CTR Renderer] pixel self-test passed: api=%s size=32x16 formats=4,8,16 clut=4,8 transparency=zero,stp "
+	       "blend=average,add,subtract,quarter bilinear=mixed-stp mask=output-bit framebuffer=feedback vram=rgb5551 hash=%016llx "
+	       "blend-hash=%016llx blend-oracle=%s oracle-hash=%016llx framebuffer-fetch=%s present=resolve+blit@%dx%d "
+	       "present-hash=%016llx\n",
+	       s_rendererDialect.apiName, (unsigned long long)hash, (unsigned long long)blendHash,
+	       framebufferFetchUsed ? "match" : "two-pass", (unsigned long long)blendOracleHash,
+	       framebufferFetchUsed ? "enabled" : "two-pass", presentWidth, presentHeight, (unsigned long long)presentHash);
 	fflush(stdout);
 	return 0;
 }

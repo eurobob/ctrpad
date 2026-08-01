@@ -9,8 +9,9 @@ timing.
 
 **Current milestone:** M10 Simulator stability and touch-control iteration;
 exact retail-consumer keyboard input and bounded two-track graphics/lifecycle
-are accepted, while Simulator cadence, broad visual churn, observable correct-
-ID shutdown and all physical-iPad M8/M9 gates remain open
+are accepted; a dirty coherent-fetch prototype is pixel-identical and faster,
+while exact replay, Simulator cadence, broad visual churn and every physical-
+iPad M8/M9 gate remain open
 
 **Last updated:** 2026-08-01
 
@@ -1452,13 +1453,16 @@ bucket to 7.737 ms. Total frame time falls to 181.024 ms, which is still about
 The next dependency-ordered work is:
 
 1. retain the new counters and presentation oracle;
-2. reduce per-split draw/state overhead without changing PS1 ordering,
-   semitransparent STP passes, masks or framebuffer feedback;
-3. rerun the renderer oracle and all 22 native tests with Simulator closed;
-4. perform an exact clean one-Simulator Crash Cove comparison and broader
-   multi-level/effect churn with the five-log fault scan;
+2. accept coherent framebuffer fetch only after its same-context two-pass
+   pixel oracle, desktop fallback and all 22 native tests pass from the exact
+   committed source;
+3. repeat the one-Simulator matched Crash Cove profile and wider scene/effect
+   churn from that exact build, retaining correct-ID shutdown and log hashes;
+4. continue reducing split/state overhead: the dirty matched fetch profile
+   removes 79 of 205 draws but still averages 172.324 ms (5.80 FPS);
 5. reopen physical-device work only after the Simulator route is usable,
    visually complete and diagnosable.
 
 Evidence and exact hashes are in
-`docs/parity/2026-08-01-simulator-renderer-profile.md`.
+`docs/parity/2026-08-01-simulator-renderer-profile.md` and
+`docs/parity/2026-08-01-ios-framebuffer-fetch.md`.

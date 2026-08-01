@@ -1068,19 +1068,31 @@ void DrawSplit(const GPUDrawSplit *split)
 	if (split->psxTexturedSemiTrans)
 	{
 		NativePerf_AddCounter(NATIVE_PERF_COUNTER_GPU_SEMITRANS_SPLITS, 1);
-		// NOTE(aalhendi): CTR native renderer divergence from upstream PsyCross.
-		// PS1 textured ABE only blends texels whose sampled 16-bit color has STP
-		// set; non-STP texels remain opaque. Native split state is per draw,
-		// so draw this primitive-sized split twice with shader-side STP masks.
-		NativeRenderer_SetBlendMode(BM_NONE);
-		NativeRenderer_SetPSXTextureSemiTransPass(1);
-		NativeRenderer_DrawTriangles(split->startVertex, split->numVerts / 3);
+		// PS1 textured ABE blends only sampled texels whose bit 15 (STP) is set;
+		// visible non-STP texels remain opaque. Apple's coherent framebuffer-fetch
+		// extension can preserve that per-fragment rule in one ordered draw. Keep
+		// the established two-pass STP/non-STP fallback everywhere else.
+		if (NativeRenderer_UsesFramebufferFetch())
+		{
+			NativePerf_AddCounter(NATIVE_PERF_COUNTER_GPU_FRAMEBUFFER_FETCH_SPLITS, 1);
+			NativeRenderer_SetBlendMode(BM_NONE);
+			NativeRenderer_SetPSXFramebufferFetchBlendMode(split->blendMode);
+			NativeRenderer_SetPSXTextureSemiTransPass(3);
+			NativeRenderer_DrawTriangles(split->startVertex, split->numVerts / 3);
+			NativeRenderer_SetPSXTextureSemiTransPass(0);
+		}
+		else
+		{
+			NativeRenderer_SetBlendMode(BM_NONE);
+			NativeRenderer_SetPSXTextureSemiTransPass(1);
+			NativeRenderer_DrawTriangles(split->startVertex, split->numVerts / 3);
 
-		NativeRenderer_SetBlendMode(split->blendMode);
-		NativeRenderer_SetPSXTextureSemiTransPass(2);
-		NativeRenderer_DrawTriangles(split->startVertex, split->numVerts / 3);
+			NativeRenderer_SetBlendMode(split->blendMode);
+			NativeRenderer_SetPSXTextureSemiTransPass(2);
+			NativeRenderer_DrawTriangles(split->startVertex, split->numVerts / 3);
 
-		NativeRenderer_SetPSXTextureSemiTransPass(0);
+			NativeRenderer_SetPSXTextureSemiTransPass(0);
+		}
 	}
 	else
 	{

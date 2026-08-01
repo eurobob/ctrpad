@@ -2438,3 +2438,104 @@ is not a build benchmark or person-hour estimate. The goal remains active.
 
 Full evidence is in
 `docs/parity/2026-08-01-simulator-renderer-profile.md`.
+
+### 2026-08-01 — Live exact viewer retained; one-pass semitransparency prototype under review
+
+- Rebuilt and tested published checkpoint `ff26c0815a04` with both Simulators
+  closed, then installed a strictly verified disposable signed copy as an
+  update on the sole disposable device. The protected validation device stayed
+  shut down. The running log identifies the exact iOS build and Apple Software
+  Renderer; the imported retail image, extracted assets and saves stayed in
+  the existing data container.
+- Left the exact viewer open at the user's request. Computer Use inspection
+  showed a coherent Crash Cove lap with kart, terrain, HUD, minimap and the
+  touch overlay. The live log records both keyboard and touch masks reaching
+  the retail-poll consumer. At the 1,553-second snapshot it contained 130
+  lines / 13,371 bytes at SHA-256 `c7e02716...6816`, with no targeted
+  asset/texture/cache/application-fault marker. A later view showed `9:59.99`
+  while FPS lines continued; `UI_DrawRaceClock` intentionally caps ordinary
+  non-seven-lap displays at that value, so this was not labeled a freeze.
+  It was closed naturally after about 37 minutes, 27 seconds; the final exact
+  log contained 166 lines / 16,467 bytes at SHA-256 `d07493d5...0f6`, still
+  without a targeted renderer, asset, cache or application fault.
+- Did not reinterpret visual coherence as Simulator acceptance. Sustained
+  race readings settled around 6 FPS, confirming that the software renderer is
+  still far outside the 30-FPS stability gate even after the presentation
+  optimization.
+- Audited the next dirty prototype against the measured 72.64 average
+  semitransparent splits. It uses coherent
+  `GL_EXT_shader_framebuffer_fetch` on GLES to apply PS1 STP-aware average,
+  add, subtract and quarter-source equations in one ordered draw while
+  retaining the established two-pass path everywhere else. A new perf counter
+  identifies the splits that actually take the optimized path.
+- Strengthened the renderer pixel oracle to cover all four equations, an exact
+  mixed-STP/non-STP bilinear boundary and the GLES/portable-fallback
+  comparison. Static review corrected generated-shader dependency order and
+  preserved the capability result before
+  renderer shutdown so the eventual iOS marker cannot falsely report fallback.
+- Khronos revision 8 confirms that the coherent extension observes previous
+  overlapping samples in API primitive order, permits ES3 `inout` fragment
+  outputs and remains orthogonal to fixed-function blending. The current Apple
+  device and Simulator SDK headers expose the extension. These are design
+  prerequisites, not runtime proof.
+- The prototype remains deliberately uncommitted and uncompiled while the
+  exact game is open for user inspection. It must pass desktop fallback pixels,
+  all 22 CTests, iOS GLES compilation, an enabled-path pixel comparison, a
+  one-Simulator Crash Cove profile and broader graphical/log churn before it
+  can be accepted or pushed.
+
+The in-progress goal reading was 242,344 seconds: 2 days, 19 hours, 19 minutes,
+4 seconds cumulative, 2,515 seconds (41 minutes, 55 seconds) after the prior
+239,829-second evidence reading. Goal time includes user inspection and
+pauses/resumes; it is not a build benchmark or person-hour estimate. The goal
+remains active.
+
+### 2026-08-01 — Coherent one-pass PS1 semitransparency passes its dirty gate
+
+- Closed the exact viewer before compiling. Every build used nice 15, one job,
+  two shut-down named devices and a closed Simulator GUI. The desktop fallback
+  pixel oracle covers all four blend equations, mixed bilinear STP/non-STP,
+  masks, feedback and staged presentation; all 22 native CTests passed.
+- Rejected three incomplete self-test states. iOS created a 1032×1376 surface
+  despite the requested 64×32 test window, so dynamic checked host buffers
+  replaced the invalid fixed assumption. Representative pixels then hid a
+  complete-buffer mismatch, so forced two-pass and fetch draws now run in the
+  same GLES context. That exposed a real `(21,7)` bilinear edge divergence;
+  the one-pass discard threshold was corrected to match both fallback passes.
+- Final hashes remained `851169f2644a1675` for the logical renderer,
+  `f6dc5a2e558bc7b5` for both blend paths, and `a7798c5a6ddee965`
+  for desktop staged presentation. The iOS oracle reported
+  `blend-oracle=match`, `framebuffer-fetch=enabled` and actual
+  `present=resolve+blit@1032x1376`.
+- The final macOS incremental build took 75.79 seconds and the 22-test suite
+  took 1.90 seconds. The iOS incremental build took 65.07 seconds. Both
+  repeated only the established 32 warnings. The unsigned and disposable
+  signed thin-ARM64 executable hashes were `76473dce...a54` and
+  `ff1a87b4...a08`; strict/deep signing verification passed.
+- Booted only the disposable device, installed the signed dirty app as an
+  update and enabled Simulator keyboard capture. `S K K K K I` reached live
+  Crash Cove. Repeated K and paired D/K taps moved Crash from the grid to the
+  coastal fence. Menus, character model/portraits, track preview, ghost prompt,
+  fly-in, kart, lights, HUD, banner, cliffs, horizon, animated water, fences
+  and touch overlay remained coherent. Retail input consumption was logged.
+- Explicitly terminated the correct bundle, flushed 5,172 timing rows and a
+  173-line / 18,813-byte app log, shut down the sole disposable device and
+  confirmed the protected device stayed off. The CSV hashes to
+  `f8fbef54...ee5`; the log hashes to `096615ca...c76`; targeted fault count is
+  zero. Computer Use lost its app window after device shutdown, so a normal
+  SIGTERM closed only the already-verified Simulator GUI PID.
+- In matched Crash Cove geometry (123 splits, 79 semitransparent splits,
+  5,405.94 split vertices), fetch removes exactly 79 draws: 205 to 126. Total
+  time falls 187.614 to 172.324 ms (8.15%), split submission 135.412 to
+  127.764 ms (5.65%), and reciprocal throughput rises 5.33 to 5.80 FPS. This
+  remains about 5.17× the 30-FPS budget, so Simulator and physical-device gates
+  stay open pending exact post-commit replay and more submission reduction.
+
+Full dirty evidence and rejected-attempt chronology are in
+`docs/parity/2026-08-01-ios-framebuffer-fetch.md`.
+
+The evidence-analysis goal reading was 245,597 seconds: 2 days, 20 hours,
+13 minutes, 17 seconds cumulative, 3,253 seconds (54 minutes, 13 seconds) after
+the prior 242,344-second boundary. Goal time includes builds, rejected attempts,
+user inspection and pauses/resumes; it is not a build benchmark or person-hour
+estimate. The goal remains active.
