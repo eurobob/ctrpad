@@ -112,3 +112,10 @@ after more than eight distinct level allocations, exact-build publication and
 post-fix visual acceptance remain pending. Until those pass, the renderer/
 asset defect is diagnosed and corrected in source but not accepted. Checkpoint
 `eeaf2c72c` is a remote backup and review boundary only.
+
+A GitHub-hosted ARM64 compile was also considered to avoid local pressure.
+Actions is enabled and `macos-15` is available as a standard ARM64 runner for
+private repositories, but those jobs consume the account allowance and can
+incur charges. The available token could not read the remaining allowance
+without a new `user` scope. No workflow or hosted job was created; remote cost
+was not assumed as validation authority.

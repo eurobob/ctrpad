@@ -1871,3 +1871,26 @@ The provisional-source prepublication reading was 218,058 seconds: 2 days,
 12 hours, 34 minutes, 18 seconds cumulative. That adds 537 seconds (8 minutes,
 57 seconds) from the interim reading and 5,796 seconds (1 hour, 36 minutes,
 36 seconds) from the preceding published boundary.
+
+- Documentation checkpoint `2951c459e` was then pushed. Draft PR #1 was
+  verified open/draft at that exact head and its stale broad visual claim was
+  replaced with the 268-error geometry defect and pending correction gates.
+- Two publication routes were rejected without repository mutation: the first
+  `gh pr create` implicitly targeted `upstream` rather than the fork, and the
+  first REST body update sent an empty stdin document and returned HTTP 400.
+  Explicit `--repo chrissotraidis/ctrpad` resolved the existing PR; a safely
+  quoted REST field updated its description successfully.
+- GitHub Actions is enabled but the private repository has no self-hosted
+  runner. Official GitHub documentation identifies standard `macos-15` as an
+  ARM64 M1 runner with 7 GB RAM for private repositories, consuming the
+  account allowance and potentially billed minutes. The current CLI token
+  cannot read billing allowance without expanding its `user` scope, so no
+  workflow was created or triggered and no potential cost was assumed.
+- Final resource observation remained unsuitable for a local unity compile:
+  3,943 free 16-KiB VM pages (about 65 MB), 11.79 GB swap used, exactly one
+  protected Simulator booted and no compiler process.
+
+The publication-close reading was 218,564 seconds: 2 days, 12 hours,
+42 minutes, 44 seconds cumulative. That adds 506 seconds (8 minutes,
+26 seconds) from the prepublication reading and 6,302 seconds (1 hour,
+45 minutes, 2 seconds) from the preceding published boundary.

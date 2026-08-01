@@ -9989,6 +9989,39 @@ visibility sidecars`) and pushed to `codex/arm64-apple`; publication is a
 recoverability/review boundary, not substitute evidence for its pending unity
 compile or live geometry gate.
 
+### Remote publication and hosted-runner decision
+
+The remaining controls/history documentation was committed as `2951c459e`
+and pushed. A first `gh pr create` wrongly resolved the repository from the
+`upstream` remote and failed with blank base/head and no-commit diagnostics;
+the origin refs themselves were healthy. Retrying with explicit repository
+`chrissotraidis/ctrpad` resolved already-open draft PR #1. Its pre-existing
+description still asserted broadly coherent rendered textures, so it was not
+left stale after the contradictory Simulator evidence.
+
+The first REST description update used `--input -`; the non-interactive stdin
+closed empty and GitHub returned HTTP 400 (`Body should be a JSON object`). No
+PR mutation occurred. Retrying with a safely quoted `body` field succeeded.
+The readback proved draft state, exact head `2951c459e`, the 268-error defect
+text and the pending unity-build language.
+
+Remote CI was evaluated as an alternative to pressuring the Mac. Repository
+API reads found Actions enabled and zero self-hosted runners. Current official
+GitHub runner documentation lists `macos-15` for private repositories as a
+three-core M1 ARM64 VM with 7 GB RAM, but private jobs consume the account's
+included allowance and can become billable. The billing endpoint was not
+readable with the existing token and requested a `user` scope expansion. No
+credential scope was expanded, workflow created or potentially paid job
+triggered without user authority.
+
+The final local resource reading was still only 3,943 free 16-KiB pages
+(about 65 MB), with 11.79 GB swap used. Exactly protected
+`CTRPad Import Validation` remained booted; no CMake, Ninja or Clang process
+was running. The goal timer then read 218,564 seconds: 2 days, 12 hours,
+42 minutes, 44 seconds cumulative, adding 506 seconds (8 minutes, 26 seconds)
+after the prepublication reading and 6,302 seconds (1 hour, 45 minutes,
+2 seconds) after the preceding published boundary.
+
 ## 2026-07-31 — Touch-only Time Trial, rotation and direct analog delivery
 
 ### Re-established exact starting state
