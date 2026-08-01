@@ -2395,3 +2395,46 @@ the draft PR head. The post-push publication reading was 236,994 seconds: 2
 days, 17 hours, 49 minutes, 54 seconds, adding 119 seconds (1 minute, 59
 seconds) after the pre-publication audit. Goal time includes pauses/resumes and
 is not a build benchmark or person-hour estimate. The goal remains active.
+
+### 2026-08-01 — Staged presentation removes one Simulator bottleneck; gate stays open
+
+- Extended the opt-in frame profiler with packed-VRAM restore/present timing
+  and per-frame renderer draw/split/vertex/semitransparent counters. The
+  unoptimized diagnostic localized Crash Cove's 230.729-ms average frame to
+  137.739 ms of split submission plus 47.201 ms of final presentation.
+- Replaced host-resolution integer VRAM unpacking with logical-resolution RGBA
+  resolve followed by nearest framebuffer blit. Retained the old direct path as
+  a 2× presentation oracle; every captured byte matched at present hash
+  `a7798c5a6ddee965`, while the established logical hash remained
+  `851169f2644a1675`.
+- Built sequentially with every Simulator closed, nice 15 and one job. The
+  macOS build took 68.06 seconds; the focused pixel test passed and the full
+  suite passed 22/22 in 5.66 seconds. The iOS Simulator build took 74.03
+  seconds, linked thin ARM64, required `_glBlitFramebuffer`, repeated only the
+  32 established warnings and passed strict signing verification in a
+  disposable copy.
+- Booted only `CTRPad Import Negatives`; the protected device stayed off. Used
+  the published keyboard route to reach Crash Cove and inspected coherent
+  logo/menu, character, track, ghost, fly-in and grid/race frames including
+  kart, lights, banner, HUD, minimap, track, cliffs, sky, water and touch
+  controls. No retail-derived capture was committed.
+- Preserved 3,000 optimized timing frames at SHA-256 `e1036716...e034` and a
+  99-line / 11,145-byte app log at `9a0b455e...603a`. Correct-ID explicit
+  termination succeeded. Five retained app logs had no known
+  asset/cache/application-fault marker; unified logging held only the same five
+  CFBundle/CoreAudio Simulator limitations and no new CTRPad diagnostic.
+- Crash Cove presentation fell from 47.201 to 7.737 ms (83.6%), work from
+  198.501 to 150.674 ms (24.1%), and total from 230.729 to 181.024 ms (21.5%).
+  This is a real improvement but still only about 5.52 FPS average and roughly
+  5.4× the 30-FPS frame budget. Split submission remains 131.012 ms across an
+  average 116.64 splits and 72.64 semitransparent splits. The Simulator and
+  physical-device gates remain open pending safe batching/state reduction,
+  exact post-commit replay and broader scene churn.
+- Shut down both named devices and quit Simulator before documentation. The
+  evidence-analysis goal reading was 239,829 seconds: 2 days, 18 hours, 37
+  minutes, 9 seconds cumulative, 47 minutes 15 seconds after the preceding
+  published boundary. Goal time includes pauses/resumes and is not a build
+  benchmark or person-hour estimate. The goal remains active.
+
+Full evidence is in
+`docs/parity/2026-08-01-simulator-renderer-profile.md`.

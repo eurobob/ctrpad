@@ -1438,3 +1438,27 @@ timestamps are explicitly excluded from game-visible deterministic state.
   through the required parity-failure route with `drivers` first. Finalize-only
   artifact verification exited 0. M1 is complete; broader M6 product evidence
   remains open.
+
+## 2026-08-01 Simulator renderer performance checkpoint
+
+The physical-device gate remains closed. Dirty-source instrumentation showed
+that Crash Cove's 230.729-ms average Simulator frame was dominated by
+137.739 ms of split submission and 47.201 ms of final packed-VRAM presentation.
+Logical-resolution resolve plus nearest framebuffer blit is byte-identical to
+the old direct presentation at 2× and reduces the live Crash Cove present
+bucket to 7.737 ms. Total frame time falls to 181.024 ms, which is still about
+5.4× the 30-FPS budget.
+
+The next dependency-ordered work is:
+
+1. retain the new counters and presentation oracle;
+2. reduce per-split draw/state overhead without changing PS1 ordering,
+   semitransparent STP passes, masks or framebuffer feedback;
+3. rerun the renderer oracle and all 22 native tests with Simulator closed;
+4. perform an exact clean one-Simulator Crash Cove comparison and broader
+   multi-level/effect churn with the five-log fault scan;
+5. reopen physical-device work only after the Simulator route is usable,
+   visually complete and diagnosable.
+
+Evidence and exact hashes are in
+`docs/parity/2026-08-01-simulator-renderer-profile.md`.

@@ -13358,3 +13358,62 @@ rotation/Home recovery and retained logging. Poor software-renderer cadence,
 broader level/effect coverage, an observed correct-ID or natural termination,
 human multi-touch and every physical-iPad gate remain open. Full proof and
 hashes are in `docs/parity/2026-08-01-simulator-stability-logging.md`.
+
+## 2026-08-01 — Profiled and staged final Simulator presentation
+
+The exact keyboard/graphics replay made the next product problem measurable:
+the Simulator stayed alive and visually coherent but was too slow to serve as
+a practical stability gate. Rather than guess at the renderer, an opt-in dirty
+diagnostic added separate packed-VRAM restore/present buckets and draw-call,
+vertex, split and semitransparent-split counters. Its preserved 2,772-frame CSV
+showed Crash Cove averaging 230.729 ms total, 198.501 ms non-wait work,
+137.739 ms in split submission and 47.201 ms in final packed-VRAM presentation.
+
+Inspection of the final path showed that the packed integer VRAM shader decoded
+the 320×240-ish logical output over the complete 1032×1376 Simulator surface.
+The replacement resolves once at the logical dimensions into a reusable RGBA
+FBO and uses `glBlitFramebuffer(..., GL_NEAREST)` only for host scaling. The
+GLES entry-point contract now rejects a loader without blit support. The prior
+direct path remains private to the renderer pixel self-test.
+
+The pixel oracle was deliberately strengthened before the live run. A 32×16
+logical fixture is presented into a 64×32 host window through both paths,
+captured and compared byte-for-byte. It passed with the unchanged logical hash
+`851169f2644a1675` and staged presentation hash `a7798c5a6ddee965`. The macOS
+build linked in 68.06 seconds; the focused oracle passed in 3.64 seconds and all
+22 CTests passed in 5.66 seconds. With both Simulators off, the iOS build linked
+thin ARM64 in 74.03 seconds with only the established 32 warnings. Unsigned and
+strictly verified disposable signed executable hashes were
+`48c03822...d534` and `3b54a227...e51`.
+
+Only disposable device `26F3DEE8-8840-446D-85FE-C882009C9C06` was booted.
+Computer Use enabled keyboard capture, then `S K K K K I` navigated from the
+mode menu through Time Trial, Crash, Crash Cove, No Ghost and fly-in skip. The
+new path visibly retained the complete logo/menu, all portraits, Crash model
+and kart, track list/preview, ghost prompt, fly-in, lights, banner, HUD,
+minimap, track, cliffs, sky, water and touch controls. The persistent log
+correlated the route at the retail poll. A later K/D tap stream was explicitly
+treated only as ingress/consumer evidence, not sustained driving.
+
+Correct bundle ID `io.github.chrissotraidis.ctrpad` terminated PID `77788`.
+The preserved optimized CSV contains 3,000 frames, 990,063 bytes and SHA-256
+`e1036716...e034`; the flushed 99-line, 11,145-byte app log hashes to
+`9a0b455e...603a`. Five rotating app logs scanned clean of known asset,
+visibility-cache, application ERROR/FATAL, render-balance, assert, signal and
+crash markers. Unified logging repeated only one CFBundle and four CoreAudio
+Simulator limitations; no new CTRPad report existed.
+
+Crash Cove final present improved from 47.201 to 7.737 ms, non-wait work from
+198.501 to 150.674 ms and total from 230.729 to 181.024 ms. This is an 83.6%,
+24.1% and 21.5% reduction respectively, but 181.024 ms still fails a 33.333-ms
+30-FPS budget by about 5.4×. The optimized run now attributes 131.012 ms to an
+average 116.64 splits, including 72.64 semitransparent two-pass splits. The
+next renderer work is therefore constrained to submission/state reduction that
+preserves ordering, STP/blend, mask and framebuffer-feedback behavior. Both
+devices and the Simulator GUI were shut down. Full evidence, exact hashes and
+the deliberately open clean-replay/broader-churn/device boundary are in
+`docs/parity/2026-08-01-simulator-renderer-profile.md`.
+
+The evidence-analysis goal reading was 239,829 seconds (2 days, 18 hours, 37
+minutes, 9 seconds), 2,835 seconds after the previous published boundary. The
+goal remains active.

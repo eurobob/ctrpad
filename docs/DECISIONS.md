@@ -531,3 +531,28 @@ device; those gates remain open. The initial cleanup used
 `io.github.chrissotraidis.ctrpad`, so its `found nothing` response is rejected
 as command-target error rather than app-exit evidence. Correct-ID termination
 remains to be observed.
+
+## 2026-08-01 — Resolve packed VRAM at logical size before host scaling
+
+**Decision:** preserve the existing integer packed-PS1-VRAM decode, but execute
+it once into a reusable RGBA framebuffer at the logical display size. Scale
+that resolved image to the host presentation viewport with nearest framebuffer
+blit. Keep the former direct path as a byte-comparison oracle and require the
+GLES loader to provide `glBlitFramebuffer`.
+
+**Why:** measured Crash Cove work assigned 47.201 ms per frame to the old final
+presentation path because the decode shader ran over the complete 1032×1376
+Simulator surface. Logical resolve removes redundant integer decoding without
+changing PS1 texture, color, STP, blend, mask or feedback semantics. A native
+blit is an explicit scale operation and fails at initialization if unsupported.
+
+**Verification boundary:** the direct and staged 2× pixel captures compare
+byte-for-byte with present hash `a7798c5a6ddee965`; the established logical
+hash remains `851169f2644a1675`. All 22 native tests pass. One-Simulator live
+inspection found coherent logo/menu, character, track, fly-in and Crash Cove
+race pixels with clean rotating logs. Crash Cove present time fell to 7.737 ms
+and total frame time to 181.024 ms. This accepts the staged algorithm, not the
+full Simulator gate: split submission still costs 131.012 ms per frame, broader
+asset churn and exact post-commit replay remain open, and physical-device work
+remains prohibited. Correct-ID termination was observed in this run. Full
+evidence is in `docs/parity/2026-08-01-simulator-renderer-profile.md`.

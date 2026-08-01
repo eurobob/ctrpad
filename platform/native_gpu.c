@@ -1062,9 +1062,12 @@ void DrawSplit(const GPUDrawSplit *split)
 	NativeRenderer_SetupClipMode(&split->drawenv.clip, &split->dispenv, drawOnScreen);
 	NativeRenderer_SetOffscreenState(&split->drawenv.clip, !drawOnScreen);
 	NativeRenderer_SetProjection(&split->drawenv.clip, &split->dispenv, !drawOnScreen);
+	NativePerf_AddCounter(NATIVE_PERF_COUNTER_GPU_SPLITS, 1);
+	NativePerf_AddCounter(NATIVE_PERF_COUNTER_GPU_SPLIT_VERTICES, split->numVerts);
 
 	if (split->psxTexturedSemiTrans)
 	{
+		NativePerf_AddCounter(NATIVE_PERF_COUNTER_GPU_SEMITRANS_SPLITS, 1);
 		// NOTE(aalhendi): CTR native renderer divergence from upstream PsyCross.
 		// PS1 textured ABE only blends texels whose sampled 16-bit color has STP
 		// set; non-STP texels remain opaque. Native split state is per draw,

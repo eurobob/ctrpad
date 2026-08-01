@@ -38,6 +38,11 @@ struct NativePerfBucketInfo
 	s32 dominantCandidate;
 };
 
+struct NativePerfCounterInfo
+{
+	const char *name;
+};
+
 struct NativePerfWorstFrame
 {
 	u32 frameIndex;
@@ -78,11 +83,21 @@ global_variable const struct NativePerfBucketInfo s_bucketInfo[NATIVE_PERF_BUCKE
     {"renderer_update_vram_ms", 1},
     {"renderer_vertex_upload_ms", 1},
     {"renderer_draw_triangles_ms", 1},
+    {"renderer_restore_vram_ms", 1},
+    {"renderer_present_vram_ms", 1},
     {"framebuffer_store_ms", 0},
     {"framebuffer_readback_ms", 1},
     {"swap_window_ms", 1},
     {"vsync_wait_ms", 0},
     {"audio_vblank_ms", 1},
+};
+
+global_variable const struct NativePerfCounterInfo s_counterInfo[NATIVE_PERF_COUNTER_COUNT] = {
+    {"renderer_draw_calls"},
+    {"renderer_draw_vertices"},
+    {"gpu_splits"},
+    {"gpu_split_vertices"},
+    {"gpu_semitrans_splits"},
 };
 
 global_variable FILE *s_csvFile;
@@ -104,6 +119,9 @@ global_variable f64 s_totalGpuFrameMs;
 global_variable f64 s_maxGpuFrameMs;
 global_variable f64 s_bucketTotals[NATIVE_PERF_BUCKET_COUNT];
 global_variable f64 s_frameBucketMs[NATIVE_PERF_BUCKET_COUNT];
+global_variable u64 s_counterTotals[NATIVE_PERF_COUNTER_COUNT];
+global_variable u32 s_counterMaxPerFrame[NATIVE_PERF_COUNTER_COUNT];
+global_variable u32 s_frameCounters[NATIVE_PERF_COUNTER_COUNT];
 global_variable u64 s_frameStartCounter;
 global_variable u64 s_scopeStartCounter[NATIVE_PERF_BUCKET_COUNT];
 global_variable s32 s_scopeDepth[NATIVE_PERF_BUCKET_COUNT];
@@ -258,6 +276,10 @@ internal void NativePerf_WriteCsvHeader(FILE *file)
 	{
 		fprintf(file, ",%s", NativePerf_BucketName((enum NativePerfBucket)bucket));
 	}
+	for (s32 counter = 0; counter < NATIVE_PERF_COUNTER_COUNT; counter++)
+	{
+		fprintf(file, ",%s", s_counterInfo[counter].name);
+	}
 
 	fprintf(file, "\n");
 }
@@ -338,6 +360,13 @@ internal void NativePerf_WriteSummary(FILE *file)
 	for (s32 bucket = 0; bucket < NATIVE_PERF_BUCKET_COUNT; bucket++)
 	{
 		fprintf(file, "  %s: %.3f\n", NativePerf_BucketName((enum NativePerfBucket)bucket), s_bucketTotals[bucket]);
+	}
+
+	fprintf(file, "\ncounter_totals_and_max_per_frame:\n");
+	for (s32 counter = 0; counter < NATIVE_PERF_COUNTER_COUNT; counter++)
+	{
+		fprintf(file, "  %s: total=%llu max_per_frame=%u\n", s_counterInfo[counter].name,
+		        (unsigned long long)s_counterTotals[counter], s_counterMaxPerFrame[counter]);
 	}
 
 	fprintf(file, "\ntop_worst_work_frames:\n");
@@ -518,6 +547,7 @@ void NativePerf_BeginFrame(const struct NativePerfFrameInfo *info)
 	}
 
 	memset(s_frameBucketMs, 0, sizeof(s_frameBucketMs));
+	memset(s_frameCounters, 0, sizeof(s_frameCounters));
 	memset(s_scopeDepth, 0, sizeof(s_scopeDepth));
 	memset(s_scopeStartCounter, 0, sizeof(s_scopeStartCounter));
 
@@ -571,6 +601,15 @@ void NativePerf_EndFrame(const struct NativePerfFrameInfo *info)
 	{
 		fprintf(s_csvFile, ",%.3f", s_frameBucketMs[bucket]);
 		s_bucketTotals[bucket] += s_frameBucketMs[bucket];
+	}
+	for (s32 counter = 0; counter < NATIVE_PERF_COUNTER_COUNT; counter++)
+	{
+		fprintf(s_csvFile, ",%u", s_frameCounters[counter]);
+		s_counterTotals[counter] += s_frameCounters[counter];
+		if (s_frameCounters[counter] > s_counterMaxPerFrame[counter])
+		{
+			s_counterMaxPerFrame[counter] = s_frameCounters[counter];
+		}
 	}
 	fprintf(s_csvFile, "\n");
 
@@ -655,5 +694,15 @@ void NativePerf_EndScope(enum NativePerfBucket bucket)
 	{
 		s_frameBucketMs[bucket] += NativePerf_CounterToMs(SDL_GetPerformanceCounter() - s_scopeStartCounter[bucket]);
 	}
+}
+
+void NativePerf_AddCounter(enum NativePerfCounter counter, u32 amount)
+{
+	if (!s_enabled || !s_frameOpen || (counter < 0) || (counter >= NATIVE_PERF_COUNTER_COUNT))
+	{
+		return;
+	}
+
+	s_frameCounters[counter] += amount;
 }
 #endif

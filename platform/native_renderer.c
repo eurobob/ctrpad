@@ -180,6 +180,7 @@ struct NativeRenderTarget
 
 global_variable struct NativeRenderTarget s_mainRenderTarget;
 global_variable struct NativeRenderTarget s_offscreenRenderTarget;
+global_variable struct NativeRenderTarget s_presentResolveTarget;
 
 global_variable TextureID s_whiteTexture = (TextureID)-1;
 global_variable TextureID s_lastBoundTexture = (TextureID)-1;
@@ -361,8 +362,8 @@ internal int NativeRenderer_InitialiseGLExt(void)
 	// prefix and loads shared GL/ES 3 entry points. Fail at this boundary if a
 	// platform resolver does not supply the specific contract we consume.
 	if (!GLAD_GL_VERSION_3_0 || (glBindVertexArray == NULL) || (glGenVertexArrays == NULL) ||
-	    (glDeleteVertexArrays == NULL) || (glBindFramebuffer == NULL) || (glReadPixels == NULL) ||
-	    (glPixelStorei == NULL))
+	    (glDeleteVertexArrays == NULL) || (glBindFramebuffer == NULL) || (glBlitFramebuffer == NULL) ||
+	    (glReadPixels == NULL) || (glPixelStorei == NULL))
 	{
 		NATIVE_RENDERER_ERROR("%s\n", "OpenGL ES 3.0 loader contract is incomplete");
 		return 0;
@@ -424,6 +425,7 @@ void NativeRenderer_Shutdown(void)
 
 	NativeRenderer_DestroyRenderTarget(&s_mainRenderTarget);
 	NativeRenderer_DestroyRenderTarget(&s_offscreenRenderTarget);
+	NativeRenderer_DestroyRenderTarget(&s_presentResolveTarget);
 	glDeleteFramebuffers(1, &s_glVramFramebuffer);
 
 	NativeRenderer_DestroyTexture(s_vram.texture);
@@ -729,6 +731,7 @@ internal void NativeRenderer_DrawVRAMRegion(int x, int y, int width, int height)
 
 internal void NativeRenderer_LoadRenderTargetFromVRAM(struct NativeRenderTarget *target, int x, int y)
 {
+	NativePerf_BeginScope(NATIVE_PERF_BUCKET_RENDERER_RESTORE_VRAM);
 	const ShaderID previousShader = s_previousShader;
 	const TextureID previousTexture = s_lastBoundTexture;
 	const BlendMode previousBlendMode = s_previousBlendMode;
@@ -761,6 +764,7 @@ internal void NativeRenderer_LoadRenderTargetFromVRAM(struct NativeRenderTarget 
 	s_previousScissorState = 0;
 	NativeRenderer_SetBlendMode(previousBlendMode);
 	NativeRenderer_SetScissorState(previousScissorState);
+	NativePerf_EndScope(NATIVE_PERF_BUCKET_RENDERER_RESTORE_VRAM);
 }
 
 internal void NativeRenderer_ClearHostRect(int x, int y, int width, int height)
@@ -1348,6 +1352,7 @@ int NativeRenderer_InitialisePSX(void)
 	// to presentation.
 	NativeRenderer_InitRenderTarget(&s_mainRenderTarget);
 	NativeRenderer_InitRenderTarget(&s_offscreenRenderTarget);
+	NativeRenderer_InitRenderTarget(&s_presentResolveTarget);
 
 	// gen VRAM texture (single, persistent - mirrors PS1's single 1MB VRAM)
 	{
@@ -2317,7 +2322,7 @@ void NativeRenderer_UpdateVRAM(void)
 	NativePerf_EndScope(NATIVE_PERF_BUCKET_RENDERER_UPDATE_VRAM);
 }
 
-void NativeRenderer_PresentVRAMRect(int displayX, int displayY, int displayW, int displayH)
+internal void NativeRenderer_PresentVRAMRectDirect(int displayX, int displayY, int displayW, int displayH)
 {
 	if (displayW <= 0 || displayH <= 0)
 	{
@@ -2338,6 +2343,43 @@ void NativeRenderer_PresentVRAMRect(int displayX, int displayY, int displayW, in
 
 	s_previousShader = (ShaderID)-1;
 	s_lastBoundTexture = (TextureID)-1;
+}
+
+void NativeRenderer_PresentVRAMRect(int displayX, int displayY, int displayW, int displayH)
+{
+	if (displayW <= 0 || displayH <= 0)
+	{
+		return;
+	}
+
+	// Decode packed PS1 VRAM once at the logical display size. The old direct
+	// path ran the integer unpack shader for every host-window pixel, which is
+	// especially expensive under Apple's Simulator software renderer. A nearest
+	// framebuffer blit then performs only the scale to the presentation viewport.
+	NativePerf_BeginScope(NATIVE_PERF_BUCKET_RENDERER_PRESENT_VRAM);
+	NativeRenderer_UpdateVRAM();
+	NativeRenderer_EnsureRenderTarget(&s_presentResolveTarget, displayW, displayH);
+	glBindFramebuffer(GL_FRAMEBUFFER, s_presentResolveTarget.framebuffer);
+	glDisable(GL_BLEND);
+	glDisable(GL_SCISSOR_TEST);
+	glDisable(GL_STENCIL_TEST);
+	glViewport(0, 0, displayW, displayH);
+	NativeRenderer_DrawVRAMRegion(displayX, displayY, displayW, displayH);
+
+	glBindFramebuffer(GL_READ_FRAMEBUFFER, s_presentResolveTarget.framebuffer);
+	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, s_presentFramebuffer);
+	glBlitFramebuffer(0, 0, displayW, displayH, s_presentViewport.x, s_presentViewport.y,
+	                  s_presentViewport.x + s_presentViewport.w, s_presentViewport.y + s_presentViewport.h,
+	                  GL_COLOR_BUFFER_BIT, GL_NEAREST);
+	glBindFramebuffer(GL_FRAMEBUFFER, s_presentFramebuffer);
+	glEnable(GL_STENCIL_TEST);
+	glBindVertexArray(0);
+
+	s_previousBlendMode = BM_NONE;
+	s_previousScissorState = 0;
+	s_previousShader = (ShaderID)-1;
+	s_lastBoundTexture = (TextureID)-1;
+	NativePerf_EndScope(NATIVE_PERF_BUCKET_RENDERER_PRESENT_VRAM);
 }
 
 int NativeRenderer_CapturePresentedRGBA(u8 *dst, int width, int height)
@@ -2522,6 +2564,8 @@ void NativeRenderer_UpdateVertexBuffer(const GrVertex *vertices, int num_vertice
 void NativeRenderer_DrawTriangles(int start_vertex, int triangles)
 {
 	NativePerf_BeginScope(NATIVE_PERF_BUCKET_RENDERER_DRAW_TRIANGLES);
+	NativePerf_AddCounter(NATIVE_PERF_COUNTER_RENDERER_DRAW_CALLS, 1);
+	NativePerf_AddCounter(NATIVE_PERF_COUNTER_RENDERER_DRAW_VERTICES, (u32)(triangles * 3));
 	glDrawArrays(GL_TRIANGLES, start_vertex, triangles * 3);
 	NativePerf_EndScope(NATIVE_PERF_BUCKET_RENDERER_DRAW_TRIANGLES);
 }
@@ -2585,6 +2629,9 @@ int NativeRenderer_RunDialectSelfTest(void)
 
 #define NATIVE_RENDERER_PIXEL_TEST_WIDTH  32
 #define NATIVE_RENDERER_PIXEL_TEST_HEIGHT 16
+#define NATIVE_RENDERER_PIXEL_TEST_PRESENT_SCALE 2
+#define NATIVE_RENDERER_PIXEL_TEST_PRESENT_WIDTH (NATIVE_RENDERER_PIXEL_TEST_WIDTH * NATIVE_RENDERER_PIXEL_TEST_PRESENT_SCALE)
+#define NATIVE_RENDERER_PIXEL_TEST_PRESENT_HEIGHT (NATIVE_RENDERER_PIXEL_TEST_HEIGHT * NATIVE_RENDERER_PIXEL_TEST_PRESENT_SCALE)
 
 internal void NativeRenderer_PixelTestCopyRows(u16 *dst, int rowWords, int rows, const u16 *row)
 {
@@ -2703,6 +2750,8 @@ int NativeRenderer_RunPixelSelfTest(void)
 	u16 clut8[256];
 	u16 packed[NATIVE_RENDERER_PIXEL_TEST_WIDTH * NATIVE_RENDERER_PIXEL_TEST_HEIGHT];
 	u8 rgba[NATIVE_RENDERER_PIXEL_TEST_WIDTH * NATIVE_RENDERER_PIXEL_TEST_HEIGHT * 4];
+	u8 presentDirect[NATIVE_RENDERER_PIXEL_TEST_PRESENT_WIDTH * NATIVE_RENDERER_PIXEL_TEST_PRESENT_HEIGHT * 4];
+	u8 presentStaged[NATIVE_RENDERER_PIXEL_TEST_PRESENT_WIDTH * NATIVE_RENDERER_PIXEL_TEST_PRESENT_HEIGHT * 4];
 	POLY_FT4 quad4;
 	POLY_FT4 quad4Semi;
 	POLY_FT4 quad8;
@@ -2712,6 +2761,7 @@ int NativeRenderer_RunPixelSelfTest(void)
 	TILE maskTile;
 	int passed = 1;
 	u64 hash;
+	u64 presentHash;
 
 	memset(rgba, 0, sizeof(rgba));
 	memset(clut4, 0, sizeof(clut4));
@@ -2726,7 +2776,7 @@ int NativeRenderer_RunPixelSelfTest(void)
 	NativeRenderer_PixelTestCopyRows(texture8, 2, 4, texture8Row);
 	NativeRenderer_PixelTestCopyRows(texture16, 4, 4, texture16Row);
 
-	Platform_Init("CTR Renderer Pixel Self-Test", NATIVE_RENDERER_PIXEL_TEST_WIDTH, NATIVE_RENDERER_PIXEL_TEST_HEIGHT);
+	Platform_Init("CTR Renderer Pixel Self-Test", NATIVE_RENDERER_PIXEL_TEST_PRESENT_WIDTH, NATIVE_RENDERER_PIXEL_TEST_PRESENT_HEIGHT);
 	if (!Platform_IsInitialized())
 	{
 		fprintf(stderr, "[CTR Renderer] pixel self-test failed: platform initialization\n");
@@ -2822,7 +2872,28 @@ int NativeRenderer_RunPixelSelfTest(void)
 	passed &= NativeRenderer_PixelTestExpectVRAM(packed, 25, 1, red, "feedback packed red");
 	passed &= NativeRenderer_PixelTestExpectVRAM(packed, 26, 1, greenStp, "feedback packed STP green");
 
+	NativeRenderer_PresentVRAMRectDirect(0, 0, NATIVE_RENDERER_PIXEL_TEST_WIDTH, NATIVE_RENDERER_PIXEL_TEST_HEIGHT);
+	if (!NativeRenderer_CapturePresentedRGBA(presentDirect, NATIVE_RENDERER_PIXEL_TEST_PRESENT_WIDTH,
+	                                        NATIVE_RENDERER_PIXEL_TEST_PRESENT_HEIGHT))
+	{
+		fprintf(stderr, "[CTR Renderer] pixel self-test failed: direct presentation readback\n");
+		passed = 0;
+	}
+	NativeRenderer_PresentVRAMRect(0, 0, NATIVE_RENDERER_PIXEL_TEST_WIDTH, NATIVE_RENDERER_PIXEL_TEST_HEIGHT);
+	if (!NativeRenderer_CapturePresentedRGBA(presentStaged, NATIVE_RENDERER_PIXEL_TEST_PRESENT_WIDTH,
+	                                        NATIVE_RENDERER_PIXEL_TEST_PRESENT_HEIGHT))
+	{
+		fprintf(stderr, "[CTR Renderer] pixel self-test failed: staged presentation readback\n");
+		passed = 0;
+	}
+	if (memcmp(presentDirect, presentStaged, sizeof(presentDirect)) != 0)
+	{
+		fprintf(stderr, "[CTR Renderer] pixel self-test failed: staged presentation differs from direct oracle\n");
+		passed = 0;
+	}
+
 	hash = NativeRenderer_PixelTestHash(rgba, sizeof(rgba));
+	presentHash = NativeRenderer_PixelTestHash(presentStaged, sizeof(presentStaged));
 	Platform_EndScene();
 	Platform_LogFlush();
 	Platform_Shutdown();
@@ -2835,8 +2906,8 @@ int NativeRenderer_RunPixelSelfTest(void)
 	}
 
 	printf("[CTR Renderer] pixel self-test passed: api=%s size=32x16 formats=4,8,16 clut=4,8 transparency=zero,stp blend=average "
-	       "mask=output-bit framebuffer=feedback vram=rgb5551 hash=%016llx\n",
-	       s_rendererDialect.apiName, (unsigned long long)hash);
+	       "mask=output-bit framebuffer=feedback vram=rgb5551 hash=%016llx present=resolve+blit@2x present-hash=%016llx\n",
+	       s_rendererDialect.apiName, (unsigned long long)hash, (unsigned long long)presentHash);
 	fflush(stdout);
 	return 0;
 }

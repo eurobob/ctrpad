@@ -119,6 +119,11 @@ Current evidence and procedures:
   session logs, accessible-button down/up correction, exact live lifecycle and
   input evidence, clean asset/error scan and deliberately unaccepted
   post-commit stability/scene-churn boundary.
+- `2026-08-01-simulator-renderer-profile.md` records per-stage presentation,
+  draw and split instrumentation, the old-direct versus logical-resolve/blit
+  pixel oracle, one-device Crash Cove visual replay, exact CSV/log hashes, the
+  measured 83.6% presentation and 21.5% total-frame reductions, clean fault
+  scan and deliberately open split-submission/performance/device gates.
 - `2026-07-31-ios-sandbox-storage.md` records the bundle/Documents/Application
   Support ownership split, Documents-priority retail startup, private log and
   memory-card roots, Files metadata, exact cross-target matrix, rejected
