@@ -11577,3 +11577,163 @@ The preceding published timer was 196,487 seconds. The pre-documentation
 reading was 202,463 seconds: 2 days, 8 hours, 14 minutes, 23 seconds cumulative,
 adding 5,976 seconds (1 hour, 39 minutes, 36 seconds). It includes paused and
 resumed task lifetime and is not a build benchmark or person-hour estimate.
+
+## 2026-07-31 — Targeted renderer pixel semantics and GLES VRAM readback correction
+
+### Resumed from a clean published checkpoint
+
+The continuation reread the controlling goal objective and found branch
+`codex/arm64-apple` clean and synchronized at documentation tip
+`c05aba78a032`. Implementation tip remained `e6ba535a9c73`. The immediately
+preceding work had accepted all 24,232 renderer-state frames but explicitly
+left pixel/mask/feedback combinations absent from those frames open. Physical
+iPad signing, natural multi-touch and device cadence still required unavailable
+external hardware/credentials, so the strongest locally closable work was M7's
+targeted pixel semantics.
+
+The source audit first bounded the claim. CTR's production `setDrawStp` macro
+emits only E6 bit 0, `SetPSXMaskState` consumes only bit 0, and no game-facing
+call site requests destination-mask rejection. The test therefore targets the
+implemented output-mask bit and does not claim bit-1 behavior merely because a
+separate SDK header can describe it.
+
+### Built a real production-pipeline oracle
+
+A new `--self-test-renderer-pixels` route now runs after sandbox path
+initialization but before disc selection. This was necessary for UIKit's
+storage-root setup while guaranteeing the media-free test cannot open the
+retail image or memory card. Duplicate selection fails explicitly.
+
+The 32-by-16 scene writes controlled 4-bit, 8-bit and 16-bit textures and both
+CLUTs into production VRAM, then feeds ordinary `POLY_FT4`, `DR_STP` and `TILE`
+packets through `ParsePrimitivesLinkedList` and `DrawAllSplits`. It validates:
+
+- transparent index zero preserving the blue background;
+- 4-bit and 8-bit red, STP-green and blue CLUT entries;
+- 16-bit direct red, STP green, zero and STP white;
+- the semi-transparent two-pass distinction: zero discard, non-STP opaque and
+  STP average blend;
+- exact alpha/STP output;
+- forced output-mask bit on an untextured red tile;
+- a 16-bit page overlapping the already drawn framebuffer, forcing the real
+  feedback flush/copy path; and
+- production framebuffer packing followed by exact RGB5551 VRAM readback.
+
+Selected RGBA channels use only narrow raster tolerances while alpha is exact.
+Packed VRAM words are exact. A full 2,048-byte FNV-1a hash catches changes away
+from the selected pixels. Apple desktop CTest registers the oracle, increasing
+the full local suite from 21 to 22 tests; iOS invokes the identical path through
+UIKit and `simctl`.
+
+### Kept both failures instead of rewriting history
+
+The first fixture used tile input red 248 and expected red 248 / RGB5551
+`0x801f`. Production 16-bit modulation/quantization truthfully produced 241 /
+`0x801e`. This was not a mask failure. The input was corrected to 255 so the
+case isolates output-mask behavior and then passed on desktop GL.
+
+The first live iOS run was more important. Every selected RGBA pixel passed and
+the full image already matched desktop hash `851169f2644a1675`, but every
+post-pack VRAM word read as zero. The production GPU-to-CPU VRAM path used
+`GL_RG/GL_UNSIGNED_BYTE` from an RG8 framebuffer. Desktop GL supports it;
+Apple GLES returned `GL_INVALID_OPERATION`. The old path neither checked that
+error nor retained GPU ownership, so it exposed stale zeros to the CPU mirror.
+
+The GLES branch now reads through the guaranteed
+`GL_RGBA/GL_UNSIGNED_BYTE` pair into a bounded temporary buffer, repacks R/G
+into each 16-bit word, checks errors and clears GPU-newer dirty tiles only on
+success. Desktop retains the direct RG path with corresponding error-aware
+ownership. The corrected UIKit run passed every exact word and retained the
+same full-frame hash as desktop.
+
+One precommit sanitizer attempt enabled `ASAN_OPTIONS=detect_leaks=1`.
+Apple's arm64 ASan rejected unsupported LeakSanitizer before any test process
+could exercise code. The unsupported option was removed; supported ASan/UBSan
+passed 22/22. This is logged as a rejected harness configuration, not a product
+failure.
+
+### Published implementation before exact validation
+
+The four-file source scope passed `git diff --check` and contained no retail
+data or unrelated edits. It was committed as:
+
+```text
+818bc0e161d3736ba6d8fffa371408cde0a9fe56
+fix: verify GLES pixel semantics
+```
+
+The commit was immediately pushed to `origin/codex/arm64-apple` and existing
+draft PR 1. Build directories were then explicitly reconfigured so embedded
+build IDs described that clean commit rather than the previous documentation
+tip.
+
+The first exact desktop command chain correctly configured and compiled, but
+then named nonexistent `build-macos-arm64/ctr`. zsh stopped the `&&` chain
+before tests. The product is named `ctr_native`; rerunning through that path
+reported build ID `818bc0e161d3`, passed the pixel marker with hash
+`851169f2644a1675`, and passed all 22 tests.
+
+### Repeated the gate live under UIKit/GLES
+
+Exact Simulator product `f9a97d5e...f274` was copied to a temporary directory,
+ad-hoc signed and verified; signing produced executable hash
+`e5d515cf...0f98`. Disposable `CTRPad Import Negatives`
+(`26F3DEE8-8840-446D-85FE-C882009C9C06`) took roughly 67 seconds to boot. The
+app installed into a new normal Simulator bundle/data container and launched
+with only `--self-test-renderer-pixels`.
+
+UIKit reported 1,032-by-1,376 points/pixels and nonzero presentation FBO/RBO 1.
+Apple Software Renderer exposed GLES 3.0 APPLE-23.1.1 and GLSL ES 3.00. All
+four PSX and both VRAM pipelines compiled. The app emitted the identical GLES
+semantic marker and full hash. Existing SDL/UIKit unbalanced appearance-
+transition warnings followed after the app-owned test returned; the app was
+explicitly terminated.
+
+An overly broad preservation loop started hashing every retained negative-
+import copy, including multiple 600-740 MB files. The canonical BIN was already
+proven, so the redundant traversal was interrupted. A later
+`simctl get_app_container` call after shutdown failed with CoreSimulator error
+405 because that API will not resolve a container for a shutdown device. The
+already printed exact path supported the final read-only save hash. Neither
+diagnostic changed app data.
+
+Canonical clone identities remained:
+
+```text
+BIN  inode 111313696, 605698800 bytes,
+     f780bf2331476aabfc00772fa758b12dd95ebfbc907968132cbd3cdd4e2c07c0
+save inode 111309627, 6016 bytes,
+     6a01b0f5562ed7a279d8f8e51e3b1874ac39a6120f55db4fe3873288950619a3
+```
+
+The disposable clone was shut down without deletion. Protected
+`CTRPad Import Validation` remained booted and untouched.
+
+### Completed the exact cross-target matrix
+
+Exact clean products and outcomes:
+
+```text
+macOS desktop GL     0e46d0f6...5980  oracle pass, 22/22 CTest
+iOS Simulator ARM64 f9a97d5e...f274  live UIKit/GLES oracle pass
+iPhoneOS ARM64       75df7a60...2ec0  compile/link, arm64 Mach-O
+macOS GLES config    56f35dfc...901e  compile/link, exact build ID
+macOS ASan/UBSan     5837b1e3...f9ac  22/22 CTest
+```
+
+The macOS GLES product cannot be launched through Cocoa without a local
+ANGLE/EGL implementation, so no desktop live-GLES claim was invented. Exact
+evidence, commands, hashes and failure chronology are published in
+`docs/parity/2026-07-31-renderer-pixel-semantics.md`.
+
+M7's representative pixel-semantics criterion is now accepted alongside the
+already accepted complete renderer-choice state/cadence criterion. M7 remains
+in progress for live macOS shared-GLES execution and physical-iPad cadence/
+energy. Physical signing/install, natural multi-touch/controller/keyboard
+delivery, completed-race playtesting and device Files/save lifecycle remain
+open. The overall goal stays active.
+
+The preceding published timer was 202,463 seconds. The documentation-close
+reading was 205,801 seconds: 2 days, 9 hours, 10 minutes, 1 second cumulative,
+adding 3,338 seconds (55 minutes, 38 seconds). It includes paused and resumed
+task lifetime and is not a build benchmark or person-hour estimate.

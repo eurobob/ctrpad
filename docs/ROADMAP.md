@@ -758,9 +758,9 @@ build.
 ### M7 — Shared OpenGL ES 3 renderer
 
 **Status:** in progress; shared dialect, live iPad Simulator GLES pixels, a
-full 24,232-frame exact-current desktop-GL/GLES state/transport match and three
-exact representative render traces have landed; live macOS GLES, remaining
-explicit pixel edge cases and physical-device cadence remain open
+full 24,232-frame exact-current desktop-GL/GLES state/transport match, three
+exact representative render traces and a targeted cross-API pixel-semantics
+oracle have landed; live macOS GLES and physical-device cadence remain open
 
 Checkpoint `78ef952dbecc` adds the explicit ES 3.0 / GLSL ES 300 production
 dialect, SDL proc loading, desktop-only feature guards, pre-context-safe
@@ -804,12 +804,27 @@ lap-structure oracle. Full report hashes, the one rejected stale-bundle-ID
 launch, keyboard revalidation and preservation evidence are in
 `docs/parity/2026-07-31-ios-gles-full-golden.md`.
 
+Checkpoint `818bc0e161d3` closes the remaining locally testable pixel boundary
+with a media-free production-pipeline oracle. Exact Apple M2 desktop GL and
+UIKit/GLES runs agree on full-frame hash `851169f2644a1675` while directly
+checking 4/8/16-bit textures, both CLUT paths, zero/STP transparency, average
+blend, E6 output-mask bit 0, real framebuffer feedback, exact alpha and
+RGB5551 VRAM packing/readback. The first live GLES run exposed a real Apple
+GLES `GL_RG` readback failure despite correct visible RGBA pixels; the fixed
+path uses guaranteed RGBA/UNSIGNED_BYTE readback and repacks R/G only after an
+error-free call. Exact-commit desktop and sanitizer suites pass 22/22; iOS
+Simulator live execution, iPhoneOS ARM64 link and macOS GLES compile/link also
+pass. The implemented mask claim is deliberately limited to CTR's bit-0
+packet path. Full rejected-fixture, failure, hash and preservation evidence is
+in `docs/parity/2026-07-31-renderer-pixel-semantics.md`.
+
 Work:
 
 - Diff Simon358's GLES branch against the exact upstream baseline and port only
   understood changes.
-- Add an SDL GLES 3 context path, ES 3 shaders, RGBA readback/repack, and
-  platform guards for unsupported debug-only desktop GL features.
+- Maintain the implemented SDL GLES 3 context path, ES 3 shaders, guaranteed
+  RGBA readback/repack, and platform guards for unsupported debug-only desktop
+  GL features.
 - Keep the existing 24-bit GPU-link bridge unchanged unless a failing test
   demonstrates a defect.
 - Validate desktop GL and GLES output using frame captures and game-state
@@ -823,11 +838,12 @@ Acceptance:
   artifacts.
 - Renderer choice does not alter game-visible state or frame cadence.
 
-The third criterion is now accepted for the complete 24,232-frame scenario.
-The second is accepted for the observed coherent framebuffer and exact traced
-frames 1,802, 1,813 and 24,001, but explicit pixel/mask/feedback cases absent
-from those frames remain open. The first criterion remains blocked locally by
-the absent Cocoa ANGLE/EGL runtime.
+The third criterion is accepted for the complete 24,232-frame scenario. The
+second is accepted by the cross-API production pixel oracle in addition to the
+coherent framebuffer and exact traced frames 1,802, 1,813 and 24,001. The
+first criterion remains blocked locally by the absent Cocoa ANGLE/EGL runtime;
+physical-device cadence/energy remains an explicit hardware confirmation
+boundary.
 
 ### M8 — iOS/iPadOS application with controller input
 

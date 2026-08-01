@@ -55,6 +55,12 @@ Current evidence and procedures:
   checkpoint-80 playback, an identical late frame-24,001 render trace, the
   explicit non-lap coverage limit, keyboard revalidation, preservation hashes,
   rejected stale bundle ID and remaining macOS-GLES/device/visual boundaries.
+- `2026-07-31-renderer-pixel-semantics.md` records the production 4/8/16-bit
+  texture, CLUT, zero/STP transparency, blend, output-mask, framebuffer-
+  feedback and RGB5551 oracle; the rejected fixture; the live Apple GLES RG
+  readback defect and guaranteed-RGBA correction; exact cross-target hashes;
+  sanitizer results; preservation checks; and deliberately open macOS-GLES
+  runtime/physical-device boundaries.
 - `2026-07-31-ios-lifecycle-display-loop.md` records the synchronous UIKit
   lifecycle reducer, cooperative display loop, explicit audio/input/VBlank
   suspension boundaries, fully yielding iOS wait, repeated Home/resume runs,

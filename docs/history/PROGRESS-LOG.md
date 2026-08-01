@@ -1651,3 +1651,48 @@ pre-documentation reading was 202,463 seconds: 2 days, 8 hours, 14 minutes,
 23 seconds cumulative, adding 5,976 seconds (1 hour, 39 minutes, 36 seconds).
 The timer is cumulative goal time, including pauses, not a benchmark or labor
 estimate. Exact iOS/macOS producer wall times are listed separately above.
+
+### 2026-07-31 — Renderer pixel-semantics oracle and GLES readback fix
+
+- Selected the remaining locally closable M7 pixel/mask/feedback boundary
+  after confirming physical signing and device cadence still require external
+  hardware/credentials. CTR's production mask packet consumes E6 bit 0 only,
+  so the acceptance claim is intentionally bounded to that behavior.
+- Added media-free `--self-test-renderer-pixels`, running after storage setup
+  and before asset selection. The 32-by-16 oracle drives production draw
+  packets and checks 4/8/16-bit textures, 4/8-bit CLUTs, zero/STP transparency,
+  opaque/average passes, exact alpha, output mask, framebuffer feedback and
+  exact RGB5551 packing/readback. Apple desktop GL now carries this as CTest
+  15, bringing the full suite to 22 tests.
+- Rejected the first mask fixture: red input 248 passed through normal
+  modulation/quantization as 241 / `0x801e`, so it could not truthfully expect
+  248 / `0x801f`. Input 255 isolates the mask behavior and passes.
+- The first live UIKit/GLES run passed every RGBA check and matched desktop
+  full-frame hash `851169f2644a1675`, but all packed VRAM words were zero.
+  Apple's GLES rejected `GL_RG` readback from RG8 with
+  `GL_INVALID_OPERATION`; the old path then exposed a stale CPU mirror.
+- Fixed GLES GPU-to-CPU VRAM synchronization through guaranteed
+  RGBA/UNSIGNED_BYTE readback, checked errors and explicit R/G-to-word repack.
+  Dirty ownership is now released only on success. The corrected live GLES
+  result matches desktop RGBA hash and exact VRAM words.
+- Published exact implementation `818bc0e161d3` before the final matrix. A
+  desktop verification chain initially named nonexistent `ctr`; the corrected
+  `ctr_native` command passed. A separate precommit leak-detection sanitizer
+  option was rejected as unsupported by Apple arm64 and replaced by supported
+  ASan/UBSan.
+- Exact clean validation passed desktop GL oracle plus 22/22 CTest, live iPad
+  Simulator UIKit/GLES oracle, iPhoneOS ARM64 compile/link, macOS GLES compile/
+  link and ASan/UBSan 22/22. Desktop and GLES hashes are identically
+  `851169f2644a1675`; Cocoa still cannot execute GLES without ANGLE/EGL.
+- The disposable clone retained canonical BIN/save inodes, sizes and hashes.
+  An unnecessary archival hash traversal was stopped; a post-shutdown
+  container query was rejected read-only. The clone was shut down, protected
+  validation Simulator left booted and untouched, and no assets entered Git.
+- M7 pixel semantics are accepted. Live macOS GLES and physical-iPad cadence/
+  energy remain open, as do the broader signing, device-input, completed-race
+  and device Files/save gates. The overall goal remains active.
+
+The preceding published reading was 202,463 goal seconds. The
+documentation-close reading was 205,801 seconds: 2 days, 9 hours, 10 minutes,
+1 second cumulative, adding 3,338 seconds (55 minutes, 38 seconds). The timer
+is cumulative goal time, including pauses, not a benchmark or labor estimate.
