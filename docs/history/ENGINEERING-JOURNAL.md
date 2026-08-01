@@ -14475,3 +14475,19 @@ parents `e2dfe9709...` and `0458baff2...` plus all three new handoff files. The
 working branch fast-forwarded to the merge. The post-merge goal reading was
 268,804 seconds (3 days, 2 hours, 40 minutes, 4 seconds); the physical-device
 acceptance boundary remained unchanged.
+
+The four-document publication record then opened as PR #8, was audited as one
+commit/four files and `CLEAN`/`MERGEABLE`, and merged at 18:04:39 CDT as
+`7087cc6e0a0a56da80373206ee3e954a8cdbb4b1`. Local and remote working-branch
+heads were fast-forwarded to that exact `main` merge. The sole Simulator still
+held executable `c6d40aaf...187f`.
+
+Packaging exact final-main commit `7087cc6e0...` ran asynchronously. The first
+verification command arrived before its output files became visible and
+reported the expected path missing; listing immediately afterward showed both
+archive and sidecar complete. The unchanged repeat passed the sidecar and
+reported 3,253 members, SHA-256 `a748e256e017c15842102c82055b0597f69cccd481e03484c974a48c3a4e2b01`,
+all three handoff files and zero retail/runtime or credential/package matches.
+The 18:06:51 reading was 269,013 seconds (3 days, 2 hours, 43 minutes, 33
+seconds). This closes publication of the locally executable handoff, not the
+external signed-iPad campaign.

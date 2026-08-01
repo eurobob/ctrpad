@@ -3067,3 +3067,11 @@ was safely refused without a merge. Re-querying and matching exact head
 `a19c1a5ef`. Remote-tree inspection found all three new handoff files. The
 post-merge active-time reading was 268,804 seconds (3 days, 2 hours, 40 minutes,
 4 seconds); signed physical acceptance remains open.
+
+PR #8 merged the four-document history at 18:04:39 CDT as `7087cc6e0`. Local,
+remote branch and `main` were aligned, with the sole Simulator still at
+`c6d40aaf...187f`. Final-main source packaging completed asynchronously; an
+early verification saw the not-yet-visible path, then the unchanged retry
+passed at 3,253 members / `a748e256...2b01`, with the handoff files present and
+zero retail/runtime or private/package matches. The 18:06:51 reading was
+269,013 seconds (3 days, 2 hours, 43 minutes, 33 seconds).
