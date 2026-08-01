@@ -13746,3 +13746,38 @@ The exact-acceptance goal reading was 250,402 seconds (2 days, 21 hours,
 33 minutes, 22 seconds), 1,576 seconds after dirty evidence. The batching
 checkpoint is exact-accepted. Simulator 30-FPS, broad churn, full touch race,
 physical-device and final-package gates remain open.
+
+## 2026-08-01 — User-visible one-simulator launch and keyboard route
+
+The repository started clean at published evidence revision `6de7f17cd4cd`,
+with both named devices shut down. Only disposable `CTRPad Import Negatives`
+was booted. Boot readiness returned before the first compound command reached
+its final launch step; an explicit state check showed exactly that one device
+booted, and a separate `simctl launch --terminate-running-process` succeeded as
+PID 19987. Protected `CTRPad Import Validation` stayed shut down throughout.
+
+Computer Use first captured the copyright screen with the complete touch-first
+overlay. Touch Cross advanced to the CTR title and main menu. A direct Down key
+moved the highlight from Adventure to Time Trial, proving the new keyboard
+route in the running iPad app; C then accepted Time Trial, Crash, Crash Cove and
+No Ghost. Fresh screenshots verified character portraits/kart, track list and
+thumbnail, loading preview, and the live Crash Cove Time Trial grid with HUD,
+minimap, kart, track textures, transparency and overlay all present.
+
+The 60-line, 7,084-byte live app log was still advancing after more than five
+minutes. It records Down as scancode 81/mask `0x0040` and C as scancode 6/mask
+`0x4000`, followed by matching retail-poll consumption. It also exposes the
+remaining blocker directly: heavy menu/race scenes report roughly 5–10 FPS.
+This bounded visual pass found no missing-asset screen, but does not close the
+broader graphical-coherence, performance, stability or physical-device gates.
+The Simulator and race were deliberately left open for user inspection.
+
+The chronology retains two harmless recoveries and one read-only warning. A
+screenshot emit reused a helper that was not available in the next Computer
+Use call; the input had already landed, and a fresh-state capture verified the
+title screen. The keyboard-mapping `rg` included nonexistent `src/` and still
+returned the intended `platform/native_input.c` mappings. Neither changed data.
+
+The handoff goal reading was 251,875 seconds (2 days, 21 hours, 57 minutes,
+55 seconds), 1,473 seconds after exact batching acceptance. The overall goal
+remains active.

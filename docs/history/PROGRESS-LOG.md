@@ -2673,3 +2673,31 @@ The exact-acceptance reading was 250,402 seconds: 2 days, 21 hours, 33 minutes,
 22 seconds cumulative, 1,576 seconds after the dirty boundary. Full details are
 in `docs/parity/2026-08-01-ios-framebuffer-fetch-batching.md`. The checkpoint is
 exact-accepted; the overall goal remains active.
+
+### 2026-08-01 — Interactive one-simulator Crash Cove handoff
+
+- Confirmed a clean worktree at pushed revision `6de7f17cd4cd`; both named iPad
+  simulators initially were shut down. Booted only disposable `CTRPad Import
+  Negatives`; protected `CTRPad Import Validation` remains shut down.
+- Launched installed app `io.github.chrissotraidis.ctrpad` as PID 19987 and left
+  Simulator open for user inspection. Computer Use verified copyright, title,
+  main menu, character select, Crash Cove track select, no-ghost prompt,
+  loading preview and the live Time Trial starting grid.
+- Verified keyboard control in the actual retail path: Down selected Time Trial
+  and C accepted the subsequent choices. The app log recorded and retail poll
+  consumed scancodes 81 and 6 with masks `0x0040` and `0x4000` respectively.
+- The visible route has character, kart, track geometry/textures, HUD, minimap,
+  transparency and touch overlay present. No missing-asset screen was observed
+  on this bounded route, but the live log still reports roughly 5–10 FPS in the
+  heavier scenes; the Simulator stability/performance gate therefore remains
+  open and no physical-device work is authorized yet.
+- Preserved harmless diagnostics: boot readiness returned before the first
+  compound command reached launch, so state was rechecked and launch was run
+  separately; one screenshot emit referenced a helper unavailable in the next
+  Computer Use call and fresh state recovered it; a read-only mapping search
+  included absent `src/`, producing only an `rg` path warning.
+
+The handoff goal reading was 251,875 seconds: 2 days, 21 hours, 57 minutes,
+55 seconds cumulative, 1,473 seconds after exact batching acceptance. Goal time
+includes this interactive launch and inspection; it is not a build benchmark
+or person-hour estimate. The overall goal remains active.
