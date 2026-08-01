@@ -150,6 +150,10 @@ Current evidence and procedures:
   oracles, one-Simulator visual route, corrected profiler invocation, complete
   CSV/log/build/preservation hashes, matched 6.10% regression, and source
   restoration to the accepted lookup-texture renderer.
+- `2026-08-01-release-rebaseline-clean-smoke.md` records the clean
+  post-rebaseline macOS/iOS builds, native and actual-surface pixel oracles,
+  one-Simulator retail/input/lifecycle/logging smoke, update preservation,
+  exact-ID shutdown, unsigned IPA/source pair and remaining physical boundary.
 - `2026-07-31-ios-sandbox-storage.md` records the bundle/Documents/Application
   Support ownership split, Documents-priority retail startup, private log and
   memory-card roots, Files metadata, exact cross-target matrix, rejected

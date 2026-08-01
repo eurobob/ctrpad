@@ -129,3 +129,21 @@ The repository currently has no valid Apple signing identity, provisioning
 profile or connected physical device, so steps 1-3 and release preparation can
 continue locally while step 4 remains an external boundary. The goal remains
 active until the signed physical campaign and paired publication are complete.
+
+## First clean execution of this plan
+
+Clean commit `d5772375fabc` completed local steps 1-3 and the unsigned part of
+step 4. macOS ARM64 passed 22/22 tests and the independent renderer pixel
+oracle; the actual iPad Simulator surface passed the established GLES hashes;
+an update install preserved the retail BIN and save at identical inodes and
+hashes; and the bounded Crash Cove route passed visual, input, Home/foreground,
+rotation, log and correct-ID termination checks. Both devices and the Simulator
+GUI were then shut down.
+
+The same clean identity produced a thin ARM64 iPhoneOS executable, retail-free
+unsigned IPA and exact 3,245-member GPL source archive. The detailed commands,
+hashes, visual boundary, console warning, log scan, preservation proof and
+limitations are in
+`docs/parity/2026-08-01-release-rebaseline-clean-smoke.md`. Real signing and the
+physical-device campaign remain open because this machine still has no valid
+Apple identity, provisioning profile or connected device.

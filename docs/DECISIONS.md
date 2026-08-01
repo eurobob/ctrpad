@@ -628,3 +628,12 @@ requires a user-owned signed install, retail Files import, complete touch race
 including a three-boost drift, audio/lifecycle/update/save persistence, cadence
 and thermal evidence. Exact scope and contingency are in
 `docs/history/RELEASE-REBASELINE.md`.
+
+Clean `d5772375fabc` now accepts the local Simulator side of this boundary:
+22/22 tests, desktop and actual-surface pixel hashes, update preservation,
+coherent live Crash Cove, keyboard/touch retail consumption,
+Home/foreground/rotation, five-log fault scan and exact-ID shutdown all pass.
+The thin iPhoneOS executable and unsigned IPA/source pair also build. The one
+self-test-exit UIKit console warning and every real signing/physical-device
+criterion remain open. Exact evidence is in
+`docs/parity/2026-08-01-release-rebaseline-clean-smoke.md`.

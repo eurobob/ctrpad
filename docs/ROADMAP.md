@@ -1495,3 +1495,15 @@ The physical-gate policy in this historical checkpoint is superseded by
 `docs/history/RELEASE-REBASELINE.md`: a clean accepted Simulator smoke remains
 required for correctness and diagnostics, while performance acceptance now
 belongs to the target iPad.
+
+Clean re-baseline checkpoint `d5772375fabc` now closes that Simulator smoke:
+22/22 macOS ARM64 tests and both desktop/actual-surface pixel oracles pass; a
+clean update install preserves retail/save inode and hash identity; Computer
+Use reaches a coherent live Crash Cove race with keyboard/touch consumption,
+pause, Home/foreground and landscape reflow; exact-ID termination leaves zero
+process; five logs have zero targeted faults; and thin ARM64 iPhoneOS plus
+matching unsigned IPA/GPL source packages are ready. The self-test exit emitted
+one UIKit appearance-transition console warning, retained as an open focused
+observation. Signing and every physical-iPad requirement remain open. Exact
+evidence is in
+`docs/parity/2026-08-01-release-rebaseline-clean-smoke.md`.

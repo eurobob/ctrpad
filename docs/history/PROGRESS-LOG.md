@@ -2878,3 +2878,30 @@ the rejection/history boundary. The overall goal remains active.
 The re-baseline documentation reading was 259,866 seconds: 3 days, 11 minutes,
 6 seconds cumulative, 1,073 seconds (17 minutes, 53 seconds) after the
 publication-close boundary. The overall goal remains active.
+
+### 2026-08-01 — Executed the clean re-baseline smoke and physical handoff build
+
+- Committed and pushed the five-file release re-baseline as `d5772375fabc` and
+  opened mergeable draft PR #2 against `main`.
+- With both Simulators and the GUI closed, rebuilt macOS ARM64, passed 22/22
+  tests, and repeated the established logical/blend/presentation pixel hashes.
+- Rebuilt the clean iPad Simulator app, passed the actual 1032x1376 GLES pixel
+  oracle, update-installed it on exactly one disposable device and preserved
+  the retail BIN/save inodes and hashes.
+- Computer Use navigated touch/keyboard through Time Trial to a live Crash Cove
+  race, paused, backgrounded/foregrounded, rotated to landscape, resumed and
+  consumed touch Gas with coherent track/kart/HUD/minimap/overlay graphics.
+- Exact-ID termination left no app process. The 82-line current log and four
+  archives have zero targeted asset, visibility, error or fatal markers; both
+  devices and Simulator GUI ended closed.
+- Rebuilt the clean thin ARM64 iPhoneOS product and produced retail-free
+  unsigned IPA `41e00a5d...13ed` plus matching 3,245-member GPL source archive
+  `117dd291...352d`.
+- Retained one self-test-exit UIKit appearance-transition console warning as an
+  open focused observation instead of treating the successful normal
+  Home/foreground route as proof that every exit path is warning-free.
+
+The clean-smoke close reading was 261,192 seconds: 3 days, 33 minutes, 12
+seconds cumulative, 1,326 seconds (22 minutes, 6 seconds) after the re-baseline
+documentation boundary. The overall goal remains active because real Apple
+signing and physical-iPad acceptance are still open.

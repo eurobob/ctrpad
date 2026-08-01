@@ -14083,3 +14083,83 @@ The re-baseline documentation reading was 259,866 seconds (3 days, 11 minutes,
 boundary. The overall goal remains active. The next exact action is to commit
 this documentation so the accepted source can be rebuilt with a clean embedded
 identity before replacing the stale exploratory Simulator installation.
+
+## 2026-08-01 — Clean release re-baseline execution
+
+The five intended documentation files were audited for balanced fences,
+existing local Markdown references, trailing whitespace and `git diff --check`,
+then explicitly staged. Commit `d5772375fabc361c58fbee6d35c43d5fcbdf4cd0`
+(`Rebaseline release acceptance on physical iPad`) added 241 lines and removed
+nine across Roadmap, Decisions, both history ledgers and the new re-baseline.
+It pushed exactly to `origin/codex/simulator-performance-next`.
+
+The GitHub connector again returned 404 for the private repository. The
+authenticated `gh` fallback was repository-qualified and created draft PR #2.
+The first post-create verification incorrectly used unsupported `gh pr view
+--head`; it failed after the PR existed. `gh pr view 2 --repo
+chrissotraidis/ctrpad` then verified OPEN/draft, head `d5772375fabc`, base
+`main`, CLEAN and MERGEABLE. The failure was retained in the focused report.
+
+Both CTRPad devices and Simulator GUI were closed before fresh configuration.
+macOS ARM64 configured with clean SDL/source suffix `gd5772375f`, compiled at
+nice 15 / one job with the established 32 warnings and reported exact version
+`d5772375fabc`. All 22 CTests passed in 3.08 seconds. The verbose renderer test
+passed in 1.33 seconds with logical `851169f2644a1675`, blend
+`0c0d08324ae06c35` and desktop presentation `a7798c5a6ddee965`.
+
+The clean iPad Simulator build repeated the 32 warnings. Its raw thin ARM64
+executable is `1699c36d...7091`; an isolated ad-hoc copy under
+`/tmp/ctrpad-d5772375f.O2ZNZX` strictly verified at `c6d40aaf...187f`. Only the
+disposable `CTRPad Import Negatives` device booted. Before update installation,
+retail inode/size/hash were `111450682` / 605,698,800 /
+`f780bf23...7c0`; save identity was `111309627` / 6,016 /
+`6a01b0f5...19a3`. The 18.16-second update remapped the data-container UUID but
+preserved every object value, and the installed executable embedded
+`d5772375fabc`.
+
+The actual 1032x1376 GLES surface reported Apple Software Renderer, framebuffer
+fetch enabled and passed logical/blend/oracle hashes plus presentation
+`172d49a34571b64c` with 12 fallback / 5 active draws. The immediate self-test
+exit printed one unbalanced UIKit appearance-transition warning and the
+Simulator's duplicate accessibility-loader class warning after the success
+line. The process had exited, but the console PTY stayed attached; an empty
+poll showed no further output and Control-C closed only the attachment. Normal
+product launch was separate.
+
+Computer Use observed copyright, animated title, Adventure/main mode menus,
+Crash portraits/kart, Crash Cove list/preview/minimap, No Ghost, track fly-in,
+grid and live race with coherent track/kart/exhaust/HUD/minimap/overlay.
+Accessible touch Cross entered the menu. Keyboard `Z`, Down, `C` and `P`
+navigated to Time Trial and paused/resumed; race `C`/`D`/`E` and final touch Gas
+were consumed by the logged retail poll. Home/foreground logged ordered audio
+suspend/reactivate transitions, retained the paused race, rotated to landscape
+and resumed. The last 850x708 screenshot is `c70f0c96...50f2` in task-owned
+temporary storage.
+
+Exact-ID termination succeeded and launchd contained no app record. The current
+82-line / 9,369-byte log is `467de09b...555`; its four archives are
+`68eec948...789f`, `a4914173...13be`, `25a66dd9...e2f` and
+`a1d98d65...107b`. Exact `[ERROR]`, `[FATAL]`, `[CTR AssetRef]` and visibility-
+fault scans returned no row. Retail/save identities remained unchanged.
+Computer Use's first Command-Q status remained stale and displayed an unrelated
+shutdown-device window on refresh; the second app list still cached
+`isRunning=true`, but direct exact GUI-process inspection was empty. Both
+CTRPad devices were confirmed shutdown.
+
+With every Simulator closed, the clean iPhoneOS build completed at nice 15 /
+one job with the same 32 warnings. The thin ARM64 device executable embeds
+`d5772375fabc` at `6f1aaefa...095b`. `package-ios.sh` produced the retail-free
+unsigned IPA `CTRPad-0.1.0-1-d5772375f-unsigned.ipa` at
+`41e00a5d...13ed`; ZIP validation and seven-member inventory passed.
+`package-source.sh` accepted the clean source and produced a 3,245-member exact
+archive `CTRPad-source-d5772375fabc.tar.gz` at `117dd291...352d`, excluding
+retail/runtime/package/profile/key material.
+
+The clean-smoke close reading was 261,192 seconds (3 days, 33 minutes, 12
+seconds), 1,326 seconds (22 minutes, 6 seconds) after the re-baseline
+documentation boundary. The entire command, hash, visual, preservation,
+warning and limitation boundary is in
+`docs/parity/2026-08-01-release-rebaseline-clean-smoke.md`. The overall goal
+remains active; this machine still has zero valid Apple signing identities,
+provisioning profiles and connected devices, so the signed physical campaign
+is not inferred from the successful unsigned handoff.
