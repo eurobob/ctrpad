@@ -52,6 +52,7 @@ adds a complete durable commit ledger.
 | Final publication/source boundary | 2026-08-01 18:06:51 | PR #8's history merged as `7087cc6e0`; its final-main source package passed at 3,253 members / `a748e256...2b01`, and active goal time reached 3 days, 2 hours, 43 minutes, 33 seconds. |
 | Apple trust/preflight audit | 2026-08-01 18:26:33 | Active goal time reached 3 days, 3 hours, 3 minutes, 14 seconds after correcting untrusted-CMS acceptance and real-profile App ID prefix construction. |
 | Apple trust pre-commit repeat | 2026-08-01 18:31:32 | Active goal time reached 3 days, 3 hours, 8 minutes, 18 seconds; 22/22 tests and the Apple-positive/self-signed-negative trust probes passed again. |
+| Apple trust main publication | 2026-08-01 18:36:44 | PR #10 had merged the trust/history checkpoint into `main` as `8f3b2be37`; its 3,255-member final-main source archive passed at `34f600e6...6326a`, and active goal time reached 3 days, 3 hours, 13 minutes, 31 seconds. |
 
 ## Executive chronology
 
@@ -120,6 +121,7 @@ adds a complete durable commit ledger.
 | 18:02–18:03 | PR #7 main merge and verification | A mistyped full protected-head SHA was refused without merging; the exact queried head then merged as `a19c1a5ef`, and fetched `origin/main` contained the tool, template and focused report. |
 | 18:04–18:06 | History merge and final-main source proof | PR #8 merged as `7087cc6e0`; local/remote heads aligned, the sole Simulator hash stayed exact, and an early asynchronous-package lookup was repeated unchanged after completion to accept the 3,253-member clean source archive. |
 | 18:11–18:31 | Apple trust and real-profile preflight | Reproduced untrusted CMS decoding, added Apple-root-pinned profile/app chain verification, corrected App ID prefix construction and app/profile certificate binding, rejected tampered/untrusted/ad-hoc inputs, retained deterministic unsigned packages and passed 22/22 tests; a final 18:31 repeat passed the Apple-positive and self-signed-negative probes, while the real signed/device positive remains open. |
+| 18:33–18:36 | Apple trust GitHub publication | Committed the exact 14-file checkpoint, verified its source archive, pushed the branch, recorded the private-repository connector 404, opened/audited PR #10 with authenticated CLI fallback, merged the exact head into `main`, then verified the 3,255-member final-main source archive and its exclusion scan. |
 
 ## Complete durable commit ledger
 

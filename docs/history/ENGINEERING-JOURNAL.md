@@ -14558,3 +14558,31 @@ the isolated self-signed profile as not trusted under basic policy. The
 18:31:32 active-time reading was 270,498 seconds (3 days, 3 hours, 8 minutes,
 18 seconds). This repeat validates the checked-in candidate; it does not add a
 real Apple development profile, signed CTRPad build or physical-device result.
+
+At 18:33:14 CDT, the exact 14-file checkpoint became commit
+`5af382409d8da9d0fa8db5314663bb07d5d58cb7` (`Harden iOS signing trust
+preflight`). Its first clean corresponding-source archive contained 3,255
+members, passed its sidecar and an independent SHA-256 check at
+`2c3a2d6f5ff9083fabe7019b77d2c14897c297c9598f49f06ee55a0a9ced6dce`,
+included the verifier, focused report and three-day timeline, and returned zero
+for the retail/runtime/profile/key/certificate/package member scan.
+
+The commit was pushed to `origin/codex/simulator-performance-next`. The
+preferred private-repository GitHub connector returned HTTP 404 without
+creating a pull request. Authenticated `gh` fallback created draft PR #10 at
+18:35:07 CDT. The audit found exactly one commit, the intended 14 files, 720
+additions, 29 deletions, exact head `5af382409...`, `MERGEABLE` / `CLEAN` and no
+configured checks. It was marked ready and the merge used that complete
+protected head SHA.
+
+PR #10 merged at 18:35:27 CDT as
+`8f3b2be37c9908fc02404f5bf62ee8c984bccae6`. Fetching `origin/main` confirmed
+the merge parents and all three load-bearing new history/trust files. The local
+working branch fast-forwarded to the exact merge. Packaging final `main`
+produced 3,255-member `CTRPad-source-8f3b2be37c99.tar.gz`; sidecar and
+independent SHA-256 verification passed at
+`34f600e64a4885154348ca011c290e76a04b228932a8f6a91aba3bab38236326`,
+and the same forbidden-member scan returned zero. At 18:36:44, active goal time
+was 270,811 seconds (3 days, 3 hours, 13 minutes, 31 seconds). The locally
+actionable trust/history correction is published; external signing and physical
+iPad acceptance remain open.

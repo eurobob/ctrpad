@@ -169,3 +169,21 @@ same leaf/root hashes above, and a fresh run against the unchanged self-signed
 profile again failed certificate trust. At 18:31:32 active goal time was
 270,498 seconds: 3 days, 3 hours, 8 minutes and 18 seconds. The temporary trust
 output was removed after its manifest and rejection were inspected.
+
+## Publication
+
+The 14-file checkpoint was committed at 18:33:14 CDT as `5af382409d8d`. Its
+clean source archive passed at 3,255 members and SHA-256
+`2c3a2d6f5ff9083fabe7019b77d2c14897c297c9598f49f06ee55a0a9ced6dce`.
+After the preferred private-repository connector returned HTTP 404,
+authenticated CLI fallback opened PR #10 at 18:35:07. GitHub reported the exact
+commit/files, `MERGEABLE` / `CLEAN` and no configured checks. The protected
+exact head merged at 18:35:27 as `8f3b2be37c99`.
+
+Packaging that fetched `main` merge produced 3,255 members at SHA-256
+`34f600e64a4885154348ca011c290e76a04b228932a8f6a91aba3bab38236326`.
+Its checksum, required-file inspection and retail/runtime/profile/key/
+certificate/package exclusion scan passed. At 18:36:44 active goal time was
+270,811 seconds: 3 days, 3 hours, 13 minutes and 31 seconds. This publication
+closes the locally actionable trust correction only; it does not change the
+real-profile and physical-device boundary.
