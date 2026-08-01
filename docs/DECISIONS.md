@@ -477,3 +477,26 @@ encodings. Fully documented exact head `71b68f118b18` then repeated two
 byte-identical 17,488,503-byte, 3,234-member archives at SHA-256
 `1681c458...53f3`, with both sidecars, expanded scans and extraction smoke
 checks passing.
+
+## 2026-08-01 — Select a signing keychain explicitly without global mutation
+
+**Decision:** let `package-ios.sh` accept an optional `--keychain PATH` only
+with identity/profile signing. Search that unlocked keychain explicitly for a
+valid code-signing identity and pass the same path to `codesign`; never change
+the user's default keychain or keychain search list from the packager.
+
+**Why:** a release or CI identity may live outside the login keychain. Requiring
+global search-list mutation makes isolation weaker and cleanup harder. Explicit
+selection scopes both discovery and signing while preserving the existing
+valid-identity/profile checks and leaving unlock/authentication policy with the
+keychain owner.
+
+**Verification boundary:** exact commit `37a5e16760ba` rejects a keychain
+without identity/profile and rejects a present but untrusted synthetic identity
+without producing an IPA. Two unchanged unsigned packages are byte-identical at
+`582b8491...b929`. A separate synthetic CMS and ad-hoc DER diagnostic strictly
+verified all four intended entitlements but explicitly had no TeamIdentifier;
+it is not Apple signing evidence. The temporary keychain was deleted and user
+search/trust state remained unchanged. A valid Apple identity/profile and
+physical device remain required. Full evidence is in
+`docs/parity/2026-08-01-ios-isolated-keychain-signing.md`.

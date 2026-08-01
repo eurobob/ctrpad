@@ -2129,3 +2129,39 @@ adds 1,154 seconds (19 minutes, 14 seconds) from the preceding 223,944-second
 published boundary, including 447 seconds (7 minutes, 27 seconds) for the
 closing and final-current-head audit. Goal time includes pauses/resumes and is
 not a build benchmark or person-hour estimate. The goal remains active.
+
+### 2026-08-01 — Isolated signing-keychain mechanics accepted, Apple gate retained
+
+- Repeated external inventory: zero valid code-signing identities, no standard-
+  location profiles and no connected device. Headroom was still only about
+  135 MB with 10.50 GB swap used, so no Simulator/compiler was started.
+- Added optional `--keychain` support to `package-ios.sh` and Installation
+  Information. It scopes valid-identity discovery and `codesign` to one already
+  unlocked keychain without changing the user's default or search list.
+- Candidate and exact missing-input tests rejected keychain-only invocation.
+  A synthetic self-signed identity imported into the isolated keychain but
+  remained untrusted; the real packager rejected it before output as intended.
+- Recorded the OpenSSL 3 default-PKCS#12 incompatibility and successful legacy-
+  container import. Did not authorize synthetic user trust or weaken the valid-
+  identity gate.
+- Synthetic CMS decoding accepted the intended iOS App ID/team/device/expiry.
+  A separately bounded ad-hoc DER diagnostic passed deep/strict verification
+  and preserved all four entitlement values while explicitly reporting no
+  TeamIdentifier.
+- Committed/pushed implementation `37a5e16760ba`. Two exact unsigned packages
+  remained byte-identical, seven-member and retail/profile/signature-free at
+  SHA-256 `582b8491...b929`.
+- Deleted the temporary keychain. Final user search list retained only the
+  login keychain; valid identities and trust settings remained empty. Computer
+  Use also found no running security/authorization app. No local synthetic key,
+  profile, IPA or signed-app artifact entered Git.
+- Accepted isolated-keychain mechanics and fail-closed behavior only. A valid
+  Apple identity/profile, real signed IPA and connected iPad remain open.
+
+The isolated-keychain documentation-open reading was 225,723 seconds: 2 days,
+14 hours, 42 minutes, 3 seconds cumulative. The documentation-close reading
+was 225,928 seconds: 2 days, 14 hours, 45 minutes, 28 seconds cumulative. That
+adds 830 seconds (13 minutes, 50 seconds) from the preceding 225,098-second
+published boundary, including 205 seconds (3 minutes, 25 seconds) for the
+closing evidence and cleanup audit. Goal time includes pauses/resumes and is
+not a build benchmark or person-hour estimate. The goal remains active.

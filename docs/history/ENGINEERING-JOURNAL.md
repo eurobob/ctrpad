@@ -12914,3 +12914,67 @@ scan passed. Fresh extraction again had no `.git`, passed both shell syntax
 checks, exposed all four Apple presets and had no prohibited member. Final
 headroom remained unsuitable for compilation at roughly 62 MB free and
 10.51 GB swap used, so the clean-build boundary remains unchanged.
+
+## 2026-08-01 — Added isolated signing-keychain support and bounded synthetic proof
+
+### External signing inputs remained absent
+
+Resumed inventory at clean GitHub head `65c3f4ab3` found zero valid code-signing
+identities, no profile in either standard Xcode directory and no connected
+device. Free VM pages had improved only to 8,648, about 135 MB, with 10.50 GB
+swap still used. No Simulator or compiler was started.
+
+The signed packager also searched only the default keychain list. An optional
+`--keychain` input now requires identity/profile signing, requires the path to
+exist, restricts `security find-identity` to that unlocked keychain and passes
+the same path to `codesign`. It does not unlock the keychain or change the
+default/search list. Installation Information documents the isolated-keychain
+route.
+
+Candidate syntax/help checks passed. A keychain without identity/profile and a
+present but untrusted identity both failed before IPA output. The ordinary
+unsigned path still produced a valid seven-member retail-free archive. The
+two-file implementation was committed and pushed as `37a5e16760ba` before
+exact repetition.
+
+### Synthetic identity routes stayed explicitly non-Apple
+
+All fixtures lived in one private temporary directory. OpenSSL 3's default
+PKCS#12 encoding failed macOS import with a misleading MAC/password message;
+regenerating only the container with `-legacy` imported the same synthetic key
+and self-signed code-signing certificate. X.509 basic policy saw it but reported
+`CSSMERR_TP_NOT_TRUSTED`; code-signing policy exposed zero valid identities.
+
+Adding user trust would have required an authorization interaction. No prompt
+was accepted, later trust inspection was empty, and the real packager retained
+its valid-identity requirement. Exact `37a5e1676` therefore repeated the
+untrusted failure and created no IPA or checksum.
+
+The synthetic CMS profile decoded through `security cms -D` with iOS platform,
+matching synthetic App ID/team/device and future expiration. Its SHA-256 was
+`b0cc01e9...c8ca`. A separate downstream diagnostic embedded that profile,
+constructed the same four entitlements and applied an ad-hoc DER signature.
+Deep/strict verification passed and the extracted entitlements hashed to
+`518d2312...716e`. CodeDirectory v20400 simultaneously reported ad-hoc flags,
+ad-hoc signature and no TeamIdentifier, keeping the proof correctly bounded.
+
+### Exact unsigned regression and cleanup
+
+Two exact clean-head unsigned packages used the same commit-time
+`SOURCE_DATE_EPOCH`. They compared byte-for-byte, passed ZIP validation,
+contained exactly seven legal/app members and excluded retail/runtime/profile/
+signature state. Both hash to:
+
+```text
+582b8491ecab23cd0ebb944a806a21beb8fba8eb7270cd2153121762f9e2b929
+```
+
+The temporary keychain was deleted with `security delete-keychain`. The user's
+search list again showed only the original login keychain, valid code-signing
+identities remained zero and trust settings remained empty. Synthetic keys,
+profiles, IPAs, the diagnostic app and entitlement files stayed outside Git.
+
+This accepts explicit isolated-keychain mechanics, fail-closed identity
+handling and unchanged unsigned behavior. It does not accept a real signed IPA,
+Apple authorization, physical installation or device execution. M11 and the
+goal remain active.

@@ -1267,6 +1267,16 @@ both Git and future source packages. Fully documented pre-report head
 `1681c458...53f3`; fresh extraction repeated both shell checks, all four Apple
 presets and the expanded prohibited-file scan.
 
+Checkpoint `37a5e16760ba` adds optional isolated-keychain selection without
+mutating the user's default keychain or search list. Exact missing-input and
+synthetic-untrusted-identity routes failed before output; two unsigned
+regression packages remained byte-identical at SHA-256 `582b8491...b929`.
+Synthetic CMS decoding and an explicitly ad-hoc DER-entitlement probe passed
+deep/strict verification with all four intended values, while CodeDirectory
+metadata proved it had no team identity. The temporary keychain was deleted and
+global identity/trust state remained empty. This strengthens the mechanics but
+does not replace the still-open real Apple identity/profile/device branch.
+
 Work:
 
 - Run the complete cross-architecture parity suite and prolonged playtesting.
