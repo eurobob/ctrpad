@@ -44,6 +44,11 @@ Current evidence and procedures:
   correction, exact clean live GLES/audio/title-menu result, bounded keyboard
   evidence, rejected black-frame/orientation attempts, and deliberately open
   lifecycle, cadence, device-signing, import and touch gates.
+- `2026-07-31-ios-gles-desktop-gl-equivalence.md` records the fresh current-
+  build 2,000-frame all-component macOS desktop-GL/iOS GLES match, exact
+  representative vertex/draw-split trace equality, coherent live framebuffer,
+  rejected cross-platform checkpoint bypass, media/save preservation and the
+  deliberately open full-suite/macOS-GLES/physical-device boundaries.
 - `2026-07-31-ios-lifecycle-display-loop.md` records the synchronous UIKit
   lifecycle reducer, cooperative display loop, explicit audio/input/VBlank
   suspension boundaries, fully yielding iOS wait, repeated Home/resume runs,

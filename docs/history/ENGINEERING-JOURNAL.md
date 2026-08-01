@@ -11197,3 +11197,284 @@ The preceding published timer was 191,189 seconds. The pre-publication reading
 was 194,894 seconds: 2 days, 6 hours, 8 minutes, 14 seconds cumulative, adding
 3,705 seconds (1 hour, 1 minute, 45 seconds). It includes paused/resumed task
 lifetime and is not a build benchmark or person-hour estimate.
+
+## 2026-07-31 — Current iOS GLES versus macOS desktop-GL equivalence
+
+### Continuation audit and choice of next gate
+
+The continuation began from clean synchronized branch
+`codex/arm64-apple` at documentation commit `23029b2c75e9`; implementation tip
+remained `e6ba535a9c73`. The goal objective attachment was reread, followed by
+all 511 lines of `docs/ctr-native-viability.md`. The current roadmap showed the
+software stack largely implemented while three kinds of work remained:
+
+1. physical signing, install, lifecycle and performance gates requiring a real
+   iPad and Apple development credentials;
+2. human multi-touch drift/boost ergonomics requiring real simultaneous
+   contacts; and
+3. M7's still-open live-GLES representative frame, deterministic state and
+   cadence comparison.
+
+The third item was selected because it could be completed with current
+authoritative artifacts without weakening either physical exit criterion. The
+existing renderer trace at `platform/native_gpu.c:141-280` hashes packed
+vertices and semantic draw-split state while excluding GL object IDs and host
+pointers, making it the correct cross-API comparison boundary.
+
+### Rejected mid-session cross-platform checkpoint playback
+
+The accepted keyboard report remained in the disposable Simulator container:
+
+```text
+debug/reports/20260731/ctr-201917
+frames=1869 checkpoints=7 build=e6ba535a9c73 platform=ios
+```
+
+Its report was copied to
+`/private/tmp/ctrpad-cross-render-macos.edJWGc/report`; the original was not
+modified. Current macOS executable `cfd3d9b4...1dca` launched with:
+
+```sh
+./ctr_native \
+  --replay /private/tmp/ctrpad-cross-render-macos.edJWGc/report/input.ctrreplay \
+  --replay-bypass-header \
+  --render-trace-frame 1590
+```
+
+The log truthfully reported:
+
+```text
+replay platform=ios   identity=0x6ea1d76d executable=e9d9b4240372487c
+live   platform=macos identity=0xaa46653b executable=8edd476c95a09be7
+```
+
+The diagnostic bypass validated seven checkpoint records, cloned an isolated
+playback memory-card root, restored checkpoint zero and printed the expected
+raw-checkpoint mismatch caused by excluded host addresses. It then failed;
+macOS opened a crash report for `ctr_native`. This is rejected evidence.
+`docs/REPLAYS.md` explicitly warns that bypassing a replay header does not make
+checkpoints portable between different executable identities. No product bug
+or game hang was inferred from violating that documented boundary.
+
+The supported solution was to generate fresh native reports from a common
+boot-origin pad/VSync seed rather than transport one platform's host-bearing
+checkpoint into another process.
+
+### Construction and validation of a bounded seed
+
+Accepted clean version-4 report `ctr-215303` was chosen because its input begins
+at the native frame-zero boundary and reaches the active-driver transition at
+frame 1,711. A local Node invocation copied the first 2,000 full records and
+changed only the replay header's declared frame count from 24,232 to 2,000.
+The resulting input remained local:
+
+```text
+/private/tmp/ctrpad-gles-gl-seed.yRPz1f/report/input.ctrreplay
+size:   880148
+SHA-256 6a26357cc517ee57e10f9bd55a3a8f48db13edd93ae2a6fa1a225f5685aabf49
+```
+
+The original report's isolated `memcard.seed` was copied beside it. The strict
+typed comparator ran in prefix mode and required all eight components. Every
+one of the 2,000 records matched the source:
+
+```text
+timing/rng/drivers/world/allocation/root/pads/vsync:
+equal=2000 mismatched=0
+```
+
+This established that truncation preserved complete version-4 record
+boundaries. The inherited end-state fields were not treated as current output;
+`--record-from-replay` consumes only pad snapshots and the complete VSync
+transport, then captures fresh current-process state.
+
+### macOS desktop-GL producer
+
+The exact clean implementation executable was:
+
+```text
+build-macos-arm64/ctr_native
+build ID e6ba535a9c73
+SHA-256 cfd3d9b420e8e9592a622112bd368b20857ba427d68c92fab58bd8578d741dca
+```
+
+It ran:
+
+```sh
+./ctr_native --record-from-replay \
+  /private/tmp/ctrpad-gles-gl-seed.yRPz1f/report/input.ctrreplay
+```
+
+Apple M2 desktop GL initialized all PSX and VRAM pipelines. Report
+`build-macos-arm64/debug/reports/20260731/ctr-204509` finalized normally:
+
+```text
+platform=macos
+identity_checksum=0xaa46653b
+executable_fingerprint=8edd476c95a09be7
+frame_count=2000
+checkpoint_count=7
+input.ctrreplay e02687209a6f4133b97afa78e4783d56777a2ecf186f6ff64d88b417ec3efd3d
+state.ctrstates 1cc4229b323916d2d49b557607a347bf55f38fc46b3de49be057ed0152a44a9e
+```
+
+The log recorded the active race-driver transition at frame 1,711 and closed
+with `replay-seeded recording finished after 2000 frames`.
+
+### iOS UIKit/GLES producer
+
+Disposable Simulator `26F3DEE8-8840-446D-85FE-C882009C9C06` was booted. Its
+installed exact executable retained:
+
+```text
+build ID e6ba535a9c73
+SHA-256 1cef6404aa3c2bf094c3357e71eb1069e81ed3e6307b972d043bfe222c2c62cb
+```
+
+The seed was copied into the app's private Application Support debug tree. The
+clone's imported BIN and default memory card were measured before launch. PID
+`16596` started with `--record-from-replay` and produced report `ctr-204914`.
+
+The app initialized UIKit framebuffer/renderbuffer 1, Apple Software Renderer
+GLES 3.0, GLSL ES 3.00, all four PSX shaders, both VRAM pipelines, the touch
+overlay and the CADisplayLink-backed lifecycle loop. Durable observations were:
+
+```text
+checkpoint 0 at frame 0
+checkpoint 1 at frame 300
+checkpoint 2 at frame 600
+checkpoint 3 at frame 900
+checkpoint 4 at frame 1200
+checkpoint 5 at frame 1500
+race driver active at frame 1711
+checkpoint 6 at frame 1800
+normal finish at frame 2000
+```
+
+Software-rendered gameplay varied from roughly 5 to 11 FPS after the faster
+presentation prefix. This kept the run visibly slow but did not change the
+replayed timing packets. Final metadata was:
+
+```text
+platform=ios
+identity_checksum=0x6ea1d76d
+executable_fingerprint=e9d9b4240372487c
+frame_count=2000
+checkpoint_count=7
+input.ctrreplay e6307c77e19b600c5658f0a1e73804e105ef22b0eb67787ba12438d13cb76d1f
+state.ctrstates 0bb86d689edcb23638bc4c853d68c971449247d4ddd0c22be44dd4344442de8e
+```
+
+The iOS process remained idle under UIKit after `LOG CLOSED`; this is expected
+for the application-owned lifecycle and was terminated explicitly before the
+next launch.
+
+### Full typed comparison
+
+The current macOS and iOS report files have different raw hashes because their
+headers carry truthful platform/executable identities and native checkpoint
+metadata. `tools/compare-replay-state-components.mjs` compared their semantic
+records and required every component:
+
+```text
+timing:     equal=2000 mismatched=0
+rng:        equal=2000 mismatched=0
+drivers:    equal=2000 mismatched=0
+world:      equal=2000 mismatched=0
+allocation: equal=2000 mismatched=0
+root:       equal=2000 mismatched=0
+pads:       equal=2000 mismatched=0
+vsync:      equal=2000 mismatched=0
+```
+
+Two separate comparisons required pad and VSync equality between the common
+seed and each output. Both also matched all 2,000 frames. Thus the live GLES
+platform preserved current game state and deterministic retail timing for this
+bounded scenario.
+
+### Frame 1,813 representative trace and framebuffer
+
+Each native report was copied to a disposable trace directory. Exact producer
+playback restored checkpoint 5 at frame 1,500 and traced frame 1,813. Both
+macOS desktop GL and iOS GLES emitted:
+
+```text
+render-trace frame=1813 flush=0 hash=4971e1a64577397f
+vertices=5958 splits=346 formats=4:319,8:27,16:0,rgba:0
+render-trace end frame=1813 hash=15c8c5410da67002 flushes=1
+```
+
+`diff -u` across the complete trace lines was empty. Both playbacks reached
+frame 2,000 without canonical divergence.
+
+The iOS recorder framebuffer captured near that point was 2064 by 2752 pixels,
+SHA-256
+`c7ec9117fa5dd550aab4e9d6def3270e4f1b199870d4df40fa4a2b09a469a24e`.
+It showed Arcade Crash Cove selection/preview with coherent kart textures,
+colors, exhaust transparency, track/checker preview, readable menu text and the
+full touch overlay.
+
+The macOS full-desktop screenshot attempt was rejected because the earlier
+diagnostic crash reporter obscured the SDL window. The exact desktop render
+trace and playback completion remained valid; the obscured image was not used.
+
+### Frame 1,802 and the historical feedback distinction
+
+The documentation's trace example uses frame 1,802. Exact checkpoint-6
+playbacks were therefore repeated on both renderers. Each emitted:
+
+```text
+render-trace frame=1802 flush=0 hash=85435f06301f654a
+vertices=6000 splits=338 formats=4:313,8:25,16:0,rgba:0
+render-trace end frame=1802 hash=63f8c781f85e4358 flushes=1
+```
+
+Again, direct trace diff was empty and both playbacks finished normally.
+
+Historical documentation also contains a pre-fix frame-1,802 trace with nine
+flushes and 25 16-bit splits. That was a defect, not a desired framebuffer-
+feedback oracle: an LP64 guest reference was misread as an inline texture word,
+creating false 16-bit feedback pages and striped Crash Cove textures. The
+accepted post-fix i686/ARM64 oracle required one flush and zero 16-bit splits.
+The current result agrees across desktop GL and GLES and must not be described
+as missing expected 16-bit coverage.
+
+### Evidence preservation, cleanup and M7 boundary
+
+Local-only playback logs were preserved under
+`/private/tmp/ctrpad-gles-gl-evidence.6JjCbs`. Their relevant hashes:
+
+```text
+macOS frame-1813 log 6bbf0ea73ad73f79d9f44848ccd67d8906137ee94183f18fa648c154451aee6e
+iOS frame-1813 log   acc9044f5da8c3abf8f03d4a89b5d940e5ce461c57d6798cc96590b65216195f
+macOS frame-1802 log a758735d961141b7318ccedffaed64b849badd5ce1c90f2fad56af02d495de81
+iOS frame-1802 log   101314bd28fcf5e1b4a956e8e9e1ab707c31d6e8bb9f55c2e85dcd0794e7045f
+```
+
+After the final iOS playback, clone storage was unchanged:
+
+```text
+BIN   inode 111313696, 605698800 bytes,
+      f780bf2331476aabfc00772fa758b12dd95ebfbc907968132cbd3cdd4e2c07c0
+save  inode 111309627, 6016 bytes,
+      6a01b0f5562ed7a279d8f8e51e3b1874ac39a6120f55db4fe3873288950619a3
+```
+
+The clone app was terminated and Simulator shut down without deletion. The
+protected source-validation PID `93637` remained running. The specific macOS
+crash reporter created by the rejected bypass diagnostic was dismissed. Current
+macOS `ctest --preset macos-arm64 --output-on-failure` passed all 21 tests in
+0.47 seconds. Git remained clean until documentation edits began.
+
+This work accepts a 2,000-frame live-GLES equivalence slice and two
+representative command traces. It does not make M7 complete. Remaining M7
+work is live Cocoa GLES/ANGLE or an equivalent reproducible ES host, the full
+24,232-frame live-GLES golden scenario, additional targeted pixel edge cases
+where needed, and physical-iPad wall cadence/energy. M8 through M11 retain
+their physical signing, controller, Files/save and natural multi-touch gates.
+The overall goal remains active.
+
+The preceding published timer was 194,894 seconds. The pre-publication reading
+was 196,487 seconds: 2 days, 6 hours, 34 minutes, 47 seconds cumulative, adding
+1,593 seconds (26 minutes, 33 seconds). It includes paused/resumed task lifetime
+and is not a build benchmark or person-hour estimate.

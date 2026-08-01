@@ -1554,3 +1554,51 @@ The preceding published reading was 191,189 goal seconds. The pre-publication
 reading was 194,894 seconds: 2 days, 6 hours, 8 minutes, 14 seconds cumulative,
 adding 3,705 seconds (1 hour, 1 minute, 45 seconds). The timer is cumulative
 goal time, including pauses, not a benchmark or labor estimate.
+
+### 2026-07-31 — Live GLES and desktop-GL equivalence slice
+
+- Re-audited the active objective, fully reread the 511-line viability report,
+  inspected the clean synchronized branch, and selected M7 renderer
+  equivalence as the strongest remaining locally closable gate. Physical
+  signing/device and human multi-touch acceptance remain unavailable.
+- Rejected direct playback of mid-session iOS report `ctr-201917` in macOS.
+  The truthful `ios`/`macos` identity mismatch was bypassed only as a
+  diagnostic; the identity-incompatible checkpoint restored raw state and the
+  process failed with a macOS crash report. Existing replay documentation says
+  this bypass cannot make checkpoints portable, so it was not used as parity
+  evidence.
+- Made a local-only exact 2,000-frame version-4 prefix of accepted seed report
+  `ctr-215303`, hash `6a26357c...f49`. The strict comparator proved all eight
+  components equal to the source prefix. Fresh current binaries consumed only
+  its pad/VSync automation through `--record-from-replay` and generated native
+  platform state independently.
+- Exact implementation `e6ba535a9c73` macOS report `ctr-204509` and iOS GLES
+  report `ctr-204914` each finalized 2,000 frames and seven checkpoints. Their
+  full comparison found zero mismatches in timing, RNG, drivers, world,
+  allocation, root, pads and VSync.
+- Exact producer playbacks traced frames 1,802 and 1,813. Both renderers emitted
+  identical packed vertices and draw splits. Aggregate hashes were
+  `63f8c781f85e4358` and `15c8c5410da67002`; both playbacks reached the normal
+  2,000-frame finish without canonical divergence.
+- The historical 25 false 16-bit batches at frame 1,802 were the already-fixed
+  LP64 mosaic classification defect. Current macOS and GLES both correctly
+  emitted zero 16-bit feedback batches; the old rejected trace was not
+  repurposed as desired coverage.
+- A local-only 2064-by-2752 iOS framebuffer, hash `c7ec9117...24e`, visibly
+  showed coherent Arcade Crash Cove preview textures, kart colors, exhaust
+  transparency, legible UI and the full touch overlay. It remained outside
+  Git. Simulator throughput fell to roughly 3–11 FPS under Apple's software
+  renderer and is not claimed as device performance.
+- Clone BIN/save inodes `111313696`/`111309627`, sizes and hashes remained
+  unchanged. The clone was shut down, source-validation PID `93637` remained
+  running, the diagnostic crash reporter was dismissed, and 21/21 current
+  macOS CTests passed.
+- M7 now has a representative 2,000-frame live-GLES equivalence slice, but
+  remains in progress: live Cocoa GLES/ANGLE, the full 24,232-frame GLES run,
+  explicit remaining visual edge cases and physical-iPad cadence are open.
+  The overall goal remains active.
+
+The preceding published reading was 194,894 goal seconds. The pre-publication
+reading was 196,487 seconds: 2 days, 6 hours, 34 minutes, 47 seconds cumulative,
+adding 1,593 seconds (26 minutes, 33 seconds). The timer is cumulative goal
+time, including pauses, not a benchmark or labor estimate.
