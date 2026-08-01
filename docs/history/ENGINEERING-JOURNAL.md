@@ -13988,3 +13988,178 @@ The documentation-open reading was 258,100 seconds (2 days, 23 hours,
 41 minutes, 40 seconds), 2,216 seconds (36 minutes, 56 seconds) after the
 published exact-replay boundary. It is cumulative goal time, not a build
 benchmark or person-hour estimate. The overall goal remains active.
+
+## 2026-08-01 — Exact GitHub main merge and next-branch boundary
+
+The final staged scope was eight documentation files, 761 additions and two
+replacements. `git diff --cached --check` passed. Commit
+`f5140b7eb40945ed706502ade83dd7f2ed9048cd` added the three-day checkpoint and
+direct-decoder rejection report while updating README, Roadmap, Decisions,
+parity index, progress log, and this journal. The worktree was clean after
+commit.
+
+`package-source.sh` validated that exact commit in 18.44 seconds. It archived
+3,244 members, excluded retail media, runtime state, packages, provisioning
+profiles and key material, and produced
+`CTRPad-source-f5140b7eb409.tar.gz` at `dc9d5ad2...3406`. The SHA sidecar file's
+own hash was `f4da65fb...e249`. Both are ignored artifacts.
+
+`git push origin codex/arm64-apple` advanced the remote from `07bbc599b` to
+`f5140b7eb`. `git ls-remote` matched local HEAD exactly. An immediate
+`gh pr view` response still cached the previous PR head and unknown merge state,
+so no merge was attempted. Explicit branch and PR API polling converged on
+`f5140b7eb409`, `mergeable=true`, `mergeable_state=clean`, draft/open.
+
+The premerge audit fetched both refs and found original `main`
+`95417c723518`, intended head `f5140b7eb409`, 6,774 commits, 2,684 changed
+files, 2,620 source/non-documentation paths, zero retail/signing-sensitive
+paths, and a clean worktree. This large count is expected because the original
+repository had only three viability files and the PR preserves imported
+upstream source/history plus the Apple port.
+
+PR #1 was explicitly marked ready, then merged with `--merge` and
+`--match-head-commit f5140b7eb409...`; the branch was not deleted. GitHub
+returned merge commit `0758e7a804390ebd8a7cc74ba4cdcaf864270717` at
+2026-08-01T19:58:15Z. A fresh `git fetch`, GitHub branch API, and
+`origin/main` agreed on that object. `git merge-base --is-ancestor` proved the
+reviewed head included. Direct tree queries proved `package-ios.sh`,
+`package-source.sh`, `docs/INSTALL-IOS.md`, the renderer, checkpoint, and
+rejection report present on remote main. GitHub reports `main` as the private
+repository's default branch.
+
+New branch `codex/simulator-performance-next` was created only after those
+checks, directly at the main merge commit, and pushed with upstream tracking.
+Its clean `package-source.sh` run took 22.06 seconds, again archived 3,244
+members with prohibited material excluded, and produced
+`CTRPad-source-0758e7a80439.tar.gz` at `873de12d...120e`; its sidecar contains
+that exact digest. This proves the merged identity's source-publication path,
+not device installation.
+
+The publication-close reading was 258,793 seconds (2 days, 23 hours,
+53 minutes, 13 seconds), 693 seconds (11 minutes, 33 seconds) after the
+rejection/history boundary. The overall goal remains active; optimization now
+continues only on the new branch.
+
+## 2026-08-01 — Holistic release re-baseline
+
+The user explicitly asked to step back from local rendering symptoms and
+identify what the project is actually trying to solve, why it still feels
+broken, which technical problems remain and what the simplest completion path
+is. Renderer experimentation stopped immediately. Source had already been
+restored from the rejected `texelFetch` probe; `git status --short` was empty at
+`32e82d8da1bd76e0330ce8d78f4d4ef9af6cf96a`. Both named CTRPad iPad Simulators
+were shutdown and no CTRPad or Simulator GUI process was running.
+
+The audit compared the goal contract with `docs/ROADMAP.md`, the three-day
+checkpoint, focused parity reports and the installation guide. It separated
+five layers: retail/gameplay correctness, Apple platform integration, bounded
+graphical correctness, Simulator throughput and physical release acceptance.
+The first three have strong focused evidence. Apple Software Renderer remains
+roughly five times over the retail frame budget, but that observation cannot
+establish physical-iPad performance. The final layer has no direct evidence:
+`security find-identity -v -p codesigning` again returned zero valid identities,
+the documented provisioning-profile locations contained no profiles, and
+`xcrun devicectl list devices` returned `No devices found.`
+
+This exposed a planning contradiction. The historical renderer checkpoint
+kept physical work closed until Simulator cadence was usable, while
+`docs/INSTALL-IOS.md` correctly states that Simulator evidence cannot replace
+physical cadence, touch feel, full-race or signing acceptance. The roadmap now
+assigns coherent bounded rendering, diagnostics and input/lifecycle correctness
+to one Simulator, but assigns sustained cadence, thermals, signed update,
+Files/audio/persistence and human drift-boost ergonomics to the target iPad.
+No existing correctness criterion was waived.
+
+`docs/history/RELEASE-REBASELINE.md` records the evidence map, genuine defects
+already fixed, minimum release contract, non-gating optional coverage,
+dependency-ordered next actions and physical-performance contingency.
+`docs/DECISIONS.md` retains the ownership change as a durable decision, and
+`docs/ROADMAP.md` now identifies M8-M11 physical-device/release acceptance as
+the current milestone. The old renderer checkpoint remains historical and is
+explicitly superseded instead of silently rewritten.
+
+The re-baseline documentation reading was 259,866 seconds (3 days, 11 minutes,
+6 seconds), 1,073 seconds (17 minutes, 53 seconds) after the publication-close
+boundary. The overall goal remains active. The next exact action is to commit
+this documentation so the accepted source can be rebuilt with a clean embedded
+identity before replacing the stale exploratory Simulator installation.
+
+## 2026-08-01 — Clean release re-baseline execution
+
+The five intended documentation files were audited for balanced fences,
+existing local Markdown references, trailing whitespace and `git diff --check`,
+then explicitly staged. Commit `d5772375fabc361c58fbee6d35c43d5fcbdf4cd0`
+(`Rebaseline release acceptance on physical iPad`) added 241 lines and removed
+nine across Roadmap, Decisions, both history ledgers and the new re-baseline.
+It pushed exactly to `origin/codex/simulator-performance-next`.
+
+The GitHub connector again returned 404 for the private repository. The
+authenticated `gh` fallback was repository-qualified and created draft PR #2.
+The first post-create verification incorrectly used unsupported `gh pr view
+--head`; it failed after the PR existed. `gh pr view 2 --repo
+chrissotraidis/ctrpad` then verified OPEN/draft, head `d5772375fabc`, base
+`main`, CLEAN and MERGEABLE. The failure was retained in the focused report.
+
+Both CTRPad devices and Simulator GUI were closed before fresh configuration.
+macOS ARM64 configured with clean SDL/source suffix `gd5772375f`, compiled at
+nice 15 / one job with the established 32 warnings and reported exact version
+`d5772375fabc`. All 22 CTests passed in 3.08 seconds. The verbose renderer test
+passed in 1.33 seconds with logical `851169f2644a1675`, blend
+`0c0d08324ae06c35` and desktop presentation `a7798c5a6ddee965`.
+
+The clean iPad Simulator build repeated the 32 warnings. Its raw thin ARM64
+executable is `1699c36d...7091`; an isolated ad-hoc copy under
+`/tmp/ctrpad-d5772375f.O2ZNZX` strictly verified at `c6d40aaf...187f`. Only the
+disposable `CTRPad Import Negatives` device booted. Before update installation,
+retail inode/size/hash were `111450682` / 605,698,800 /
+`f780bf23...7c0`; save identity was `111309627` / 6,016 /
+`6a01b0f5...19a3`. The 18.16-second update remapped the data-container UUID but
+preserved every object value, and the installed executable embedded
+`d5772375fabc`.
+
+The actual 1032x1376 GLES surface reported Apple Software Renderer, framebuffer
+fetch enabled and passed logical/blend/oracle hashes plus presentation
+`172d49a34571b64c` with 12 fallback / 5 active draws. The immediate self-test
+exit printed one unbalanced UIKit appearance-transition warning and the
+Simulator's duplicate accessibility-loader class warning after the success
+line. The process had exited, but the console PTY stayed attached; an empty
+poll showed no further output and Control-C closed only the attachment. Normal
+product launch was separate.
+
+Computer Use observed copyright, animated title, Adventure/main mode menus,
+Crash portraits/kart, Crash Cove list/preview/minimap, No Ghost, track fly-in,
+grid and live race with coherent track/kart/exhaust/HUD/minimap/overlay.
+Accessible touch Cross entered the menu. Keyboard `Z`, Down, `C` and `P`
+navigated to Time Trial and paused/resumed; race `C`/`D`/`E` and final touch Gas
+were consumed by the logged retail poll. Home/foreground logged ordered audio
+suspend/reactivate transitions, retained the paused race, rotated to landscape
+and resumed. The last 850x708 screenshot is `c70f0c96...50f2` in task-owned
+temporary storage.
+
+Exact-ID termination succeeded and launchd contained no app record. The current
+82-line / 9,369-byte log is `467de09b...555`; its four archives are
+`68eec948...789f`, `a4914173...13be`, `25a66dd9...e2f` and
+`a1d98d65...107b`. Exact `[ERROR]`, `[FATAL]`, `[CTR AssetRef]` and visibility-
+fault scans returned no row. Retail/save identities remained unchanged.
+Computer Use's first Command-Q status remained stale and displayed an unrelated
+shutdown-device window on refresh; the second app list still cached
+`isRunning=true`, but direct exact GUI-process inspection was empty. Both
+CTRPad devices were confirmed shutdown.
+
+With every Simulator closed, the clean iPhoneOS build completed at nice 15 /
+one job with the same 32 warnings. The thin ARM64 device executable embeds
+`d5772375fabc` at `6f1aaefa...095b`. `package-ios.sh` produced the retail-free
+unsigned IPA `CTRPad-0.1.0-1-d5772375f-unsigned.ipa` at
+`41e00a5d...13ed`; ZIP validation and seven-member inventory passed.
+`package-source.sh` accepted the clean source and produced a 3,245-member exact
+archive `CTRPad-source-d5772375fabc.tar.gz` at `117dd291...352d`, excluding
+retail/runtime/package/profile/key material.
+
+The clean-smoke close reading was 261,192 seconds (3 days, 33 minutes, 12
+seconds), 1,326 seconds (22 minutes, 6 seconds) after the re-baseline
+documentation boundary. The entire command, hash, visual, preservation,
+warning and limitation boundary is in
+`docs/parity/2026-08-01-release-rebaseline-clean-smoke.md`. The overall goal
+remains active; this machine still has zero valid Apple signing identities,
+provisioning profiles and connected devices, so the signed physical campaign
+is not inferred from the successful unsigned handoff.

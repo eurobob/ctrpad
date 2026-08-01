@@ -7,13 +7,14 @@ timing.
 
 **Roadmap status:** active
 
-**Current milestone:** M10 Simulator stability and touch-control iteration;
-exact retail-consumer keyboard input and bounded two-track graphics/lifecycle
-are accepted; coherent framebuffer fetch is exact-oracle/live accepted, and
-same-state fetch batching is exact desktop/iOS/oracle/retail accepted, while
-unified-state batching and direct RGB5551 fragment decode are profile-rejected;
-Simulator cadence, broad visual churn and every physical-iPad M8/M9 gate remain
-open
+**Current milestone:** M8-M11 physical-device and release acceptance; exact
+retail-consumer input, bounded two-track Simulator graphics/lifecycle, coherent
+framebuffer fetch and same-state batching are accepted, while three later
+pixel-exact Simulator optimizations are profile-rejected. Simulator correctness
+and diagnostics remain gates, but Apple Software Renderer cadence is no longer
+used as a proxy for physical-iPad performance. User-owned signing, physical
+touch ergonomics, device cadence/lifecycle/persistence and final paired
+IPA/source publication remain open.
 
 **Last updated:** 2026-08-01
 
@@ -28,6 +29,9 @@ commands, evidence, failures, decisions, validation, and remaining limitations
 so the project can be reconstructed historically rather than only understood
 from its final state. `docs/history/THREE-DAY-CHECKPOINT.md` provides the
 readable end-to-end map through the 258,100-second checkpoint.
+`docs/history/RELEASE-REBASELINE.md` maps that implementation evidence to the
+minimum physical-device release contract and supersedes the earlier policy
+that required hardware-like Simulator cadence before device validation.
 
 ## Non-negotiable constraints
 
@@ -1471,8 +1475,10 @@ The next dependency-ordered work is:
    integer fragment decode, which preserved every oracle but regressed the
    identical 66-call / 119-split / 78-fetch / 56-merge state from 187.002 to
    198.412 ms;
-5. reopen physical-device work only after the Simulator route is usable,
-   visually complete and diagnosable.
+5. keep the Simulator route coherent, diagnosable and bounded-test clean, but
+   measure sustained cadence, frame pacing, thermals and touch feel on the
+   physical target iPad rather than treating Apple Software Renderer speed as
+   a device-performance prerequisite.
 
 Evidence and exact hashes are in
 `docs/parity/2026-08-01-simulator-renderer-profile.md` and
@@ -1484,3 +1490,20 @@ correct-but-slower follow-on designs and full restoration boundary are in
 pixel-exact but slower direct decoder, launch-argument correction, complete
 profile hashes, matched comparison, preservation checks, and restoration are
 in `docs/parity/2026-08-01-ios-direct-rgb5551-decode-rejection.md`.
+
+The physical-gate policy in this historical checkpoint is superseded by
+`docs/history/RELEASE-REBASELINE.md`: a clean accepted Simulator smoke remains
+required for correctness and diagnostics, while performance acceptance now
+belongs to the target iPad.
+
+Clean re-baseline checkpoint `d5772375fabc` now closes that Simulator smoke:
+22/22 macOS ARM64 tests and both desktop/actual-surface pixel oracles pass; a
+clean update install preserves retail/save inode and hash identity; Computer
+Use reaches a coherent live Crash Cove race with keyboard/touch consumption,
+pause, Home/foreground and landscape reflow; exact-ID termination leaves zero
+process; five logs have zero targeted faults; and thin ARM64 iPhoneOS plus
+matching unsigned IPA/GPL source packages are ready. The self-test exit emitted
+one UIKit appearance-transition console warning, retained as an open focused
+observation. Signing and every physical-iPad requirement remain open. Exact
+evidence is in
+`docs/parity/2026-08-01-release-rebaseline-clean-smoke.md`.

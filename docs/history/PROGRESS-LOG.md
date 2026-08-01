@@ -2830,3 +2830,78 @@ The rejection/history reading was 258,100 seconds: 2 days, 23 hours,
 the exact-replay boundary. The overall goal remains active: Simulator cadence,
 broader churn, physical-iPad execution, human touch ergonomics, user-owned
 signing, and final package/source pairing are still open.
+
+### 2026-08-01 — Merged the documented Apple port into GitHub main
+
+- Committed the eight-file, 761-addition/two-replacement historical checkpoint
+  as `f5140b7eb409`. No source, build product, retail file, save, IPA, profile,
+  certificate or keychain material was in the commit.
+- The exact commit passed the clean GPL source packager in 18.44 seconds:
+  3,244 members, prohibited material excluded, archive `dc9d5ad2...3406`.
+- Pushed `codex/arm64-apple`; local and remote branch IDs matched. GitHub's
+  first PR read was briefly stale at the old head, so merging paused. The API
+  then converged on `f5140b7eb409`, `mergeable=true`, `state=clean`.
+- Audited the intended large import relative to the original viability-only
+  `main`: 6,774 commits, 2,684 changed files, 2,620 source/non-document files,
+  and zero sensitive paths. Marked private PR #1 ready and merged with a normal
+  history-preserving merge commit.
+- Verified `origin/main`, the GitHub branch API and repository default branch
+  at `0758e7a804390ebd8a7cc74ba4cdcaf864270717`. The reviewed head is its
+  ancestor and all rebuild/install/history files exist in the merged tree.
+- Created and pushed `codex/simulator-performance-next` directly from that
+  merge before resuming optimization. The merged commit's own source package
+  passed in 22.06 seconds with 3,244 members and archive
+  `873de12d...120e`; prohibited material remained excluded.
+
+The publication-close reading was 258,793 seconds: 2 days, 23 hours,
+53 minutes, 13 seconds cumulative, 693 seconds (11 minutes, 33 seconds) after
+the rejection/history boundary. The overall goal remains active.
+
+### 2026-08-01 — Re-baselined the project around physical release evidence
+
+- Stopped speculative Simulator renderer tuning and mapped every major layer
+  to the actual signed-iPad definition of done.
+- Recorded that retail state/parity, shared Apple builds, focused GLES pixels,
+  import/save, lifecycle, touch/keyboard/controller composition and bounded
+  coherent graphics are implemented, while signed physical-device acceptance
+  remains unproved.
+- Corrected the acceptance model: Simulator remains responsible for build,
+  pixel, bounded visual, input, lifecycle and logging correctness; sustained
+  cadence, thermals and multi-touch feel now belong to the target iPad.
+- Defined the minimum physical release campaign and the contingency that a
+  larger renderer change is considered only if physical profiling reproduces
+  the Simulator bottleneck.
+- Re-audited the machine: both CTRPad Simulators were shut down, the worktree
+  began clean, and there were zero valid code-signing identities,
+  provisioning profiles or connected physical devices.
+
+The re-baseline documentation reading was 259,866 seconds: 3 days, 11 minutes,
+6 seconds cumulative, 1,073 seconds (17 minutes, 53 seconds) after the
+publication-close boundary. The overall goal remains active.
+
+### 2026-08-01 — Executed the clean re-baseline smoke and physical handoff build
+
+- Committed and pushed the five-file release re-baseline as `d5772375fabc` and
+  opened mergeable draft PR #2 against `main`.
+- With both Simulators and the GUI closed, rebuilt macOS ARM64, passed 22/22
+  tests, and repeated the established logical/blend/presentation pixel hashes.
+- Rebuilt the clean iPad Simulator app, passed the actual 1032x1376 GLES pixel
+  oracle, update-installed it on exactly one disposable device and preserved
+  the retail BIN/save inodes and hashes.
+- Computer Use navigated touch/keyboard through Time Trial to a live Crash Cove
+  race, paused, backgrounded/foregrounded, rotated to landscape, resumed and
+  consumed touch Gas with coherent track/kart/HUD/minimap/overlay graphics.
+- Exact-ID termination left no app process. The 82-line current log and four
+  archives have zero targeted asset, visibility, error or fatal markers; both
+  devices and Simulator GUI ended closed.
+- Rebuilt the clean thin ARM64 iPhoneOS product and produced retail-free
+  unsigned IPA `41e00a5d...13ed` plus matching 3,245-member GPL source archive
+  `117dd291...352d`.
+- Retained one self-test-exit UIKit appearance-transition console warning as an
+  open focused observation instead of treating the successful normal
+  Home/foreground route as proof that every exit path is warning-free.
+
+The clean-smoke close reading was 261,192 seconds: 3 days, 33 minutes, 12
+seconds cumulative, 1,326 seconds (22 minutes, 6 seconds) after the re-baseline
+documentation boundary. The overall goal remains active because real Apple
+signing and physical-iPad acceptance are still open.
