@@ -121,6 +121,8 @@ for required_file in \
     package-source.sh \
     tools/install-ios-simulator.sh \
     tools/ios-device-campaign.sh \
+    tools/test-ios-entitlement-binding.sh \
+    tools/verify-ios-entitlement-binding.sh \
     tools/verify-ios-signing-trust.sh; do
     grep -Fxq "${archive_root}/${required_file}" "$archive_list" || \
         fail "source archive is missing required file: $required_file"

@@ -53,6 +53,8 @@ adds a complete durable commit ledger.
 | Apple trust/preflight audit | 2026-08-01 18:26:33 | Active goal time reached 3 days, 3 hours, 3 minutes, 14 seconds after correcting untrusted-CMS acceptance and real-profile App ID prefix construction. |
 | Apple trust pre-commit repeat | 2026-08-01 18:31:32 | Active goal time reached 3 days, 3 hours, 8 minutes, 18 seconds; 22/22 tests and the Apple-positive/self-signed-negative trust probes passed again. |
 | Apple trust main publication | 2026-08-01 18:36:44 | PR #10 had merged the trust/history checkpoint into `main` as `8f3b2be37`; its 3,255-member final-main source archive passed at `34f600e6...6326a`, and active goal time reached 3 days, 3 hours, 13 minutes, 31 seconds. |
+| Entitlement-authorization audit | 2026-08-01 18:48:30 | Active goal time reached 3 days, 3 hours, 25 minutes, 19 seconds after replacing suffix-only App ID validation with exact profile/signature authorization and expanding the suite to 23 tests. |
+| Entitlement candidate repeat | 2026-08-01 18:51:23 | Active goal time reached 3 days, 3 hours, 28 minutes, 9 seconds after Boolean-type/final-wildcard hardening and a final 23/23 repeat. |
 
 ## Executive chronology
 
@@ -122,6 +124,7 @@ adds a complete durable commit ledger.
 | 18:04–18:06 | History merge and final-main source proof | PR #8 merged as `7087cc6e0`; local/remote heads aligned, the sole Simulator hash stayed exact, and an early asynchronous-package lookup was repeated unchanged after completion to accept the 3,253-member clean source archive. |
 | 18:11–18:31 | Apple trust and real-profile preflight | Reproduced untrusted CMS decoding, added Apple-root-pinned profile/app chain verification, corrected App ID prefix construction and app/profile certificate binding, rejected tampered/untrusted/ad-hoc inputs, retained deterministic unsigned packages and passed 22/22 tests; a final 18:31 repeat passed the Apple-positive and self-signed-negative probes, while the real signed/device positive remains open. |
 | 18:33–18:36 | Apple trust GitHub publication | Committed the exact 14-file checkpoint, verified its source archive, pushed the branch, recorded the private-repository connector 404, opened/audited PR #10 with authenticated CLI fallback, merged the exact head into `main`, then verified the 3,255-member final-main source archive and its exclusion scan. |
+| 18:40–18:51 | Signed-entitlement authorization | Audited Apple's install-time rules, found suffix-only App ID comparison, added exact prefix/team/keychain/debugger/minimal-entitlement binding shared by packaging and device preflight, passed two positive/seven negative fixtures plus two 23/23 CTest runs, and retained deterministic unsigned packaging; real signing/device execution remains open. |
 
 ## Complete durable commit ledger
 

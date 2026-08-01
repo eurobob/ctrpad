@@ -1375,6 +1375,21 @@ remain byte-identical at `3354bb3e...49ed`; and 22/22 regressions pass. A real
 Apple development profile and signed CTRPad positive remain open. Exact
 evidence is in `docs/parity/2026-08-01-ios-apple-trust-preflight.md`.
 
+A following completion audit found that physical preflight still compared only
+the suffix of the signature's `application-identifier` to the bundle ID. It
+could therefore overstate an externally signed IPA with the wrong App ID
+prefix or profile-disallowed keychain/debugger/service entitlements, even
+though iOS validates those surfaces at install or launch. The shared
+`verify-ios-entitlement-binding.sh` now requires the exact prefix/bundle/team,
+one profile-authorized default keychain group, matching optional
+`get-task-allow` and CTRPad's minimal entitlement allowlist. Manual packaging
+checks both requested and read-back entitlements; device preflight retains the
+binding manifest. Two exact/wildcard positives and seven mutations behave as
+required; the expanded macOS suite passes 23/23; deterministic unsigned IPA
+packaging remains intact. The real signed-profile/device positive is still
+open. Exact evidence is in
+`docs/parity/2026-08-01-ios-entitlement-authorization.md`.
+
 Current GitHub head `bbb17478c76d` was then reconfigured and rebuilt
 sequentially at nice 15 / one job with zero open Simulators and zero booted
 devices. The ordinary and ASan/UBSan thin ARM64 macOS binaries passed 22/22

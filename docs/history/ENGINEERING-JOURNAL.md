@@ -14586,3 +14586,47 @@ and the same forbidden-member scan returned zero. At 18:36:44, active goal time
 was 270,811 seconds (3 days, 3 hours, 13 minutes, 31 seconds). The locally
 actionable trust/history correction is published; external signing and physical
 iPad acceptance remain open.
+
+## 2026-08-01 — Closed suffix-only signed-entitlement authorization
+
+The next completion audit compared the physical campaign against Apple's
+install-time entitlement rules. It found a concrete false-positive at
+`tools/ios-device-campaign.sh`: the signature check removed everything through
+the first dot and compared only the remaining bundle-ID suffix. A valid
+signature and trusted profile could therefore pass offline with different App
+ID prefixes. The campaign also did not bind the signed keychain group,
+`get-task-allow`, or unexpected service entitlements back to the profile.
+Apple TN2415 explicitly calls out prefix and keychain mismatches as install or
+launch failures.
+
+New `tools/verify-ios-entitlement-binding.sh` validates a trusted decoded
+profile against trusted signed entitlements. It requires one canonical profile
+prefix and team, valid exact/final-component-wildcard App ID authorization,
+exact signed prefix plus bundle ID, the matching team, one default signed
+keychain group authorized by the profile, matching optional
+`get-task-allow`, and a three-or-four-key CTRPad allowlist. It writes no success
+manifest until all checks pass and refuses tracked output. The packager applies
+it before signing and after entitlement readback; device preflight records the
+result. Corresponding-source packaging requires the verifier and its test.
+
+The new temporary-plist self-test passed an exact profile and a wildcard App ID
+profile. Seven isolated mutations failed: wrong signed prefix, extra push
+entitlement, second keychain group, unauthorized keychain group, mismatched
+debugger entitlement, non-final wildcard and profile team mismatch. CMake now
+registers this as test 23 on macOS. After reconfiguration, 23/23 passed in 20.94
+seconds, including 15.99 seconds for the new test. Bash syntax and diff hygiene
+passed.
+
+Two unsigned packages remained byte-identical with seven members and passing
+sidecars at `7ebb1f4e...52a36`. At 18:48:30 CDT, exactly one Simulator remained
+booted, valid signing identities remained zero and CoreDevice still reported
+no devices. Active goal time was 271,519 seconds (3 days, 3 hours, 25 minutes,
+19 seconds). This closes another offline false positive without inferring the
+still-unrun Apple-profile or physical-iPad branch. Focused evidence is in
+`docs/parity/2026-08-01-ios-entitlement-authorization.md`.
+
+The final candidate additionally required actual Boolean plist types for
+`get-task-allow` and limited keychain wildcards to their final component. The
+focused test passed in 4.51 seconds and the complete suite repeated 23/23 in
+8.13 seconds. At 18:51:23 CDT, active goal time was 271,689 seconds (3 days, 3
+hours, 28 minutes, 9 seconds). No real-profile or device claim changed.

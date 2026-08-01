@@ -35,6 +35,10 @@ that are necessary to reproduce the conclusion.
       to an Apple Root CA from the system root keychain.
 - [ ] The app signing-certificate chain verified to an Apple Root CA.
 - [ ] The profile authorized the exact App ID, signing team and target UDID.
+- [ ] The signature's App ID prefix exactly matched the profile prefix; suffix-
+      only matching was not used.
+- [ ] The sole signed keychain group and optional `get-task-allow` were
+      profile-authorized, with no unexpected CTRPad entitlement.
 - [ ] The app leaf signing certificate matched one of the profile's authorized
       `DeveloperCertificates`.
 - [ ] The executable was thin ARM64 with platform `IOS` and the expected build

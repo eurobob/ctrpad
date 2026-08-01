@@ -733,3 +733,26 @@ remain byte-identical and 22/22 tests pass. No real Apple development profile,
 CTRPad signed IPA or physical device exists locally, so those positive gates
 remain open. Exact evidence is in
 `docs/parity/2026-08-01-ios-apple-trust-preflight.md`.
+
+## 2026-08-01 — Bind exact signed entitlements to the trusted profile
+
+**Decision:** after authenticating the profile and app independently, require
+the final CTRPad signature to carry the profile's exact App ID prefix plus
+bundle ID, matching team, exactly one default keychain group authorized by the
+profile, matching `get-task-allow` when present, and no CTRPad-unneeded service
+entitlements. Apply the same verifier before manual signing and to the final
+signature readback.
+
+**Why:** the physical campaign compared only the signed App ID suffix with the
+bundle ID. That did not prove prefix continuity, and it ignored two other
+install-time authorization surfaces. Apple's TN2415 explicitly identifies
+profile/signature App ID prefix and keychain entitlement mismatches as
+installation failures. Trusting both signatures does not prove that the
+profile authorizes the signed entitlement values.
+
+**Verification boundary:** two synthetic exact/wildcard positives pass and
+seven wrong-prefix/team/keychain/wildcard/debugger/extra-entitlement mutations
+fail without a success manifest. The normal macOS suite now passes 23/23 and
+two unsigned IPAs remain byte-identical. This is an offline authorization
+proof, not a real Apple-profile or iPad result. Exact evidence is in
+`docs/parity/2026-08-01-ios-entitlement-authorization.md`.
