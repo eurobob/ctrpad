@@ -310,6 +310,12 @@ if(BUILD_TESTING)
             "^\\[CTR Renderer\\] dialect self-test passed: api=gl context=3.3 profile=core shader=140 loader=native-gl wireframe=enabled debug-labels=enabled gpu-timer=enabled shutdown=preinit-safe"
         )
     endif()
+    if(APPLE AND NOT IOS AND NOT CTR_NATIVE_RENDERER_GLES)
+        add_test(NAME ctr_native_renderer_pixels COMMAND $<TARGET_FILE:ctr_native> --self-test-renderer-pixels)
+        set_tests_properties(ctr_native_renderer_pixels PROPERTIES PASS_REGULAR_EXPRESSION
+            "\\[CTR Renderer\\] pixel self-test passed: api=gl size=32x16 formats=4,8,16 clut=4,8 transparency=zero,stp blend=average mask=output-bit framebuffer=feedback vram=rgb5551 hash=[0-9a-f]+"
+        )
+    endif()
     add_test(NAME ctr_native_lifecycle COMMAND $<TARGET_FILE:ctr_native> --self-test-lifecycle)
     set_tests_properties(ctr_native_lifecycle PROPERTIES PASS_REGULAR_EXPRESSION
         "^\\[CTR Lifecycle\\] self-test passed: background=idempotent foreground=rebase quit=cooperative audio=paired low-memory=flush"

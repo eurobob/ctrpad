@@ -6,6 +6,7 @@
 int NativeRenderer_InitialiseRender(char *windowName, int width, int height, int fullscreen);
 int NativeRenderer_InitialisePSX(void);
 int NativeRenderer_RunDialectSelfTest(void);
+int NativeRenderer_RunPixelSelfTest(void);
 void NativeRenderer_Shutdown(void);
 void NativeRenderer_ResetDevice(void);
 void NativeRenderer_BeginScene(void);

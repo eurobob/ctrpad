@@ -5,6 +5,7 @@
  */
 
 #include <macros.h>
+#include <platform.h>
 #include "platform/native_renderer_types.h"
 #include <SDL3/SDL.h>
 
@@ -1965,17 +1966,65 @@ internal void NativeRenderer_SyncGpuVRAMToCPU(int x, int y, int w, int h)
 	GLint previousReadFramebuffer;
 	GLint previousPackRowLength;
 	GLint previousPackAlignment;
+	b32 readbackSucceeded = true;
 	glGetIntegerv(GL_READ_FRAMEBUFFER_BINDING, &previousReadFramebuffer);
 	glGetIntegerv(GL_PACK_ROW_LENGTH, &previousPackRowLength);
 	glGetIntegerv(GL_PACK_ALIGNMENT, &previousPackAlignment);
 
 	glBindFramebuffer(GL_READ_FRAMEBUFFER, s_glVramFramebuffer);
+
+#if defined(CTR_NATIVE_RENDERER_GLES)
+	// GLES 3 guarantees RGBA/UNSIGNED_BYTE readback, but not GL_RG readback
+	// from an RG8 attachment. Apple GLES rejects GL_RG with GL_INVALID_OPERATION.
+	// Read the two packed VRAM bytes through guaranteed RGBA and discard B/A.
+	const size_t readbackPixelCount = (size_t)readRect.w * readRect.h;
+	u8 *readback = (u8 *)SDL_malloc(readbackPixelCount * 4);
+	if (readback == NULL)
+	{
+		NATIVE_RENDERER_ERROR("GLES VRAM readback allocation failed for %dx%d\n", readRect.w, readRect.h);
+		readbackSucceeded = false;
+	}
+	else
+	{
+		glPixelStorei(GL_PACK_ROW_LENGTH, 0);
+		glPixelStorei(GL_PACK_ALIGNMENT, 1);
+		glReadPixels(readRect.x, readRect.y, readRect.w, readRect.h, GL_RGBA, GL_UNSIGNED_BYTE, readback);
+		const GLenum readbackError = glGetError();
+		if (readbackError != GL_NO_ERROR)
+		{
+			NATIVE_RENDERER_ERROR("GLES VRAM RGBA readback failed: error=0x%x rect=(%d,%d %dx%d)\n", readbackError, readRect.x,
+			                      readRect.y, readRect.w, readRect.h);
+			readbackSucceeded = false;
+		}
+		else
+		{
+			for (int row = 0; row < readRect.h; row++)
+			{
+				u16 *dst = s_vram.cpuPixels + (size_t)(readRect.y + row) * VRAM_WIDTH + readRect.x;
+				const u8 *src = readback + (size_t)row * readRect.w * 4;
+				for (int column = 0; column < readRect.w; column++)
+				{
+					dst[column] = (u16)(src[column * 4] | ((u16)src[column * 4 + 1] << 8));
+				}
+			}
+		}
+		SDL_free(readback);
+	}
+#else
 	glPixelStorei(GL_PACK_ROW_LENGTH, VRAM_WIDTH);
 	glPixelStorei(GL_PACK_ALIGNMENT, sizeof(u16));
 	glReadPixels(readRect.x, readRect.y, readRect.w, readRect.h, VRAM_FORMAT, GL_UNSIGNED_BYTE,
 	             s_vram.cpuPixels + (size_t)readRect.y * VRAM_WIDTH + readRect.x);
+	const GLenum readbackError = glGetError();
+	if (readbackError != GL_NO_ERROR)
+	{
+		NATIVE_RENDERER_ERROR("GL VRAM RG readback failed: error=0x%x rect=(%d,%d %dx%d)\n", readbackError, readRect.x, readRect.y,
+		                      readRect.w, readRect.h);
+		readbackSucceeded = false;
+	}
+#endif
 
-	for (int tileY = tileY0; tileY <= tileY1; tileY++)
+	for (int tileY = tileY0; readbackSucceeded && tileY <= tileY1; tileY++)
 	{
 		for (int tileX = tileX0; tileX <= tileX1; tileX++)
 		{
@@ -2531,5 +2580,263 @@ int NativeRenderer_RunDialectSelfTest(void)
 	       s_rendererDialect.wireframeEnabled ? "enabled" : "disabled",
 	       s_rendererDialect.debugLabelsEnabled ? "enabled" : "disabled",
 	       s_rendererDialect.gpuTimerEnabled ? "enabled" : "disabled");
+	return 0;
+}
+
+#define NATIVE_RENDERER_PIXEL_TEST_WIDTH  32
+#define NATIVE_RENDERER_PIXEL_TEST_HEIGHT 16
+
+internal void NativeRenderer_PixelTestCopyRows(u16 *dst, int rowWords, int rows, const u16 *row)
+{
+	for (int y = 0; y < rows; y++)
+	{
+		memcpy(dst + y * rowWords, row, (size_t)rowWords * sizeof(*row));
+	}
+}
+
+internal void NativeRenderer_PixelTestInitQuad(POLY_FT4 *quad, int x, int y, int width, int height, int format, int blend,
+	                                             int pageX, int pageY, int clutX, int clutY, int semiTrans)
+{
+	memset(quad, 0, sizeof(*quad));
+	setPolyFT4(quad);
+	setRGB0(quad, 128, 128, 128);
+	setXYWH(quad, x, y, width, height);
+	setUVWH(quad, 0, 0, width, height);
+	setTPage(quad, format, blend, pageX, pageY);
+	setClut(quad, clutX, clutY);
+	setSemiTrans(quad, semiTrans);
+}
+
+internal int NativeRenderer_PixelTestCaptureMainRGBA(u8 *dst)
+{
+	u8 bottomUp[NATIVE_RENDERER_PIXEL_TEST_WIDTH * NATIVE_RENDERER_PIXEL_TEST_HEIGHT * 4];
+	GLint previousFramebuffer = 0;
+	GLint previousPackAlignment = 0;
+
+	if ((s_mainRenderTarget.width != NATIVE_RENDERER_PIXEL_TEST_WIDTH) || (s_mainRenderTarget.height != NATIVE_RENDERER_PIXEL_TEST_HEIGHT))
+	{
+		return 0;
+	}
+
+	glGetIntegerv(GL_FRAMEBUFFER_BINDING, &previousFramebuffer);
+	glGetIntegerv(GL_PACK_ALIGNMENT, &previousPackAlignment);
+	glBindFramebuffer(GL_FRAMEBUFFER, s_mainRenderTarget.framebuffer);
+	glPixelStorei(GL_PACK_ALIGNMENT, 1);
+	glReadPixels(0, 0, NATIVE_RENDERER_PIXEL_TEST_WIDTH, NATIVE_RENDERER_PIXEL_TEST_HEIGHT, GL_RGBA, GL_UNSIGNED_BYTE, bottomUp);
+	glPixelStorei(GL_PACK_ALIGNMENT, previousPackAlignment);
+	glBindFramebuffer(GL_FRAMEBUFFER, (GLuint)previousFramebuffer);
+
+	for (int y = 0; y < NATIVE_RENDERER_PIXEL_TEST_HEIGHT; y++)
+	{
+		const int srcY = NATIVE_RENDERER_PIXEL_TEST_HEIGHT - y - 1;
+		memcpy(dst + y * NATIVE_RENDERER_PIXEL_TEST_WIDTH * 4, bottomUp + srcY * NATIVE_RENDERER_PIXEL_TEST_WIDTH * 4,
+		       NATIVE_RENDERER_PIXEL_TEST_WIDTH * 4);
+	}
+
+	return glGetError() == GL_NO_ERROR;
+}
+
+internal const u8 *NativeRenderer_PixelTestPixel(const u8 *rgba, int x, int y)
+{
+	return rgba + (y * NATIVE_RENDERER_PIXEL_TEST_WIDTH + x) * 4;
+}
+
+internal int NativeRenderer_PixelTestNear(u8 actual, int expected, int tolerance)
+{
+	const int delta = (int)actual - expected;
+	return (delta >= -tolerance) && (delta <= tolerance);
+}
+
+internal int NativeRenderer_PixelTestExpectRGBA(const u8 *rgba, int x, int y, int r, int g, int b, int a, int tolerance,
+	                                             const char *label)
+{
+	const u8 *pixel = NativeRenderer_PixelTestPixel(rgba, x, y);
+	if (NativeRenderer_PixelTestNear(pixel[0], r, tolerance) && NativeRenderer_PixelTestNear(pixel[1], g, tolerance) &&
+	    NativeRenderer_PixelTestNear(pixel[2], b, tolerance) && (pixel[3] == a))
+	{
+		return 1;
+	}
+
+	fprintf(stderr, "[CTR Renderer] pixel self-test mismatch: %s at (%d,%d) actual=%u,%u,%u,%u expected=%d,%d,%d,%d tolerance=%d\n",
+	        label, x, y, pixel[0], pixel[1], pixel[2], pixel[3], r, g, b, a, tolerance);
+	return 0;
+}
+
+internal int NativeRenderer_PixelTestExpectVRAM(const u16 *vram, int x, int y, u16 expected, const char *label)
+{
+	const u16 actual = vram[y * NATIVE_RENDERER_PIXEL_TEST_WIDTH + x];
+	if (actual == expected)
+	{
+		return 1;
+	}
+
+	fprintf(stderr, "[CTR Renderer] pixel self-test VRAM mismatch: %s at (%d,%d) actual=%04x expected=%04x\n", label, x, y, actual,
+	        expected);
+	return 0;
+}
+
+internal u64 NativeRenderer_PixelTestHash(const u8 *data, size_t size)
+{
+	u64 hash = UINT64_C(14695981039346656037);
+	for (size_t i = 0; i < size; i++)
+	{
+		hash ^= data[i];
+		hash *= UINT64_C(1099511628211);
+	}
+	return hash;
+}
+
+int NativeRenderer_RunPixelSelfTest(void)
+{
+	const u16 transparent = 0x0000;
+	const u16 red = 0x001f;
+	const u16 greenStp = 0x83e0;
+	const u16 blue = 0x7c00;
+	const u16 whiteStp = 0xffff;
+	const u16 texture4Row[1] = {0x3210};
+	const u16 texture8Row[2] = {0x0201, 0x0300};
+	const u16 texture16Row[4] = {red, greenStp, transparent, whiteStp};
+	u16 texture4[4];
+	u16 texture8[8];
+	u16 texture16[16];
+	u16 clut4[16];
+	u16 clut8[256];
+	u16 packed[NATIVE_RENDERER_PIXEL_TEST_WIDTH * NATIVE_RENDERER_PIXEL_TEST_HEIGHT];
+	u8 rgba[NATIVE_RENDERER_PIXEL_TEST_WIDTH * NATIVE_RENDERER_PIXEL_TEST_HEIGHT * 4];
+	POLY_FT4 quad4;
+	POLY_FT4 quad4Semi;
+	POLY_FT4 quad8;
+	POLY_FT4 quad16;
+	POLY_FT4 feedback;
+	DR_STP mask;
+	TILE maskTile;
+	int passed = 1;
+	u64 hash;
+
+	memset(rgba, 0, sizeof(rgba));
+	memset(clut4, 0, sizeof(clut4));
+	memset(clut8, 0, sizeof(clut8));
+	clut4[1] = red;
+	clut4[2] = greenStp;
+	clut4[3] = blue;
+	clut8[1] = red;
+	clut8[2] = greenStp;
+	clut8[3] = blue;
+	NativeRenderer_PixelTestCopyRows(texture4, 1, 4, texture4Row);
+	NativeRenderer_PixelTestCopyRows(texture8, 2, 4, texture8Row);
+	NativeRenderer_PixelTestCopyRows(texture16, 4, 4, texture16Row);
+
+	Platform_Init("CTR Renderer Pixel Self-Test", NATIVE_RENDERER_PIXEL_TEST_WIDTH, NATIVE_RENDERER_PIXEL_TEST_HEIGHT);
+	if (!Platform_IsInitialized())
+	{
+		fprintf(stderr, "[CTR Renderer] pixel self-test failed: platform initialization\n");
+		return 1;
+	}
+
+	memset(&activeDispEnv, 0, sizeof(activeDispEnv));
+	memset(&activeDrawEnv, 0, sizeof(activeDrawEnv));
+	SetDefDispEnv(&activeDispEnv, 0, 0, NATIVE_RENDERER_PIXEL_TEST_WIDTH, NATIVE_RENDERER_PIXEL_TEST_HEIGHT);
+	SetDefDrawEnv(&activeDrawEnv, 0, 0, NATIVE_RENDERER_PIXEL_TEST_WIDTH, NATIVE_RENDERER_PIXEL_TEST_HEIGHT);
+	activeDrawEnv.dfe = 1;
+	activeDrawEnv.dtd = 0;
+	activeDrawEnv.isbg = 1;
+	activeDrawEnv.r0 = 0;
+	activeDrawEnv.g0 = 0;
+	activeDrawEnv.b0 = 248;
+	ClearSplits();
+
+	NativeRenderer_CopyVRAM(texture4, 0, 0, 1, 4, 256, 0);
+	NativeRenderer_CopyVRAM(clut4, 0, 0, 16, 1, 0, 480);
+	NativeRenderer_CopyVRAM(texture8, 0, 0, 2, 4, 320, 0);
+	NativeRenderer_CopyVRAM(clut8, 0, 0, 256, 1, 256, 480);
+	NativeRenderer_CopyVRAM(texture16, 0, 0, 4, 4, 512, 0);
+
+	if (!Platform_BeginScene())
+	{
+		fprintf(stderr, "[CTR Renderer] pixel self-test failed: scene initialization\n");
+		Platform_Shutdown();
+		return 1;
+	}
+
+	NativeRenderer_PixelTestInitQuad(&quad4, 0, 0, 4, 4, 0, 0, 256, 0, 0, 480, 0);
+	NativeRenderer_PixelTestInitQuad(&quad4Semi, 4, 0, 4, 4, 0, 0, 256, 0, 0, 480, 1);
+	NativeRenderer_PixelTestInitQuad(&quad8, 8, 0, 4, 4, 1, 0, 320, 0, 256, 480, 0);
+	NativeRenderer_PixelTestInitQuad(&quad16, 12, 0, 4, 4, 2, 0, 512, 0, 0, 0, 0);
+	ParsePrimitivesLinkedList((u32 *)&quad4, 1);
+	ParsePrimitivesLinkedList((u32 *)&quad4Semi, 1);
+	ParsePrimitivesLinkedList((u32 *)&quad8, 1);
+	ParsePrimitivesLinkedList((u32 *)&quad16, 1);
+
+	memset(&mask, 0, sizeof(mask));
+	setDrawStp(&mask, 1);
+	ParsePrimitivesLinkedList((u32 *)&mask, 1);
+	memset(&maskTile, 0, sizeof(maskTile));
+	setTile(&maskTile);
+	setRGB0(&maskTile, 255, 0, 0);
+	setXY0(&maskTile, 16, 0);
+	setWH(&maskTile, 4, 4);
+	ParsePrimitivesLinkedList((u32 *)&maskTile, 1);
+	DrawAllSplits();
+
+	memset(&mask, 0, sizeof(mask));
+	setDrawStp(&mask, 0);
+	ParsePrimitivesLinkedList((u32 *)&mask, 1);
+	NativeRenderer_PixelTestInitQuad(&feedback, 24, 0, 4, 4, 2, 0, 0, 0, 0, 0, 0);
+	ParsePrimitivesLinkedList((u32 *)&feedback, 1);
+	DrawAllSplits();
+
+	if (!NativeRenderer_PixelTestCaptureMainRGBA(rgba))
+	{
+		fprintf(stderr, "[CTR Renderer] pixel self-test failed: RGBA readback\n");
+		passed = 0;
+	}
+
+	passed &= NativeRenderer_PixelTestExpectRGBA(rgba, 0, 1, 0, 0, 248, 0, 2, "4-bit transparent index");
+	passed &= NativeRenderer_PixelTestExpectRGBA(rgba, 1, 1, 248, 0, 0, 0, 2, "4-bit CLUT red");
+	passed &= NativeRenderer_PixelTestExpectRGBA(rgba, 2, 1, 0, 248, 0, 255, 2, "4-bit CLUT STP green");
+	passed &= NativeRenderer_PixelTestExpectRGBA(rgba, 3, 1, 0, 0, 248, 0, 2, "4-bit CLUT blue");
+	passed &= NativeRenderer_PixelTestExpectRGBA(rgba, 4, 1, 0, 0, 248, 0, 2, "semi-transparent zero discard");
+	passed &= NativeRenderer_PixelTestExpectRGBA(rgba, 5, 1, 248, 0, 0, 0, 2, "semi-transparent non-STP opaque pass");
+	passed &= NativeRenderer_PixelTestExpectRGBA(rgba, 6, 1, 0, 124, 124, 255, 4, "semi-transparent STP average pass");
+	passed &= NativeRenderer_PixelTestExpectRGBA(rgba, 8, 1, 248, 0, 0, 0, 2, "8-bit CLUT red");
+	passed &= NativeRenderer_PixelTestExpectRGBA(rgba, 9, 1, 0, 248, 0, 255, 2, "8-bit CLUT STP green");
+	passed &= NativeRenderer_PixelTestExpectRGBA(rgba, 10, 1, 0, 0, 248, 0, 2, "8-bit transparent index");
+	passed &= NativeRenderer_PixelTestExpectRGBA(rgba, 11, 1, 0, 0, 248, 0, 2, "8-bit CLUT blue");
+	passed &= NativeRenderer_PixelTestExpectRGBA(rgba, 12, 1, 248, 0, 0, 0, 2, "16-bit direct red");
+	passed &= NativeRenderer_PixelTestExpectRGBA(rgba, 13, 1, 0, 248, 0, 255, 2, "16-bit direct STP green");
+	passed &= NativeRenderer_PixelTestExpectRGBA(rgba, 14, 1, 0, 0, 248, 0, 2, "16-bit transparent zero");
+	passed &= NativeRenderer_PixelTestExpectRGBA(rgba, 15, 1, 248, 248, 248, 255, 2, "16-bit direct STP white");
+	passed &= NativeRenderer_PixelTestExpectRGBA(rgba, 16, 1, 248, 0, 0, 255, 2, "forced output mask bit");
+	passed &= NativeRenderer_PixelTestExpectRGBA(rgba, 24, 1, 0, 0, 248, 0, 2, "framebuffer feedback blue");
+	passed &= NativeRenderer_PixelTestExpectRGBA(rgba, 25, 1, 248, 0, 0, 0, 2, "framebuffer feedback red");
+	passed &= NativeRenderer_PixelTestExpectRGBA(rgba, 26, 1, 0, 248, 0, 255, 2, "framebuffer feedback STP green");
+	passed &= NativeRenderer_PixelTestExpectRGBA(rgba, 27, 1, 0, 0, 248, 0, 2, "framebuffer feedback blue copy");
+
+	NativeRenderer_StoreFrameBuffer(0, 0, NATIVE_RENDERER_PIXEL_TEST_WIDTH, NATIVE_RENDERER_PIXEL_TEST_HEIGHT);
+	NativeRenderer_ReadVRAM(packed, 0, 0, NATIVE_RENDERER_PIXEL_TEST_WIDTH, NATIVE_RENDERER_PIXEL_TEST_HEIGHT);
+	passed &= NativeRenderer_PixelTestExpectVRAM(packed, 0, 1, blue, "transparent index preserves background");
+	passed &= NativeRenderer_PixelTestExpectVRAM(packed, 1, 1, red, "red mask clear");
+	passed &= NativeRenderer_PixelTestExpectVRAM(packed, 2, 1, greenStp, "sampled STP mask set");
+	passed &= NativeRenderer_PixelTestExpectVRAM(packed, 16, 1, (u16)(0x8000 | red), "forced mask set");
+	passed &= NativeRenderer_PixelTestExpectVRAM(packed, 24, 1, blue, "feedback packed blue");
+	passed &= NativeRenderer_PixelTestExpectVRAM(packed, 25, 1, red, "feedback packed red");
+	passed &= NativeRenderer_PixelTestExpectVRAM(packed, 26, 1, greenStp, "feedback packed STP green");
+
+	hash = NativeRenderer_PixelTestHash(rgba, sizeof(rgba));
+	Platform_EndScene();
+	Platform_LogFlush();
+	Platform_Shutdown();
+
+	if (!passed)
+	{
+		fprintf(stderr, "[CTR Renderer] pixel self-test failed: api=%s hash=%016llx\n", s_rendererDialect.apiName,
+		        (unsigned long long)hash);
+		return 1;
+	}
+
+	printf("[CTR Renderer] pixel self-test passed: api=%s size=32x16 formats=4,8,16 clut=4,8 transparency=zero,stp blend=average "
+	       "mask=output-bit framebuffer=feedback vram=rgb5551 hash=%016llx\n",
+	       s_rendererDialect.apiName, (unsigned long long)hash);
+	fflush(stdout);
 	return 0;
 }

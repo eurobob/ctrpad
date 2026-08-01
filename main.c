@@ -217,6 +217,11 @@ static int NativeArg_IsRendererDialectSelfTest(const char *arg)
 	return (arg != NULL) && (strcmp(arg, "--self-test-renderer-dialect") == 0);
 }
 
+static int NativeArg_IsRendererPixelSelfTest(const char *arg)
+{
+	return (arg != NULL) && (strcmp(arg, "--self-test-renderer-pixels") == 0);
+}
+
 static int NativeArg_IsLifecycleSelfTest(const char *arg)
 {
 	return (arg != NULL) && (strcmp(arg, "--self-test-lifecycle") == 0);
@@ -507,6 +512,7 @@ int main(int argc, char *argv[])
 	s32 scrapbookSTRProbeFrames = 0;
 	s32 scrapbookSTRPresentProbeFrames = 0;
 	const char *scrapbookSTRPresentProbePath = NULL;
+	int rendererPixelSelfTest = 0;
 
 	for (int argIndex = 1; argIndex < argc; argIndex++)
 	{
@@ -566,6 +572,15 @@ int main(int argc, char *argv[])
 		if (NativeArg_IsRendererDialectSelfTest(argv[argIndex]))
 		{
 			return NativeRenderer_RunDialectSelfTest();
+		}
+		if (NativeArg_IsRendererPixelSelfTest(argv[argIndex]))
+		{
+			if (rendererPixelSelfTest != 0)
+			{
+				fprintf(stderr, "[CTR Renderer] select --self-test-renderer-pixels only once\n");
+				return 1;
+			}
+			rendererPixelSelfTest = 1;
 		}
 		if (NativeArg_IsLifecycleSelfTest(argv[argIndex]))
 		{
@@ -638,6 +653,10 @@ int main(int argc, char *argv[])
 	{
 		fprintf(stderr, "[CTR Native] Failed to initialize storage paths.\n");
 		return NativeConsole_Return(1);
+	}
+	if (rendererPixelSelfTest != 0)
+	{
+		return NativeConsole_Return((u32)NativeRenderer_RunPixelSelfTest());
 	}
 
 #if defined(CTR_INTERNAL)
