@@ -374,7 +374,7 @@ if(BUILD_TESTING)
     if(APPLE AND NOT IOS AND NOT CTR_NATIVE_RENDERER_GLES)
         add_test(NAME ctr_native_renderer_pixels COMMAND $<TARGET_FILE:ctr_native> --self-test-renderer-pixels)
         set_tests_properties(ctr_native_renderer_pixels PROPERTIES PASS_REGULAR_EXPRESSION
-            "\\[CTR Renderer\\] pixel self-test passed: api=gl size=32x16 formats=4,8,16 clut=4,8 transparency=zero,stp blend=average,add,subtract,quarter bilinear=mixed-stp mask=output-bit framebuffer=feedback vram=rgb5551 hash=[0-9a-f]+ blend-hash=[0-9a-f]+ blend-oracle=two-pass oracle-hash=[0-9a-f]+ framebuffer-fetch=two-pass present=resolve\\+blit@[0-9]+x[0-9]+ present-hash=[0-9a-f]+"
+            "\\[CTR Renderer\\] pixel self-test passed: api=gl size=32x16 formats=4,8,16 clut=4,8 transparency=zero,stp blend=average,add,subtract,quarter bilinear=mixed-stp ordered-overlap=match fallback-draws=12 active-draws=12 mask=output-bit framebuffer=feedback vram=rgb5551 hash=[0-9a-f]+ blend-hash=[0-9a-f]+ blend-oracle=two-pass oracle-hash=[0-9a-f]+ framebuffer-fetch=two-pass present=resolve\\+blit@[0-9]+x[0-9]+ present-hash=[0-9a-f]+"
         )
     endif()
     add_test(NAME ctr_native_lifecycle COMMAND $<TARGET_FILE:ctr_native> --self-test-lifecycle)

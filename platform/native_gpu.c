@@ -109,6 +109,7 @@ typedef struct
 	GPUDrawSplit splits[MAX_DRAW_SPLITS];
 	int vertexIndex;
 	int splitIndex;
+	int lastRendererDrawCount;
 } NativeGpuState;
 
 global_variable NativeGpuState s_gpu;
@@ -285,6 +286,11 @@ void NativeGpu_RenderTraceEnd(u32 replayFrame)
 int NativeGpu_HasPendingSplits(void)
 {
 	return s_gpu.splitIndex > 0;
+}
+
+int NativeGpu_GetLastRendererDrawCount(void)
+{
+	return s_gpu.lastRendererDrawCount;
 }
 
 void ClearSplits(void)
@@ -1025,7 +1031,29 @@ internal void AddSplit(bool semiTrans, bool textured, bool framebufferFeedback)
 	split->numVerts = 0;
 }
 
-void DrawSplit(const GPUDrawSplit *split)
+internal bool NativeGpu_CanBatchFramebufferFetchSplits(const GPUDrawSplit *first, const GPUDrawSplit *next)
+{
+	// Coherent EXT_shader_framebuffer_fetch exposes previous overlapping samples
+	// in API primitive order. Contiguous vertices with identical host state can
+	// therefore share one draw without changing the PS1 primitive sequence.
+	if (!NativeRenderer_UsesFramebufferFetch() || !first->psxTexturedSemiTrans || !next->psxTexturedSemiTrans)
+	{
+		return false;
+	}
+
+	if (((int)first->startVertex + (int)first->numVerts) != (int)next->startVertex)
+	{
+		return false;
+	}
+
+	return first->blendMode == next->blendMode && first->texFormat == next->texFormat && first->textureId == next->textureId &&
+	       first->drawPrimMode == next->drawPrimMode && first->psxTextureOutputSTP == next->psxTextureOutputSTP &&
+	       first->psxDrawMaskSet == next->psxDrawMaskSet && first->debugText == next->debugText &&
+	       memcmp(&first->drawenv, &next->drawenv, sizeof(first->drawenv)) == 0 &&
+	       memcmp(&first->dispenv, &next->dispenv, sizeof(first->dispenv)) == 0;
+}
+
+internal int NativeGpu_DrawSplitRange(const GPUDrawSplit *split, int numVerts, u32 logicalSplitCount)
 {
 	if (split->debugText)
 	{
@@ -1044,7 +1072,7 @@ void DrawSplit(const GPUDrawSplit *split)
 		{
 			NativeRenderer_PopDebugLabel();
 		}
-		return;
+		return 0;
 	}
 
 	NativeRenderer_SetStencilMode(split->drawPrimMode); // draw with mask 0x16
@@ -1062,34 +1090,35 @@ void DrawSplit(const GPUDrawSplit *split)
 	NativeRenderer_SetupClipMode(&split->drawenv.clip, &split->dispenv, drawOnScreen);
 	NativeRenderer_SetOffscreenState(&split->drawenv.clip, !drawOnScreen);
 	NativeRenderer_SetProjection(&split->drawenv.clip, &split->dispenv, !drawOnScreen);
-	NativePerf_AddCounter(NATIVE_PERF_COUNTER_GPU_SPLITS, 1);
-	NativePerf_AddCounter(NATIVE_PERF_COUNTER_GPU_SPLIT_VERTICES, split->numVerts);
+	NativePerf_AddCounter(NATIVE_PERF_COUNTER_GPU_SPLITS, logicalSplitCount);
+	NativePerf_AddCounter(NATIVE_PERF_COUNTER_GPU_SPLIT_VERTICES, (u32)numVerts);
 
 	if (split->psxTexturedSemiTrans)
 	{
-		NativePerf_AddCounter(NATIVE_PERF_COUNTER_GPU_SEMITRANS_SPLITS, 1);
+		NativePerf_AddCounter(NATIVE_PERF_COUNTER_GPU_SEMITRANS_SPLITS, logicalSplitCount);
 		// PS1 textured ABE blends only sampled texels whose bit 15 (STP) is set;
 		// visible non-STP texels remain opaque. Apple's coherent framebuffer-fetch
 		// extension can preserve that per-fragment rule in one ordered draw. Keep
 		// the established two-pass STP/non-STP fallback everywhere else.
 		if (NativeRenderer_UsesFramebufferFetch())
 		{
-			NativePerf_AddCounter(NATIVE_PERF_COUNTER_GPU_FRAMEBUFFER_FETCH_SPLITS, 1);
+			NativePerf_AddCounter(NATIVE_PERF_COUNTER_GPU_FRAMEBUFFER_FETCH_SPLITS, logicalSplitCount);
+			NativePerf_AddCounter(NATIVE_PERF_COUNTER_GPU_FRAMEBUFFER_FETCH_MERGED_SPLITS, logicalSplitCount - 1);
 			NativeRenderer_SetBlendMode(BM_NONE);
 			NativeRenderer_SetPSXFramebufferFetchBlendMode(split->blendMode);
 			NativeRenderer_SetPSXTextureSemiTransPass(3);
-			NativeRenderer_DrawTriangles(split->startVertex, split->numVerts / 3);
+			NativeRenderer_DrawTriangles(split->startVertex, numVerts / 3);
 			NativeRenderer_SetPSXTextureSemiTransPass(0);
 		}
 		else
 		{
 			NativeRenderer_SetBlendMode(BM_NONE);
 			NativeRenderer_SetPSXTextureSemiTransPass(1);
-			NativeRenderer_DrawTriangles(split->startVertex, split->numVerts / 3);
+			NativeRenderer_DrawTriangles(split->startVertex, numVerts / 3);
 
 			NativeRenderer_SetBlendMode(split->blendMode);
 			NativeRenderer_SetPSXTextureSemiTransPass(2);
-			NativeRenderer_DrawTriangles(split->startVertex, split->numVerts / 3);
+			NativeRenderer_DrawTriangles(split->startVertex, numVerts / 3);
 
 			NativeRenderer_SetPSXTextureSemiTransPass(0);
 		}
@@ -1098,13 +1127,15 @@ void DrawSplit(const GPUDrawSplit *split)
 	{
 		NativeRenderer_SetBlendMode(split->blendMode);
 		NativeRenderer_SetPSXTextureSemiTransPass(0);
-		NativeRenderer_DrawTriangles(split->startVertex, split->numVerts / 3);
+		NativeRenderer_DrawTriangles(split->startVertex, numVerts / 3);
 	}
 
 	if (split->debugText)
 	{
 		NativeRenderer_PopDebugLabel();
 	}
+
+	return split->psxTexturedSemiTrans && !NativeRenderer_UsesFramebufferFetch() ? 2 : 1;
 }
 
 internal void SetPSXMaskState(u32 code)
@@ -1148,9 +1179,21 @@ void DrawAllSplits()
 	// next code ideally should be called before EndScene
 	NativeRenderer_UpdateVertexBuffer(s_gpu.vertexBuffer, s_gpu.vertexIndex);
 
+	s_gpu.lastRendererDrawCount = 0;
 	for (int i = 1; i <= s_gpu.splitIndex; i++)
 	{
-		DrawSplit(&s_gpu.splits[i]);
+		const GPUDrawSplit *split = &s_gpu.splits[i];
+		int lastSplit = i;
+		int numVerts = split->numVerts;
+
+		while ((lastSplit < s_gpu.splitIndex) && NativeGpu_CanBatchFramebufferFetchSplits(&s_gpu.splits[lastSplit], &s_gpu.splits[lastSplit + 1]))
+		{
+			lastSplit++;
+			numVerts += s_gpu.splits[lastSplit].numVerts;
+		}
+
+		s_gpu.lastRendererDrawCount += NativeGpu_DrawSplitRange(split, numVerts, (u32)(lastSplit - i + 1));
+		i = lastSplit;
 	}
 
 	ClearSplits();

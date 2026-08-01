@@ -2582,3 +2582,47 @@ The exact-acceptance goal reading was 247,009 seconds: 2 days, 20 hours,
 the dirty evidence boundary. Goal time includes publication, builds, Simulator
 boot/oracles/live replay, cleanup and analysis; it is not a build benchmark or
 person-hour estimate. The goal remains active.
+
+### 2026-08-01 — Same-state coherent-fetch batching passes its dirty gate
+
+- Preserved logical PS1 split generation and render traces, but joined adjacent
+  contiguous framebuffer-fetch splits only when their complete host state is
+  identical. Added a separate merged-split counter so logical work and removed
+  host calls remain distinguishable.
+- Confirmed against Khronos revision 8 that coherent fetch observes previous
+  overlapping samples in API primitive order. Expanded the byte oracle with two
+  identical overlapping quads: portable fallback must issue 12 draws, enabled
+  GLES must issue 5, and the STP pixel must show the blend applied twice.
+- With both devices and Simulator off, the final low-priority one-job desktop
+  rebuild took 69.74 seconds, repeated 32 established warnings and produced
+  ARM64 executable `7b670e2f...1a53`. All 22 tests passed in 3.07 seconds;
+  logical/presentation hashes stayed fixed and the new blend hash is
+  `0c0d08324ae06c35`.
+- The dirty iOS ARM64 executable hashes to `e4c29176...3e9`; its isolated
+  strict-verified ad-hoc copy hashes to `5c236fb5...c87a`. The actual-surface
+  oracle reported fallback/active 12/5 calls, byte match, enabled fetch and the
+  established `172d49a34571b64c` presentation hash.
+- Booted only the disposable device, used `S K K K K I` plus gas/turn inputs,
+  and inspected coherent menu, character, track, grid, coast and canyon/palm
+  scenes. The advancing log proved the slow view was not stuck.
+- Correct-ID termination flushed 4,332 frames plus header at
+  `eedb1181...90a` and a 224-line log at `f0d6035c...955`; targeted faults are
+  zero. Both devices and GUI are off. Retail BIN/save inode, size and canonical
+  hashes remain unchanged.
+- In 428 frames matched to 151 exact unbatched frames, the same 119 logical and
+  78 semitransparent splits fall from 122 to 66 calls (-45.90%). Total time
+  falls 171.223 to 164.187 ms (-4.11%) and reciprocal throughput rises 5.84 to
+  6.09 FPS. This is still about 4.93 times budget; exact post-commit replay,
+  wider churn and all device gates remain open.
+- Retained harmless routes: an active-file partial tail, the expected absent
+  GPU trace after a non-trace launch, a noisy size-based preservation search,
+  Computer Use's fresh-state retry, and a redundant shutdown that found the
+  device already off.
+
+Full chronology and hashes are in
+`docs/parity/2026-08-01-ios-framebuffer-fetch-batching.md`.
+
+The dirty-evidence goal reading was 248,826 seconds: 2 days, 21 hours,
+7 minutes, 6 seconds cumulative, 1,817 seconds after the prior boundary. Goal
+time includes user viewing, profiling, review, compilation and documentation;
+it is not a build benchmark or person-hour estimate. The goal remains active.

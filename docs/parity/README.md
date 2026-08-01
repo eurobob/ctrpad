@@ -131,6 +131,13 @@ Current evidence and procedures:
   and 8.15% frame-time reductions, exact post-commit desktop/iOS/live
   acceptance, and deliberately open performance, scene-churn and physical-
   device gates.
+- `2026-08-01-ios-framebuffer-fetch-batching.md` records conservative
+  same-state logical-split batching under the coherent primitive-order
+  contract, the ordered-overlap 12-to-5-call byte oracle, new logical-versus-
+  host counters, one-Simulator canyon route, matched-scene 45.90% call and
+  4.11% frame-time reductions, complete dirty artifact/log hashes, harmless
+  rejected command routes and the deliberately open exact-replay, performance
+  and physical-device gates.
 - `2026-07-31-ios-sandbox-storage.md` records the bundle/Documents/Application
   Support ownership split, Documents-priority retail startup, private log and
   memory-card roots, Files metadata, exact cross-target matrix, rejected

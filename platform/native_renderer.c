@@ -2754,23 +2754,32 @@ internal void NativeRenderer_PixelTestClearBlendTarget(void)
 	glClear(GL_COLOR_BUFFER_BIT);
 }
 
-internal void NativeRenderer_PixelTestDrawBlendFixture(void)
+internal int NativeRenderer_PixelTestDrawBlendFixture(void)
 {
 	POLY_FT4 blendQuads[4];
+	POLY_FT4 orderedQuads[2];
 	POLY_FT4 bilinearQuad;
 	const int previousBilinearFiltering = g_cfg_bilinearFiltering;
+	int firstPhaseDrawCalls;
 
 	for (int blendMode = 0; blendMode < 4; blendMode++)
 	{
 		NativeRenderer_PixelTestInitQuad(&blendQuads[blendMode], blendMode * 4, 4, 4, 4, 0, blendMode, 256, 0, 0, 480, 1);
 		ParsePrimitivesLinkedList((u32 *)&blendQuads[blendMode], 1);
 	}
+	for (int i = 0; i < 2; i++)
+	{
+		NativeRenderer_PixelTestInitQuad(&orderedQuads[i], 24, 4, 4, 4, 0, 0, 256, 0, 0, 480, 1);
+		ParsePrimitivesLinkedList((u32 *)&orderedQuads[i], 1);
+	}
 	DrawAllSplits();
+	firstPhaseDrawCalls = NativeGpu_GetLastRendererDrawCount();
 	g_cfg_bilinearFiltering = 1;
 	NativeRenderer_PixelTestInitQuad(&bilinearQuad, 20, 4, 4, 4, 0, 0, 256, 0, 0, 480, 1);
 	ParsePrimitivesLinkedList((u32 *)&bilinearQuad, 1);
 	DrawAllSplits();
 	g_cfg_bilinearFiltering = previousBilinearFiltering;
+	return firstPhaseDrawCalls;
 }
 
 internal int NativeRenderer_PixelTestExpectBufferMatch(const u8 *expected, const u8 *actual, size_t size, const char *label)
@@ -2906,6 +2915,8 @@ int NativeRenderer_RunPixelSelfTest(void)
 	TILE maskTile;
 	int passed = 1;
 	int framebufferFetchUsed = 0;
+	int blendFallbackDrawCalls;
+	int blendActiveDrawCalls;
 	int presentWidth;
 	int presentHeight;
 	size_t presentBytes;
@@ -3078,7 +3089,12 @@ int NativeRenderer_RunPixelSelfTest(void)
 	framebufferFetchAvailable = s_psxFramebufferFetchEnabled;
 	s_psxFramebufferFetchEnabled = false;
 	NativeRenderer_PixelTestClearBlendTarget();
-	NativeRenderer_PixelTestDrawBlendFixture();
+	blendFallbackDrawCalls = NativeRenderer_PixelTestDrawBlendFixture();
+	if (blendFallbackDrawCalls != 12)
+	{
+		fprintf(stderr, "[CTR Renderer] pixel self-test failed: two-pass ordered-overlap draws expected=12 actual=%d\n", blendFallbackDrawCalls);
+		passed = 0;
+	}
 	if (!NativeRenderer_PixelTestCaptureMainRGBA(blendFallbackRgba))
 	{
 		fprintf(stderr, "[CTR Renderer] pixel self-test failed: two-pass blend oracle readback\n");
@@ -3089,8 +3105,13 @@ int NativeRenderer_RunPixelSelfTest(void)
 	{
 		s_psxFramebufferFetchEnabled = true;
 		NativeRenderer_PixelTestClearBlendTarget();
-		NativeRenderer_PixelTestDrawBlendFixture();
+		blendActiveDrawCalls = NativeRenderer_PixelTestDrawBlendFixture();
 		framebufferFetchUsed = NativeRenderer_UsesFramebufferFetch();
+		if (blendActiveDrawCalls != 5)
+		{
+			fprintf(stderr, "[CTR Renderer] pixel self-test failed: framebuffer-fetch ordered-overlap draws expected=5 actual=%d\n", blendActiveDrawCalls);
+			passed = 0;
+		}
 		if (!NativeRenderer_PixelTestCaptureMainRGBA(blendRgba))
 		{
 			fprintf(stderr, "[CTR Renderer] pixel self-test failed: framebuffer-fetch blend readback\n");
@@ -3101,6 +3122,7 @@ int NativeRenderer_RunPixelSelfTest(void)
 	}
 	else
 	{
+		blendActiveDrawCalls = blendFallbackDrawCalls;
 		memcpy(blendRgba, blendFallbackRgba, sizeof(blendRgba));
 	}
 	s_psxFramebufferFetchEnabled = framebufferFetchAvailable;
@@ -3118,6 +3140,8 @@ int NativeRenderer_RunPixelSelfTest(void)
 	passed &= NativeRenderer_PixelTestExpectRGBA(blendRgba, 13, 5, 248, 0, 0, 0, 2, "quarter-add non-STP opaque");
 	passed &= NativeRenderer_PixelTestExpectRGBA(blendRgba, 14, 5, 0, 62, 248, 255, 4, "quarter-add STP blend");
 	passed &= NativeRenderer_PixelTestExpectRGBA(blendRgba, 21, 5, 124, 124, 0, 255, 4, "bilinear mixed STP/non-STP");
+	passed &= NativeRenderer_PixelTestExpectRGBA(blendRgba, 25, 5, 248, 0, 0, 0, 2, "ordered overlap non-STP opaque");
+	passed &= NativeRenderer_PixelTestExpectRGBA(blendRgba, 26, 5, 0, 186, 62, 255, 4, "ordered overlap STP twice blended");
 	blendHash = NativeRenderer_PixelTestHash(blendRgba, sizeof(blendRgba));
 	blendOracleHash = NativeRenderer_PixelTestHash(blendFallbackRgba, sizeof(blendFallbackRgba));
 	SDL_free(presentDirect);
@@ -3134,10 +3158,11 @@ int NativeRenderer_RunPixelSelfTest(void)
 	}
 
 	printf("[CTR Renderer] pixel self-test passed: api=%s size=32x16 formats=4,8,16 clut=4,8 transparency=zero,stp "
-	       "blend=average,add,subtract,quarter bilinear=mixed-stp mask=output-bit framebuffer=feedback vram=rgb5551 hash=%016llx "
+	       "blend=average,add,subtract,quarter bilinear=mixed-stp ordered-overlap=match fallback-draws=%d active-draws=%d "
+	       "mask=output-bit framebuffer=feedback vram=rgb5551 hash=%016llx "
 	       "blend-hash=%016llx blend-oracle=%s oracle-hash=%016llx framebuffer-fetch=%s present=resolve+blit@%dx%d "
 	       "present-hash=%016llx\n",
-	       s_rendererDialect.apiName, (unsigned long long)hash, (unsigned long long)blendHash,
+	       s_rendererDialect.apiName, blendFallbackDrawCalls, blendActiveDrawCalls, (unsigned long long)hash, (unsigned long long)blendHash,
 	       framebufferFetchUsed ? "match" : "two-pass", (unsigned long long)blendOracleHash,
 	       framebufferFetchUsed ? "enabled" : "two-pass", presentWidth, presentHeight, (unsigned long long)presentHash);
 	fflush(stdout);

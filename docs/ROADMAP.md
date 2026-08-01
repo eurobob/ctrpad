@@ -9,9 +9,10 @@ timing.
 
 **Current milestone:** M10 Simulator stability and touch-control iteration;
 exact retail-consumer keyboard input and bounded two-track graphics/lifecycle
-are accepted; coherent framebuffer fetch is exact-oracle/live accepted and
-faster, while Simulator cadence, broad visual churn and every physical-iPad
-M8/M9 gate remain open
+are accepted; coherent framebuffer fetch is exact-oracle/live accepted, and
+same-state fetch batching has passed its dirty byte/live/profile gate pending
+exact replay, while Simulator cadence, broad visual churn and every physical-
+iPad M8/M9 gate remain open
 
 **Last updated:** 2026-08-01
 
@@ -1458,10 +1459,15 @@ The next dependency-ordered work is:
 3. continue wider scene/effect churn from exact builds, retaining correct-ID
    shutdown and five-log fault scans;
 4. reduce split/state overhead further: the matched fetch profile
-   removes 79 of 205 draws but still averages 172.324 ms (5.80 FPS);
+   removes 79 of 205 draws, and the next dirty batching checkpoint reduces an
+   identical 119-split state from 122 to 66 calls and 171.223 to 164.187 ms;
+   exact post-commit replay remains required and even the dirty result is about
+   4.93 times the 30-FPS budget;
 5. reopen physical-device work only after the Simulator route is usable,
    visually complete and diagnosable.
 
 Evidence and exact hashes are in
 `docs/parity/2026-08-01-simulator-renderer-profile.md` and
-`docs/parity/2026-08-01-ios-framebuffer-fetch.md`.
+`docs/parity/2026-08-01-ios-framebuffer-fetch.md`. The batching design,
+ordered-overlap oracle, live hashes, matched methodology and command chronology
+are in `docs/parity/2026-08-01-ios-framebuffer-fetch-batching.md`.

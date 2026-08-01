@@ -13637,3 +13637,54 @@ device gates stay open.
 The exact-acceptance goal reading was 247,009 seconds (2 days, 20 hours,
 36 minutes, 49 seconds), 1,412 seconds after the dirty evidence boundary. The
 goal remains active.
+
+## 2026-08-01 — Batched consecutive coherent-fetch logical splits
+
+The next profile-driven prototype keeps PS1 parsing and logical split traces
+unchanged, then scans at `DrawAllSplits` submission. Adjacent fetch splits join
+only with contiguous vertices and equal blend/texture/primitive/STP/mask/debug,
+`DRAWENV` and `DISPENV` state. Logical counters retain the pre-batch values;
+`gpu_framebuffer_fetch_merged_splits` records removed calls. Review added the
+Khronos coherent primitive-order rationale beside the predicate.
+
+The pixel fixture now renders two same-mode overlapping quads in addition to
+the four blend equations and mixed-STP bilinear case. Desktop fallback requires
+12 calls and enabled iOS fetch requires 5; every byte and a twice-blended STP
+pixel must match. Logical hash remains `851169f2644a1675`, the new full blend
+hash is `0c0d08324ae06c35`, and desktop/iOS presentation hashes remain
+`a7798c5a6ddee965` / `172d49a34571b64c`.
+
+Compilation respected the resource rule: GUI off, both devices off, nice 15,
+one job. The reviewed desktop rebuild took 69.74 seconds with the established
+32 warnings, emitted ARM64 `7b670e2f...1a53`, and passed 22/22 tests in 3.07
+seconds. The earlier iOS build took 66.67 seconds; unsigned and disposable
+signed hashes are `e4c29176...3e9` and `5c236fb5...c87a`, with strict signing
+verification and the 12-to-5 enabled oracle.
+
+Only `CTRPad Import Negatives` booted for the retail profile. Computer Use
+captured keyboard and navigated `S K K K K I`, then exercised gas and both turn
+directions through grid, coast and canyon/palm views. All bounded assets and
+the touch overlay remained coherent. Correct-ID termination after at least
+588.165 seconds produced frame CSV `eedb1181...90a` (4,333 lines,
+1,456,292 bytes) and log `f0d6035c...955` (224 lines, 24,534 bytes), with zero
+targeted faults.
+
+The structurally identical 119-split / 78-semitransparent state has 428 batched
+frames versus 151 exact unbatched frames. Calls fall 122 to 66, total 171.223
+to 164.187 ms, work 147.173 to 144.513 ms, renderer triangles 136.333 to
+133.964 ms and split submission 126.900 to 124.429 ms. The 4.29% reciprocal
+throughput gain is accepted for publication, not as the product gate.
+
+The historical record retains five harmless diagnostics: an active CSV was
+tailed before flushing; a final command expected a GPU trace even though the
+launch requested only frame perf; a size search printed historical copies;
+Computer Use required a fresh state before close; and the later redundant
+shutdown returned already-shutdown code 405. The corrected explicit checks
+proved both devices/GUI off, primary retail/save hashes unchanged and no task
+data lost. The first staged-diff check then rejected two Markdown hard-break
+spaces; they were removed and the check was repeated before commit.
+
+The dirty-evidence goal reading was 248,826 seconds (2 days, 21 hours,
+7 minutes, 6 seconds), 1,817 seconds after the preceding exact-fetch boundary.
+Exact post-commit rebuild/replay, broad churn, 30-FPS and physical-device gates
+remain open.
