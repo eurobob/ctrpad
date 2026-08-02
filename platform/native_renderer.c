@@ -191,6 +191,9 @@ struct NativeRenderTarget
 global_variable struct NativeRenderTarget s_mainRenderTarget;
 global_variable struct NativeRenderTarget s_offscreenRenderTarget;
 global_variable struct NativeRenderTarget s_presentResolveTarget;
+global_variable int s_internalResolutionScale = 1;
+global_variable int s_mainLogicalWidth = 1;
+global_variable int s_mainLogicalHeight = 1;
 
 global_variable TextureID s_whiteTexture = (TextureID)-1;
 global_variable TextureID s_lastBoundTexture = (TextureID)-1;
@@ -249,7 +252,7 @@ internal void NativeRenderer_DestroyRenderTarget(struct NativeRenderTarget *targ
 internal void NativeRenderer_EnsureRenderTarget(struct NativeRenderTarget *target, int width, int height);
 internal void NativeRenderer_BindMainRenderTarget(void);
 internal void NativeRenderer_DrawVRAMRegion(int x, int y, int width, int height);
-internal void NativeRenderer_LoadRenderTargetFromVRAM(struct NativeRenderTarget *target, int x, int y);
+internal void NativeRenderer_LoadRenderTargetFromVRAM(struct NativeRenderTarget *target, int x, int y, int sourceWidth, int sourceHeight);
 #if defined(CTR_NATIVE_GPU_TIMERS)
 internal void NativeRenderer_ResolveGpuMeasurements(b32 waitForResults);
 #endif
@@ -265,7 +268,7 @@ global_variable GLuint s_glVramFramebuffer;
 internal int NativeRenderer_InitialiseGLContext(char *windowName, int fullscreen)
 {
 #if defined(SDL_PLATFORM_IOS)
-	SDL_WindowFlags windowFlags = SDL_WINDOW_OPENGL | SDL_WINDOW_FULLSCREEN;
+	SDL_WindowFlags windowFlags = SDL_WINDOW_OPENGL | SDL_WINDOW_FULLSCREEN | SDL_WINDOW_HIGH_PIXEL_DENSITY;
 #else
 	SDL_WindowFlags windowFlags = SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE;
 #endif
@@ -515,6 +518,39 @@ void NativeRenderer_UpdateSwapIntervalState(int swapInterval)
 	SDL_GL_SetSwapInterval(swapInterval);
 }
 
+int NativeRenderer_SetInternalResolutionScale(int scale)
+{
+	GLint maximumTextureSize = 0;
+	int maximumScale = 4;
+
+	if (scale < 1)
+	{
+		scale = 1;
+	}
+	if (scale > 4)
+	{
+		scale = 4;
+	}
+
+	if (s_rendererApiReady)
+	{
+		glGetIntegerv(GL_MAX_TEXTURE_SIZE, &maximumTextureSize);
+		while ((maximumScale > 1) &&
+		       (((s_mainLogicalWidth * maximumScale) > maximumTextureSize) ||
+		        ((s_mainLogicalHeight * maximumScale) > maximumTextureSize)))
+		{
+			maximumScale--;
+		}
+	}
+
+	if (scale > maximumScale)
+	{
+		scale = maximumScale;
+	}
+	s_internalResolutionScale = scale;
+	return s_internalResolutionScale;
+}
+
 void NativeRenderer_BeginScene(void)
 {
 #if defined(CTR_NATIVE_GPU_TIMERS)
@@ -544,7 +580,8 @@ void NativeRenderer_BeginScene(void)
 	NativeRenderer_UpdateVRAM();
 	if (!activeDrawEnv.isbg)
 	{
-		NativeRenderer_LoadRenderTargetFromVRAM(&s_mainRenderTarget, activeDispEnv.disp.x, activeDispEnv.disp.y);
+		NativeRenderer_LoadRenderTargetFromVRAM(&s_mainRenderTarget, activeDispEnv.disp.x, activeDispEnv.disp.y,
+		                                        s_mainLogicalWidth, s_mainLogicalHeight);
 	}
 	else
 	{
@@ -756,7 +793,10 @@ internal void NativeRenderer_BindMainRenderTarget(void)
 		height = activeDrawEnv.clip.h;
 	}
 
-	NativeRenderer_EnsureRenderTarget(&s_mainRenderTarget, width, height);
+	s_mainLogicalWidth = width > 0 ? width : 1;
+	s_mainLogicalHeight = height > 0 ? height : 1;
+	NativeRenderer_EnsureRenderTarget(&s_mainRenderTarget, s_mainLogicalWidth * s_internalResolutionScale,
+	                                  s_mainLogicalHeight * s_internalResolutionScale);
 	glBindFramebuffer(GL_FRAMEBUFFER, s_mainRenderTarget.framebuffer);
 }
 
@@ -770,7 +810,7 @@ internal void NativeRenderer_DrawVRAMRegion(int x, int y, int width, int height)
 	NativeRenderer_DrawTriangles(0, 2);
 }
 
-internal void NativeRenderer_LoadRenderTargetFromVRAM(struct NativeRenderTarget *target, int x, int y)
+internal void NativeRenderer_LoadRenderTargetFromVRAM(struct NativeRenderTarget *target, int x, int y, int sourceWidth, int sourceHeight)
 {
 	NativePerf_BeginScope(NATIVE_PERF_BUCKET_RENDERER_RESTORE_VRAM);
 	const ShaderID previousShader = s_previousShader;
@@ -784,7 +824,7 @@ internal void NativeRenderer_LoadRenderTargetFromVRAM(struct NativeRenderTarget 
 	glDisable(GL_SCISSOR_TEST);
 	glDisable(GL_STENCIL_TEST);
 	glViewport(0, 0, target->width, target->height);
-	NativeRenderer_DrawVRAMRegion(x, y, target->width, target->height);
+	NativeRenderer_DrawVRAMRegion(x, y, sourceWidth, sourceHeight);
 	glClear(GL_STENCIL_BUFFER_BIT);
 	glEnable(GL_STENCIL_TEST);
 
@@ -1565,15 +1605,16 @@ void NativeRenderer_SetupClipMode(const RECT16 *rect, const DISPENV *displayEnv,
 	// coordinates are introduced only by the final presentation pass.
 	const float viewportX = 0.0f;
 	const float viewportY = 0.0f;
-	const float viewportW = (float)displayEnv->disp.w;
-	const float viewportH = (float)displayEnv->disp.h;
+	const float renderScale = (float)s_internalResolutionScale;
+	const float viewportW = (float)displayEnv->disp.w * renderScale;
+	const float viewportH = (float)displayEnv->disp.h * renderScale;
 	const float flipOffset = viewportY + viewportH - clipRectH * viewportH;
 	const float crx = viewportX + clipRectX * viewportW;
 	const float cry = clipRectY * viewportH;
 	const float crw = clipRectW * viewportW;
 	const float crh = clipRectH * viewportH;
 
-	glScissor(crx, flipOffset - cry, crw, crh);
+	glScissor((GLint)crx, (GLint)(flipOffset - cry), (GLsizei)crw, (GLsizei)crh);
 }
 
 internal void NativeRenderer_SetShader(const ShaderID shader)
@@ -1945,10 +1986,10 @@ void NativeRenderer_Clear(int x, int y, int w, int h, u8 r, u8 g, u8 b)
 
 	const int relX = overlapX - displayX;
 	const int relBottom = overlapBottom - displayY;
-	const int scissorX = relX;
-	const int scissorY = displayH - relBottom;
-	const int scissorW = overlapRight - overlapX;
-	const int scissorH = overlapBottom - overlapY;
+	const int scissorX = relX * s_internalResolutionScale;
+	const int scissorY = (displayH - relBottom) * s_internalResolutionScale;
+	const int scissorW = (overlapRight - overlapX) * s_internalResolutionScale;
+	const int scissorH = (overlapBottom - overlapY) * s_internalResolutionScale;
 
 	if ((scissorW <= 0) || (scissorH <= 0))
 	{
@@ -2198,7 +2239,8 @@ void NativeRenderer_SetOffscreenState(const RECT16 *offscreenRect, int enable)
 		s_previousOffscreenState = 1;
 		NativeRenderer_EnsureRenderTarget(&s_offscreenRenderTarget, offscreenRect->w, offscreenRect->h);
 		s_previousOffscreen = *offscreenRect;
-		NativeRenderer_LoadRenderTargetFromVRAM(&s_offscreenRenderTarget, offscreenRect->x, offscreenRect->y);
+		NativeRenderer_LoadRenderTargetFromVRAM(&s_offscreenRenderTarget, offscreenRect->x, offscreenRect->y,
+		                                        offscreenRect->w, offscreenRect->h);
 	}
 	else
 	{
@@ -2291,6 +2333,35 @@ void NativeRenderer_StoreFrameBuffer(int x, int y, int w, int h)
 	NativeRenderer_GpuPackTextureToVRAM(s_mainRenderTarget.texture, x, y, w, h, true);
 
 	NativePerf_EndScope(NATIVE_PERF_BUCKET_FRAMEBUFFER_STORE);
+}
+
+void NativeRenderer_PresentMainRenderTarget(void)
+{
+	if ((s_internalResolutionScale <= 1) || (s_mainRenderTarget.width <= 0) || (s_mainRenderTarget.height <= 0))
+	{
+		NativeRenderer_PresentVRAMDisplay();
+		return;
+	}
+
+	NativePerf_BeginScope(NATIVE_PERF_BUCKET_RENDERER_PRESENT_VRAM);
+	glDisable(GL_BLEND);
+	glDisable(GL_SCISSOR_TEST);
+	glDisable(GL_STENCIL_TEST);
+	glBindFramebuffer(GL_READ_FRAMEBUFFER, s_mainRenderTarget.framebuffer);
+	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, s_presentFramebuffer);
+	glBlitFramebuffer(0, 0, s_mainRenderTarget.width, s_mainRenderTarget.height,
+	                  s_presentViewport.x, s_presentViewport.y,
+	                  s_presentViewport.x + s_presentViewport.w, s_presentViewport.y + s_presentViewport.h,
+	                  GL_COLOR_BUFFER_BIT, GL_NEAREST);
+	glBindFramebuffer(GL_FRAMEBUFFER, s_presentFramebuffer);
+	glEnable(GL_STENCIL_TEST);
+	glBindVertexArray(0);
+
+	s_previousBlendMode = BM_NONE;
+	s_previousScissorState = 0;
+	s_previousShader = (ShaderID)-1;
+	s_lastBoundTexture = (TextureID)-1;
+	NativePerf_EndScope(NATIVE_PERF_BUCKET_RENDERER_PRESENT_VRAM);
 }
 
 void NativeRenderer_CopyVRAM(u16 *src, int x, int y, int w, int h, int dst_x, int dst_y)
@@ -3144,6 +3215,59 @@ int NativeRenderer_RunPixelSelfTest(void)
 	passed &= NativeRenderer_PixelTestExpectRGBA(blendRgba, 26, 5, 0, 186, 62, 255, 4, "ordered overlap STP twice blended");
 	blendHash = NativeRenderer_PixelTestHash(blendRgba, sizeof(blendRgba));
 	blendOracleHash = NativeRenderer_PixelTestHash(blendFallbackRgba, sizeof(blendFallbackRgba));
+
+	// Verify the enhanced path independently of presentation screenshots: the
+	// main target scales, logical clears cover the matching physical pixels,
+	// framebuffer feedback still lands in logical PS1 VRAM, and presentation
+	// reads from the high-resolution target.
+	for (int scale = 2; scale <= 4; scale++)
+	{
+		if (NativeRenderer_SetInternalResolutionScale(scale) != scale)
+		{
+			fprintf(stderr, "[CTR Renderer] pixel self-test failed: %dx internal resolution unavailable\n", scale);
+			passed = 0;
+		}
+		NativeRenderer_BindMainRenderTarget();
+		if ((s_mainRenderTarget.width != NATIVE_RENDERER_PIXEL_TEST_WIDTH * scale) ||
+		    (s_mainRenderTarget.height != NATIVE_RENDERER_PIXEL_TEST_HEIGHT * scale))
+		{
+			fprintf(stderr, "[CTR Renderer] pixel self-test failed: %dx target expected=%dx%d actual=%dx%d\n", scale,
+			        NATIVE_RENDERER_PIXEL_TEST_WIDTH * scale, NATIVE_RENDERER_PIXEL_TEST_HEIGHT * scale,
+			        s_mainRenderTarget.width, s_mainRenderTarget.height);
+			passed = 0;
+		}
+	}
+	NativeRenderer_SetInternalResolutionScale(2);
+	NativeRenderer_BindMainRenderTarget();
+	NativeRenderer_SetViewPort(0, 0, s_mainRenderTarget.width, s_mainRenderTarget.height);
+	NativeRenderer_SetBlendMode(BM_NONE);
+	NativeRenderer_SetScissorState(0);
+	glClearColor(0.0f, 0.0f, 248.0f / 255.0f, 0.0f);
+	glClear(GL_COLOR_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
+	NativeRenderer_Clear(0, 0, NATIVE_RENDERER_PIXEL_TEST_WIDTH / 2, NATIVE_RENDERER_PIXEL_TEST_HEIGHT, 255, 0, 0);
+	NativeRenderer_StoreFrameBuffer(0, 0, NATIVE_RENDERER_PIXEL_TEST_WIDTH, NATIVE_RENDERER_PIXEL_TEST_HEIGHT);
+	NativeRenderer_ReadVRAM(packed, 0, 0, NATIVE_RENDERER_PIXEL_TEST_WIDTH, NATIVE_RENDERER_PIXEL_TEST_HEIGHT);
+	passed &= NativeRenderer_PixelTestExpectVRAM(packed, 8, 8, red, "2x scaled clear packs red");
+	passed &= NativeRenderer_PixelTestExpectVRAM(packed, 24, 8, blue, "2x scaled clear preserves blue");
+	NativeRenderer_PresentMainRenderTarget();
+	if (!NativeRenderer_CapturePresentedRGBA(presentStaged, presentWidth, presentHeight))
+	{
+		fprintf(stderr, "[CTR Renderer] pixel self-test failed: 2x presentation readback\n");
+		passed = 0;
+	}
+	else
+	{
+		const u8 *leftPixel = presentStaged + ((presentHeight / 2) * presentWidth + presentWidth / 4) * 4;
+		const u8 *rightPixel = presentStaged + ((presentHeight / 2) * presentWidth + (presentWidth * 3) / 4) * 4;
+		if (!NativeRenderer_PixelTestNear(leftPixel[0], 248, 2) || !NativeRenderer_PixelTestNear(leftPixel[1], 0, 2) ||
+		    !NativeRenderer_PixelTestNear(leftPixel[2], 0, 2) || !NativeRenderer_PixelTestNear(rightPixel[0], 0, 2) ||
+		    !NativeRenderer_PixelTestNear(rightPixel[1], 0, 2) || !NativeRenderer_PixelTestNear(rightPixel[2], 248, 2))
+		{
+			fprintf(stderr, "[CTR Renderer] pixel self-test failed: 2x direct presentation colors\n");
+			passed = 0;
+		}
+	}
+	NativeRenderer_SetInternalResolutionScale(1);
 	SDL_free(presentDirect);
 	SDL_free(presentStaged);
 	Platform_EndScene();
@@ -3161,7 +3285,7 @@ int NativeRenderer_RunPixelSelfTest(void)
 	       "blend=average,add,subtract,quarter bilinear=mixed-stp ordered-overlap=match fallback-draws=%d active-draws=%d "
 	       "mask=output-bit framebuffer=feedback vram=rgb5551 hash=%016llx "
 	       "blend-hash=%016llx blend-oracle=%s oracle-hash=%016llx framebuffer-fetch=%s present=resolve+blit@%dx%d "
-	       "present-hash=%016llx\n",
+	       "present-hash=%016llx internal-scale=2x,3x,4x\n",
 	       s_rendererDialect.apiName, blendFallbackDrawCalls, blendActiveDrawCalls, (unsigned long long)hash, (unsigned long long)blendHash,
 	       framebufferFetchUsed ? "match" : "two-pass", (unsigned long long)blendOracleHash,
 	       framebufferFetchUsed ? "enabled" : "two-pass", presentWidth, presentHeight, (unsigned long long)presentHash);

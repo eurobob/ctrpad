@@ -4,6 +4,22 @@ CTRPad is a native Apple Silicon application for macOS 11 or newer. The app
 contains no Crash Team Racing data. On first launch it asks you to choose your
 own compatible NTSC-U single-track raw MODE2/2352 BIN.
 
+No public macOS archive is published yet. Build `CTRPad.app` locally using the
+short sequence below, or use the packaged-build instructions once a GitHub
+release provides `CTRPad-macOS-arm64-*.zip`.
+
+## Quick local build
+
+```sh
+brew install cmake ninja
+git clone https://github.com/chrissotraidis/ctrpad.git
+cd ctrpad
+cmake --preset macos-arm64-app
+cmake --build --preset macos-arm64-app
+ctest --preset macos-arm64-app --output-on-failure
+open build-macos-arm64-app/CTRPad.app
+```
+
 ## Install a packaged build
 
 1. Download `CTRPad-macOS-arm64-*.zip` from a GitHub release that includes a

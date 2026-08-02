@@ -10,6 +10,33 @@ This document is Installation Information for the sideloaded build. It is not
 legal advice and does not grant rights to retail game data or Sony/Naughty Dog
 marks. Use only your own compatible NTSC-U retail disc image.
 
+No downloadable CTRPad IPA is published yet. The current supported route is to
+build the app from this repository, create the retail-free unsigned IPA, and
+sign it with your own Apple ID. One device build supports both iPhone and iPad.
+
+## Choose an installation path
+
+| Goal | Recommended path |
+|---|---|
+| Play on your iPhone or iPad with a personal Apple ID | Build the unsigned IPA, then import it into a compatible sideloading tool such as AltStore Classic so that tool can sign it for your device. |
+| Install directly as an Apple developer | Build the device app and run `package-ios.sh` with your development identity, matching profile, and device UDID. |
+| Develop or inspect the UI without signing hardware | Build the Simulator target and use `tools/install-ios-simulator.sh`. |
+
+The simplest source-build sequence is:
+
+```sh
+brew install cmake ninja
+git clone https://github.com/chrissotraidis/ctrpad.git
+cd ctrpad
+cmake --preset ios-device-arm64
+cmake --build --preset ios-device-arm64
+./package-ios.sh
+```
+
+The generated IPA is unsigned and cannot be installed until your chosen tool
+applies an identity and provisioning profile that authorize the target device.
+Continue below for the exact signing and verification details.
+
 ## Requirements
 
 - an ARM64 Mac with the current Xcode command-line tools;
