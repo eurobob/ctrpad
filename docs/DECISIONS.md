@@ -840,3 +840,29 @@ pass; targeted log faults are zero. This proves sustained state in the sole
 Simulator, not physical finger multi-touch, three-boost ergonomics or a
 complete hardware race. Exact evidence is in
 `docs/parity/2026-08-01-ios-sustained-accessible-controls.md`.
+
+## 2026-08-02 — Bound assistive race actions and invalidate stale timers
+
+**Decision:** keep explicit indefinite Hold/Release actions, add bounded
+one-second and three-second actions for every retail button, add bounded full
+and 45% slight stick nudges, and associate all delayed releases with a local
+generation number. A newer hold, release, touch, nudge, center or global reset
+increments that generation and makes an older timer a no-op.
+
+**Why:** the Simulator's desktop accessibility bridge can take many seconds to
+return a screen read while the emulated game continues in real time. An
+indefinite Gas or steering hold can therefore continue long after the next
+desktop observation, making repeatable race guidance unnecessarily coarse.
+Bounded actions provide deterministic motion without changing the production
+touch path. Generation checks are required so an expired bounded action cannot
+release a newer intentional hold or physical touch.
+
+**Verification boundary:** exact clean build `c56162f68a74` returned bounded
+button and stick values to Released/Centered, logged exact one-second and
+three-second Gas down/up pairs at the retail poll, rendered a coherent broad
+Crash Cove route and remained free of targeted runtime faults. The same source
+builds for all three current Apple targets and passes 25/25 tests. The retained
+route stopped at `LAP 1/3`; physical multi-touch, a completed three-lap race,
+three-boost drift ergonomics, signing and hardware measurements remain open.
+Exact evidence is in
+`docs/parity/2026-08-02-ios-bounded-accessible-race-controls.md`.

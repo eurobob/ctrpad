@@ -3343,3 +3343,48 @@ history files, returned zero forbidden members and passed at
 `e08098bb...a463`. At 21:46:42, active time was 282,209 seconds (3 days,
 6 hours, 23 minutes, 29 seconds). Publication is closed; physical acceptance
 remains open.
+
+### 2026-08-01 to 2026-08-02 — Bounded touch-race follow-on
+
+**Outcome**
+
+- Confirmed the preceding checkpoint was merged to GitHub `main` and kept
+  exactly one iPad Simulator booted throughout this follow-on.
+- Rejected the first live race attempt because a long-running accessibility
+  Hold could continue while a desktop screen read was delayed, causing the
+  kart to run into scenery. This was an automation-control problem, not
+  evidence of missing retail graphics.
+- Added bounded one-second and three-second button actions, bounded full and
+  slight steering nudges, and generation counters that prevent an expired
+  timer from releasing a newer hold or touch.
+- Proved the one-second and three-second Gas actions reached the retail input
+  poll with exact down/up edges, then drove a broad visible Crash Cove route
+  through the tunnel, shoreline, central rock, inland beach, shipwreck,
+  bridge and final climb. The run stopped at `LAP 1/3`; it is retained as
+  partial route evidence, not a completed race.
+- Committed implementation `c56162f68`, built that exact source for
+  iPhoneSimulator, iPhoneOS and macOS ARM64 with 32 established warnings and
+  zero errors per target, preserved the retail/save tuples across the guarded
+  Simulator update, and found zero targeted runtime faults during more than
+  13 minutes of clean execution.
+- Rejected a partial CTest run and an accidentally overlapping duplicate
+  test-only invocation. After both exited, the final serialized run passed
+  25/25 tests in 74.85 seconds.
+
+**Exact elapsed readings**
+
+- At 23:33:34 CDT, active goal time was 288,621 seconds: 3 days, 8 hours,
+  10 minutes, 21 seconds.
+- At 00:20:53 CDT, active goal time was 291,459 seconds: 3 days, 8 hours,
+  57 minutes, 39 seconds.
+- At 00:28:34 CDT, the seven-document pre-commit audit read 291,910 seconds:
+  3 days, 9 hours, 5 minutes, 10 seconds.
+
+**Current boundary**
+
+The clean Simulator visibly renders Crash Cove and the complete touch overlay,
+and bounded assistive input now returns deterministically to neutral. A full
+three-lap touch race, repeated three-boost drift chain, Apple signing,
+physical-iPad lifecycle/save validation and hardware performance measurements
+remain open. Exact evidence is in
+`docs/parity/2026-08-02-ios-bounded-accessible-race-controls.md`.

@@ -217,6 +217,12 @@ Current evidence and procedures:
   one-Simulator graphics/input/reset/log/persistence evidence, exact clean
   Apple build/test/artifact hashes, retained orchestration mistakes and the
   still-open physical multi-touch/race/signing boundary.
+- `2026-08-02-ios-bounded-accessible-race-controls.md` records the rejected
+  runaway-hold race attempt, bounded one/three-second button actions, bounded
+  full/slight steering nudges, stale-timer generation guards, exact retail
+  input edges, the partial `LAP 1/3` Crash Cove route, clean one-Simulator
+  graphics/log/persistence evidence, cross-target builds and the final
+  serialized 25/25 test result without overstating physical acceptance.
 - `2026-07-31-macos-arm64-keyboard-tap.md` records the missing quick-tap root
   cause, historical one-snapshot press-edge transport, its later two-snapshot
   supersession, direct live PSX packet traces, and exact-commit
