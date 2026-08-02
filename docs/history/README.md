@@ -25,6 +25,7 @@ All wall times use `America/Chicago` (`CDT`, UTC-05:00).
 | Active goal created | 2026-07-29 13:46:41 | Start of Codex goal accounting and implementation work. |
 | Fresh-clone proof | 2026-08-02 02:40:02 | Active goal time reached 299,789 seconds: 3 days, 11 hours, 16 minutes, 29 seconds. |
 | Low-load history checkpoint | 2026-08-02 03:10:09 | Active goal time reached 301,588 seconds: 3 days, 11 hours, 46 minutes, 28 seconds. |
+| Final documentation handoff | 2026-08-02 03:21:12 | The paused goal clock read 301,777 seconds: 3 days, 11 hours, 49 minutes, 37 seconds. PR #28 had already merged the implementation and complete history to `main`; only isolated Markdown/Git publication work followed. |
 | Wall-clock span to that checkpoint | 3 days, 13 hours, 23 minutes, 28 seconds | Includes paused time and periods where goal work was not active. |
 | Paused/non-active difference | 1 hour, 37 minutes | Wall span minus active goal time; not claimed as implementation time. |
 
@@ -247,6 +248,26 @@ Primary records:
 and
 [`../parity/2026-08-02-ios-start-control-clarity.md`](../parity/2026-08-02-ios-start-control-clarity.md).
 
+### 12. 2026-08-02 03:05-03:21 — Complete-history publication and handoff
+
+- Reconstructed the full campaign into this canonical 11-phase history,
+  timestamped progress log, command-level engineering journal and 212-entry
+  pre-publication commit ledger rather than relying on conversation memory.
+- Committed the documentation as `a19337a30`, audited PR #28 as exactly two
+  commits and 12 files (772 additions, 13 deletions), clean/mergeable and with
+  no configured checks.
+- The GitHub connector returned HTTP 404 while creating the PR; the documented
+  `gh` fallback created the ready PR without changing its reviewed scope.
+- PR #28 merged protected head `a19337a30` to `main` as
+  `028dd651efc473197c67e0ec8477174891504b3d` at 03:18:01 CDT. GitHub state,
+  merge parents, fresh remote resolution and ancestry all passed.
+- New customizable-touch and icon work owned by another bot appeared in the
+  shared checkout after that merge. It was deliberately excluded from this
+  publication and preserved untouched; the final record was prepared in an
+  isolated worktree based on `origin/main`.
+- No Simulator, compiler or game process was started for this final history
+  pass. The goal remained paused at 301,777 active seconds.
+
 ## What was deliberately rejected or corrected
 
 The repository records failures because many were plausible shortcuts that
@@ -274,10 +295,12 @@ working history. PR #1 merged the initial Apple port. PRs #2-#9 re-baselined
 physical release and added the campaign. PRs #10-#19 hardened Apple trust,
 entitlements, structured device evidence and exact source identity. PRs #20-#23
 published sustained/bounded controls. PRs #24-#27 published the performance
-handoff, telemetry and their history records.
+handoff, telemetry and their history records. PR #28 published the Start-label
+correction plus the complete three-day/eleven-hour historical reconstruction;
+its exact merge is `028dd651e`.
 
-The exact commit-by-commit ledger—212 campaign commits through
-`df1b80372` at this checkpoint—is in
+The exact commit-by-commit ledger—214 campaign commits through PR #28 merge
+`028dd651e` at this checkpoint—is in
 [`THREE-DAY-TIMELINE.md`](THREE-DAY-TIMELINE.md). That ledger, not a prose
 summary, is the authoritative answer to which changes were durable at each
 timestamp.

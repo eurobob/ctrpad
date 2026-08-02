@@ -23,8 +23,8 @@ adds a complete durable commit ledger.
 - Runtime observations are called exact only where the journal, log or report
   retained a timestamp. Work between durable checkpoints is described as an
   interval rather than assigned an invented minute.
-- The commit ledger contains every campaign commit through Start-control
-  implementation `df1b80372`: 212 commits. Commands, temporary
+- The commit ledger contains every campaign commit through PR #28 merge
+  `028dd651e`: 214 commits. Commands, temporary
   paths, hashes, rejected experiments and individual test results are
   intentionally not duplicated for every commit;
   they remain in the linked engineering journal and parity reports.
@@ -86,6 +86,8 @@ adds a complete durable commit ledger.
 | Remote-main fresh-clone proof | 2026-08-02 02:40:02 | A new shallow HTTPS clone of `cb459a198` completed macOS/iPhoneOS builds, 26/26 tests and matching unsigned IPA/source packaging; active goal time reached 3 days, 11 hours, 16 minutes and 29 seconds. |
 | Start-control correction and resource stop | 2026-08-02 02:40-03:04 | Identified the hidden Start label, visibly changed it to `START / PAUSE`, advanced the real game to its menu, committed `df1b80372`, completed exact Apple compiles, then stopped all runtime/build activity at the user's request under severe host contention. |
 | Low-load publication resume | 2026-08-02 03:10:09 | Stopped state was reconfirmed, documentation/scope review ran without Simulator or compiler restart, and active goal time reached 3 days, 11 hours, 46 minutes and 28 seconds. |
+| Complete-history main publication | 2026-08-02 03:18:01 | PR #28 merged exact two-commit head `a19337a30` as `028dd651e`; 12 files, 772 additions and 13 deletions were published after clean scope/ancestry audits and with no configured checks. |
+| Final documentation handoff | 2026-08-02 03:21:12 | The paused goal clock read 301,777 seconds: 3 days, 11 hours, 49 minutes and 37 seconds. Other-bot touch/icon work in the shared checkout was preserved and excluded; final documentation used an isolated worktree and started no Simulator or compiler. |
 
 ## Executive chronology
 
@@ -215,6 +217,10 @@ open boundary are in
 | 01:20 | Host-load snapshot | Eight logical CPUs carried load averages `88.64 50.16 32.89` with CTRPad plus substantial WindowServer, Codex, File Provider, Docker/VM and CrossOver work. |
 | 01:22 | Exact app-only termination | CTRPad stopped; the sole Simulator remained and no user process was killed. |
 | 01:24 | Handoff decision | Publish the exact source and measure the physical iPad before another renderer rewrite; signed/device/race/drift/performance/lifecycle/save gates remain open. |
+| 02:30-02:40 | Fresh HTTPS clone of remote `main` | Independently rebuilt macOS and iPhoneOS, passed 26/26 tests and reproduced a verified unsigned IPA/source pair without development-worktree state. |
+| 02:40-03:04 | Start-control correction and explicit resource stop | Changed the misleading `PAUSE` label to `START / PAUSE`, visibly advanced the retail game, froze `df1b80372`, completed exact compiles, then stopped all runtime/build activity under severe host contention. |
+| 03:05-03:18 | Low-load history reconstruction and publication | Wrote the canonical 11-phase map and updated every historical ledger; PR #28 merged exact head `a19337a30` as `028dd651e`. |
+| 03:21 | Final handoff | Documented the accepted state and physical-device-only remainder; concurrent touch/icon work was left to its owner and excluded from this history branch. |
 
 Full hashes, call stacks, claim boundaries and the other-Mac execution route are
 in
@@ -440,6 +446,8 @@ the engineering journal.
 2026-08-02 02:22:45  3b45e67cd  Record device telemetry publication
 2026-08-02 02:23:27  cb459a198  Merge pull request #27 from chrissotraidis/codex/device-telemetry
 2026-08-02 02:52:31  df1b80372  Clarify touch Start control
+2026-08-02 03:16:24  a19337a30  Document three-day Apple port history
+2026-08-02 03:18:00  028dd651e  Merge pull request #28 from chrissotraidis/codex/start-button-label
 ```
 
 ## What the process actually did

@@ -15705,3 +15705,38 @@ range-based correction also stopped two lines before the expanded ledger end
 and reported 210. The final format-anchored ledger count returned the intended
 212 entries. At 03:10:09, goal time was 301,588 seconds: 3 days, 11 hours,
 46 minutes and 28 seconds.
+
+## 2026-08-02 03:10-03:21 CDT — Complete-history publication and ownership-safe closeout
+
+The canonical history pass condensed the full repository record into 11
+dependency-ordered phases while retaining the command-level journal and exact
+commit ledger as primary evidence. Commit
+`a19337a30345114c8459a910e3d829ba9e382468` contained the history update; with
+`df1b803726b4375389476d6abf273b55b9580f98`, ready PR #28 exposed exactly two
+commits and 12 changed files (772 additions, 13 deletions). GitHub reported the
+head clean/mergeable with no configured checks.
+
+The preferred GitHub connector returned HTTP 404 when asked to create the PR.
+That failure changed only the publication mechanism: `gh pr create` produced
+the same ready review surface, after which its base, protected head, commit
+list and file totals were re-read before merge. PR #28 merged at 03:18:01 CDT
+as `028dd651efc473197c67e0ec8477174891504b3d`. A fresh fetch resolved
+`origin/main` to that merge; the merge's second parent was exact head
+`a19337a30`, and `git merge-base --is-ancestor` returned success.
+
+After publication, the shared checkout contained modified
+`platform/apple/native_ios_touch.m` plus untracked customizable-touch evidence
+and `ref/harkinianpad/`. The user confirmed another bot owns touch-control and
+app-icon improvements. None of that state was staged, edited, reset or merged
+here. An isolated worktree based on `origin/main` was used for this final
+record, preventing overlapping ownership. No Simulator, build or game process
+was started.
+
+At 03:21:12 CDT the goal remained paused with `timeUsedSeconds=301777`: 3 days,
+11 hours, 49 minutes and 37 seconds. Locally accepted and published work ends
+at the unsigned/fresh-clone boundary. Still open are the Apple-issued signing
+identity and profile, connected target iPad, exact signed guarded update,
+complete touch-only three-lap race, repeated three-boost drift chain, device
+cadence/audio/thermal/lifecycle/controller/Files evidence, and cold-relaunch
+plus update-install save/import persistence. Those gates require the physical
+device and must not be inferred from Simulator results.
