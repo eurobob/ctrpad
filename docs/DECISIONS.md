@@ -772,7 +772,7 @@ tool explicitly makes versioned `--json-output` the supported automation
 surface, so the repository validates that structure instead of reducing it
 back to text.
 
-**Verification boundary:** four valid fixtures pass and nine isolated failed,
+**Initial verification boundary:** four valid fixtures passed and nine isolated failed,
 empty, wrong-command/bundle/version/install/PID/executable mutations fail before
 a success manifest. A real no-device list envelope from `devicectl 518.33` /
 JSON version 3 passes; a real CoreDevice error 1000 app query is rejected. The
@@ -780,3 +780,9 @@ full suite passes 24/24 and the exact one-Simulator rebuild visibly reaches the
 main menu with retail/save preservation. No signed physical result exists.
 Exact evidence is in
 `docs/parity/2026-08-01-ios-devicectl-structured-evidence.md`.
+
+**Post-publication follow-up:** `info.jsonVersion` is mandatory, not optional.
+The first verifier accepted a real otherwise-valid list envelope after that key
+was removed and wrote `JSON_VERSION=not-reported`. Current CoreDevice documents
+file JSON as versioned and emits version 3, so absence is unsupported evidence.
+The missing-version mutation is the tenth negative fixture; 24/24 tests pass.

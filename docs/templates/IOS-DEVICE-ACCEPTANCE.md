@@ -47,7 +47,8 @@ that are necessary to reproduce the conclusion.
       data.
 - [ ] `ios-device-campaign.sh prepare` completed without uninstalling CTRPad.
 - [ ] Every retained `devicectl` result had the expected command type,
-      `outcome=success`, supported JSON/tool version and no error object.
+      `outcome=success`, an explicit positive integer JSON schema version,
+      supported tool version and no error object.
 - [ ] The exact installed bundle, version, build and `CTRPad.app` URL verified;
       a text search or empty app result was not treated as proof.
 - [ ] The exact `CTRPad.app/CTRPad` process launched with a positive PID.

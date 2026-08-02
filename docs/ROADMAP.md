@@ -1578,9 +1578,14 @@ failed or empty `devicectl device info apps` result because CoreDevice echoes
 the requested ID in arguments and matching-query metadata. All list/details/
 install/app/launch/copy operations now require the exact versioned success
 envelope; install, app and launch also require their exact result bundle,
-version/build, URL and positive PID. Four positive and nine adversarial fixtures
-pass/fail as intended, a real local error result is rejected, and the suite is
+version/build, URL and positive PID. The initial four-positive/nine-adversarial
+checkpoint passed and rejected a real local error result with the suite at
 24/24.
+
+A post-publication audit then removed `info.jsonVersion` from the accepted real
+list envelope. The first verifier incorrectly passed it as `not-reported`.
+Schema version is now mandatory and positive; that mutation is the tenth
+adversarial case, and the complete 24-test suite passes in 16.61 seconds.
 
 The current Simulator sibling was rebuilt and guarded-update-installed on the
 sole booted device at exact staged/installed hash `88b5e79f...400979`. Retail
