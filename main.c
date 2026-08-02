@@ -30,6 +30,9 @@
 #include "platform/native_ios_telemetry.h"
 #include "platform/native_ios_touch.h"
 #endif
+#if defined(__APPLE__) && defined(CTR_NATIVE_MACOS_BUNDLE) && !defined(SDL_PLATFORM_IOS)
+#include "platform/native_macos_import.h"
+#endif
 #include "platform/native_log.h"
 #include "platform/native_memcard.h"
 #include "platform/native_memory.h"
@@ -163,6 +166,11 @@ static s32 NativeConsole_Return(const u32 result)
 static int NativeArg_IsVersion(const char *arg)
 {
 	return (arg != NULL) && ((strcmp(arg, "--version") == 0) || (strcmp(arg, "-v") == 0));
+}
+
+static int NativeArg_IsChooseDisc(const char *arg)
+{
+	return (arg != NULL) && (strcmp(arg, "--choose-disc") == 0);
 }
 
 static int NativeArg_IsStateDigestSelfTest(const char *arg)
@@ -354,7 +362,7 @@ struct NativeLaunchOptions
 // selected source is missing or invalid, and -1 for a storage/path failure.
 static int NativeApp_SelectAndValidateAssets(const char *sdlBasePath)
 {
-	if (!NativeAssets_Init(sdlBasePath, NativeStorage_GetImportBaseDir()))
+	if (!NativeAssets_InitWithDiscImage(sdlBasePath, NativeStorage_GetImportBaseDir(), NULL))
 	{
 		fprintf(stderr, "[CTR Native] Failed to initialize asset paths.\n");
 		return -1;
@@ -376,6 +384,20 @@ static int NativeApp_SelectAndValidateAssets(const char *sdlBasePath)
 	}
 	fflush(stdout);
 
+	return NativeAssets_Validate() ? 1 : 0;
+}
+
+static int NativeApp_SelectAndValidateDiscPath(const char *sdlBasePath, const char *discImagePath)
+{
+	if (!NativeAssets_InitWithDiscImage(sdlBasePath, NativeStorage_GetImportBaseDir(), discImagePath))
+	{
+		return 0;
+	}
+	if (!NativeStorage_FinalizeForAssetBase(NativeAssets_GetBaseDir()))
+	{
+		fprintf(stderr, "[CTR Native] Failed to finalize storage paths.\n");
+		return -1;
+	}
 	return NativeAssets_Validate() ? 1 : 0;
 }
 
@@ -592,6 +614,7 @@ int main(int argc, char *argv[])
 	s32 scrapbookSTRPresentProbeFrames = 0;
 	const char *scrapbookSTRPresentProbePath = NULL;
 	int rendererPixelSelfTest = 0;
+	int chooseDisc = 0;
 
 	for (int argIndex = 1; argIndex < argc; argIndex++)
 	{
@@ -599,6 +622,10 @@ int main(int argc, char *argv[])
 		{
 			printf("CTR Native %s (%s)\n", CTR_NATIVE_VERSION, CTR_NATIVE_BUILD_ID);
 			return 0;
+		}
+		if (NativeArg_IsChooseDisc(argv[argIndex]))
+		{
+			chooseDisc = 1;
 		}
 		if (NativeArg_IsStateDigestSelfTest(argv[argIndex]))
 		{
@@ -752,8 +779,55 @@ int main(int argc, char *argv[])
 	launchOptions.scrapbookSTRPresentProbeFrames = scrapbookSTRPresentProbeFrames;
 	launchOptions.scrapbookSTRPresentProbePath = scrapbookSTRPresentProbePath;
 	launchOptions.sdlBasePath = sdlBasePath;
-
 	assetSelectionStatus = NativeApp_SelectAndValidateAssets(sdlBasePath);
+
+#if defined(__APPLE__) && defined(CTR_NATIVE_MACOS_BUNDLE) && !defined(SDL_PLATFORM_IOS)
+	if ((assetSelectionStatus == 0) || ((assetSelectionStatus == 1) && (chooseDisc != 0)))
+	{
+		char discImagePath[4096];
+		int fallbackStatus = assetSelectionStatus;
+
+		if ((chooseDisc == 0) && NativeMacOSImport_GetRememberedDiscPath(discImagePath, sizeof(discImagePath)))
+		{
+			assetSelectionStatus = NativeApp_SelectAndValidateDiscPath(sdlBasePath, discImagePath);
+			if (assetSelectionStatus != 1)
+			{
+				NativeMacOSImport_ForgetDiscPath();
+			}
+		}
+
+		while ((chooseDisc != 0) || (assetSelectionStatus == 0))
+		{
+			int chooserStatus = NativeMacOSImport_ChooseDiscPath(discImagePath, sizeof(discImagePath));
+			chooseDisc = 0;
+			if (chooserStatus == 0)
+			{
+				assetSelectionStatus = (fallbackStatus == 1)
+				                           ? NativeApp_SelectAndValidateAssets(sdlBasePath)
+				                           : fallbackStatus;
+				break;
+			}
+			if (chooserStatus < 0)
+			{
+				fprintf(stderr, "[CTR Import] Could not read the selected macOS file path.\n");
+				return NativeConsole_Return(1);
+			}
+
+			assetSelectionStatus = NativeApp_SelectAndValidateDiscPath(sdlBasePath, discImagePath);
+			if (assetSelectionStatus == 1)
+			{
+				NativeMacOSImport_RememberDiscPath(discImagePath);
+				break;
+			}
+			if (assetSelectionStatus < 0)
+			{
+				return NativeConsole_Return(1);
+			}
+			NativeMacOSImport_ShowInvalidDiscAlert();
+		}
+	}
+#endif
+
 	if (assetSelectionStatus != 1)
 	{
 #if defined(SDL_PLATFORM_IOS)

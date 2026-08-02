@@ -11,7 +11,8 @@ CTRPad is a native port built from the
 [CTR-ModSDK](https://github.com/CTR-tools/CTR-ModSDK) decompilation project. On
 iOS and iPadOS it provides Metal-backed presentation, Files-based disc import,
 customizable landscape touch controls, keyboard input, and SDL's native game
-controller path.
+controller path. Desktop builds provide resizable windows, native fullscreen,
+keyboard controls, and mouse-button gameplay shortcuts.
 
 This repository contains source code, platform integration, documentation, and
 retail-free build tooling. It does **not** contain Crash Team Racing, disc
@@ -26,9 +27,9 @@ endorsed by Sony, PlayStation, Naughty Dog, or Activision.
 
 | Target | Status | Recommended path |
 |---|---|---|
-| iPhone and iPad | Development build available | Build and sign locally; see [the iOS installation guide](docs/INSTALL-IOS.md) |
+| iPhone and iPad | User-signed development build | Download or build the unsigned IPA, then sign it with your Apple ID; see [the iOS installation guide](docs/INSTALL-IOS.md) |
 | iOS Simulator | Available for development | Build with the Simulator preset and boot exactly one Simulator |
-| Apple Silicon Mac | Native app and bare executable available | Use the `macos-arm64-app` or `macos-arm64` preset |
+| Apple Silicon Mac | Packaged native application | Use a release that includes the macOS ZIP, or build it locally; move CTRPad to Applications and choose your BIN on first launch |
 | Windows | Native x86 builds available | Use MSVC or MinGW |
 | Linux | Native i686 build available | Use the Linux build script or CMake preset |
 | App Store / TestFlight | Not announced | No official listing or public TestFlight exists |
@@ -41,13 +42,34 @@ controller matrix remain acceptance checks.
 
 ## Get started
 
+Every build requires your own NTSC-U single-track raw MODE2/2352 Crash Team
+Racing BIN. CTRPad and its release artifacts contain no game data.
+
+### Download a build
+
+- **Apple Silicon Mac:** when a [GitHub release](https://github.com/chrissotraidis/ctrpad/releases)
+  includes `CTRPad-macOS-arm64-*.zip`, download it, move `CTRPad.app` to
+  Applications, and open it. The app prompts for your BIN and remembers its
+  external location. See [Install CTRPad on macOS](docs/INSTALL-MACOS.md).
+- **iPhone or iPad:** when a release includes an unsigned `.ipa`, download and
+  re-sign it with your own Apple ID, or build/sign locally. See
+  [Build, sign, and sideload CTRPad](docs/INSTALL-IOS.md).
+- **Windows or Linux:** use a matching release archive when provided, or use
+  the source-build instructions below.
+
+iOS/iPadOS packages cannot be installed unsigned, and no App Store or public
+TestFlight build is currently offered. Ad-hoc macOS developer previews may
+require Control-click → **Open** once; a notarized release opens normally.
+
+### Build from source
+
 You need:
 
 - a clone of this repository;
 - CMake 3.20 or newer;
 - Ninja for the Apple presets;
 - Xcode and its command-line tools for Apple builds; and
-- your own NTSC-U single-track raw MODE2/2352 Crash Team Racing BIN.
+- your compatible retail BIN.
 
 Clone the project:
 
@@ -97,30 +119,30 @@ cmake --build --preset macos-arm64-app
 ctest --preset macos-arm64-app
 ```
 
-Launch the app with a development-only external disc path:
+Open `build-macos-arm64-app/CTRPad.app`. First launch presents a native file
+picker, validates the selected BIN, remembers the external path, and starts
+the game. Saves and logs live under Application Support rather than beside or
+inside the app. `./package-macos.sh --build` creates a retail-free ZIP.
 
-```sh
-CTRPAD_DISC_IMAGE="/absolute/path/to/CTR-USA.bin" \
-  tools/run-macos-arm64-app.sh
-```
-
-The launcher validates the raw-sector image and creates only an ignored
-development symlink. It does not copy retail data into the app or Git.
-
-## First launch on iPhone or iPad
+## First launch on Apple platforms
 
 CTRPad never downloads or bundles game data.
 
-1. Launch CTRPad.
-2. Select **Choose CTR disc image**.
-3. Pick your own compatible NTSC-U raw BIN through Files.
-4. Wait while CTRPad validates and imports the image.
-5. The game starts in the same app process after a valid import.
+On iPhone or iPad:
+
+1. Launch CTRPad and select **Choose CTR disc image**.
+2. Pick your own compatible NTSC-U raw BIN through Files.
+3. Wait while CTRPad validates and imports the image.
+4. The game starts in the same app process after a valid import.
 
 The imported image is stored privately under
 `Documents/CTRPad/assets/ctr-u.bin`. Invalid or cancelled selections do not
 replace a previously verified import. **Change Disc** remains available at the
 upper-right edge of the game screen.
+
+On macOS, launch `CTRPad.app` and choose the BIN in the native first-launch
+panel. The app remembers the file's external location without placing game
+data inside the bundle. Use `CTRPad --choose-disc` to select a different image.
 
 For desktop development builds, place the same image at `assets/ctr-u.bin`
 beside the source or packaged executable. A cooked 2048-byte ISO is not a
@@ -149,16 +171,20 @@ under the other. Right-hand steering mirrors the gameplay layout.
 ### Customize the layout
 
 1. Open **Controls** at the upper right.
-2. Choose **Edit touch layout**.
-3. Drag any gameplay control to reposition it.
-4. Select a control and use **−** or **+** to resize it from 70% to 150%.
-5. Choose **Done** to return to play, or **Reset** to restore the CTRPad
+2. Turn **On-screen controls** off when using a physical controller, or leave
+   it on to use touch.
+3. Choose **Edit touch layout**.
+4. Drag any gameplay control to reposition it.
+5. Select a control and use **−** or **+** to resize it from 70% to 150%.
+6. Choose **Done** to return to play, or **Reset** to restore the CTRPad
    default for the current device and steering side.
 
 Positions are stored as normalized safe-area coordinates and clamped again
 after rotation or window resizing. Phone/tablet and left/right-steering
-profiles are independent. The settings sheet also provides global control
-size and opacity choices without shrinking the touch targets.
+profiles are independent. Touch visibility persists between launches. Controls
+and Change Disc remain reachable even when gameplay controls are hidden. The
+settings sheet also provides global control size and opacity choices without
+shrinking the touch targets.
 
 ### Gas lock
 
@@ -172,11 +198,11 @@ The overlay tracks touches independently, so steering and multiple buttons can
 be held together. Empty overlay space passes through and does not create game
 input.
 
-## Controllers and keyboards
+## Controllers, keyboard, mouse, and fullscreen
 
-Touch, keyboard, and controller input are composed into the same player-one
-PlayStation pad state. Connecting a controller does not rewire or disable the
-touch mappings.
+Touch, keyboard, mouse buttons, and controller input are composed into the
+same player-one PlayStation pad state. Connecting a controller does not rewire
+the other mappings.
 
 SDL's iOS controller path includes:
 
@@ -206,6 +232,20 @@ The desktop and iOS builds also accept these keyboard bindings:
 | Start | `P` | Return |
 | Select | Tab | Space |
 
+Desktop mouse buttons provide convenient held actions without replacing
+keyboard or controller steering:
+
+| Mouse input | PlayStation input |
+|---|---|
+| Left button | Cross / Gas |
+| Right button | Square / Brake |
+| Middle button | Circle / Item |
+| Mouse 4 | L1 / Drift |
+| Mouse 5 | R1 / Drift |
+
+Desktop windows are resizable and preserve the game presentation. Press `F11`
+or `Alt-Return` (`Option-Return` on macOS) to enter or leave fullscreen.
+
 ## What works
 
 | Area | Current result |
@@ -213,12 +253,13 @@ The desktop and iOS builds also accept these keyboard bindings:
 | Native game | CTR-ModSDK game source runs through CTRPad's host platform layer |
 | Apple rendering | Native ARM64 macOS, iOS, and iPadOS presentation |
 | Game setup | Files picker import and validated raw-disc loading |
-| Touch | Analog steering, digital menu ring, face buttons, shoulders, Start, Select, editing, resizing, and Gas lock |
+| Touch | Analog steering, digital menu ring, face buttons, shoulders, Start, Select, persistent show/hide, editing, resizing, and Gas lock |
+| Desktop input | Keyboard, mouse-button actions, controllers, resizable window, and fullscreen shortcuts |
 | Controllers | SDL keyboard/gamepad composition and controller hot-plug path |
 | Saves | Private memory-card persistence and non-destructive app updates |
 | Lifecycle | Rotation, resizing, background/foreground, and held-input cleanup |
-| Packaging | Retail-data exclusion, source identity, signing checks, unsigned or user-signed IPA output |
-| App icon | Original complete iPhone/iPad asset catalog |
+| Packaging | Retail-data exclusion, source identity, macOS ZIP/signing/notarization support, and unsigned or user-signed IPA output |
+| App icon | Original macOS, iPhone, and iPad icon resources |
 
 The full Apple-port evidence ledger, including what was tested only in
 Simulator, lives under [`docs/parity/`](docs/parity/README.md). The historical
@@ -268,9 +309,10 @@ Create the corresponding source archive from a clean committed checkout:
 ./package-source.sh
 ```
 
-The source and iOS packagers reject retail media, saves, runtime containers,
-provisioning profiles, private-key-like files, and unrelated binary packages.
-Each iOS build records its full 40-character source commit. The packaging
+The source, macOS, and iOS packagers reject retail media, saves, runtime
+containers, provisioning profiles, private-key-like files, and unrelated
+binary packages.
+Each Apple build records its full 40-character source commit. The packaging
 workflow verifies that identity before producing release artifacts.
 
 ## Frequently asked questions
@@ -284,6 +326,11 @@ not request or attach game downloads, extracted assets, or saves in issues.
 
 Yes. Open **Controls → Edit touch layout**. Layouts persist independently for
 iPhone, iPad, left-hand steering, and right-hand steering.
+
+### Can I hide the touch controls?
+
+Yes. Open **Controls** and turn off **On-screen controls**. The Controls and
+Change Disc utility buttons remain available, and the setting persists.
 
 ### Can Gas stay held without keeping my thumb down?
 
@@ -317,10 +364,12 @@ packages. CTRPad does not sell or distribute the game.
 | `include/` | Native and game-facing declarations |
 | `externals/SDL/` | Vendored SDL3 source |
 | `platform/apple/` | macOS/iOS integration, property lists, touch UI, and asset catalog |
+| `docs/INSTALL-MACOS.md` | macOS download, first launch, controls, and packaging guide |
 | `docs/INSTALL-IOS.md` | iOS build, signing, sideload, and device acceptance guide |
 | `docs/parity/` | Timestamped implementation and validation evidence |
 | `docs/history/` | Apple-port campaign history and decisions |
 | `package-ios.sh` | Retail-free unsigned or user-signed IPA creation |
+| `package-macos.sh` | Retail-free ad-hoc or notarized macOS ZIP creation |
 | `package-source.sh` | Deterministic corresponding-source archive |
 | `tools/install-ios-simulator.sh` | Guarded single-Simulator update and launch |
 

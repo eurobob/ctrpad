@@ -804,6 +804,11 @@ void Platform_PollHostEvents(void)
 			s_lifecycleStatus.quitRequested = 1;
 			Platform_Log("[CTR Lifecycle] cooperative quit requested by window\n");
 			break;
+		case SDL_EVENT_MOUSE_BUTTON_DOWN:
+		case SDL_EVENT_MOUSE_BUTTON_UP:
+			Platform_InputMouseButtonEvent(event.button.button,
+			                                   event.type == SDL_EVENT_MOUSE_BUTTON_DOWN ? 1 : 0);
+			break;
 		case SDL_EVENT_KEY_DOWN:
 		case SDL_EVENT_KEY_UP:
 		{

@@ -28,6 +28,7 @@ typedef NS_ENUM(NSInteger, CTRPadTouchOpacity)
 static NSString *const s_touchHandednessKey = @"CTRPadTouchHandedness";
 static NSString *const s_touchSizeKey = @"CTRPadTouchSize";
 static NSString *const s_touchOpacityKey = @"CTRPadTouchOpacity";
+static NSString *const s_touchEnabledKey = @"CTRPadTouchEnabled";
 static NSString *const s_touchLayoutKeyPrefix = @"CTRPadTouchLayout";
 static const NSTimeInterval s_gasLatchDelay = 2.0;
 
@@ -83,6 +84,7 @@ static const NSTimeInterval s_gasLatchDelay = 2.0;
 @property(nonatomic, assign) CTRPadTouchHandedness handedness;
 @property(nonatomic, assign) CGFloat controlScale;
 @property(nonatomic, assign) CGFloat controlOpacity;
+@property(nonatomic, assign) BOOL touchControlsEnabled;
 @property(nonatomic, assign) BOOL layoutEditing;
 @property(nonatomic, strong) NSArray<UIView *> *editableControls;
 @property(nonatomic, strong) NSMutableArray<UIGestureRecognizer *> *editGestures;
@@ -114,6 +116,7 @@ static const NSTimeInterval s_gasLatchDelay = 2.0;
 @property(nonatomic, strong) UISegmentedControl *handednessControl;
 @property(nonatomic, strong) UISegmentedControl *sizeControl;
 @property(nonatomic, strong) UISegmentedControl *opacityControl;
+@property(nonatomic, strong) UISwitch *touchEnabledSwitch;
 @property(nonatomic, strong) UIButton *editLayoutButton;
 @end
 
@@ -562,11 +565,22 @@ static CGFloat CTRPadTouch_OpacityForChoice(CTRPadTouchOpacity choice)
 	titleLabel.textAlignment = NSTextAlignmentCenter;
 
 	UILabel *bodyLabel = [[UILabel alloc] init];
-	bodyLabel.text = @"Move and resize controls in Edit Layout; changes stay on this device. Hold Gas for two seconds to lock it, then tap Gas to release.";
+	bodyLabel.text = @"Turn gameplay controls on or off, or move and resize them in Edit Layout. Hold Gas for two seconds to lock it, then tap Gas to release.";
 	bodyLabel.textColor = [UIColor colorWithWhite:0.72 alpha:1.0];
 	bodyLabel.font = [UIFont systemFontOfSize:15.0 weight:UIFontWeightRegular];
 	bodyLabel.textAlignment = NSTextAlignmentCenter;
 	bodyLabel.numberOfLines = 0;
+
+	UILabel *touchEnabledLabel = [self sectionLabelWithText:@"On-screen controls"];
+	self.touchEnabledSwitch = [[UISwitch alloc] init];
+	self.touchEnabledSwitch.on = CTRPadTouch_ReadPreference(s_touchEnabledKey, 1, 1) != 0;
+	self.touchEnabledSwitch.accessibilityIdentifier = @"ctrpad.touch.settings.enabled";
+	self.touchEnabledSwitch.accessibilityLabel = @"On-screen touch controls";
+	[self.touchEnabledSwitch addTarget:self action:@selector(preferencesChanged) forControlEvents:UIControlEventValueChanged];
+	UIStackView *touchEnabledRow = [[UIStackView alloc] initWithArrangedSubviews:@[ touchEnabledLabel, self.touchEnabledSwitch ]];
+	touchEnabledRow.axis = UILayoutConstraintAxisHorizontal;
+	touchEnabledRow.alignment = UIStackViewAlignmentCenter;
+	touchEnabledRow.distribution = UIStackViewDistributionEqualSpacing;
 
 	self.handednessControl = [[UISegmentedControl alloc] initWithItems:@[ @"Steer left", @"Steer right" ]];
 	self.handednessControl.selectedSegmentIndex = CTRPadTouch_ReadPreference(s_touchHandednessKey,
@@ -610,6 +624,7 @@ static CGFloat CTRPadTouch_OpacityForChoice(CTRPadTouchOpacity choice)
 	editConfiguration.baseForegroundColor = [UIColor colorWithRed:0.34 green:0.70 blue:1.0 alpha:1.0];
 	self.editLayoutButton = [UIButton buttonWithConfiguration:editConfiguration primaryAction:nil];
 	self.editLayoutButton.accessibilityIdentifier = @"ctrpad.touch.settings.edit-layout";
+	self.editLayoutButton.enabled = self.touchEnabledSwitch.on;
 	[self.editLayoutButton addTarget:self action:@selector(editLayout) forControlEvents:UIControlEventTouchUpInside];
 
 	UIButtonConfiguration *doneConfiguration = [UIButtonConfiguration filledButtonConfiguration];
@@ -622,6 +637,7 @@ static CGFloat CTRPadTouch_OpacityForChoice(CTRPadTouchOpacity choice)
 	UIStackView *stack = [[UIStackView alloc] initWithArrangedSubviews:@[
 		titleLabel,
 		bodyLabel,
+		touchEnabledRow,
 		[self sectionLabelWithText:@"Handedness"],
 		self.handednessControl,
 		[self sectionLabelWithText:@"Control size"],
@@ -674,6 +690,8 @@ static CGFloat CTRPadTouch_OpacityForChoice(CTRPadTouchOpacity choice)
 	[defaults setInteger:self.handednessControl.selectedSegmentIndex forKey:s_touchHandednessKey];
 	[defaults setInteger:self.sizeControl.selectedSegmentIndex forKey:s_touchSizeKey];
 	[defaults setInteger:self.opacityControl.selectedSegmentIndex forKey:s_touchOpacityKey];
+	[defaults setBool:self.touchEnabledSwitch.on forKey:s_touchEnabledKey];
+	self.editLayoutButton.enabled = self.touchEnabledSwitch.on;
 	[self.overlayController applyPreferencesAndRebuildControls];
 }
 
@@ -683,9 +701,12 @@ static CGFloat CTRPadTouch_OpacityForChoice(CTRPadTouchOpacity choice)
 	[defaults removeObjectForKey:s_touchHandednessKey];
 	[defaults removeObjectForKey:s_touchSizeKey];
 	[defaults removeObjectForKey:s_touchOpacityKey];
+	[defaults removeObjectForKey:s_touchEnabledKey];
 	self.handednessControl.selectedSegmentIndex = CTRPadTouchHandednessSteerLeft;
 	self.sizeControl.selectedSegmentIndex = CTRPadTouchSizeStandard;
 	self.opacityControl.selectedSegmentIndex = CTRPadTouchOpacityStandard;
+	self.touchEnabledSwitch.on = YES;
+	self.editLayoutButton.enabled = YES;
 	[self.overlayController resetAllLayouts];
 	[self.overlayController applyPreferencesAndRebuildControls];
 	UIAccessibilityPostNotification(UIAccessibilityAnnouncementNotification, @"Touch controls reset to defaults.");
@@ -693,6 +714,10 @@ static CGFloat CTRPadTouch_OpacityForChoice(CTRPadTouchOpacity choice)
 
 - (void)editLayout
 {
+	if (!self.touchEnabledSwitch.on)
+	{
+		return;
+	}
 	[self.overlayController resetControlState];
 	__weak CTRPadTouchOverlayViewController *overlay = self.overlayController;
 	[self dismissViewControllerAnimated:YES completion:^{
@@ -945,6 +970,7 @@ static CGFloat CTRPadTouch_OpacityForChoice(CTRPadTouchOpacity choice)
 	                                                                                CTRPadTouchOpacityHigh);
 	self.controlScale = CTRPadTouch_ScaleForChoice(sizeChoice);
 	self.controlOpacity = CTRPadTouch_OpacityForChoice(opacityChoice);
+	self.touchControlsEnabled = CTRPadTouch_ReadPreference(s_touchEnabledKey, 1, 1) != 0;
 
 	CTRPadTouchStickView *stick = [[CTRPadTouchStickView alloc] init];
 	[stick applyControlOpacity:self.controlOpacity];
@@ -988,6 +1014,12 @@ static CGFloat CTRPadTouch_OpacityForChoice(CTRPadTouchOpacity choice)
 		[self.view addSubview:control];
 	}
 	self.editableControls = @[ stick, cross, square, circle, triangle, leftDrift, rightDrift, start, select ];
+	for (UIView *control in self.editableControls)
+	{
+		control.hidden = !self.touchControlsEnabled;
+		control.userInteractionEnabled = self.touchControlsEnabled;
+	}
+	Platform_InputTouchSetEnabled(self.touchControlsEnabled ? 1 : 0);
 	self.editGestures = [NSMutableArray array];
 	self.layoutCenters = [NSMutableDictionary dictionary];
 	self.layoutScales = [NSMutableDictionary dictionary];
@@ -1507,7 +1539,7 @@ int NativeIOSTouch_Begin(NativeIOSTouchDiscReselectionCallback discReselectionCa
 	[parent.view bringSubviewToFront:overlay];
 	[controller didMoveToParentViewController:parent];
 	s_touchOverlayController = controller;
-	Platform_InputTouchSetEnabled(1);
+	Platform_InputTouchSetEnabled(controller.touchControlsEnabled ? 1 : 0);
 	return 1;
 }
 

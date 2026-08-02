@@ -1,0 +1,93 @@
+# Install CTRPad on macOS
+
+CTRPad is a native Apple Silicon application for macOS 11 or newer. The app
+contains no Crash Team Racing data. On first launch it asks you to choose your
+own compatible NTSC-U single-track raw MODE2/2352 BIN.
+
+## Install a packaged build
+
+1. Download `CTRPad-macOS-arm64-*.zip` from a GitHub release that includes a
+   macOS package, or build the app locally as described below.
+2. Open the archive and move `CTRPad.app` to Applications.
+3. Open CTRPad.
+4. Choose your own compatible retail BIN when prompted.
+
+A Developer ID-signed and notarized release opens normally. An ad-hoc-signed
+developer preview is not notarized; on first launch, Control-click the app,
+choose **Open**, and confirm macOS's prompt. Do not disable Gatekeeper
+system-wide.
+
+CTRPad validates the selected image before starting. CUE files, compressed
+archives, cooked 2048-byte ISOs, other regions, and incomplete images are not
+accepted. The app remembers the selected file's external path and does not
+copy it into `CTRPad.app`. Keep the BIN at that location.
+
+To deliberately choose a different image from Terminal:
+
+```sh
+/Applications/CTRPad.app/Contents/MacOS/CTRPad --choose-disc
+```
+
+## Controls
+
+The window is resizable and preserves the game's 4:3 presentation. Use `F11`
+or `Option-Return` to enter or leave fullscreen.
+
+| PlayStation input | Keyboard | Mouse |
+|---|---|---|
+| D-pad / steer | `W` `A` `S` `D` or arrow keys | — |
+| Triangle / View | `I` or `Z` | — |
+| Square / Brake | `J` or `X` | Right button |
+| Cross / Gas | `K` or `C` | Left button |
+| Circle / Item | `L` or `V` | Middle button |
+| L1 / R1 drift | `Q` / `E` or Shift keys | Mouse 4 / Mouse 5 |
+| L2 / R2 | Control keys | — |
+| Start / Pause | `P` or Return | — |
+| Select | Tab or Space | — |
+
+Standard SDL-compatible Bluetooth and USB controllers are supported alongside
+keyboard and mouse input.
+
+## Saves, logs, and preferences
+
+CTRPad keeps writable data outside the application bundle under:
+
+```text
+~/Library/Application Support/chrissotraidis/CTRPad/
+```
+
+That directory contains memory-card saves and `Crash Team Racing.log`. App
+updates do not need to replace it. The remembered disc path is a macOS app
+preference, not a copy of the game.
+
+## Build locally
+
+Install Xcode or its command-line tools, CMake 3.20 or newer, and Ninja:
+
+```sh
+cmake --preset macos-arm64-app
+cmake --build --preset macos-arm64-app
+ctest --preset macos-arm64-app
+```
+
+The app is written to `build-macos-arm64-app/CTRPad.app` and ad-hoc signed for
+local execution.
+
+Create a retail-free distributable archive from a clean checkout:
+
+```sh
+./package-macos.sh --build
+```
+
+Maintainers with a Developer ID Application identity and notarytool profile
+can produce a hardened, notarized archive:
+
+```sh
+./package-macos.sh --build \
+  --identity "Developer ID Application: Your Name (TEAMID)" \
+  --notary-profile CTRPad-Notary
+```
+
+The package script verifies the bundle architecture, metadata, icon,
+signature, source identity, required legal resources, and absence of retail or
+runtime data before writing the ZIP and SHA-256 sidecar under ignored `dist/`.

@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.20)
 project(CTR-Native C)
 include(CheckCCompilerFlag)
 
-if(IOS)
+if(IOS OR APPLE)
     enable_language(OBJC)
 endif()
 
@@ -210,8 +210,14 @@ if(CTR_NATIVE_MACOS_BUNDLE OR IOS)
     set(CTR_NATIVE_DISTRIBUTION_RESOURCES
         "${CMAKE_SOURCE_DIR}/LICENSE"
         "${CMAKE_SOURCE_DIR}/THIRD_PARTY_NOTICES.md"
-        "${CMAKE_SOURCE_DIR}/docs/INSTALL-IOS.md"
     )
+    if(IOS)
+        list(APPEND CTR_NATIVE_DISTRIBUTION_RESOURCES
+            "${CMAKE_SOURCE_DIR}/docs/INSTALL-IOS.md")
+    else()
+        list(APPEND CTR_NATIVE_DISTRIBUTION_RESOURCES
+            "${CMAKE_SOURCE_DIR}/docs/INSTALL-MACOS.md")
+    endif()
     set_source_files_properties(${CTR_NATIVE_DISTRIBUTION_RESOURCES} PROPERTIES
         MACOSX_PACKAGE_LOCATION "Resources"
     )
@@ -261,9 +267,21 @@ set_target_properties(ctr_native PROPERTIES
 )
 if(CTR_NATIVE_MACOS_BUNDLE)
     find_program(CTR_NATIVE_CODESIGN_EXECUTABLE codesign REQUIRED)
+    set(CTR_NATIVE_MACOS_ICON "${CMAKE_SOURCE_DIR}/platform/apple/CTRPad.icns")
+    set_source_files_properties("${CTR_NATIVE_MACOS_ICON}" PROPERTIES
+        MACOSX_PACKAGE_LOCATION "Resources"
+    )
+    target_sources(ctr_native PRIVATE
+        platform/apple/native_macos_import.m
+        "${CTR_NATIVE_MACOS_ICON}"
+    )
+    target_compile_options(ctr_native PRIVATE "$<$<COMPILE_LANGUAGE:OBJC>:-fobjc-arc>")
+    target_compile_definitions(ctr_native PRIVATE CTR_NATIVE_MACOS_BUNDLE=1)
+    target_link_libraries(ctr_native "-framework AppKit" "-framework UniformTypeIdentifiers")
     set_target_properties(ctr_native PROPERTIES
         OUTPUT_NAME "CTRPad"
         MACOSX_BUNDLE_BUNDLE_NAME "CTRPad"
+        MACOSX_BUNDLE_ICON_FILE "CTRPad.icns"
         MACOSX_BUNDLE_GUI_IDENTIFIER "io.github.chrissotraidis.ctrpad"
         MACOSX_BUNDLE_INFO_STRING "Touch-first native Crash Team Racing runtime"
         MACOSX_BUNDLE_LONG_VERSION_STRING "${CTR_NATIVE_VERSION}"

@@ -74,15 +74,19 @@ int NativeStorage_Init(const char *executableBasePath)
 		basePath = ".";
 	}
 
-#if defined(SDL_PLATFORM_IOS)
+#if defined(SDL_PLATFORM_IOS) || (defined(__APPLE__) && defined(CTR_NATIVE_MACOS_BUNDLE))
 	{
 		char *preferencePath = SDL_GetPrefPath(NATIVE_STORAGE_ORGANIZATION, NATIVE_STORAGE_APPLICATION);
+	#if defined(SDL_PLATFORM_IOS)
 		const char *documentsPath = SDL_GetUserFolder(SDL_FOLDER_DOCUMENTS);
+	#else
+		const char *documentsPath = preferencePath;
+	#endif
 		int ok;
 
 		if ((preferencePath == NULL) || (documentsPath == NULL))
 		{
-			fprintf(stderr, "[CTR Storage] failed to resolve iOS sandbox paths: %s\n", SDL_GetError());
+			fprintf(stderr, "[CTR Storage] failed to resolve app storage paths: %s\n", SDL_GetError());
 			SDL_free(preferencePath);
 			return 0;
 		}
@@ -91,13 +95,13 @@ int NativeStorage_Init(const char *executableBasePath)
 		SDL_free(preferencePath);
 		if (!ok)
 		{
-			fprintf(stderr, "[CTR Storage] iOS sandbox path exceeds %d bytes\n", NATIVE_STORAGE_PATH_MAX - 1);
+			fprintf(stderr, "[CTR Storage] app storage path exceeds %d bytes\n", NATIVE_STORAGE_PATH_MAX - 1);
 			return 0;
 		}
 
 		if (!SDL_CreateDirectory(s_nativeStorage.writableRoot) || !SDL_CreateDirectory(s_nativeStorage.importAssetDir))
 		{
-			fprintf(stderr, "[CTR Storage] failed to create iOS sandbox directories: %s\n", SDL_GetError());
+			fprintf(stderr, "[CTR Storage] failed to create app storage directories: %s\n", SDL_GetError());
 			memset(&s_nativeStorage, 0, sizeof(s_nativeStorage));
 			return 0;
 		}

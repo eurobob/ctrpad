@@ -41,6 +41,7 @@ void Platform_InputUpdate(void);
 void Platform_InputSuspend(void);
 void Platform_InputResume(void);
 void Platform_InputKeyboardEvent(int key, int down);
+void Platform_InputMouseButtonEvent(int button, int down);
 void Platform_InputTouchSetEnabled(int enabled);
 void Platform_InputTouchButton(unsigned int buttonMask, int down);
 void Platform_InputTouchLeftStick(int x, int y, int active);

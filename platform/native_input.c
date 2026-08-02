@@ -122,6 +122,10 @@ global_variable s32 s_submitNameKey;
 // active-low edge until GAMEPAD_ProcessHold acknowledges its retail poll.
 // This host transport state is intentionally not serialized.
 global_variable u16 s_keyboardLatchedButtons = 0xffff;
+// Desktop mouse buttons are optional peer inputs for the keyboard player.
+// Keep fast clicks until the retail poll, while held buttons remain live.
+global_variable u16 s_mouseHeldButtons;
+global_variable u16 s_mouseLatchedButtons;
 // UIKit touch contacts are host transport state. Button-down edges are
 // likewise retained until the retail consumer polls; held contacts and the
 // analog stick remain live until UIKit releases them.
@@ -421,6 +425,31 @@ internal void NativeInput_ClearKeyboardLatch(void)
 	s_keyboardLatchedButtons = 0xffff;
 }
 
+internal void NativeInput_ResetMouseButtons(void)
+{
+	s_mouseHeldButtons = 0;
+	s_mouseLatchedButtons = 0;
+}
+
+internal u16 NativeInput_MouseButtonBit(int button)
+{
+	switch (button)
+	{
+	case SDL_BUTTON_LEFT:
+		return PLATFORM_INPUT_TOUCH_CROSS;
+	case SDL_BUTTON_RIGHT:
+		return PLATFORM_INPUT_TOUCH_SQUARE;
+	case SDL_BUTTON_MIDDLE:
+		return PLATFORM_INPUT_TOUCH_CIRCLE;
+	case SDL_BUTTON_X1:
+		return PLATFORM_INPUT_TOUCH_L1;
+	case SDL_BUTTON_X2:
+		return PLATFORM_INPUT_TOUCH_R1;
+	default:
+		return 0;
+	}
+}
+
 internal void NativeInput_ResetTouchContacts(void)
 {
 	s_touchState.heldButtons = 0;
@@ -515,6 +544,29 @@ void Platform_InputKeyboardEvent(int key, int down)
 	}
 }
 
+void Platform_InputMouseButtonEvent(int button, int down)
+{
+	u16 buttonBit = NativeInput_MouseButtonBit(button);
+	if (buttonBit == 0)
+	{
+		return;
+	}
+	if (down != 0)
+	{
+		s_mouseHeldButtons |= buttonBit;
+		s_mouseLatchedButtons |= buttonBit;
+	}
+	else
+	{
+		s_mouseHeldButtons &= (u16)~buttonBit;
+	}
+	if (Platform_LogIsOpen())
+	{
+		Platform_Log("[CTR Input] source=mouse edge=%s button=%d mask=0x%04x\n", down != 0 ? "down" : "up",
+		             button, (unsigned int)buttonBit);
+	}
+}
+
 internal s32 NativeInput_ControllerButtonState(SDL_Gamepad *controller, s32 buttonOrAxis)
 {
 	if (controller == NULL)
@@ -563,6 +615,31 @@ internal u8 NativeInput_AxisToByte(s32 axis)
 internal u16 NativeInput_ConsumeTouchButtons(void)
 {
 	return s_touchState.heldButtons | s_touchState.latchedButtons;
+}
+
+internal u16 NativeInput_ConsumeMouseButtons(void)
+{
+	return s_mouseHeldButtons | s_mouseLatchedButtons;
+}
+
+internal void NativeInput_ApplyMouse(s32 slot, u16 mouseButtons)
+{
+	struct PlatformInputPadSnapshot *snapshot;
+	u16 buttons;
+
+	if ((slot != s_keyboardControllerSlot) || (mouseButtons == 0))
+	{
+		return;
+	}
+	snapshot = &s_controllers[slot].snapshot;
+	if (snapshot->connected == 0)
+	{
+		snapshot->connected = 1;
+		snapshot->status = 0;
+		snapshot->id = NATIVE_INPUT_PAD_DIGITAL;
+	}
+	buttons = NativeInput_GetSnapshotButtons(snapshot);
+	NativeInput_SetSnapshotButtons(snapshot, buttons & (u16)~mouseButtons);
 }
 
 internal void NativeInput_ApplyTouch(s32 slot, u16 touchButtons)
@@ -799,13 +876,15 @@ void Platform_InputAcknowledgeRetailPoll(void)
 {
 	u16 keyboardPressed = (u16)~s_keyboardLatchedButtons;
 	u16 touchPressed = s_touchState.latchedButtons;
+	u16 mousePressed = s_mouseLatchedButtons;
 
-	if (((keyboardPressed != 0) || (touchPressed != 0)) && Platform_LogIsOpen())
+	if (((keyboardPressed != 0) || (touchPressed != 0) || (mousePressed != 0)) && Platform_LogIsOpen())
 	{
-		Platform_Log("[CTR Input] source=retail-poll consumed keyboard=0x%04x touch=0x%04x\n",
-		             (unsigned int)keyboardPressed, (unsigned int)touchPressed);
+		Platform_Log("[CTR Input] source=retail-poll consumed keyboard=0x%04x mouse=0x%04x touch=0x%04x\n",
+		             (unsigned int)keyboardPressed, (unsigned int)mousePressed, (unsigned int)touchPressed);
 	}
 	NativeInput_ClearKeyboardLatch();
+	s_mouseLatchedButtons = 0;
 	s_touchState.latchedButtons = 0;
 }
 
@@ -1017,6 +1096,7 @@ int Platform_InputInit(void)
 	s_keyboardState = SDL_GetKeyboardState(NULL);
 	s_submitNameKey = 0;
 	NativeInput_ClearKeyboardLatch();
+	NativeInput_ResetMouseButtons();
 	NativeInput_ResetTouchContacts();
 
 	if (SDL_InitSubSystem(SDL_INIT_GAMEPAD | SDL_INIT_HAPTIC) == 0)
@@ -1052,6 +1132,7 @@ void Platform_InputShutdown(void)
 	s_lastActiveControllerSlot = -1;
 	s_submitNameKey = 0;
 	NativeInput_ClearKeyboardLatch();
+	NativeInput_ResetMouseButtons();
 	Platform_InputTouchSetEnabled(0);
 	memset(s_padSlotData, 0, sizeof(s_padSlotData));
 	s_keyboardState = NULL;
@@ -1060,6 +1141,7 @@ void Platform_InputShutdown(void)
 void Platform_InputUpdate(void)
 {
 	u16 keyboardButtons;
+	u16 mouseButtons;
 	u16 touchButtons;
 	s32 slot;
 
@@ -1073,6 +1155,7 @@ void Platform_InputUpdate(void)
 		// NOTE(aalhendi): replay/state installs PSX-shaped pad bytes here;
 		// SDL host state is not serialized.
 		NativeInput_ClearKeyboardLatch();
+		NativeInput_ResetMouseButtons();
 		NativeInput_ResetTouchContacts();
 		NativeInput_WriteInstalledSnapshots();
 		return;
@@ -1081,6 +1164,7 @@ void Platform_InputUpdate(void)
 	if (g_padCommEnable == 0)
 	{
 		NativeInput_ClearKeyboardLatch();
+		s_mouseLatchedButtons = 0;
 		// Keep current contacts like SDL's held keyboard state, but do not
 		// replay a tap edge accumulated while the retail pad bus was disabled.
 		s_touchState.latchedButtons = 0;
@@ -1089,6 +1173,7 @@ void Platform_InputUpdate(void)
 
 	SDL_PumpEvents();
 	keyboardButtons = NativeInput_ConsumeKeyboard();
+	mouseButtons = NativeInput_ConsumeMouseButtons();
 	touchButtons = NativeInput_ConsumeTouchButtons();
 	if (NativeInput_KeyboardSuppressed())
 	{
@@ -1100,6 +1185,7 @@ void Platform_InputUpdate(void)
 		NativeInput_ResetSnapshot(slot);
 		NativeInput_ApplyController(slot);
 		NativeInput_ApplyKeyboard(slot, keyboardButtons);
+		NativeInput_ApplyMouse(slot, mouseButtons);
 		NativeInput_ApplyTouch(slot, touchButtons);
 		if (slot == s_keyboardControllerSlot)
 		{
@@ -1114,6 +1200,7 @@ void Platform_InputSuspend(void)
 	s32 slot;
 
 	NativeInput_ClearKeyboardLatch();
+	NativeInput_ResetMouseButtons();
 	NativeInput_ResetTouchContacts();
 	s_submitNameKey = 0;
 
@@ -1137,6 +1224,7 @@ void Platform_InputResume(void)
 	// The next ordinary update samples current keyboard/gamepad state. Clear
 	// only transport edges accumulated before the foreground boundary.
 	NativeInput_ClearKeyboardLatch();
+	NativeInput_ResetMouseButtons();
 	NativeInput_ResetTouchContacts();
 	s_submitNameKey = 0;
 }
@@ -1684,6 +1772,26 @@ int Platform_InputRunSelfTest(void)
 		return 1;
 	}
 
+	Platform_InputMouseButtonEvent(SDL_BUTTON_LEFT, 1);
+	Platform_InputMouseButtonEvent(SDL_BUTTON_X1, 1);
+	Platform_InputMouseButtonEvent(SDL_BUTTON_LEFT, 0);
+	NativeInput_ResetSnapshot(0);
+	NativeInput_ApplyMouse(0, NativeInput_ConsumeMouseButtons());
+	snapshot = &s_controllers[0].snapshot;
+	if ((snapshot->connected == 0) || (snapshot->id != NATIVE_INPUT_PAD_DIGITAL) ||
+	    (NativeInput_GetSnapshotButtons(snapshot) != 0xbbff))
+	{
+		fprintf(stderr, "[CTR Input] self-test failed: mouse gas and drift composition\n");
+		return 1;
+	}
+	Platform_InputAcknowledgeRetailPoll();
+	Platform_InputMouseButtonEvent(SDL_BUTTON_X1, 0);
+	if (NativeInput_ConsumeMouseButtons() != 0)
+	{
+		fprintf(stderr, "[CTR Input] self-test failed: released mouse chord survived\n");
+		return 1;
+	}
+
 	Platform_InputTouchSetEnabled(1);
 	Platform_InputTouchButton(PLATFORM_INPUT_TOUCH_CROSS, 1);
 	Platform_InputTouchButton(PLATFORM_INPUT_TOUCH_R1, 1);
@@ -1741,7 +1849,7 @@ int Platform_InputRunSelfTest(void)
 		return 1;
 	}
 
-	printf("[CTR Input] self-test passed: metadata-key=%d legacy-enter=%d migration-enter=%d live-start=retail tap-latch=c+right until-retail-poll aliases=12 held=k+d+e alias-tap=k+d primary-share=keyboard+touch+gamepad virtual-gamepad=buttons+axes+rumble+hotplug\n",
+	printf("[CTR Input] self-test passed: metadata-key=%d legacy-enter=%d migration-enter=%d live-start=retail tap-latch=c+right until-retail-poll aliases=12 held=k+d+e alias-tap=k+d mouse=gas+brake+item+l1+r1 primary-share=keyboard+mouse+touch+gamepad virtual-gamepad=buttons+axes+rumble+hotplug\n",
 	       SDL_SCANCODE_A, SDL_SCANCODE_RETURN, SDL_SCANCODE_RETURN);
 	return 0;
 }

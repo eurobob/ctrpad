@@ -587,6 +587,22 @@ int NativeAssets_Init(const char *executableBasePath, const char *preferredBaseP
 	return NativeAssets_SetBaseDir(exeDir);
 }
 
+int NativeAssets_InitWithDiscImage(const char *executableBasePath, const char *preferredBasePath,
+                                   const char *discImagePath)
+{
+	if (!NativeAssets_Init(executableBasePath, preferredBasePath))
+	{
+		return 0;
+	}
+
+	if ((discImagePath != NULL) && (discImagePath[0] != '\0'))
+	{
+		return NativeDiscImage_InitPath(discImagePath);
+	}
+
+	return 1;
+}
+
 const char *NativeAssets_GetBaseDir(void)
 {
 	return s_nativeAssetsBaseDir;

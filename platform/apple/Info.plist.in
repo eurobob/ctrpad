@@ -13,6 +13,8 @@
   <string>${MACOSX_BUNDLE_INFO_STRING}</string>
   <key>CFBundleIdentifier</key>
   <string>${MACOSX_BUNDLE_GUI_IDENTIFIER}</string>
+  <key>CFBundleIconFile</key>
+  <string>CTRPad.icns</string>
   <key>CFBundleInfoDictionaryVersion</key>
   <string>6.0</string>
   <key>CFBundleLongVersionString</key>
@@ -33,6 +35,8 @@
   <string>${CMAKE_OSX_DEPLOYMENT_TARGET}</string>
   <key>NSHighResolutionCapable</key>
   <true/>
+  <key>NSPrincipalClass</key>
+  <string>NSApplication</string>
   <key>NSHumanReadableCopyright</key>
   <string>${MACOSX_BUNDLE_COPYRIGHT}</string>
   <key>SDL_FILESYSTEM_BASE_DIR_TYPE</key>

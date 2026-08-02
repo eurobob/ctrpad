@@ -374,9 +374,20 @@ int NativeDiscImage_Init(const char *assetsDir)
 {
 	char path[NATIVE_DISC_IMAGE_PATH_MAX];
 
+	if ((assetsDir == NULL) || !NativeDiscImage_FindHostImagePath(path, sizeof(path), NativeStr8_FromCString(assetsDir)))
+	{
+		NativeDiscImage_Shutdown();
+		return 0;
+	}
+
+	return NativeDiscImage_InitPath(path);
+}
+
+int NativeDiscImage_InitPath(const char *path)
+{
 	NativeDiscImage_Shutdown();
 
-	if ((assetsDir == NULL) || !NativeDiscImage_FindHostImagePath(path, sizeof(path), NativeStr8_FromCString(assetsDir)))
+	if ((path == NULL) || (path[0] == '\0'))
 	{
 		return 0;
 	}

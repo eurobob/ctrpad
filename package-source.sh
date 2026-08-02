@@ -111,6 +111,7 @@ for required_file in \
     build.sh \
     docs/DECISIONS.md \
     docs/INSTALL-IOS.md \
+    docs/INSTALL-MACOS.md \
     docs/ROADMAP.md \
     docs/templates/IOS-DEVICE-ACCEPTANCE.md \
     docs/history/ENGINEERING-JOURNAL.md \
@@ -118,6 +119,7 @@ for required_file in \
     externals/SDL/LICENSE.txt \
     main.c \
     package-ios.sh \
+    package-macos.sh \
     package-source.sh \
     tools/install-ios-simulator.sh \
     tools/ios-device-campaign.sh \
