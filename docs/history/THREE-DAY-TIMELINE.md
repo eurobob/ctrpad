@@ -23,10 +23,9 @@ adds a complete durable commit ledger.
 - Runtime observations are called exact only where the journal, log or report
   retained a timestamp. Work between durable checkpoints is described as an
   interval rather than assigned an invented minute.
-- The commit ledger contains every campaign commit through sustained-control
-  publication-history main merge `3f7b16caa`: 196 commits. The later bounded-
-  action implementation commit is recorded in the post-ledger chronology until
-  its publication history is final. Commands, temporary paths,
+- The commit ledger contains every campaign commit through bounded-control
+  main publication `a1d51f021`: 199 commits. The later publication-record
+  commit remains visible in ordinary Git history. Commands, temporary paths,
   hashes, rejected experiments and individual test results are intentionally
   not duplicated
   194 times here;
@@ -79,6 +78,7 @@ adds a complete durable commit ledger.
 | Bounded-control implementation commit | 2026-08-02 00:00:58 | Commit `c56162f68` froze one-/three-second buttons, steering nudges and stale-timer generation guards after the rejected lap attempt. |
 | Bounded-control clean acceptance reading | 2026-08-02 00:20:53 | Exact Simulator/iPhoneOS/macOS builds, sole-Simulator update/persistence/visual/log evidence and a final serialized 25/25 suite passed; active goal time reached 3 days, 8 hours, 57 minutes, 39 seconds. |
 | Bounded-control history audit | 2026-08-02 00:28:34 | Seven timestamp/history/parity documents reconciled the live route, rejected attempts, hashes and still-open physical gates; active goal time reached 3 days, 9 hours, 5 minutes, 10 seconds. |
+| Bounded-control main publication | 2026-08-02 00:30:55 | PR #22 merged its audited two-commit/eight-file head as `a1d51f021`; ancestry and refs passed, and active goal time reached 3 days, 9 hours, 7 minutes, 31 seconds. |
 
 ## Executive chronology
 
@@ -189,6 +189,9 @@ adds a complete durable commit ledger.
 | 00:17-00:19 | CTest orchestration and accepted repeat | A mistakenly duplicated partial run was stopped and rejected; the final serialized repeat passed 25/25 in 74.85 seconds. |
 | 00:20:53 | Clean-acceptance active clock | `timeUsedSeconds=291459`: 3 days, 8 hours, 57 minutes, 39 seconds. Goal remains active. |
 | 00:28:34 | Pre-commit history audit | Reconciled seven repository documents against source lines, hashes and retained timestamps; `timeUsedSeconds=291910` (3 days, 9 hours, 5 minutes, 10 seconds). |
+| 00:29-00:30 | GitHub publication | Pushed commits `c56162f68` and `7f9f68b2e`; the preferred connector returned its retained private-repository 404, so authenticated CLI fallback opened PR #22. Audited exact head `7f9f68b2e` as two commits/eight files/475 additions/10 deletions, clean/mergeable and without configured checks. |
+| 00:30:31 | Protected main merge | PR #22 merged exact head as `a1d51f021`; ancestry, remote branch and local/remote main alignment passed. |
+| 00:30:55 | Post-publication active clock | `timeUsedSeconds=292051`: 3 days, 9 hours, 7 minutes, 31 seconds. Publication closed; signed physical acceptance remains open. |
 
 Full source citations, hashes, input intervals, rejected routes and the exact
 open boundary are in
@@ -398,6 +401,9 @@ the engineering journal.
 2026-08-01 21:45:48  be9c81605  Merge pull request #20 from chrissotraidis/codex/simulator-performance-next
 2026-08-01 21:47:46  7b491d411  Record sustained control publication
 2026-08-01 21:48:31  3f7b16caa  Merge pull request #21 from chrissotraidis/codex/simulator-performance-next
+2026-08-02 00:00:58  c56162f68  Add bounded accessible control actions
+2026-08-02 00:29:07  7f9f68b2e  Document bounded race-control checkpoint
+2026-08-02 00:30:31  a1d51f021  Merge pull request #22 from chrissotraidis/codex/simulator-performance-next
 ```
 
 ## What the process actually did
