@@ -1688,3 +1688,41 @@ PR #22 published the exact two-commit/eight-file bounded-control checkpoint to
 `main` as `a1d51f021167`. Its protected head and ancestry were verified after
 the merge. Source publication is complete; the five physical-device steps
 above remain open.
+
+## 2026-08-02 Simulator performance handoff
+
+The resumed one-Simulator run did not close the full-race gate. A first race
+repeatedly entered scenery and stayed on `LAP 1/3`; a production-touch restart
+then reached a new green light and accepted a bounded Gas segment but still did
+not finish a lap. Both are retained as negative/partial evidence.
+
+The slow path is now independently localized. Runtime identity named Apple
+Software Renderer, complex-scene samples ranged about 4.32-11.95 FPS, and a
+three-second live sample put 1,236 of 1,768 main-thread stacks beneath ordered
+`DrawOTag -> DrawAllSplits` work into software GL triangle filling. The
+eight-logical-CPU host simultaneously reported load averages
+`88.64 50.16 32.89`. This explains the visible slow motion without changing the
+accepted retail-state or GLES-pixel results.
+
+Dependency order is therefore:
+
+1. publish this exact source/history handoff and matching unsigned
+   IPA/corresponding source;
+2. sign on a Mac with a valid Apple identity/profile and install without
+   deleting the existing target container;
+3. measure real iPad cadence/frame pacing before changing the renderer again;
+4. complete the touch-only race and repeated three-boost chain on glass;
+5. verify audio, thermals, lifecycle, Files import and save/update persistence;
+   and
+6. only if hardware is slow, profile the target GLES path and evaluate a
+   bounded optimization or Metal backend without weakening pixel/parity gates.
+
+Full evidence, exact hashes and the other-Mac commands are in
+`docs/parity/2026-08-02-simulator-performance-handoff.md`.
+
+Handoff step 1 is now locally complete for source `daba106ae9884`: thin ARM64
+iPhoneOS and macOS builds succeeded with zero errors, the final serialized
+macOS suite passed 25/25 in 22.51 seconds, the seven-member unsigned IPA passed
+at `67ec61bf...1c34e5`, and its 3,267-member matching source archive passed at
+`da8af630...fff3a3`. Both artifacts are retail-free and ignored. GitHub main
+publication remains the final part of step 1; steps 2-6 remain open.

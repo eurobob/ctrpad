@@ -223,6 +223,12 @@ Current evidence and procedures:
   input edges, the partial `LAP 1/3` Crash Cove route, clean one-Simulator
   graphics/log/persistence evidence, cross-target builds and the final
   serialized 25/25 test result without overstating physical acceptance.
+- `2026-08-02-simulator-performance-handoff.md` records the resumed failed
+  race and production-touch restart, exact retail-poll/log/save/screenshot
+  evidence, Apple Software Renderer identity, independent live call-stack
+  sample, eight-CPU host oversubscription, app-only termination and the
+  decision to publish for target-iPad measurement before another renderer
+  rewrite.
 - `2026-07-31-macos-arm64-keyboard-tap.md` records the missing quick-tap root
   cause, historical one-snapshot press-edge transport, its later two-snapshot
   supersession, direct live PSX packet traces, and exact-commit
