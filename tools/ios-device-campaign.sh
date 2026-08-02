@@ -12,6 +12,7 @@ Usage:
 
 Preflight/prepare options:
   --ipa PATH              Signed CTRPad IPA to validate.
+  --source-commit HEX     Exact full 40-character source commit for the IPA.
   --device-udid UDID      Provisioned physical-device UDID. Required by
                           prepare; optional but verified by preflight.
   --evidence-dir PATH     New local evidence directory (must not exist).
@@ -25,9 +26,10 @@ Common options:
   --timeout SECONDS       Per-devicectl timeout (default: 120).
   -h, --help              Show this help.
 
-preflight validates the IPA, non-ad-hoc signature, embedded provisioning profile,
-bundle/application/team identifiers, thin ARM64 iOS executable, optional UDID,
-retail exclusion, and checksum sidecar without contacting a device.
+preflight validates the IPA, its exact clean source identity, non-ad-hoc
+signature, embedded provisioning profile, bundle/application/team identifiers,
+thin ARM64 iOS executable, optional UDID, retail exclusion, and checksum sidecar
+without contacting a device.
 
 prepare performs the same preflight, records versioned devicectl JSON/logs,
 update-installs without uninstalling, verifies the bundle appears on the
@@ -148,6 +150,15 @@ preflight_signed_ipa() {
     bundle_version="$(plutil -extract CFBundleShortVersionString raw -o - "$info_plist")"
     build_version="$(plutil -extract CFBundleVersion raw -o - "$info_plist")"
     executable_path="$app_path/$executable_name"
+
+    build_identity_manifest="$evidence_dir/build-identity-manifest.txt"
+    "$build_identity_tool" --info-plist "$info_plist" \
+        --expected-source-commit "$requested_source_commit" \
+        --output "$build_identity_manifest" >/dev/null
+    source_commit="$(awk -F= '$1 == "SOURCE_COMMIT" { print $2 }' \
+        "$build_identity_manifest")"
+    [[ "$source_commit" =~ ^[0-9a-f]{40}$ ]] || \
+        fail "could not read the verified IPA source commit"
 
     [[ "$package_type" == "APPL" ]] || fail "unexpected CFBundlePackageType: $package_type"
     [[ "$bundle_id" =~ ^[A-Za-z0-9.-]+$ ]] || fail "unsupported bundle ID: $bundle_id"
@@ -276,6 +287,8 @@ preflight_signed_ipa() {
         printf 'BUNDLE_ID=%s\n' "$bundle_id"
         printf 'VERSION=%s\n' "$bundle_version"
         printf 'BUILD=%s\n' "$build_version"
+        printf 'SOURCE_COMMIT=%s\n' "$source_commit"
+        printf 'BUILD_IDENTITY_STATUS=verified\n'
         printf 'EXECUTABLE=%s\n' "$executable_name"
         printf 'EXECUTABLE_SHA256=%s\n' "$executable_hash"
         printf 'ARCHITECTURES=%s\n' "$architectures"
@@ -313,6 +326,9 @@ entitlement_binding_tool="$repo_root/tools/verify-ios-entitlement-binding.sh"
 devicectl_json_tool="$repo_root/tools/verify-devicectl-json.sh"
 [[ -x "$devicectl_json_tool" ]] || \
     fail "required devicectl JSON verifier not found: $devicectl_json_tool"
+build_identity_tool="$repo_root/tools/verify-ios-build-identity.sh"
+[[ -x "$build_identity_tool" ]] || \
+    fail "required build-identity verifier not found: $build_identity_tool"
 command_name="${1:-}"
 if [[ -z "$command_name" ]]; then
     usage
@@ -325,14 +341,16 @@ device_udid=""
 bundle_id=""
 requested_evidence_dir=""
 evidence_dir=""
+requested_source_commit=""
 device_timeout=120
 
 while (($#)); do
     case "$1" in
-        --ipa|--device-udid|--bundle-id|--evidence-dir|--timeout)
+        --ipa|--source-commit|--device-udid|--bundle-id|--evidence-dir|--timeout)
             (($# >= 2)) || fail "$1 requires a value"
             case "$1" in
                 --ipa) ipa_path="$2" ;;
+                --source-commit) requested_source_commit="$2" ;;
                 --device-udid) device_udid="$2" ;;
                 --bundle-id) bundle_id="$2" ;;
                 --evidence-dir) requested_evidence_dir="$2" ;;
@@ -352,7 +370,7 @@ done
 
 [[ "$device_timeout" =~ ^[1-9][0-9]*$ ]] || fail "--timeout must be a positive integer"
 for command_tool in awk base64 basename codesign date dirname ditto file find grep \
-    lipo mkdir mktemp plutil rg rm security shasum uname unzip xcrun; do
+    lipo mkdir mktemp plutil rg rm security shasum tr uname unzip xcrun; do
     require_command "$command_tool"
 done
 [[ "$(uname -s)" == "Darwin" ]] || fail "physical iOS device work requires macOS"
@@ -362,6 +380,12 @@ plist_buddy='/usr/libexec/PlistBuddy'
 case "$command_name" in
     preflight|prepare)
         [[ -n "$ipa_path" ]] || fail "--ipa is required for $command_name"
+        [[ -n "$requested_source_commit" ]] || \
+            fail "--source-commit is required for $command_name"
+        requested_source_commit="$(printf '%s' "$requested_source_commit" | \
+            tr '[:upper:]' '[:lower:]')"
+        [[ "$requested_source_commit" =~ ^[0-9a-f]{40}$ ]] || \
+            fail "--source-commit must contain exactly 40 hexadecimal characters"
         [[ "$command_name" != "prepare" || -n "$device_udid" ]] || \
             fail "--device-udid is required for prepare"
         [[ -z "$device_udid" || "$device_udid" =~ ^[A-Za-z0-9-]+$ ]] || \
@@ -417,6 +441,8 @@ case "$command_name" in
             printf 'BUNDLE_ID=%s\n' "$bundle_id"
             printf 'VERSION=%s\n' "$bundle_version"
             printf 'BUILD=%s\n' "$build_version"
+            printf 'SOURCE_COMMIT=%s\n' "$source_commit"
+            printf 'BUILD_IDENTITY_STATUS=verified\n'
             printf 'SIGNED_PACKAGE_EXECUTABLE_SHA256=%s\n' "$executable_hash"
             printf 'INSTALLATION_URL=%s\n' "$installation_url"
             printf 'INSTALLED_APP_URL=%s\n' "$installed_app_url"
@@ -429,6 +455,8 @@ case "$command_name" in
         ;;
     collect)
         [[ -z "$ipa_path" ]] || fail "--ipa is valid only with preflight or prepare"
+        [[ -z "$requested_source_commit" ]] || \
+            fail "--source-commit is valid only with preflight or prepare"
         [[ -n "$device_udid" ]] || fail "--device-udid is required for collect"
         [[ "$device_udid" =~ ^[A-Za-z0-9-]+$ ]] || \
             fail "unsupported device UDID: $device_udid"
@@ -444,6 +472,12 @@ case "$command_name" in
             fail "collect device does not match the prepare manifest"
         grep -Fxq "BUNDLE_ID=$bundle_id" "$prepare_manifest" || \
             fail "collect bundle does not match the prepare manifest"
+        source_commit="$(awk -F= '$1 == "SOURCE_COMMIT" { print $2 }' \
+            "$prepare_manifest")"
+        [[ "$source_commit" =~ ^[0-9a-f]{40}$ ]] || \
+            fail "prepare manifest has no verified source commit"
+        grep -Fxq 'BUILD_IDENTITY_STATUS=verified' "$prepare_manifest" || \
+            fail "prepare manifest does not record verified build identity"
         collection_stamp="$(date -u '+%Y%m%dT%H%M%SZ')"
         collection_dir="$evidence_dir/collection-$collection_stamp-$$"
         [[ ! -e "$collection_dir" ]] || fail "collection path already exists: $collection_dir"
@@ -493,6 +527,8 @@ case "$command_name" in
             printf 'BUNDLE_ID=%s\n' "$bundle_id"
             printf 'INSTALLED_VERSION=%s\n' "$collected_version"
             printf 'INSTALLED_BUILD=%s\n' "$collected_build"
+            printf 'SOURCE_COMMIT=%s\n' "$source_commit"
+            printf 'BUILD_IDENTITY_STATUS=verified\n'
             printf 'DEVICECTL_STRUCTURED_JSON_STATUS=verified\n'
             printf 'COLLECTED_UTC=%s\n' "$(date -u '+%Y-%m-%dT%H:%M:%SZ')"
             printf 'DOCUMENTS_RETAIL_TREE_COPIED=no\n'

@@ -60,10 +60,10 @@ if(CTR_NATIVE_SOURCE_COMMIT)
     string(TOLOWER "${CTR_NATIVE_SOURCE_COMMIT}" CTR_NATIVE_SOURCE_COMMIT_NORMALIZED)
     string(LENGTH "${CTR_NATIVE_SOURCE_COMMIT_NORMALIZED}" CTR_NATIVE_SOURCE_COMMIT_LENGTH)
     if(NOT CTR_NATIVE_SOURCE_COMMIT_NORMALIZED MATCHES "^[0-9a-f]+$"
-       OR CTR_NATIVE_SOURCE_COMMIT_LENGTH LESS 12
-       OR CTR_NATIVE_SOURCE_COMMIT_LENGTH GREATER 40)
+       OR (NOT CTR_NATIVE_SOURCE_COMMIT_LENGTH EQUAL 12
+           AND NOT CTR_NATIVE_SOURCE_COMMIT_LENGTH EQUAL 40))
         message(FATAL_ERROR
-            "CTR_NATIVE_SOURCE_COMMIT must contain 12 to 40 hexadecimal characters."
+            "CTR_NATIVE_SOURCE_COMMIT must contain exactly 12 or 40 hexadecimal characters."
         )
     endif()
     string(SUBSTRING "${CTR_NATIVE_SOURCE_COMMIT_NORMALIZED}" 0 12
@@ -84,32 +84,57 @@ if(CTR_NATIVE_GIT_TOPLEVEL_RESULT EQUAL 0)
 endif()
 
 set(CTR_NATIVE_GIT_HASH "unknown")
+set(CTR_NATIVE_SOURCE_IDENTITY "unknown")
 set(CTR_NATIVE_GIT_DIRTY 1)
 if(CTR_NATIVE_GIT_TOPLEVEL_RESULT EQUAL 0
    AND CTR_NATIVE_GIT_TOPLEVEL_REALPATH STREQUAL CTR_NATIVE_SOURCE_REALPATH)
     execute_process(
-        COMMAND git -C "${CMAKE_SOURCE_DIR}" rev-parse --short=12 HEAD
-        OUTPUT_VARIABLE CTR_NATIVE_GIT_HASH
+        COMMAND git -C "${CMAKE_SOURCE_DIR}" rev-parse HEAD
+        OUTPUT_VARIABLE CTR_NATIVE_SOURCE_IDENTITY
         OUTPUT_STRIP_TRAILING_WHITESPACE
-        RESULT_VARIABLE CTR_NATIVE_GIT_HASH_RESULT
+        RESULT_VARIABLE CTR_NATIVE_GIT_COMMIT_RESULT
         ERROR_QUIET
     )
-    if(NOT CTR_NATIVE_GIT_HASH_RESULT EQUAL 0 OR NOT CTR_NATIVE_GIT_HASH)
+    string(LENGTH "${CTR_NATIVE_SOURCE_IDENTITY}"
+        CTR_NATIVE_SOURCE_IDENTITY_LENGTH)
+    if(NOT CTR_NATIVE_GIT_COMMIT_RESULT EQUAL 0
+       OR NOT CTR_NATIVE_SOURCE_IDENTITY MATCHES "^[0-9a-f]+$"
+       OR NOT CTR_NATIVE_SOURCE_IDENTITY_LENGTH EQUAL 40)
         message(FATAL_ERROR "Could not determine the source checkout commit.")
     endif()
-    if(CTR_NATIVE_SOURCE_COMMIT_SHORT
-       AND NOT CTR_NATIVE_SOURCE_COMMIT_SHORT STREQUAL CTR_NATIVE_GIT_HASH)
-        message(FATAL_ERROR
-            "CTR_NATIVE_SOURCE_COMMIT does not match the source checkout commit."
-        )
+    string(SUBSTRING "${CTR_NATIVE_SOURCE_IDENTITY}" 0 12 CTR_NATIVE_GIT_HASH)
+    if(CTR_NATIVE_SOURCE_COMMIT_NORMALIZED)
+        if(CTR_NATIVE_SOURCE_COMMIT_LENGTH EQUAL 40)
+            set(CTR_NATIVE_SOURCE_COMMIT_EXPECTED "${CTR_NATIVE_SOURCE_IDENTITY}")
+        else()
+            set(CTR_NATIVE_SOURCE_COMMIT_EXPECTED "${CTR_NATIVE_GIT_HASH}")
+        endif()
+        if(NOT CTR_NATIVE_SOURCE_COMMIT_NORMALIZED STREQUAL
+           CTR_NATIVE_SOURCE_COMMIT_EXPECTED)
+            message(FATAL_ERROR
+                "CTR_NATIVE_SOURCE_COMMIT does not match the source checkout commit."
+            )
+        endif()
     endif()
     execute_process(
-        COMMAND git -C "${CMAKE_SOURCE_DIR}" diff --quiet --exit-code
-        RESULT_VARIABLE CTR_NATIVE_GIT_DIRTY
+        COMMAND git -C "${CMAKE_SOURCE_DIR}" status --porcelain=v1
+            --untracked-files=normal
+        OUTPUT_VARIABLE CTR_NATIVE_GIT_STATUS
+        OUTPUT_STRIP_TRAILING_WHITESPACE
+        RESULT_VARIABLE CTR_NATIVE_GIT_STATUS_RESULT
         ERROR_QUIET
     )
+    if(NOT CTR_NATIVE_GIT_STATUS_RESULT EQUAL 0)
+        message(FATAL_ERROR "Could not determine whether the source checkout is dirty.")
+    endif()
+    if(CTR_NATIVE_GIT_STATUS)
+        set(CTR_NATIVE_GIT_DIRTY 1)
+    else()
+        set(CTR_NATIVE_GIT_DIRTY 0)
+    endif()
 elseif(CTR_NATIVE_SOURCE_COMMIT_SHORT)
     set(CTR_NATIVE_GIT_HASH "${CTR_NATIVE_SOURCE_COMMIT_SHORT}")
+    set(CTR_NATIVE_SOURCE_IDENTITY "${CTR_NATIVE_SOURCE_COMMIT_NORMALIZED}")
     set(CTR_NATIVE_GIT_DIRTY 0)
     message(STATUS
         "CTR Native: source identity ${CTR_NATIVE_GIT_HASH} from CTR_NATIVE_SOURCE_COMMIT"
@@ -122,6 +147,7 @@ else()
             CTR_NATIVE_SOURCE_DIR_COMMIT_LENGTH)
         if(CTR_NATIVE_SOURCE_DIR_COMMIT_LENGTH EQUAL 12)
             set(CTR_NATIVE_GIT_HASH "${CTR_NATIVE_SOURCE_DIR_COMMIT}")
+            set(CTR_NATIVE_SOURCE_IDENTITY "${CTR_NATIVE_SOURCE_DIR_COMMIT}")
             set(CTR_NATIVE_GIT_DIRTY 0)
             message(STATUS
                 "CTR Native: source identity ${CTR_NATIVE_GIT_HASH} from corresponding-source root"
@@ -417,6 +443,12 @@ if(BUILD_TESTING)
         )
         set_tests_properties(ctr_ios_devicectl_json PROPERTIES PASS_REGULAR_EXPRESSION
             "^DEVICECTL_JSON_SELF_TEST=passed positives=4 negatives=10"
+        )
+        add_test(NAME ctr_ios_build_identity
+            COMMAND "${CMAKE_CURRENT_SOURCE_DIR}/tools/test-ios-build-identity.sh"
+        )
+        set_tests_properties(ctr_ios_build_identity PROPERTIES PASS_REGULAR_EXPRESSION
+            "^IOS_BUILD_IDENTITY_SELF_TEST=passed positives=2 negatives=6"
         )
     endif()
 endif()

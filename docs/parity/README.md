@@ -206,6 +206,11 @@ Current evidence and procedures:
   expanded 24-test suite, and the
   exact one-Simulator visual/persistence recheck while keeping every signed
   physical-iPad result open.
+- `2026-08-01-ios-source-identity-binding.md` closes stale/dirty IPA-to-source
+  ambiguity, records the reproduced false acceptance, full 40-character bundle
+  and campaign binding, two positive/six negative fixtures, deterministic
+  exact-commit IPA/source artifacts, 25-test suite and visible one-Simulator
+  recheck while keeping Apple signing and physical-iPad acceptance open.
 - `2026-07-31-macos-arm64-keyboard-tap.md` records the missing quick-tap root
   cause, historical one-snapshot press-edge transport, its later two-snapshot
   supersession, direct live PSX packet traces, and exact-commit

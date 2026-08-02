@@ -786,3 +786,29 @@ The first verifier accepted a real otherwise-valid list envelope after that key
 was removed and wrote `JSON_VERSION=not-reported`. Current CoreDevice documents
 file JSON as versioned and emits version 3, so absence is unsupported evidence.
 The missing-version mutation is the tenth negative fixture; 24/24 tests pass.
+
+## 2026-08-01 — Bind every iOS package to one full source commit
+
+**Decision:** embed the full 40-character Git commit in each Apple bundle,
+retain only its 12-character prefix as the human build label, and refuse IPA
+packaging or physical preflight unless the full metadata identity is clean and
+matches the expected source. Treat staged, unstaged and untracked checkout
+content as dirty. Carry the verified commit through preflight, prepare and
+collection manifests.
+
+**Why:** the prior packager accepted a real stale app with runtime build
+`890ba3f4be57-dirty` from checkout `931a81065572...`; its plist contained no
+source key. A first correction used only 12 characters, but that was rejected
+as too weak for an “exact source” claim. Semantic version/build, a filename or
+an expected hash prefix cannot independently establish the GPL corresponding
+source for a signed binary.
+
+**Verification boundary:** the shared fixture suite passes two clean cases and
+rejects six missing, dirty, truncated, malformed, wrong-expected and
+wrong-build cases without failure manifests. The exact implementation bundle
+reports source `84456cd95a587a1b23a54e37a103e176052c7b46`; two IPAs are
+byte-identical at `25a8f751...1c191`; 25/25 tests pass; and the matching
+3,263-member source archive passes checksum/exclusion/extracted-tool checks at
+`5ddf285a...9fbd9`. The one-Simulator visual/log/persistence recheck passes,
+but real Apple signing and physical-iPad acceptance remain open. See
+`docs/parity/2026-08-01-ios-source-identity-binding.md`.

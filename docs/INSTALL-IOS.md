@@ -44,10 +44,14 @@ Or let the packager run both build commands:
 ./package-ios.sh --build
 ```
 
-The result is written under ignored `dist/` with a SHA-256 sidecar. The script
+The result is written under ignored `dist/` with the 12-character source prefix
+in its filename and a SHA-256 sidecar. The script
 requires a thin ARM64 device executable, an iOS load command, the legal/source
 installation resources, and the standard `Payload/CTRPad.app` IPA layout. It
 fails if it sees known retail-media extensions or runtime save directories.
+It also refuses a dirty checkout and requires the bundle's full
+`CTRNativeSourceCommit` plus clean 12-character `CTRNativeBuildIdentity` to
+match the checkout before packaging.
 
 Package the exact corresponding source from the same clean committed checkout:
 
@@ -62,11 +66,21 @@ build/package scripts, GPL license, notices, modification history and this
 Installation Information. It fails if tracked changes are present or if the
 archive contains retail/runtime data, an IPA, a profile, a certificate or a
 private-key-like file. Publish this archive alongside the matching signed or
-unsigned IPA; the app's build identity identifies the source commit. Keep the
-generated `CTRPad-source-<12-character-commit>` root name when extracting so
-CMake recovers that identity without `.git`. If the root is renamed, add
-`-DCTR_NATIVE_SOURCE_COMMIT=<full-or-12-character-commit>` to the configure
-command.
+unsigned IPA. The app's `CTRNativeSourceCommit` identifies all 40 Git
+characters; the shorter build identity and filenames are display prefixes
+only. For a release build from an extracted archive, pass the full commit
+through the packager so CMake embeds the same exact identity:
+
+```sh
+./package-ios.sh --build \
+  --source-commit FULL_40_CHARACTER_SOURCE_COMMIT
+```
+
+Keeping the generated `CTRPad-source-<12-character-commit>` root still gives
+ordinary non-release builds a readable short identity. A renamed tree may be
+configured directly with
+`-DCTR_NATIVE_SOURCE_COMMIT=<full-or-12-character-commit>`, but IPA packaging
+requires the full 40-character value.
 
 To use a different App ID, configure and verify it explicitly:
 
@@ -153,7 +167,8 @@ First validate the signed IPA without contacting an iPad:
 
 ```sh
 ./tools/ios-device-campaign.sh preflight \
-  --ipa dist/CTRPad-0.1.0-1-signed.ipa \
+  --ipa dist/CTRPad-0.1.0-1-SOURCEPREFIX-signed.ipa \
+  --source-commit FULL_40_CHARACTER_SOURCE_COMMIT \
   --device-udid YOUR_PHYSICAL_IPAD_UDID \
   --evidence-dir dist/device-acceptance-preflight
 ```
@@ -174,7 +189,8 @@ launch without uninstalling:
 
 ```sh
 ./tools/ios-device-campaign.sh prepare \
-  --ipa dist/CTRPad-0.1.0-1-signed.ipa \
+  --ipa dist/CTRPad-0.1.0-1-SOURCEPREFIX-signed.ipa \
+  --source-commit FULL_40_CHARACTER_SOURCE_COMMIT \
   --device-udid YOUR_PHYSICAL_IPAD_UDID \
   --evidence-dir dist/device-acceptance-initial
 ```
@@ -189,6 +205,8 @@ verified remote app URL and positive process identifier are retained in the
 ignored manifest. It hashes the signed packaged executable but does not claim
 it can read back the installed executable from iPadOS. It never calls
 `uninstall` and never copies the retail image to or from the Mac.
+The preflight/prepare manifests bind the same full source commit; collection
+refuses a prepare manifest without that verified identity.
 
 After the human touch/race/lifecycle test, collect CTRPad's rotating logs,
 diagnostics and saves:

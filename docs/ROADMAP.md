@@ -14,7 +14,9 @@ pixel-exact Simulator optimizations are profile-rejected. Simulator correctness
 and diagnostics remain gates, but Apple Software Renderer cadence is no longer
 used as a proxy for physical-iPad performance. User-owned signing, physical
 touch ergonomics, device cadence/lifecycle/persistence and final paired
-IPA/source publication remain open.
+IPA/source publication remain open. Exact 40-character IPA/source binding is
+now locally accepted; the remaining publication gate is the real signed
+physical artifact and its human/device results.
 
 **Last updated:** 2026-08-01
 
@@ -30,8 +32,9 @@ so the project can be reconstructed historically rather than only understood
 from its final state. `docs/history/THREE-DAY-CHECKPOINT.md` provides the
 readable end-to-end map through the 258,100-second checkpoint.
 `docs/history/THREE-DAY-TIMELINE.md` is the timestamped navigation index for the
-full campaign, including all 151 durable commits and the exact
-262,238-second physical-device boundary.
+full campaign, including all 185 durable implementation commits through the
+source-identity checkpoint and the exact 262,238-second physical-device
+boundary.
 `docs/history/RELEASE-REBASELINE.md` maps that implementation evidence to the
 minimum physical-device release contract and supersedes the earlier policy
 that required hardware-like Simulator cadence before device validation.
@@ -1595,3 +1598,27 @@ the retail poll, and the log contained zero targeted faults. This retains the
 Simulator correctness gate; it does not satisfy Apple signing, physical install,
 complete touch race, on-device cadence/thermals/audio or update persistence.
 See `docs/parity/2026-08-01-ios-devicectl-structured-evidence.md`.
+
+## 2026-08-01 exact IPA/source identity checkpoint
+
+A completion audit reproduced a real package/source ambiguity: the old
+packager accepted an iPhoneOS app whose binary said `890ba3f4be57-dirty` while
+the checkout was `931a81065572...`, because the plist carried no source commit
+and packaging did not compare one. The old dirty check also missed staged and
+untracked source.
+
+Checkpoint `84456cd95a58` embeds all 40 Git characters in Apple bundle
+metadata, retains the 12-character clean/dirty runtime label, treats any
+porcelain status as dirty, and makes a shared verifier mandatory in packaging
+and physical preflight. Two clean positives and six identity mutations behave
+as required; the full suite passes 25/25 in 19.53 seconds. Two exact unsigned
+IPAs are byte-identical at `25a8f751...1c191`, and the paired 3,263-member
+source archive passes at `5ddf285a...9fbd9` with an extracted verifier run.
+
+The exact Simulator sibling update-preserved the 605,698,800-byte retail image
+and 6,016-byte save, installed executable `4b1a6c6f...eaefa3`, carried full
+source `84456cd95a58...`, visibly rendered the complete textured mode menu and
+recorded zero targeted faults. This closes local package/source ambiguity. It
+does not add an Apple identity/profile, connected iPad, signed install or any
+hardware-only acceptance result. Full evidence is in
+`docs/parity/2026-08-01-ios-source-identity-binding.md`.

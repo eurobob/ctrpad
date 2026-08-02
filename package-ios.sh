@@ -10,8 +10,10 @@ Usage: ./package-ios.sh [options]
 Options:
   --build                 Configure and build the ios-device-arm64 preset first.
   --app PATH              Input .app (default: build-ios-device-arm64/CTRPad.app).
-  --output PATH           Output .ipa (default: dist/CTRPad-<version>-<mode>.ipa).
+  --output PATH           Output .ipa (default includes the source commit).
   --bundle-id ID          Expected bundle ID; passed to CMake with --build.
+  --source-commit HEX     Expected full 40-character source commit. Required
+                          outside a clean Git checkout.
   --identity IDENTITY     Apple Development/Distribution codesign identity.
   --profile PATH          Matching .mobileprovision file.
   --keychain PATH         Search/sign with this unlocked keychain only.
@@ -44,6 +46,7 @@ signing_identity=""
 profile_path=""
 signing_keychain=""
 device_udid=""
+requested_source_commit=""
 build_first=0
 
 while (($#)); do
@@ -52,12 +55,13 @@ while (($#)); do
             build_first=1
             shift
             ;;
-        --app|--output|--bundle-id|--identity|--profile|--keychain|--device)
+        --app|--output|--bundle-id|--source-commit|--identity|--profile|--keychain|--device)
             (($# >= 2)) || fail "$1 requires a value"
             case "$1" in
                 --app) app_path="$2" ;;
                 --output) output_path="$2" ;;
                 --bundle-id) expected_bundle_id="$2" ;;
+                --source-commit) requested_source_commit="$2" ;;
                 --identity) signing_identity="$2" ;;
                 --profile) profile_path="$2" ;;
                 --keychain) signing_keychain="$2" ;;
@@ -75,8 +79,8 @@ while (($#)); do
     esac
 done
 
-for command_name in awk base64 cmake ditto file find grep lipo plutil security \
-    shasum strings unzip xcrun; do
+for command_name in awk base64 basename cmake dirname ditto file find git grep \
+    lipo plutil security shasum strings tr unzip xcrun; do
     require_command "$command_name"
 done
 plist_buddy='/usr/libexec/PlistBuddy'
@@ -87,6 +91,33 @@ signing_trust_tool="$repo_root/tools/verify-ios-signing-trust.sh"
 entitlement_binding_tool="$repo_root/tools/verify-ios-entitlement-binding.sh"
 [[ -x "$entitlement_binding_tool" ]] || \
     fail "required entitlement-binding verifier not found: $entitlement_binding_tool"
+build_identity_tool="$repo_root/tools/verify-ios-build-identity.sh"
+[[ -x "$build_identity_tool" ]] || \
+    fail "required build-identity verifier not found: $build_identity_tool"
+
+expected_source_commit=""
+if git -C "$repo_root" rev-parse --show-toplevel >/dev/null 2>&1 && \
+    [[ "$(git -C "$repo_root" rev-parse --show-toplevel)" == "$repo_root" ]]; then
+    source_status="$(git -C "$repo_root" status --porcelain=v1 --untracked-files=normal)"
+    [[ -z "$source_status" ]] || \
+        fail "source checkout is dirty; commit or remove changes before packaging"
+    expected_source_commit="$(git -C "$repo_root" rev-parse --verify HEAD)"
+elif [[ -n "$requested_source_commit" ]]; then
+    expected_source_commit="$requested_source_commit"
+else
+    fail "cannot derive the source commit; use --source-commit with a corresponding source tree"
+fi
+
+expected_source_commit="$(printf '%s' "$expected_source_commit" | tr '[:upper:]' '[:lower:]')"
+[[ "$expected_source_commit" =~ ^[0-9a-f]{40}$ ]] || \
+    fail "source commit must contain exactly 40 hexadecimal characters"
+if [[ -n "$requested_source_commit" ]]; then
+    requested_source_commit="$(printf '%s' "$requested_source_commit" | tr '[:upper:]' '[:lower:]')"
+    [[ "$requested_source_commit" =~ ^[0-9a-f]{40}$ ]] || \
+        fail "--source-commit must contain exactly 40 hexadecimal characters"
+    [[ "$requested_source_commit" == "$expected_source_commit" ]] || \
+        fail "requested source commit does not match the clean checkout or source archive"
+fi
 
 if [[ -n "$signing_identity" || -n "$profile_path" ]]; then
     [[ -n "$signing_identity" && -n "$profile_path" ]] || \
@@ -106,7 +137,8 @@ if [[ -n "$signing_keychain" ]]; then
 fi
 
 if ((build_first)); then
-    configure_args=(--preset ios-device-arm64)
+    configure_args=(--preset ios-device-arm64
+        "-DCTR_NATIVE_SOURCE_COMMIT=$expected_source_commit")
     if [[ -n "$expected_bundle_id" ]]; then
         configure_args+=("-DCTR_NATIVE_IOS_BUNDLE_IDENTIFIER=$expected_bundle_id")
     fi
@@ -146,6 +178,16 @@ executable_name="$(plutil -extract CFBundleExecutable raw -o - "$info_plist")"
 package_type="$(plutil -extract CFBundlePackageType raw -o - "$info_plist")"
 minimum_os="$(plutil -extract MinimumOSVersion raw -o - "$info_plist")"
 executable_path="$staged_app/$executable_name"
+
+build_identity_manifest="$tmp_dir/build-identity-manifest.txt"
+"$build_identity_tool" --info-plist "$info_plist" \
+    --expected-source-commit "$expected_source_commit" \
+    --output "$build_identity_manifest" >/dev/null
+source_commit="$(awk -F= '$1 == "SOURCE_COMMIT" { print $2 }' \
+    "$build_identity_manifest")"
+[[ "$source_commit" =~ ^[0-9a-f]{40}$ ]] || \
+    fail "could not read the verified bundle source commit"
+source_commit_short="${source_commit:0:12}"
 
 [[ "$package_type" == "APPL" ]] || fail "unexpected CFBundlePackageType: $package_type"
 [[ "$bundle_id" =~ ^[A-Za-z0-9.-]+$ ]] || fail "bundle ID contains unsupported characters: $bundle_id"
@@ -298,7 +340,7 @@ archive_timestamp="$(date -r "$source_date_epoch" -u '+%Y%m%d%H%M.%S')"
 find "$payload_dir" -exec touch -h -t "$archive_timestamp" {} +
 
 if [[ -z "$output_path" ]]; then
-    output_path="$repo_root/dist/CTRPad-${bundle_version}-${build_version}-${mode}.ipa"
+    output_path="$repo_root/dist/CTRPad-${bundle_version}-${build_version}-${source_commit_short}-${mode}.ipa"
 elif [[ "$output_path" != /* ]]; then
     output_path="$repo_root/$output_path"
 fi
@@ -331,5 +373,6 @@ printf 'Wrote %s\n' "$output_path"
 printf 'Wrote %s\n' "$output_path.sha256"
 printf 'Bundle: %s %s (%s), minimum iOS %s, %s, %s\n' \
     "$bundle_id" "$bundle_version" "$build_version" "$minimum_os" "$architectures" "$mode"
+printf 'Source commit: %s (clean identity verified)\n' "$source_commit"
 printf 'Retail media: excluded\n'
 printf 'Distribution resources: LICENSE, THIRD_PARTY_NOTICES.md, INSTALL-IOS.md\n'

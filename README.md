@@ -13,7 +13,10 @@ is still open. Read `docs/history/THREE-DAY-CHECKPOINT.md` for the complete
 implementation chronology, evidence map, exact current boundary, rebuild path,
 rejected experiments, and remaining work. Do not interpret a successful build
 as final device acceptance. The exact timestamped index and complete
-151-commit campaign ledger are in `docs/history/THREE-DAY-TIMELINE.md`.
+185-commit implementation ledger are in
+`docs/history/THREE-DAY-TIMELINE.md`. Every packaged iOS build now carries and
+verifies its full 40-character source commit; see
+`docs/parity/2026-08-01-ios-source-identity-binding.md`.
 
 ## Philosophy
 
@@ -227,6 +230,8 @@ mandatory positive JSON schema version, tool version and exact install/app/
 version/launch/copy result must match
 before a campaign manifest can claim success. Searching arbitrary JSON text is
 not accepted as installed-app proof.
+The campaign also requires the full 40-character source commit and proves it
+against `CTRNativeSourceCommit` before signature or device claims.
 
 Create the matching GPL corresponding-source archive from a clean committed
 checkout with:

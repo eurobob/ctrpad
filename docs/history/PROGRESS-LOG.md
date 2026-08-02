@@ -3199,3 +3199,88 @@ clean and mergeable with no configured checks, then merged to `main` as
 `7e8466901`. At 19:42:13 active time was 274,735 seconds (3 days, 4 hours,
 18 minutes, 55 seconds). One Simulator, zero identities and no physical device
 remained.
+
+### 2026-08-01 19:43–20:17 CDT — Bound IPA identity to exact corresponding source
+
+- At 19:43:09, commit `c3589f129` recorded the mandatory CoreDevice-version
+  publication. PR #17 merged it to `main` at 19:43:47 as `931a81065572`; the
+  final-main source archive retained 3,261 members, passed the extracted 4/10
+  verifier and hashed to `c48923eb...c1c29`.
+- Around 19:45, a completion audit found that the current iPhoneOS app had no
+  source key and still contained runtime identity `890ba3f4be57-dirty` while
+  the checkout was `931a81065572...`. The old packager nevertheless produced a
+  valid IPA and sidecar. This reproduced an actual stale-package/source false
+  acceptance.
+- Added full 40-character `CTRNativeSourceCommit` plus clean/dirty
+  12-character `CTRNativeBuildIdentity` to Apple bundle metadata. Replaced the
+  unstaged-only dirty check with porcelain status covering staged, unstaged and
+  untracked source.
+- Added a manifest-writing build-identity verifier, a 2-positive/6-negative
+  self-test and CTest 25. The packager now refuses dirty checkout state,
+  propagates an explicit commit through `--build`, verifies staged app
+  metadata and uses the short prefix in the IPA filename. Physical preflight,
+  prepare and collect now retain the same full identity.
+- Rejected the first 12-character source-key draft because it did not justify
+  the word “exact”; the accepted comparison covers all 40 characters.
+- Implementation commit `84456cd95a58` was clean-built for iPhoneOS. Its plist
+  passed at source `84456cd95a587a1b23a54e37a103e176052c7b46`, build
+  `84456cd95a58`, plist SHA-256 `31b70d0d...12fd5`. Two seven-member unsigned
+  IPAs were byte-identical at `25a8f751...1c191`. A wrong full commit failed
+  without a manifest; the correct unsigned package wrote its identity manifest
+  then failed for no embedded profile before device work.
+- The fully reconfigured macOS suite passed 25/25 in 19.53 seconds. Matching
+  source archive `CTRPad-source-84456cd95a58.tar.gz` contained 3,263 members,
+  passed checksum/built-in exclusions/extracted identity tests and hashed to
+  `5ddf285a...9fbd9`.
+- The independent archive scan initially matched `.str` inside
+  `InfoPlist.strings`; the end-anchored unchanged repeat returned zero. An
+  earlier verifier command passed the app directory rather than `Info.plist`
+  and failed as designed before the corrected repeat. Neither failed harness
+  supplied acceptance evidence.
+- At 20:14, the sole iPad Simulator update-preserved the exact retail and save
+  inode/size/hash tuples, installed executable `4b1a6c6f...eaefa3` and launched
+  build `84456cd95a58`. Computer Use visibly observed copyright, animated
+  Crash/trophy/title assets and the complete textured mode menu with touch
+  controls. Touch Cross reached the retail poll; current targeted log rows were
+  zero. Heavy menu animation remained roughly 7–8 FPS on Apple Software
+  Renderer.
+- A naive line count first called literal empty device array `[]` one device;
+  structural CoreDevice validation confirmed version 3, success and zero
+  entries. Valid signing identities also remain zero.
+
+At 20:17:24 CDT, active goal time was 276,843 seconds: 3 days, 4 hours,
+54 minutes and 3 seconds. Exact IPA/source pairing is locally accepted. Apple
+credentials, a signed CTRPad positive, connected iPad and all physical-only
+acceptance remain open. Full evidence is in
+`docs/parity/2026-08-01-ios-source-identity-binding.md`.
+
+From approximately 20:22–20:29 CDT, a fresh extraction of the exact
+3,263-member archive exercised `package-ios.sh --build --source-commit` with
+`CMAKE_BUILD_PARALLEL_LEVEL=1`, low process priority and the commit timestamp.
+All 246 iPhoneOS targets built; packaging and sidecar verification passed; the
+new IPA embedded full source `84456cd95a58...` and clean build
+`84456cd95a58`, with SHA-256 `314d2ef0...40b0e0`. The goal reading at 20:29:27
+was 277,567 seconds (3 days, 5 hours, 6 minutes, 7 seconds). This directly
+accepts the no-`.git` rebuild/package route; it does not add signing or device
+evidence.
+
+At 20:33:38 CDT, the booted-device JSON again contained exactly the sole
+`CTRPad Import Validation` iPad. `simctl launch` foregrounded the existing app
+as PID 25424 without booting another Simulator. A five-second-later screenshot
+showed the textured Crash/trophy mode menu and the complete touch overlay; the
+ignored local PNG hashed to `ad7a9098...c41b0`. This confirmed the user-visible
+state immediately before publication and did not create physical-device proof.
+
+At 20:35 CDT, the final pre-publication macOS regression repeat passed 25/25
+in 26.40 seconds. The source-identity test took 4.85 seconds and again passed
+its two positive and six negative cases. This reran the unchanged built
+implementation; only documentation was pending in the checkout.
+
+At 20:36:40 CDT, commit `f4c1300f9` recorded the ten-file/531-addition exact
+source-binding and timestamped-history checkpoint. Its 3,264-member source
+archive excluded every targeted retail/runtime/package/profile/key member and
+passed the extracted 2/6 identity suite. An independent checksum command first
+ran from the repository root despite a basename-only sidecar and failed to
+locate the archive. The unchanged repeat from `dist/` passed at 20:38:17 with
+SHA-256 `27bd43cc...63ed0`. At 20:38:30, active goal time was 278,117 seconds:
+3 days, 5 hours, 15 minutes and 17 seconds.
