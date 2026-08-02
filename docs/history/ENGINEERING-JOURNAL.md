@@ -15079,3 +15079,20 @@ SHA-256
 `8f4cb489746b00ee31ac20c7f75d77ce0450101cac4ac498cd024cb5e0a857a4`.
 At 21:44:16, active goal time was 282,054 seconds: 3 days, 6 hours,
 20 minutes and 54 seconds. GitHub publication remained next.
+
+The three commits pushed to `codex/simulator-performance-next`. The preferred
+GitHub connector returned the same private-repository 404 without creating a
+PR; authenticated CLI fallback opened draft PR #20. Its server audit reported
+exact head `718fb73b088ce16a98ab4e90385d23fdb3d58cce`, three commits, eight
+intended files, 611 additions, eight deletions, `MERGEABLE` / `CLEAN` and no
+configured checks. It was marked ready and merged only with that protected
+head at 21:45:48 CDT as `be9c81605133d2329041f36ac7ca77b6f9347ead`.
+
+Fetching `origin/main`, verifying the accepted head as its ancestor and
+fast-forwarding/pushing the working branch aligned all three refs. Final-main
+source packaging contained 3,265 members, both required history files, zero
+forbidden members and a passing sidecar at SHA-256
+`e08098bb3acf725dc7393709bbf010bead3aed1b57855f9d337367f85481a463`.
+At 21:46:42, active goal time was 282,209 seconds: 3 days, 6 hours,
+23 minutes and 29 seconds. Local publication is closed; the signed physical-
+iPad acceptance boundary remains open.

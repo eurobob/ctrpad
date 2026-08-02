@@ -1651,3 +1651,8 @@ multi-touch. Remaining dependency-ordered work is unchanged:
 Full evidence and the post-three-day timestamp chronology are in
 `docs/parity/2026-08-01-ios-sustained-accessible-controls.md` and
 `docs/history/THREE-DAY-TIMELINE.md`.
+
+PR #20 published the exact three-commit/eight-file checkpoint to `main` as
+`be9c81605133`. Its 3,265-member final-main corresponding source passed at
+`e08098bb...a463` with both required history files and zero forbidden members.
+Publication is complete; the five physical-device steps above remain open.
