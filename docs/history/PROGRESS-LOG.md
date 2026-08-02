@@ -3275,3 +3275,12 @@ At 20:35 CDT, the final pre-publication macOS regression repeat passed 25/25
 in 26.40 seconds. The source-identity test took 4.85 seconds and again passed
 its two positive and six negative cases. This reran the unchanged built
 implementation; only documentation was pending in the checkout.
+
+At 20:36:40 CDT, commit `f4c1300f9` recorded the ten-file/531-addition exact
+source-binding and timestamped-history checkpoint. Its 3,264-member source
+archive excluded every targeted retail/runtime/package/profile/key member and
+passed the extracted 2/6 identity suite. An independent checksum command first
+ran from the repository root despite a basename-only sidecar and failed to
+locate the archive. The unchanged repeat from `dist/` passed at 20:38:17 with
+SHA-256 `27bd43cc...63ed0`. At 20:38:30, active goal time was 278,117 seconds:
+3 days, 5 hours, 15 minutes and 17 seconds.

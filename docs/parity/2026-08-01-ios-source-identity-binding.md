@@ -179,6 +179,19 @@ empty JSON array `[]`. Structural inspection then verified command type,
 success, JSON schema version 3 and `result.devices=[]`; the physical count is
 zero. Signing identities are also zero.
 
+## Documentation source checkpoint
+
+The timestamped documentation checkpoint was committed at 20:36:40 CDT as
+`f4c1300f9bb749ab901689e9b091eefa06e907f1`. Its corresponding-source archive
+contained 3,264 members, returned zero retail/runtime/package/profile/key
+matches and passed the extracted two-positive/six-negative identity suite. The
+first independent `shasum -c` invocation ran from the repository root even
+though the sidecar records a basename, so it failed to locate the archive.
+Repeating from `dist/` at 20:38:17 passed on the unchanged files; archive
+SHA-256 is
+`27bd43cc0deaea5fcb6248c095d0eca0e727c126d5197236ab1f7ac178363ed0`.
+The failed harness invocation is not counted as acceptance evidence.
+
 ## Remaining boundary
 
 This closes ambiguous IPA/source pairing and confirms the exact build remains
@@ -189,3 +202,6 @@ touch-only race or physical update/save persistence. Those remain required.
 
 At 20:29:27 CDT, after the extracted-source package completed, active goal time
 was 277,567 seconds: 3 days, 5 hours, 6 minutes and 7 seconds.
+At 20:38:30 CDT, after committing and independently checking the documentation
+source checkpoint, active goal time was 278,117 seconds: 3 days, 5 hours,
+15 minutes and 17 seconds.

@@ -14912,3 +14912,18 @@ The final pre-publication CTest repeat completed at 20:35 CDT: 25/25 passed in
 26.40 seconds. `ctr_ios_build_identity` completed in 4.85 seconds with two
 positive and six negative cases. The implementation under test was unchanged;
 the working-tree differences at that point were this documentation record.
+
+The ten-file documentation checkpoint was committed at 20:36:40 CDT as
+`f4c1300f9bb749ab901689e9b091eefa06e907f1`. Clean source packaging produced
+`CTRPad-source-f4c1300f9bb7.tar.gz` with 3,264 members. Its built-in exclusions
+passed; an independent end-anchored scan returned zero forbidden members; and
+the extracted tree repeated the 2/6 identity suite successfully.
+
+The first independent checksum verification invoked `shasum -c` from the
+repository root. Because the sidecar records only the archive basename and the
+archive resides under `dist/`, that invocation failed to open the file. It did
+not invalidate or validate its bytes. The repeat from `dist/` at 20:38:17
+passed for the unchanged archive at SHA-256
+`27bd43cc0deaea5fcb6248c095d0eca0e727c126d5197236ab1f7ac178363ed0`.
+At 20:38:30 CDT, the goal API reported 278,117 seconds: 3 days, 5 hours,
+15 minutes and 17 seconds.

@@ -65,6 +65,7 @@ adds a complete durable commit ledger.
 | Extracted-source release package | 2026-08-01 20:29:27 | Active goal time reached 3 days, 5 hours, 6 minutes, 7 seconds after a fresh no-`.git` extraction built all 246 iPhoneOS targets and packaged a full-identity IPA with one low-priority job. |
 | Visible pre-publication state | 2026-08-01 20:33:38 | Booted-device JSON again contained exactly one iPad Simulator; foregrounding the existing exact-source app showed the textured mode menu and complete touch overlay, captured locally at `ad7a9098...c41b0`. |
 | Final pre-publication regression | 2026-08-01 20:35 | The unchanged implementation passed 25/25 again in 26.40 seconds; source-identity test 25 passed its 2/6 cases in 4.85 seconds. |
+| Documentation source checkpoint | 2026-08-01 20:38:30 | Commit `f4c1300f9` recorded the exact-source/history docs; its 3,264-member archive passed exclusions, extraction and corrected-directory checksum at `27bd43cc...63ed0`; active goal time reached 3 days, 5 hours, 15 minutes, 17 seconds. |
 
 ## Executive chronology
 
@@ -146,6 +147,7 @@ adds a complete durable commit ledger.
 | 20:22–20:29 | Fresh extracted-source package | Extracted exact source with no `.git`, ran the documented `--build --source-commit` path under one-job/low-priority limits, built all 246 iPhoneOS targets and verified a full-identity unsigned IPA plus sidecar. |
 | 20:33 | Final visible publication check | Reconfirmed exactly one booted Simulator, foregrounded the existing app without a reinstall, and captured the fully textured mode menu plus touch overlay; the ignored screenshot is evidence only and contains no committed retail graphics. |
 | 20:35 | Final regression repeat | Repeated all 25 macOS tests against the unchanged implementation; every test passed, including the exact-source identity fixture. |
+| 20:36–20:38 | Documentation source checkpoint | Committed the ten-file history/report checkpoint, packaged its 3,264-member corresponding source, preserved a wrong-directory checksum failure, then passed the unchanged sidecar from `dist/` plus extracted exclusions/identity checks. |
 
 ## Complete durable commit ledger
 
