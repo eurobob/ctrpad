@@ -16,6 +16,8 @@ that are necessary to reproduce the conclusion.
 | --- | --- |
 | Date/time/time zone | `<value>` |
 | Source commit | `<40-character Git SHA>` |
+| IPA `CTRNativeSourceCommit` | `<same 40-character Git SHA>` |
+| IPA `CTRNativeBuildIdentity` | `<clean 12-character prefix>` |
 | CTRPad version/build identity from log | `<value>` |
 | Signed IPA filename | `<value>` |
 | Signed IPA SHA-256 | `<value>` |
@@ -31,6 +33,8 @@ that are necessary to reproduce the conclusion.
 
 - [ ] `ios-device-campaign.sh preflight` completed successfully.
 - [ ] The IPA sidecar, ZIP structure and strict signature verified.
+- [ ] The build-identity manifest matched all 40 source-commit characters and
+      rejected dirty, missing, truncated or mismatched metadata.
 - [ ] The profile CMS signature, signer purpose and certificate chain verified
       to an Apple Root CA from the system root keychain.
 - [ ] The app signing-certificate chain verified to an Apple Root CA.
@@ -43,6 +47,8 @@ that are necessary to reproduce the conclusion.
       `DeveloperCertificates`.
 - [ ] The executable was thin ARM64 with platform `IOS` and the expected build
       identity.
+- [ ] The matching source archive was produced from the same full commit and
+      its SHA-256 sidecar verified.
 - [ ] The signed app contained GPL/install resources and no retail/runtime
       data.
 - [ ] `ios-device-campaign.sh prepare` completed without uninstalling CTRPad.

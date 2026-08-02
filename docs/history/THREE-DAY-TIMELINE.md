@@ -23,10 +23,10 @@ adds a complete durable commit ledger.
 - Runtime observations are called exact only where the journal, log or report
   retained a timestamp. Work between durable checkpoints is described as an
   interval rather than assigned an invented minute.
-- The commit ledger contains every campaign commit through published head
-  `7e8466901`: 182 commits. Commands, temporary paths, hashes, rejected
+- The commit ledger contains every campaign commit through implementation head
+  `84456cd95`: 185 commits. Commands, temporary paths, hashes, rejected
   experiments and individual test results are intentionally not duplicated
-  182 times here;
+  185 times here;
   they remain in the linked engineering journal and parity reports.
 
 ## Time accounting
@@ -60,6 +60,11 @@ adds a complete durable commit ledger.
 | Structured evidence main publication | 2026-08-01 19:29:27 | PR #14 merged the 16-file checkpoint into `main` as `94f4d40ed`; its 3,261-member source archive passed after correcting the independent zsh harness, and active goal time reached 3 days, 4 hours, 6 minutes, 8 seconds. |
 | Mandatory JSON-version audit | 2026-08-01 19:38:00 | Active goal time reached 3 days, 4 hours, 14 minutes, 42 seconds after reproducing and rejecting an unversioned CoreDevice envelope and passing 24/24 tests. |
 | Mandatory-version main publication | 2026-08-01 19:42:13 | PR #16 merged the exact 13-file checkpoint into `main` as `7e8466901`; active goal time reached 3 days, 4 hours, 18 minutes, 55 seconds. |
+| Mandatory-version history publication | 2026-08-01 19:43:47 | PR #17 merged the publication record into `main` as `931a81065`; its final-main 3,261-member source archive passed at `c48923eb...c1c29`. |
+| Exact IPA/source identity audit | 2026-08-01 20:17:24 | Active goal time reached 3 days, 4 hours, 54 minutes, 3 seconds (`timeUsedSeconds=276843`) after reproducing stale-package acceptance, binding all 40 source characters, passing 25/25 tests, packaging exact source and visually rechecking the sole Simulator. |
+| Extracted-source release package | 2026-08-01 20:29:27 | Active goal time reached 3 days, 5 hours, 6 minutes, 7 seconds after a fresh no-`.git` extraction built all 246 iPhoneOS targets and packaged a full-identity IPA with one low-priority job. |
+| Visible pre-publication state | 2026-08-01 20:33:38 | Booted-device JSON again contained exactly one iPad Simulator; foregrounding the existing exact-source app showed the textured mode menu and complete touch overlay, captured locally at `ad7a9098...c41b0`. |
+| Final pre-publication regression | 2026-08-01 20:35 | The unchanged implementation passed 25/25 again in 26.40 seconds; source-identity test 25 passed its 2/6 cases in 4.85 seconds. |
 
 ## Executive chronology
 
@@ -136,6 +141,11 @@ adds a complete durable commit ledger.
 | 19:26–19:29 | Structured-evidence GitHub publication | Committed the 16-file checkpoint, built its 3,261-member source archive, corrected an independent zsh `path`-array harness mistake, used authenticated CLI fallback after the private-repository connector 404, audited PR #14's exact one-commit scope and merged its protected head into `main` as `94f4d40ed`. |
 | 19:34–19:38 | Mandatory CoreDevice schema version | Removed `info.jsonVersion` from the accepted real list envelope, reproduced an incorrect `JSON_VERSION=not-reported` success, made the positive integer version mandatory, added the tenth adversarial fixture and passed 24/24 tests in 16.61 seconds without touching the sole Simulator. |
 | 19:40–19:42 | Mandatory-version GitHub publication | Committed the 13-file checkpoint, verified its 3,261-member source archive, used authenticated CLI fallback after the connector 404, audited PR #16 as an exact clean one-commit change, and merged its protected head to `main` as `7e8466901`. |
+| 19:43 | Mandatory-version history publication | Committed the exact publication boundary and merged it through PR #17 as final-main `931a81065`; its 3,261-member source archive and extracted 4/10 fixture suite passed. |
+| 19:45–20:17 | Exact package/source identity binding | Reproduced a successful IPA from stale dirty binary `890ba3f4be57-dirty`, added full-commit bundle/campaign binding and comprehensive dirty detection, rejected a 12-character “exact” draft, passed 2/6 identity fixtures and 25/25 tests, produced byte-identical IPAs plus matching 3,263-member source, and visibly rechecked full textures/controls/logs on the one Simulator. |
+| 20:22–20:29 | Fresh extracted-source package | Extracted exact source with no `.git`, ran the documented `--build --source-commit` path under one-job/low-priority limits, built all 246 iPhoneOS targets and verified a full-identity unsigned IPA plus sidecar. |
+| 20:33 | Final visible publication check | Reconfirmed exactly one booted Simulator, foregrounded the existing app without a reinstall, and captured the fully textured mode menu plus touch overlay; the ignored screenshot is evidence only and contains no committed retail graphics. |
+| 20:35 | Final regression repeat | Repeated all 25 macOS tests against the unchanged implementation; every test passed, including the exact-source identity fixture. |
 
 ## Complete durable commit ledger
 
@@ -327,6 +337,9 @@ the engineering journal.
 2026-08-01 19:31:04  5e8acb3f2  Merge pull request #15 from chrissotraidis/codex/simulator-performance-next
 2026-08-01 19:40:20  a139cce1c  Require versioned CoreDevice evidence
 2026-08-01 19:41:57  7e8466901  Merge pull request #16 from chrissotraidis/codex/simulator-performance-next
+2026-08-01 19:43:09  c3589f129  Record versioned evidence publication
+2026-08-01 19:43:47  931a81065  Merge pull request #17 from chrissotraidis/codex/simulator-performance-next
+2026-08-01 20:07:03  84456cd95  Bind iOS builds to exact source commits
 ```
 
 ## What the process actually did
@@ -363,6 +376,8 @@ The later physical handoff and structured CoreDevice claim audit are in
 [`../parity/2026-08-01-ios-physical-campaign-handoff.md`](../parity/2026-08-01-ios-physical-campaign-handoff.md)
 and
 [`../parity/2026-08-01-ios-devicectl-structured-evidence.md`](../parity/2026-08-01-ios-devicectl-structured-evidence.md).
+The exact package/source binding audit is in
+[`../parity/2026-08-01-ios-source-identity-binding.md`](../parity/2026-08-01-ios-source-identity-binding.md).
 
 At the 15:56:54 boundary, local evidence included:
 
