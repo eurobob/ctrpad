@@ -247,6 +247,12 @@ their source commit will be published to GitHub. They are not Apple-signed and
 cannot launch on an iPad until the user supplies a valid identity/profile or a
 compatible re-signing workflow.
 
+Ready PR #24 published the exact two-commit/seven-file handoff. Its protected
+head `d44c5b0b06c6...` was clean and mergeable and merged at 01:39:55 CDT as
+remote-main `8ed2ce98a9bb...`. A fresh ancestry check passed. The source commit
+named by both local artifacts is therefore present on GitHub `main` even
+though the generated artifacts themselves remain intentionally ignored.
+
 ## Evidence boundary
 
 The runtime log, sample report and screenshots are local diagnostic material.
