@@ -98,10 +98,14 @@ resolve_existing_evidence_dir() {
 run_devicectl() {
     local evidence_root="$1"
     local label="$2"
-    shift 2
+    local expected_command_type="$3"
+    shift 3
     xcrun devicectl --timeout "$device_timeout" \
         --json-output "$evidence_root/$label.json" \
         --log-output "$evidence_root/$label.log" "$@"
+    "$devicectl_json_tool" envelope --json "$evidence_root/$label.json" \
+        --command-type "$expected_command_type" \
+        --output "$evidence_root/$label-envelope.txt" >/dev/null
 }
 
 preflight_signed_ipa() {
@@ -306,6 +310,9 @@ signing_trust_tool="$repo_root/tools/verify-ios-signing-trust.sh"
 entitlement_binding_tool="$repo_root/tools/verify-ios-entitlement-binding.sh"
 [[ -x "$entitlement_binding_tool" ]] || \
     fail "required entitlement-binding verifier not found: $entitlement_binding_tool"
+devicectl_json_tool="$repo_root/tools/verify-devicectl-json.sh"
+[[ -x "$devicectl_json_tool" ]] || \
+    fail "required devicectl JSON verifier not found: $devicectl_json_tool"
 command_name="${1:-}"
 if [[ -z "$command_name" ]]; then
     usage
@@ -375,22 +382,46 @@ case "$command_name" in
             exit 0
         fi
 
-        run_devicectl "$evidence_dir" device-list list devices
-        run_devicectl "$evidence_dir" device-details device info details \
+        run_devicectl "$evidence_dir" device-list devicectl.list.devices \
+            list devices
+        run_devicectl "$evidence_dir" device-details \
+            devicectl.device.info.details device info details \
             --device "$device_udid"
-        run_devicectl "$evidence_dir" install device install app \
+        run_devicectl "$evidence_dir" install devicectl.device.install.app \
+            device install app \
             --device "$device_udid" "$app_path"
-        run_devicectl "$evidence_dir" installed-app device info apps \
-            --device "$device_udid" --bundle-id "$bundle_id"
-        grep -Fq "$bundle_id" "$evidence_dir/installed-app.json" || \
-            fail "installed-app evidence does not contain $bundle_id"
-        run_devicectl "$evidence_dir" launch device process launch \
+        "$devicectl_json_tool" install --json "$evidence_dir/install.json" \
+            --bundle-id "$bundle_id" --output "$evidence_dir/install-result.txt" >/dev/null
+        run_devicectl "$evidence_dir" installed-app devicectl.device.info.apps \
+            device info apps \
+            --device "$device_udid" --bundle-id "$bundle_id" --columns '*'
+        "$devicectl_json_tool" installed-app \
+            --json "$evidence_dir/installed-app.json" --bundle-id "$bundle_id" \
+            --version "$bundle_version" --build "$build_version" \
+            --output "$evidence_dir/installed-app-result.txt" >/dev/null
+        run_devicectl "$evidence_dir" launch devicectl.device.process.launch \
+            device process launch \
             --device "$device_udid" --terminate-existing "$bundle_id"
+        "$devicectl_json_tool" launch --json "$evidence_dir/launch.json" \
+            --bundle-id "$bundle_id" --executable "$executable_name" \
+            --output "$evidence_dir/launch-result.txt" >/dev/null
+        installation_url="$(awk -F= '$1 == "REMOTE_URL" { print $2 }' \
+            "$evidence_dir/install-result.txt")"
+        installed_app_url="$(awk -F= '$1 == "REMOTE_URL" { print $2 }' \
+            "$evidence_dir/installed-app-result.txt")"
+        launched_process_id="$(awk -F= '$1 == "PROCESS_IDENTIFIER" { print $2 }' \
+            "$evidence_dir/launch-result.txt")"
         {
             printf 'PHASE=prepare-success\n'
             printf 'DEVICE_UDID=%s\n' "$device_udid"
             printf 'BUNDLE_ID=%s\n' "$bundle_id"
+            printf 'VERSION=%s\n' "$bundle_version"
+            printf 'BUILD=%s\n' "$build_version"
             printf 'SIGNED_PACKAGE_EXECUTABLE_SHA256=%s\n' "$executable_hash"
+            printf 'INSTALLATION_URL=%s\n' "$installation_url"
+            printf 'INSTALLED_APP_URL=%s\n' "$installed_app_url"
+            printf 'LAUNCHED_PROCESS_IDENTIFIER=%s\n' "$launched_process_id"
+            printf 'DEVICECTL_STRUCTURED_JSON_STATUS=verified\n'
             printf 'DEVICECTL_VERSION=%s\n' "$(xcrun devicectl --version)"
             printf 'COMPLETED_UTC=%s\n' "$(date -u '+%Y-%m-%dT%H:%M:%SZ')"
         } >"$evidence_dir/prepare-manifest.txt"
@@ -417,13 +448,21 @@ case "$command_name" in
         collection_dir="$evidence_dir/collection-$collection_stamp-$$"
         [[ ! -e "$collection_dir" ]] || fail "collection path already exists: $collection_dir"
         mkdir "$collection_dir"
-        run_devicectl "$collection_dir" device-details device info details \
+        run_devicectl "$collection_dir" device-details \
+            devicectl.device.info.details device info details \
             --device "$device_udid"
-        run_devicectl "$collection_dir" installed-app device info apps \
-            --device "$device_udid" --bundle-id "$bundle_id"
-        grep -Fq "$bundle_id" "$collection_dir/installed-app.json" || \
-            fail "installed-app evidence does not contain $bundle_id"
-        run_devicectl "$collection_dir" copy-app-support device copy from \
+        run_devicectl "$collection_dir" installed-app \
+            devicectl.device.info.apps device info apps \
+            --device "$device_udid" --bundle-id "$bundle_id" --columns '*'
+        "$devicectl_json_tool" installed-app \
+            --json "$collection_dir/installed-app.json" --bundle-id "$bundle_id" \
+            --output "$collection_dir/installed-app-result.txt" >/dev/null
+        collected_version="$(awk -F= '$1 == "VERSION" { print $2 }' \
+            "$collection_dir/installed-app-result.txt")"
+        collected_build="$(awk -F= '$1 == "BUILD" { print $2 }' \
+            "$collection_dir/installed-app-result.txt")"
+        run_devicectl "$collection_dir" copy-app-support \
+            devicectl.device.copy.from device copy from \
             --device "$device_udid" \
             --domain-type appDataContainer \
             --domain-identifier "$bundle_id" \
@@ -452,6 +491,9 @@ case "$command_name" in
             printf 'PHASE=collect-success\n'
             printf 'DEVICE_UDID=%s\n' "$device_udid"
             printf 'BUNDLE_ID=%s\n' "$bundle_id"
+            printf 'INSTALLED_VERSION=%s\n' "$collected_version"
+            printf 'INSTALLED_BUILD=%s\n' "$collected_build"
+            printf 'DEVICECTL_STRUCTURED_JSON_STATUS=verified\n'
             printf 'COLLECTED_UTC=%s\n' "$(date -u '+%Y-%m-%dT%H:%M:%SZ')"
             printf 'DOCUMENTS_RETAIL_TREE_COPIED=no\n'
             printf 'APP_SUPPORT=%s\n' "$collection_dir/app-support"

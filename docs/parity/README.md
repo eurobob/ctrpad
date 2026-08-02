@@ -199,6 +199,12 @@ Current evidence and procedures:
   debugger/minimal entitlement set to the trusted profile, records two
   positive and seven negative authorization fixtures, the expanded 23-test
   suite and the still-open real-profile/physical-device result.
+- `2026-08-01-ios-devicectl-structured-evidence.md` closes arbitrary-text
+  CoreDevice acceptance, records the real empty/failed false-positive,
+  versioned envelope and exact install/app/version/launch/copy validation, four
+  positive and nine adversarial fixtures, the expanded 24-test suite, and the
+  exact one-Simulator visual/persistence recheck while keeping every signed
+  physical-iPad result open.
 - `2026-07-31-macos-arm64-keyboard-tap.md` records the missing quick-tap root
   cause, historical one-snapshot press-edge transport, its later two-snapshot
   supersession, direct live PSX packet traces, and exact-commit

@@ -1569,3 +1569,24 @@ the exercised startup/Home/foreground/rotation route. Manual appearance calls,
 arbitrary nested-run-loop delay, skipped shutdown and a test-only asynchronous
 state machine are rejected absent a physical production reproduction. See
 `docs/parity/2026-08-01-ios-uikit-view-lifecycle.md`.
+
+## 2026-08-01 structured physical-campaign evidence checkpoint
+
+The signed-device boundary remains open, but a concrete false-positive inside
+the handoff is closed. The former whole-file bundle-ID grep could accept a
+failed or empty `devicectl device info apps` result because CoreDevice echoes
+the requested ID in arguments and matching-query metadata. All list/details/
+install/app/launch/copy operations now require the exact versioned success
+envelope; install, app and launch also require their exact result bundle,
+version/build, URL and positive PID. Four positive and nine adversarial fixtures
+pass/fail as intended, a real local error result is rejected, and the suite is
+24/24.
+
+The current Simulator sibling was rebuilt and guarded-update-installed on the
+sole booted device at exact staged/installed hash `88b5e79f...400979`. Retail
+and slot-zero save identity remained unchanged, PID 4571 launched, current
+copyright/Naughty Dog/main-menu assets and touch controls rendered, Gas reached
+the retail poll, and the log contained zero targeted faults. This retains the
+Simulator correctness gate; it does not satisfy Apple signing, physical install,
+complete touch race, on-device cadence/thermals/audio or update persistence.
+See `docs/parity/2026-08-01-ios-devicectl-structured-evidence.md`.
