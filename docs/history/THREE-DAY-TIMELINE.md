@@ -23,8 +23,8 @@ adds a complete durable commit ledger.
 - Runtime observations are called exact only where the journal, log or report
   retained a timestamp. Work between durable checkpoints is described as an
   interval rather than assigned an invented minute.
-- The commit ledger contains every campaign commit through performance-handoff
-  main merge `8ed2ce98a`: 204 commits. Commands, temporary
+- The commit ledger contains every campaign commit through Start-control
+  implementation `df1b80372`: 212 commits. Commands, temporary
   paths, hashes, rejected experiments and individual test results are
   intentionally not duplicated for every commit;
   they remain in the linked engineering journal and parity reports.
@@ -81,6 +81,11 @@ adds a complete durable commit ledger.
 | Simulator performance handoff reading | 2026-08-02 01:24:27 | A one-Simulator touch route, exact log/screenshot audit, three-second sample and host-load inventory separated coherent gameplay from Apple Software Renderer/host contention; active goal time reached 3 days, 10 hours and 48 seconds. |
 | Physical-test handoff package | 2026-08-02 01:37:14 | Clean `daba106ae` produced a verified thin-ARM64 unsigned IPA, 3,267-member matching source archive and a serialized 25/25 macOS regression; active goal time reached 3 days, 10 hours, 13 minutes and 39 seconds. |
 | Performance-handoff main publication | 2026-08-02 01:40:23 | PR #24 merged protected head `d44c5b0b0` as `8ed2ce98a`; two commits/seven files/604 additions/5 corrections were clean and exact-head ancestry passed; active goal time reached 3 days, 10 hours, 16 minutes and 54 seconds. |
+| Telemetry main publication | 2026-08-02 02:21:56 | PR #26 merged protected head `21e214f6b` as `15f8d9212`; exact Apple builds, 26/26 tests and retail-free package/source checks passed, and active goal time reached 3 days, 10 hours, 58 minutes and 43 seconds. |
+| Telemetry history publication | 2026-08-02 02:23:27 | PR #27 merged publication commit `3b45e67cd` as final-main `cb459a198`. |
+| Remote-main fresh-clone proof | 2026-08-02 02:40:02 | A new shallow HTTPS clone of `cb459a198` completed macOS/iPhoneOS builds, 26/26 tests and matching unsigned IPA/source packaging; active goal time reached 3 days, 11 hours, 16 minutes and 29 seconds. |
+| Start-control correction and resource stop | 2026-08-02 02:40-03:04 | Identified the hidden Start label, visibly changed it to `START / PAUSE`, advanced the real game to its menu, committed `df1b80372`, completed exact Apple compiles, then stopped all runtime/build activity at the user's request under severe host contention. |
+| Low-load publication resume | 2026-08-02 03:10:09 | Stopped state was reconfirmed, documentation/scope review ran without Simulator or compiler restart, and active goal time reached 3 days, 11 hours, 46 minutes and 28 seconds. |
 
 ## Executive chronology
 
@@ -427,6 +432,14 @@ the engineering journal.
 2026-08-02 01:31:11  daba106ae  Document Simulator performance handoff
 2026-08-02 01:38:53  d44c5b0b0  Record exact handoff package
 2026-08-02 01:39:55  8ed2ce98a  Merge pull request #24 from chrissotraidis/codex/simulator-performance-next
+2026-08-02 01:41:24  008bfe4d1  Record performance handoff publication
+2026-08-02 01:42:04  83a618139  Merge pull request #25 from chrissotraidis/codex/simulator-performance-next
+2026-08-02 02:11:22  2bfa53207  Add iOS device cadence telemetry
+2026-08-02 02:20:36  21e214f6b  Record clean device telemetry handoff
+2026-08-02 02:21:42  15f8d9212  Merge pull request #26 from chrissotraidis/codex/device-telemetry
+2026-08-02 02:22:45  3b45e67cd  Record device telemetry publication
+2026-08-02 02:23:27  cb459a198  Merge pull request #27 from chrissotraidis/codex/device-telemetry
+2026-08-02 02:52:31  df1b80372  Clarify touch Start control
 ```
 
 ## What the process actually did
@@ -561,3 +574,37 @@ head `21e214f6bf2f` merged at 02:21:42 CDT as remote-main
 passed. At 02:21:56, goal time was 298,723 seconds: 3 days, 10 hours,
 58 minutes and 43 seconds. Telemetry publication was complete; physical-iPad
 acceptance remained open.
+
+PR #27 merged the telemetry publication record at 02:23:27 as final-main
+`cb459a198798`. At 02:30:16 a new disposable shallow HTTPS clone of that exact
+remote head began. It used no development-worktree Git objects or ignored
+files. By 02:33:49 it had built native macOS ARM64 with zero errors and passed
+all 26 serialized tests; by 02:38:04 it had linked all 247 iPhoneOS steps as
+thin ARM64 iOS 15.0/SDK 26.5 with zero errors. Both targets retained the same
+32 established legacy warnings.
+
+The clone produced a seven-member unsigned IPA at `c1622388...2ad` and a
+3,270-member source archive at `38a55c92...531`. Sidecars, full commit identity,
+resources, unsigned state, load command and sensitive-material exclusions
+passed. The first source checksum ran from the wrong directory because its
+sidecar records a basename; the corrected `dist/` check passed without changing
+the artifact. At 02:40:02, active goal time was 299,789 seconds: 3 days,
+11 hours, 16 minutes and 29 seconds.
+
+The next user-visible audit identified that the real Start input was labeled
+only `PAUSE`. The title became `START / PAUSE` with accessibility label
+`Start or pause`; a one-Simulator on-screen tap advanced the retail copyright
+sequence to the textured main menu. The live proof preserved the retail/save
+tuples but used a dirty development build. Commit `df1b80372` froze only the
+two source edits, and exact-commit iPhoneOS and Simulator compiles later linked
+with 32 established warnings and zero errors.
+
+During the exact Simulator rebuild, combined host/game contention reached load
+`188.43 181.14 128.81`. The user requested that all operations stop. The
+already-running final link completed before stop inspection, then CTRPad and
+the named Simulator were stopped. Final audit found no booted Simulator, no
+project operation, a clean branch one local commit ahead and no push. Focused
+evidence is in
+[`../parity/2026-08-02-remote-main-fresh-clone.md`](../parity/2026-08-02-remote-main-fresh-clone.md)
+and
+[`../parity/2026-08-02-ios-start-control-clarity.md`](../parity/2026-08-02-ios-start-control-clarity.md).

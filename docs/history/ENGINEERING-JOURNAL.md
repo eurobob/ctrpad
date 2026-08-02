@@ -15595,3 +15595,113 @@ pre-publication history.
 At 02:21:56 CDT, goal time was 298,723 seconds: 3 days, 10 hours, 58 minutes
 and 43 seconds. Source publication was complete. Apple signing, a connected
 physical iPad and every device-only acceptance result remained open.
+
+### 2026-08-02 02:23-02:40 CDT — Remote-main missing-state proof
+
+PR #27 merged the telemetry publication record at 02:23:27 as
+`cb459a198798d58adc345e4a4997820d2b580cf9`. A requirement re-audit found the
+actual unclosed product contract was now the signed physical-device campaign.
+The useful local question was whether another checkout could build GitHub
+`main` or the three-day worktree silently supplied an ignored prerequisite.
+
+Preflight showed load `8.25 12.99 19.25`, approximately 12 GiB free and one
+booted Simulator with CTRPad stopped. The Simulator was shut down. `du`
+attributed 3.4 GiB of the 7.9 GiB checkout to accumulated macOS debug reports,
+so that history was retained. A local-object inventory warned about a 268.50
+MiB orphan temporary pack; it was not pruned.
+
+At 02:30:16, a depth-one, main-only HTTPS clone created
+`/tmp/ctrpad-main-fresh.L7QJUr/repo`. It resolved exact clean head
+`cb459a198798...`, occupied 81 MiB total/19 MiB `.git`, and used no local
+reference/shared clone option. The initial macOS configure outlived the
+orchestration wrapper's first yield. An early build consequently returned
+`Error: could not load cache`; process inspection found the only configure
+still active. After it completed, the same serialized low-priority build
+finished all 242 steps with 32 established warnings and zero errors. CTest
+passed 26/26 in 10.85 seconds at 02:33:49.
+
+The iPhoneOS preset configured by 02:34:58 and built all 247 steps through the
+app link at 02:38:04, again with 32 established warnings and zero errors. The
+result was thin ARM64, platform iOS, minimum iOS 15.0, SDK 26.5, bundle
+`io.github.chrissotraidis.ctrpad`, version `0.1.0 (1)` and full source identity
+`cb459a198798d58adc345e4a4997820d2b580cf9`.
+
+The first script search included nonexistent `scripts/`; `rg` reported that
+operand missing while still locating the package scripts at repository root.
+The corrected invocations produced:
+
+```text
+CTRPad-0.1.0-1-cb459a198798-unsigned.ipa
+size 1462090, members 7
+sha256 c16223884f7d49fc269e605133feb761fe2c15677557446f073df041432bc2ad
+
+CTRPad-source-cb459a198798.tar.gz
+size 17756079, members 3270
+sha256 38a55c9247625dbaf370e40972beaa146b8bc387a0e57090261672a760bda531
+```
+
+The IPA sidecar passed from repository root. The source sidecar records a
+basename, so its first root-directory check could not open the tarball; the
+repeat from `dist/` passed both artifacts. Architecture, load command, full
+identity, intentionally absent signature and negative retail/profile/key scans
+passed. A first standard-profile diagnostic used an unset helper variable and
+printed root-level paths; it was rejected. Explicit per-user checks confirmed
+both standard profile directories absent. Signing identities and connected
+devices remained zero.
+
+At 02:40:02, active goal time was 299,789 seconds: 3 days, 11 hours, 16 minutes
+and 29 seconds. This is same-host fresh-clone evidence, not an independent
+other-Mac, signature or physical-iPad result. Exact detail is in
+`docs/parity/2026-08-02-remote-main-fresh-clone.md`.
+
+### 2026-08-02 02:40-03:04 CDT — Hidden Start label and explicit resource stop
+
+The user correctly asked why the game had no Start button. Source inspection
+found `ctrpad.touch.start` already emitted `PLATFORM_INPUT_TOUCH_START`; its
+visible title was only `PAUSE`. The UI therefore hid valid pre-race behavior.
+The title changed to two lines, `START` / `PAUSE`, and gained accessibility
+label `Start or pause`; the input identifier and mask did not change.
+
+The first dirty Simulator build compiled and linked with the established 32
+warnings and zero errors. The named sole Simulator booted, and guarded
+update-install verified staged/installed executable SHA-256
+`12fdde832eba4b03218acc4bf55a3c8989e6d8a4b2dedac593874574f4254e66`.
+Retail inode/size/hash and slot-zero inode/size/hash were identical before and
+after. Computer Use visibly found the two-line label unclipped, and its
+accessibility tree exposed `Start or pause`, `ctrpad.touch.start`, `Released`.
+One screen-coordinate tap advanced the real game from copyright presentation
+to the textured CTR main menu. A local-only retail screenshot passed at
+`e2378241...7a66` and was not committed.
+
+At 02:52:31, commit `df1b803726b4375389476d6abf273b55b9580f98` froze only
+the two UI-source edits. Its first iPhoneOS configure correctly rejected the
+build directory's stale cached `cb459...` identity. Clearing only cached
+`CTR_NATIVE_SOURCE_COMMIT` reconfigured the same directory against the exact
+new commit; the eight-step iPhoneOS rebuild linked thin ARM64 at 02:55:04 with
+32 established warnings and zero errors. Full plist source identity matched.
+
+The corresponding exact Simulator rebuild ran one low-priority job while host
+contention climbed to `188.43 181.14 128.81`. The user explicitly ordered all
+operations stopped because the game was sluggish and bogging down the machine.
+The already-running build reached its final link and wrote the exact binary at
+03:04:14 before cancellation/stop inspection completed. CTRPad and the named
+Simulator were then terminated/shut down. Final audit found zero booted
+Simulators, no matching project build/runtime process, a clean branch one
+local commit ahead of `origin/main`, and no push or merge.
+
+The earlier live check is retained as identical-source dirty-development
+evidence, not upgraded to an exact-clean runtime claim. Exact detail is in
+`docs/parity/2026-08-02-ios-start-control-clarity.md`.
+
+At 03:05, publication work resumed in a deliberately low-load mode. A fresh
+audit again found zero booted Simulators, no matching CTRPad/CMake/CTest/clang
+process, clean implementation commit `df1b80372` one ahead of remote `main`,
+and no remote branch. Only Markdown and scope checks ran; no app or compiler
+restarted. The first combined fixed-string audit mistakenly passed a `\n`
+pattern through `rg` as a newline and was rejected; the corrected fixed-string
+repeat followed. A later history-count wrapper embedded Markdown fence
+backticks inside a JavaScript template and failed before running; its first
+range-based correction also stopped two lines before the expanded ledger end
+and reported 210. The final format-anchored ledger count returned the intended
+212 entries. At 03:10:09, goal time was 301,588 seconds: 3 days, 11 hours,
+46 minutes and 28 seconds.

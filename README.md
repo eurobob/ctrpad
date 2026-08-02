@@ -7,13 +7,13 @@ A native PC port of Crash Team Racing (PS1, 1999), built on top of the [CTR-ModS
 CTRPad now builds natively for ARM64 macOS, iOS, and iPadOS; imports a
 user-owned NTSC-U retail BIN; persists saves; and provides controller,
 keyboard, and touch-first input. The bounded iPad Simulator retail route is
-functional and visually coherent, but heavy scenes remain approximately
-5–6 FPS under Apple's software renderer and the physical-iPad acceptance gate
-is still open. Read `docs/history/THREE-DAY-CHECKPOINT.md` for the complete
-implementation chronology, evidence map, exact current boundary, rebuild path,
-rejected experiments, and remaining work. Do not interpret a successful build
-as final device acceptance. The exact timestamped index and complete
-185-commit implementation ledger are in
+functional and visually coherent, but heavy scenes remain slow under Apple's
+Simulator software renderer and the physical-iPad acceptance gate is still
+open. Read `docs/history/README.md` for the complete three-day-and-eleven-hour
+process map, evidence structure, current boundary, rejected experiments and
+remaining work. Do not interpret a successful build as final device
+acceptance. The exact timestamped index and complete 212-commit campaign ledger
+through the Start-control implementation checkpoint are in
 `docs/history/THREE-DAY-TIMELINE.md`. Every packaged iOS build now carries and
 verifies its full 40-character source commit; see
 `docs/parity/2026-08-01-ios-source-identity-binding.md`.
@@ -348,7 +348,7 @@ MFi controller can remain active without disabling the overlay.
 | **VIEW △** | Triangle | camera or skip / menu action |
 | **L DRIFT / BOOST** | L1 | hop, hold drift, fire boosts |
 | **R DRIFT / BOOST** | R1 | alternate hop/drift side |
-| **PAUSE** | Start | pause or advance |
+| **START / PAUSE** | Start | start, advance, pause, or resume |
 | **SELECT** | Select | retail Select input |
 
 Open **CONTROLS** above the game surface to choose left- or right-hand

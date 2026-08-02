@@ -234,6 +234,15 @@ Current evidence and procedures:
   iOS thermal/Low Power/battery-state events, collector integration,
   deterministic percentile coverage, cross-SDK builds and a one-Simulator
   live proof while keeping every physical-device result open.
+- `2026-08-02-remote-main-fresh-clone.md` proves that a new shallow HTTPS clone
+  of exact GitHub `main` independently configures, builds, passes 26/26 tests
+  and produces the thin-ARM64 unsigned IPA/corresponding-source pair without
+  development-worktree state; it retains corrected verification attempts,
+  resource constraints, hashes and the still-open physical boundary.
+- `2026-08-02-ios-start-control-clarity.md` records why the production Start
+  input appeared only as `PAUSE`, the `START / PAUSE` label/accessibility fix,
+  a real on-screen tap advancing to the textured menu, exact clean Apple
+  compiles, save invariants and the subsequent user-requested resource stop.
 - `2026-07-31-macos-arm64-keyboard-tap.md` records the missing quick-tap root
   cause, historical one-snapshot press-edge transport, its later two-snapshot
   supersession, direct live PSX packet traces, and exact-commit
