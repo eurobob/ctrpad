@@ -37,6 +37,9 @@ static NSString *const s_touchOpacityKey = @"CTRPadTouchOpacity";
 @interface CTRPadInputButton : UIButton
 @property(nonatomic, assign) BOOL accessibilityHeld;
 @property(nonatomic, assign) BOOL accessibilityTapPending;
+@property(nonatomic, assign) NSUInteger accessibilityActionGeneration;
+- (BOOL)accessibilityPressBriefly;
+- (BOOL)accessibilityPressThreeSeconds;
 - (BOOL)accessibilityHoldControl;
 - (BOOL)accessibilityReleaseControl;
 @end
@@ -46,14 +49,19 @@ static NSString *const s_touchOpacityKey = @"CTRPadTouchOpacity";
 @property(nonatomic, strong) UILabel *label;
 @property(nonatomic, assign) BOOL trackingTouch;
 @property(nonatomic, assign) BOOL accessibilitySteering;
+@property(nonatomic, assign) NSUInteger accessibilitySteeringGeneration;
 @property(nonatomic, assign) unsigned int directionMask;
 - (void)applyControlOpacity:(CGFloat)opacity;
 - (void)publishPoint:(CGPoint)point;
 - (void)releaseTouch;
 - (BOOL)accessibilityHoldLeft;
 - (BOOL)accessibilityHoldRight;
+- (BOOL)accessibilityNudgeLeft;
+- (BOOL)accessibilityNudgeRight;
 - (BOOL)accessibilityHoldSlightLeft;
 - (BOOL)accessibilityHoldSlightRight;
+- (BOOL)accessibilityNudgeSlightLeft;
+- (BOOL)accessibilityNudgeSlightRight;
 - (BOOL)accessibilityHoldUp;
 - (BOOL)accessibilityHoldDown;
 - (BOOL)accessibilityCenter;
@@ -130,18 +138,16 @@ static CGFloat CTRPadTouch_OpacityForChoice(CTRPadTouchOpacity choice)
 
 @implementation CTRPadInputButton
 
-- (BOOL)accessibilityActivate
+- (BOOL)accessibilityPressForDuration:(NSTimeInterval)duration value:(NSString *)value
 {
-	// Voice Control, Switch Control and Simulator accessibility actions invoke
-	// a button's primary action without synthesizing UIControlEventTouchDown.
-	// Publish the same down/up pair as a physical finger so accessible controls
-	// cannot silently appear to press while the retail pad receives no edge.
 	[self accessibilityReleaseControl];
+	NSUInteger generation = ++self.accessibilityActionGeneration;
 	self.accessibilityTapPending = YES;
-	self.accessibilityValue = @"Pressed";
+	self.accessibilityValue = value;
 	[self sendActionsForControlEvents:UIControlEventTouchDown];
-	dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.10 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
-		if (self.accessibilityTapPending && !self.accessibilityHeld)
+	dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(duration * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+		if (self.accessibilityTapPending && !self.accessibilityHeld &&
+		    (self.accessibilityActionGeneration == generation))
 		{
 			self.accessibilityTapPending = NO;
 			self.accessibilityValue = @"Released";
@@ -151,9 +157,29 @@ static CGFloat CTRPadTouch_OpacityForChoice(CTRPadTouchOpacity choice)
 	return YES;
 }
 
+- (BOOL)accessibilityActivate
+{
+	// Voice Control, Switch Control and Simulator accessibility actions invoke
+	// a button's primary action without synthesizing UIControlEventTouchDown.
+	// Publish the same down/up pair as a physical finger so accessible controls
+	// cannot silently appear to press while the retail pad receives no edge.
+	return [self accessibilityPressForDuration:0.10 value:@"Pressed"];
+}
+
+- (BOOL)accessibilityPressBriefly
+{
+	return [self accessibilityPressForDuration:1.0 value:@"Pressed for one second"];
+}
+
+- (BOOL)accessibilityPressThreeSeconds
+{
+	return [self accessibilityPressForDuration:3.0 value:@"Pressed for three seconds"];
+}
+
 - (BOOL)accessibilityHoldControl
 {
 	BOOL wasActive = self.accessibilityHeld || self.accessibilityTapPending;
+	self.accessibilityActionGeneration += 1;
 	self.accessibilityTapPending = NO;
 	self.accessibilityHeld = YES;
 	self.accessibilityValue = @"Held";
@@ -167,6 +193,7 @@ static CGFloat CTRPadTouch_OpacityForChoice(CTRPadTouchOpacity choice)
 - (BOOL)accessibilityReleaseControl
 {
 	BOOL wasActive = self.accessibilityHeld || self.accessibilityTapPending;
+	self.accessibilityActionGeneration += 1;
 	self.accessibilityHeld = NO;
 	self.accessibilityTapPending = NO;
 	self.accessibilityValue = @"Released";
@@ -193,8 +220,12 @@ static CGFloat CTRPadTouch_OpacityForChoice(CTRPadTouchOpacity choice)
 		self.accessibilityValue = @"Centered";
 		self.isAccessibilityElement = YES;
 		self.accessibilityCustomActions = @[
+			[[UIAccessibilityCustomAction alloc] initWithName:@"Nudge left" target:self selector:@selector(accessibilityNudgeLeft)],
+			[[UIAccessibilityCustomAction alloc] initWithName:@"Nudge right" target:self selector:@selector(accessibilityNudgeRight)],
 			[[UIAccessibilityCustomAction alloc] initWithName:@"Hold left" target:self selector:@selector(accessibilityHoldLeft)],
 			[[UIAccessibilityCustomAction alloc] initWithName:@"Hold right" target:self selector:@selector(accessibilityHoldRight)],
+			[[UIAccessibilityCustomAction alloc] initWithName:@"Nudge slight left" target:self selector:@selector(accessibilityNudgeSlightLeft)],
+			[[UIAccessibilityCustomAction alloc] initWithName:@"Nudge slight right" target:self selector:@selector(accessibilityNudgeSlightRight)],
 			[[UIAccessibilityCustomAction alloc] initWithName:@"Hold slight left" target:self selector:@selector(accessibilityHoldSlightLeft)],
 			[[UIAccessibilityCustomAction alloc] initWithName:@"Hold slight right" target:self selector:@selector(accessibilityHoldSlightRight)],
 			[[UIAccessibilityCustomAction alloc] initWithName:@"Hold up" target:self selector:@selector(accessibilityHoldUp)],
@@ -239,6 +270,21 @@ static CGFloat CTRPadTouch_OpacityForChoice(CTRPadTouchOpacity choice)
 	return YES;
 }
 
+- (BOOL)accessibilityNudgeX:(CGFloat)x y:(CGFloat)y value:(NSString *)value
+{
+	[self accessibilityHoldX:x y:y value:value];
+	NSUInteger generation = self.accessibilitySteeringGeneration;
+	dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.45 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+		// A newer accessibility action or a physical touch owns the stick now.
+		// Do not let an older nudge unexpectedly center that newer input.
+		if (self.accessibilitySteering && (self.accessibilitySteeringGeneration == generation))
+		{
+			[self releaseTouch];
+		}
+	});
+	return YES;
+}
+
 - (BOOL)accessibilityHoldLeft
 {
 	return [self accessibilityHoldX:-1.0 y:0.0 value:@"Held left"];
@@ -249,6 +295,16 @@ static CGFloat CTRPadTouch_OpacityForChoice(CTRPadTouchOpacity choice)
 	return [self accessibilityHoldX:1.0 y:0.0 value:@"Held right"];
 }
 
+- (BOOL)accessibilityNudgeLeft
+{
+	return [self accessibilityNudgeX:-1.0 y:0.0 value:@"Nudging left"];
+}
+
+- (BOOL)accessibilityNudgeRight
+{
+	return [self accessibilityNudgeX:1.0 y:0.0 value:@"Nudging right"];
+}
+
 - (BOOL)accessibilityHoldSlightLeft
 {
 	return [self accessibilityHoldX:-0.45 y:0.0 value:@"Held slight left"];
@@ -257,6 +313,16 @@ static CGFloat CTRPadTouch_OpacityForChoice(CTRPadTouchOpacity choice)
 - (BOOL)accessibilityHoldSlightRight
 {
 	return [self accessibilityHoldX:0.45 y:0.0 value:@"Held slight right"];
+}
+
+- (BOOL)accessibilityNudgeSlightLeft
+{
+	return [self accessibilityNudgeX:-0.45 y:0.0 value:@"Nudging slight left"];
+}
+
+- (BOOL)accessibilityNudgeSlightRight
+{
+	return [self accessibilityNudgeX:0.45 y:0.0 value:@"Nudging slight right"];
 }
 
 - (BOOL)accessibilityHoldUp
@@ -359,6 +425,7 @@ static CGFloat CTRPadTouch_OpacityForChoice(CTRPadTouchOpacity choice)
 
 - (void)releaseTouch
 {
+	self.accessibilitySteeringGeneration += 1;
 	self.trackingTouch = NO;
 	self.accessibilitySteering = NO;
 	self.accessibilityValue = @"Centered";
@@ -570,6 +637,8 @@ static CGFloat CTRPadTouch_OpacityForChoice(CTRPadTouchOpacity choice)
 	[button setTitleColor:UIColor.whiteColor forState:UIControlStateNormal];
 	button.accessibilityValue = @"Released";
 	button.accessibilityCustomActions = @[
+		[[UIAccessibilityCustomAction alloc] initWithName:@"Press one second" target:button selector:@selector(accessibilityPressBriefly)],
+		[[UIAccessibilityCustomAction alloc] initWithName:@"Press three seconds" target:button selector:@selector(accessibilityPressThreeSeconds)],
 		[[UIAccessibilityCustomAction alloc] initWithName:@"Hold" target:button selector:@selector(accessibilityHoldControl)],
 		[[UIAccessibilityCustomAction alloc] initWithName:@"Release" target:button selector:@selector(accessibilityReleaseControl)],
 	];
@@ -623,6 +692,7 @@ static CGFloat CTRPadTouch_OpacityForChoice(CTRPadTouchOpacity choice)
 		if ([control isKindOfClass:CTRPadInputButton.class])
 		{
 			CTRPadInputButton *button = (CTRPadInputButton *)control;
+			button.accessibilityActionGeneration += 1;
 			button.accessibilityHeld = NO;
 			button.accessibilityTapPending = NO;
 			button.accessibilityValue = @"Released";

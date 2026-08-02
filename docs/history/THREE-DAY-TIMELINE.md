@@ -1,4 +1,4 @@
-# CTRPad three-day build timeline
+# CTRPad build timeline
 
 This document is the chronological index for the CTRPad Apple-port campaign
 that began on 2026-07-29 and reached the physical-iPad acceptance boundary on
@@ -24,7 +24,9 @@ adds a complete durable commit ledger.
   retained a timestamp. Work between durable checkpoints is described as an
   interval rather than assigned an invented minute.
 - The commit ledger contains every campaign commit through sustained-control
-  main publication `be9c81605`: 194 commits. Commands, temporary paths,
+  publication-history main merge `3f7b16caa`: 196 commits. The later bounded-
+  action implementation commit is recorded in the post-ledger chronology until
+  its publication history is final. Commands, temporary paths,
   hashes, rejected experiments and individual test results are intentionally
   not duplicated
   194 times here;
@@ -72,6 +74,11 @@ adds a complete durable commit ledger.
 | Sustained-control clean acceptance reading | 2026-08-01 21:37:01 | Clean implementation `a3523c7a8` passed Simulator/device builds, 25/25 tests, exact install/persistence/visual/control checks and matching IPA/source packaging; active goal time reached 3 days, 6 hours, 13 minutes, 52 seconds. |
 | Sustained-control documentation package | 2026-08-01 21:44:16 | Documentation commit `76ef53931` recorded the control/timeline checkpoint; its 3,265-member source archive passed sidecar/required-file/exclusion checks at `8f4cb489...57a4`, and active goal time reached 3 days, 6 hours, 20 minutes, 54 seconds. |
 | Sustained-control main publication | 2026-08-01 21:46:42 | PR #20 merged its audited three-commit/eight-file head as `be9c81605`; its 3,265-member final-main source passed at `e08098bb...a463`, and active goal time reached 3 days, 6 hours, 23 minutes, 29 seconds. |
+| Sustained-control history publication | 2026-08-01 21:48:31 | PR #21 merged the publication record to `main` as `3f7b16caa`; local branch, remote branch and `main` aligned. |
+| Bounded-race diagnosis reading | 2026-08-01 23:33:34 | Active goal time reached 3 days, 8 hours, 10 minutes, 21 seconds after identifying held-control/screen-read runaway and adding bounded controls. |
+| Bounded-control implementation commit | 2026-08-02 00:00:58 | Commit `c56162f68` froze one-/three-second buttons, steering nudges and stale-timer generation guards after the rejected lap attempt. |
+| Bounded-control clean acceptance reading | 2026-08-02 00:20:53 | Exact Simulator/iPhoneOS/macOS builds, sole-Simulator update/persistence/visual/log evidence and a final serialized 25/25 suite passed; active goal time reached 3 days, 8 hours, 57 minutes, 39 seconds. |
+| Bounded-control history audit | 2026-08-02 00:28:34 | Seven timestamp/history/parity documents reconciled the live route, rejected attempts, hashes and still-open physical gates; active goal time reached 3 days, 9 hours, 5 minutes, 10 seconds. |
 
 ## Executive chronology
 
@@ -166,6 +173,26 @@ adds a complete durable commit ledger.
 | 21:43–21:44 | Timestamped history checkpoint | Committed the seven-document acceptance/history set as `76ef53931`; its 3,265-member source archive included the new report/timeline, passed its sidecar and returned zero forbidden members. |
 | 21:44–21:46 | Sustained-control GitHub publication | Pushed three commits, recorded the private-repository connector 404, opened draft PR #20 with authenticated CLI fallback, audited exact head `718fb73b0` as three commits/eight files/611 additions/eight deletions with clean mergeability and no checks, then merged its protected head as final-main `be9c81605`. |
 | 21:46 | Final-main corresponding source | Packaged 3,265 members, found both required history files, zero forbidden members and passing sidecar at `e08098bb...a463`; local/remote branch and main contained the accepted implementation. |
+
+### 2026-08-01 to 2026-08-02 — Bounded race inputs and honest lap boundary
+
+| Time | Durable event | Result |
+| --- | --- | --- |
+| 21:47-21:48 | Sustained-control publication history (`7b491d411`, `3f7b16caa`) | Closed the earlier main publication record before new work. |
+| 21:49-22:39 | Extended clean-build Crash Cove review in the sole Simulator | Held controls continued during 15-25-second screen reads, driving into walls/ocean. The route was rejected as complete-race evidence. |
+| 22:39-23:14 | Dirty bounded-control implementation and serial live iteration | Added 450-ms steering nudges, one-/three-second button actions and generation ownership. Dirty sessions remained diagnostic. |
+| 23:15-23:58 | Touch-only bounded Crash Cove retry | Production touch inputs visibly traversed tunnel, shoreline, central rock, beach, shipwreck, bridge and final climb with coherent assets. It ended at a climb wall on lap 1/3, so no lap or race pass was claimed. |
+| 23:33:34 | Mid-run active clock | `timeUsedSeconds=288621`: 3 days, 8 hours, 10 minutes, 21 seconds. |
+| 00:00:58 | Bounded-action implementation commit `c56162f68` | Converted the accepted source to a clean exact identity. |
+| 00:05-00:16 | Exact one-job Simulator, iPhoneOS and macOS builds | All three products linked with the established 32 warnings and zero errors; no second Simulator or parallel builder was started. |
+| 00:07-00:20 | Guarded exact install and visible/logging recheck | Retail/save tuples survived; exact clean build visibly rendered the retail boot/demo/Crash Cove textures and complete overlay; targeted current-log faults were zero. |
+| 00:17-00:19 | CTest orchestration and accepted repeat | A mistakenly duplicated partial run was stopped and rejected; the final serialized repeat passed 25/25 in 74.85 seconds. |
+| 00:20:53 | Clean-acceptance active clock | `timeUsedSeconds=291459`: 3 days, 8 hours, 57 minutes, 39 seconds. Goal remains active. |
+| 00:28:34 | Pre-commit history audit | Reconciled seven repository documents against source lines, hashes and retained timestamps; `timeUsedSeconds=291910` (3 days, 9 hours, 5 minutes, 10 seconds). |
+
+Full source citations, hashes, input intervals, rejected routes and the exact
+open boundary are in
+[`../parity/2026-08-02-ios-bounded-accessible-race-controls.md`](../parity/2026-08-02-ios-bounded-accessible-race-controls.md).
 
 ## Complete durable commit ledger
 
@@ -369,6 +396,8 @@ the engineering journal.
 2026-08-01 21:43:31  76ef53931  Document sustained control acceptance
 2026-08-01 21:44:51  718fb73b0  Record sustained control package proof
 2026-08-01 21:45:48  be9c81605  Merge pull request #20 from chrissotraidis/codex/simulator-performance-next
+2026-08-01 21:47:46  7b491d411  Record sustained control publication
+2026-08-01 21:48:31  3f7b16caa  Merge pull request #21 from chrissotraidis/codex/simulator-performance-next
 ```
 
 ## What the process actually did

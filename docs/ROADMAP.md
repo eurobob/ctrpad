@@ -1656,3 +1656,30 @@ PR #20 published the exact three-commit/eight-file checkpoint to `main` as
 `be9c81605133`. Its 3,265-member final-main corresponding source passed at
 `e08098bb...a463` with both required history files and zero forbidden members.
 Publication is complete; the five physical-device steps above remain open.
+
+## 2026-08-02 bounded-race-control checkpoint
+
+Implementation `c56162f68a74` adds bounded one-second and three-second button
+actions plus bounded full/slight steering nudges. Per-control generation
+counters make delayed releases harmless after a newer hold, release, touch or
+reset. This preserves physical-touch behavior while making slow desktop
+screen reads unable to leave the kart accelerating or steering indefinitely.
+
+The exact clean sole-Simulator build rendered the full Crash Cove scene and
+touch overlay, consumed bounded Gas edges at the retail poll, traversed the
+broad visible route through the bridge/final climb, preserved the retail and
+slot-zero save tuples during guarded update, ran fault-free for more than 13
+minutes and passed the final serialized 25/25 test suite. The partial route
+ended on `LAP 1/3`; it is not a race-completion claim.
+
+The remaining dependency-ordered work is still:
+
+1. obtain a valid Apple development identity and matching profile;
+2. install and launch the exact signed IPA on a connected iPad;
+3. complete a touch-only three-lap race and repeated three-boost drift chain;
+4. measure hardware cadence, frame pacing, audio latency and thermals; and
+5. verify lifecycle plus save/update persistence on that physical device.
+
+Full evidence and timestamps are in
+`docs/parity/2026-08-02-ios-bounded-accessible-race-controls.md` and
+`docs/history/THREE-DAY-TIMELINE.md`.

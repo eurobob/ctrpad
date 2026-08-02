@@ -15096,3 +15096,109 @@ forbidden members and a passing sidecar at SHA-256
 At 21:46:42, active goal time was 282,209 seconds: 3 days, 6 hours,
 23 minutes and 29 seconds. Local publication is closed; the signed physical-
 iPad acceptance boundary remains open.
+
+## 2026-08-01 to 2026-08-02 — Bounded accessible race controls
+
+**Starting source:** published `main` merge `3f7b16caa95e33a68ccfbd0e9fa92854252a6b2f`
+
+**Accepted implementation:** `c56162f68a74ebc3f381a6d77d5a00b064a6c8b2`
+
+### Observation and rejected race attempt
+
+The sole `CTRPad Import Validation` iPad Simulator opened the clean sustained-
+control build at 21:49:38 CDT. Time Trial -> Crash -> Crash Cove -> No Ghost
+continued to work through production touch input and every inspected retail
+frame retained coherent sky, rock, grass, sand, water, bridge, ship, kart, HUD,
+minimap and control-overlay assets.
+
+The extended route exposed an automation-specific duration failure. A held
+Gas or steering action continued while Computer Use waited 15-25 seconds for
+the next accessibility tree and screenshot. The kart therefore crossed far
+more track than the intended observation interval and reached walls, wrong-way
+or ocean states. Those runs were rejected. They were not relabeled as input,
+physics or graphics passes and did not complete a lap.
+
+### Implementation
+
+The touch layer now exposes:
+
+- one- and three-second self-releasing actions on every retail button;
+- 450-ms full and 45% left/right steering nudges;
+- action-generation guards so an older scheduled release cannot cancel a
+  later Hold, Release, reset, nudge or physical steering owner; and
+- the existing normal 100-ms activation, explicit Hold/Release, full/slight
+  steering and Center actions unchanged.
+
+All actions still enter `buttonDown:`/`buttonUp:` or the normal analog/D-pad
+publisher. No parallel game-state injection was added. Source citations and
+the generation design are in
+[2026-08-02-ios-bounded-accessible-race-controls.md](../parity/2026-08-02-ios-bounded-accessible-race-controls.md).
+
+Dirty sessions opened at 22:39:49, 22:59:33 and 23:15:05 as
+`3f7b16caa95e-dirty`. Their identities intentionally prevent release use.
+Exact log rows prove a one-second Gas press at 23:00:46-23:00:47 and a three-
+second press at 23:16:02-23:16:05, with both down edges consumed by the retail
+poll.
+
+### Broad visible route, not a completed lap
+
+The cleanly restarted bounded attempt from 23:34-23:58 used one-/three-second
+Gas intervals with centered, slight and full steering corrections. Computer
+Use visibly observed the opening tunnel, first cliff/shoreline, central rock,
+inland beach, shipwreck, bridge and final climb. Textures remained coherent.
+The attempt ended against the climb wall with the HUD still `LAP 1/3`.
+
+The result accepts that bounded touch actions move a live retail race through
+substantial course geometry and self-neutralize. It explicitly rejects a full-
+lap, three-lap, drift-chain or ergonomic claim.
+
+### Clean exact validation
+
+Implementation commit `c56162f68` was created at 00:00:58 CDT. Serialized,
+nice-15, one-job builds produced:
+
+```text
+iPhoneSimulator link  00:05:34  source executable ef5b2de3...ece6d
+iPhoneOS link          00:12:04  executable        d6c81c8b...3290
+macOS ARM64 link       00:16:28
+```
+
+All reported the exact full source commit and clean short build. Each emitted
+the established 32 warnings and no errors. The guarded Simulator update used
+only the already booted device, installed signed executable
+`28500b12...2ea2`, and retained:
+
+```text
+retail=111131200|605698800|f780bf23...2c07c0
+save=111222179|6016|6a01b0f5...0619a3
+```
+
+The clean session opened at 00:07:02 as build `c56162f68a74`, initialized
+GLES framebuffer fetch and UIKit touch/display, and showed the retail boot and
+coherent Crash Cove demo. Its targeted error/fatal/asset/visibility/shader/
+abort/assert scan returned zero. The ignored 00:19:52 visual checkpoint was
+101,446 bytes at SHA-256 `17cf0ada...403a` and is not committed because it
+contains retail-derived graphics.
+
+### Test-orchestration correction
+
+The first full CTest call continued after the command wrapper returned partial
+output. A later process-status command accidentally appended another full
+CTest command, so two test suites briefly overlapped. The duplicate reached
+23/25 and was interrupted immediately; its partial output was rejected. No
+compiler or Simulator was duplicated.
+
+After the process table was empty, a final serialized repeat passed 25/25 with
+zero failures in 74.85 seconds. This final run, not either overlapping/partial
+route, is the acceptance evidence.
+
+At 23:33:34 CDT the goal API reported 288,621 seconds: 3 days, 8 hours,
+10 minutes and 21 seconds. At 00:20:53 it reported 291,459 seconds: 3 days,
+8 hours, 57 minutes and 39 seconds. The goal remains active because signed
+physical installation, a complete touch race, repeated drift boosts and all
+hardware-only performance/lifecycle/persistence checks remain open.
+
+At 00:28:34 CDT, the pre-commit history audit reconciled the parity report,
+timeline, journal, progress log, roadmap, decision record and parity index.
+The goal API then reported 291,910 seconds: 3 days, 9 hours, 5 minutes and
+10 seconds. Publication remained next.
