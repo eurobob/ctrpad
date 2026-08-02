@@ -3168,3 +3168,13 @@ At 19:16:58 CDT active goal time was 273,210 seconds: 3 days, 3 hours,
 this is stronger campaign evidence handling and current Simulator proof, not
 physical-iPad completion. Exact evidence is in
 `docs/parity/2026-08-01-ios-devicectl-structured-evidence.md`.
+
+At 19:26–19:29 CDT, commit `55932c2c1` produced a 3,261-member corresponding-
+source archive at `da7c7d22...bcc3f7`. Its sidecar passed. An independent zsh
+check first reused special variable `path` and lost command lookup; the
+unchanged rerun used `member_path`, found all required files, zero forbidden
+members and a passing extracted verifier. The private-repository connector
+returned 404, authenticated CLI fallback opened/audited PR #14, and GitHub
+merged the exact head into `main` as `94f4d40ed`. At 19:29:27 the active-time
+reading was 273,968 seconds (3 days, 4 hours, 6 minutes, 8 seconds). One
+Simulator, zero identities and no physical device remained.

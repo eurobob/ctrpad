@@ -14695,3 +14695,30 @@ remains separately recorded at exactly 262,238 seconds. The structured evidence
 and visible Simulator route are accepted; signed physical execution and every
 hardware-only acceptance item remain open. Full detail is in
 `docs/parity/2026-08-01-ios-devicectl-structured-evidence.md`.
+
+At 19:26:17 CDT the exact 16-file checkpoint became commit
+`55932c2c1510ffae66ad5ec57e2dd5082541f2bf`. Corresponding source contained
+3,261 members and passed its sidecar at SHA-256
+`da7c7d22c7e3ac227ea13c1bedc8a50549ac79585c5fc924ce74afc0e8bcc3f7`.
+The first independent member-inspection command used `path` as a zsh loop
+variable. Because `path` is zsh's special command-search array, later `tar` and
+`grep` lookups in that shell failed. The unchanged archive was rerun with
+`member_path`; all required files were present, the forbidden retail/runtime/
+credential scan found zero members, and its extracted verifier passed four
+positive/nine negative fixtures.
+
+The commit pushed to `codex/simulator-performance-next`. The preferred GitHub
+connector again returned private-repository HTTP 404 without creating a PR;
+authenticated CLI fallback created draft PR #14. Its audit found one commit,
+the exact 16 intended files, 865 additions, 25 deletions, head
+`55932c2c1510...`, `MERGEABLE` / `CLEAN` and no configured checks. It was
+marked ready and merged only with that protected head.
+
+PR #14 merged at 19:28:59 CDT as
+`94f4d40eda4be460f605ef7828de2d812cb7ca5f`. Fetching `origin/main` confirmed
+parents `890ba3f4b... 55932c2c1...` and all three new verifier/test/report
+files. The local branch fast-forwarded to the merge. At 19:29:27 CDT active
+goal time was 273,968 seconds: 3 days, 4 hours, 6 minutes and 8 seconds. Exactly
+one Simulator remained booted, identities remained zero and CoreDevice still
+found no physical device; publication is closed, signed hardware acceptance is
+not.
