@@ -553,3 +553,11 @@ warnings and zero errors; serialized CTest passed 26/26 in 27.98 seconds. The
 seven-member unsigned IPA passed at `e47db84e...44f`; its 3,270-member matching
 source archive passed at `f4834241...a431`. Both are ignored and retail-free.
 Publication remained next; no signing or physical result was implied.
+
+Ready PR #26 contained exactly two commits, 16 files, 806 additions and 10
+deletions. GitHub reported clean/mergeable with no configured checks. Protected
+head `21e214f6bf2f` merged at 02:21:42 CDT as remote-main
+`15f8d92127f1`; GitHub state, merge parents, fresh fetch and ancestry all
+passed. At 02:21:56, goal time was 298,723 seconds: 3 days, 10 hours,
+58 minutes and 43 seconds. Telemetry publication was complete; physical-iPad
+acceptance remained open.

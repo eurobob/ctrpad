@@ -3523,7 +3523,12 @@ or person-hours.
 The telemetry is frozen as clean implementation commit `2bfa532074eb`. Its
 exact macOS/iPhoneOS rebuilds pass, serialized CTest passes 26/26 in 27.98
 seconds, and checksum-verified unsigned IPA/source handoff artifacts pass at
-`e47db84e...44f` and `f4834241...a431`. Publication to GitHub `main` is next.
+`e47db84e...44f` and `f4834241...a431`. PR #26 merged exact protected head
+`21e214f6bf2f` to remote `main` at 02:21:42 CDT as `15f8d92127f1`; ancestry
+passes and GitHub reports `MERGED`. Publication is complete.
 Apple signing, real-iPad cadence/thermal/audio/touch/lifecycle, a complete
 three-lap race, repeated three-boost drift and update persistence remain open.
 Exact evidence is in `docs/parity/2026-08-02-ios-device-observability.md`.
+
+At 02:21:56 CDT, active goal time was 298,723 seconds: 3 days, 10 hours,
+58 minutes and 43 seconds.
