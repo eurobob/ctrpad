@@ -812,3 +812,31 @@ byte-identical at `25a8f751...1c191`; 25/25 tests pass; and the matching
 `5ddf285a...9fbd9`. The one-Simulator visual/log/persistence recheck passes,
 but real Apple signing and physical-iPad acceptance remain open. See
 `docs/parity/2026-08-01-ios-source-identity-binding.md`.
+
+## 2026-08-01 — Expose sustained controls as explicit accessibility state
+
+**Decision:** keep normal accessibility activation as a short tap, and add
+separate `Hold`/`Release` button actions plus full/slight/Center stick actions.
+Route them through the production touch publisher, expose the current state as
+an accessibility value, and neutralize local plus engine state whenever the
+control UI changes ownership. Slight steering is 45% deflection, below the
+existing 68% menu-D-pad threshold.
+
+**Why:** Voice Control, Switch Control and Simulator accessibility activation
+do not synthesize a prolonged `UIControlEventTouchDown`, while desktop
+Computer Use cannot synthesize genuine iOS multi-touch. Replacing normal
+activation with a latch would make a routine action unexpectedly sticky. Full
+steering also emits the intended menu D-pad edge and is too coarse for
+menu-neutral stepwise validation. Explicit actions preserve ordinary tap
+semantics, make duration intentional, support assistive use, and allow Gas,
+analog steering and drift to remain independently testable without a parallel
+input implementation.
+
+**Verification boundary:** exact clean build `a3523c7a8583` simultaneously
+reported Gas, slight-right steering and L drift Held; current logs show Gas and
+L drift reaching the retail poll; Controls reset every button to Released and
+the stick to Centered; iPhoneSimulator/iPhoneOS/macOS builds and 25/25 tests
+pass; targeted log faults are zero. This proves sustained state in the sole
+Simulator, not physical finger multi-touch, three-boost ergonomics or a
+complete hardware race. Exact evidence is in
+`docs/parity/2026-08-01-ios-sustained-accessible-controls.md`.

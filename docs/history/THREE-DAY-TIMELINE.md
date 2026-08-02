@@ -23,10 +23,11 @@ adds a complete durable commit ledger.
 - Runtime observations are called exact only where the journal, log or report
   retained a timestamp. Work between durable checkpoints is described as an
   interval rather than assigned an invented minute.
-- The commit ledger contains every campaign commit through implementation head
-  `84456cd95`: 185 commits. Commands, temporary paths, hashes, rejected
+- The commit ledger contains every campaign commit through sustained-control
+  implementation head `a3523c7a8`: 191 commits. Commands, temporary paths,
+  hashes, rejected
   experiments and individual test results are intentionally not duplicated
-  185 times here;
+  191 times here;
   they remain in the linked engineering journal and parity reports.
 
 ## Time accounting
@@ -67,6 +68,8 @@ adds a complete durable commit ledger.
 | Final pre-publication regression | 2026-08-01 20:35 | The unchanged implementation passed 25/25 again in 26.40 seconds; source-identity test 25 passed its 2/6 cases in 4.85 seconds. |
 | Documentation source checkpoint | 2026-08-01 20:38:30 | Commit `f4c1300f9` recorded the exact-source/history docs; its 3,264-member archive passed exclusions, extraction and corrected-directory checksum at `27bd43cc...63ed0`; active goal time reached 3 days, 5 hours, 15 minutes, 17 seconds. |
 | Exact-source main publication | 2026-08-01 20:41:47 | PR #18 merged its audited three-commit/18-file head to `main` as `d29a560e9`; the 3,264-member final-main source archive passed at `9ad1c168...80577`, and active goal time reached 3 days, 5 hours, 18 minutes, 33 seconds. |
+| Exact-source history publication | 2026-08-01 20:43:08 | PR #19 merged the publication record to `main` as `88e453999`; local/remote/main aligned and its 3,264-member final source archive passed at `b56a9832...4713`. |
+| Sustained-control clean acceptance reading | 2026-08-01 21:37:01 | Clean implementation `a3523c7a8` passed Simulator/device builds, 25/25 tests, exact install/persistence/visual/control checks and matching IPA/source packaging; active goal time reached 3 days, 6 hours, 13 minutes, 52 seconds. |
 
 ## Executive chronology
 
@@ -150,6 +153,14 @@ adds a complete durable commit ledger.
 | 20:35 | Final regression repeat | Repeated all 25 macOS tests against the unchanged implementation; every test passed, including the exact-source identity fixture. |
 | 20:36–20:38 | Documentation source checkpoint | Committed the ten-file history/report checkpoint, packaged its 3,264-member corresponding source, preserved a wrong-directory checksum failure, then passed the unchanged sidecar from `dist/` plus extracted exclusions/identity checks. |
 | 20:39–20:41 | Exact-source GitHub publication | Pushed the three commits, used authenticated CLI after the private-repository connector 404, audited PR #18 as an exact clean 18-file change, merged its protected head to `main`, synchronized the branch and verified the 3,264-member final-main source archive. |
+| 20:42–20:43 | Exact-source history GitHub publication | Recorded the PR #18/source boundary, merged it through PR #19 as `88e453999`, aligned local/remote/main and verified the 3,264-member final source archive. |
+| 20:43–21:04 | Sustained-control diagnosis and first implementation | Re-entered Time Trial/Crash/Crash Cove/No Ghost using the sole Simulator, proved ordinary accessibility activation could not sustain Gas/steering/drift, added explicit holds, and rejected overlapped builder output after terminating both accidental one-job process groups. |
+| 21:04–21:15 | Dirty sustained-control live proof | Held/released menu Down and Gas, reached a moving Crash Cove race, held Gas plus Left plus L drift, then added 45% slight steering after full deflection proved too coarse for menu-neutral validation. |
+| 21:15–21:18 | Slight-steering and lifecycle-reset proof | Confirmed slight analog did not emit the 68%-threshold menu D-pad edge; added one local/global neutralization route and proved Controls returned every button and stick to neutral. |
+| 21:24 | Sustained-control implementation commit | Committed clean implementation `a3523c7a8` before acceptance builds. |
+| 21:26–21:32 | Exact Simulator build, install and visible acceptance | Built with one low-priority job, installed staged/installed hash `443d08a9...dabc`, preserved exact retail/save tuples, observed complete graphics, held Gas/slight-right/L drift together and proved settings neutralization with zero targeted log faults. |
+| 21:33–21:35 | iPhoneOS and macOS matrix | Clean iPhoneOS compiled; clean macOS compiled and passed 25/25 tests in 27.84 seconds. |
+| 21:35–21:37 | Exact IPA/source packaging | Wrote seven-member ARM64 unsigned IPA `781f8c03...ebf0` and 3,264-member source `62562ce9...8ae0`; sidecars and corrected independent scans passed after retaining one wrong-directory audit failure. |
 
 ## Complete durable commit ledger
 
@@ -344,6 +355,12 @@ the engineering journal.
 2026-08-01 19:43:09  c3589f129  Record versioned evidence publication
 2026-08-01 19:43:47  931a81065  Merge pull request #17 from chrissotraidis/codex/simulator-performance-next
 2026-08-01 20:07:03  84456cd95  Bind iOS builds to exact source commits
+2026-08-01 20:36:40  f4c1300f9  Document exact iOS source binding history
+2026-08-01 20:39:21  4bc222fcb  Record documentation source checkpoint
+2026-08-01 20:40:38  d29a560e9  Merge pull request #18 from chrissotraidis/codex/simulator-performance-next
+2026-08-01 20:42:40  be7b52e28  Record exact source publication
+2026-08-01 20:43:08  88e453999  Merge pull request #19 from chrissotraidis/codex/simulator-performance-next
+2026-08-01 21:24:14  a3523c7a8  Add sustained accessible touch controls
 ```
 
 ## What the process actually did
@@ -382,6 +399,9 @@ and
 [`../parity/2026-08-01-ios-devicectl-structured-evidence.md`](../parity/2026-08-01-ios-devicectl-structured-evidence.md).
 The exact package/source binding audit is in
 [`../parity/2026-08-01-ios-source-identity-binding.md`](../parity/2026-08-01-ios-source-identity-binding.md).
+The post-publication sustained-control audit, every dirty and clean live
+checkpoint, artifact hash and deliberately open device boundary are in
+[`../parity/2026-08-01-ios-sustained-accessible-controls.md`](../parity/2026-08-01-ios-sustained-accessible-controls.md).
 
 At the 15:56:54 boundary, local evidence included:
 
@@ -400,3 +420,11 @@ connected physical iPad. Therefore it did not prove signed installation,
 physical multi-touch feel, hardware cadence, audio latency, thermals or update
 persistence on a real device. Those are the remaining completion conditions;
 Simulator software-renderer speed must not be substituted for them.
+
+At 21:37:01 CDT the later sustained-control checkpoint had increased the active
+goal clock to 281,632 seconds: 3 days, 6 hours, 13 minutes and 52 seconds. It
+added explicit sustained accessibility actions, clean exact builds across all
+three Apple products, 25/25 tests, exact one-Simulator visual/input/reset/log
+evidence and a matching unsigned IPA/source pair. It still did not add Apple
+credentials, a physical device, physical multi-touch or a complete on-device
+race, so the definition-of-done boundary is unchanged.

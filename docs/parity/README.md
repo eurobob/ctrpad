@@ -211,6 +211,12 @@ Current evidence and procedures:
   and campaign binding, two positive/six negative fixtures, deterministic
   exact-commit IPA/source artifacts, 25-test suite and visible one-Simulator
   recheck while keeping Apple signing and physical-iPad acceptance open.
+- `2026-08-01-ios-sustained-accessible-controls.md` records the short-
+  accessibility-tap limitation, explicit button holds and full/slight analog
+  steering, unified neutralization, complete dirty-to-clean live chronology,
+  one-Simulator graphics/input/reset/log/persistence evidence, exact clean
+  Apple build/test/artifact hashes, retained orchestration mistakes and the
+  still-open physical multi-touch/race/signing boundary.
 - `2026-07-31-macos-arm64-keyboard-tap.md` records the missing quick-tap root
   cause, historical one-snapshot press-edge transport, its later two-snapshot
   supersession, direct live PSX packet traces, and exact-commit

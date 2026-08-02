@@ -3294,3 +3294,35 @@ draft was marked ready and the exact head merged at 20:40:38 CDT as final-main
 exclusions and extracted 2/6 fixture at SHA-256 `9ad1c168...80577`. At
 20:41:47, active goal time was 278,313 seconds: 3 days, 5 hours, 18 minutes and
 33 seconds. The sole Simulator remained booted throughout.
+
+At 20:42:40-20:43:08 CDT, commit `be7b52e28` and PR #19 published that exact
+source boundary as final-main `88e453999`. Local/remote/main aligned and the
+3,264-member final archive passed at `b56a9832...4713`.
+
+From 20:43-21:18 CDT, the next sole-Simulator audit found that normal
+accessibility activation could navigate Time Trial -> Crash -> Crash Cove but
+could not sustain Gas/analog/drift. Added explicit button Hold/Release, full
+and 45% slight steering, Center and local/global neutralization. The initial
+dirty live route held Gas through visible race movement and independently held
+Left and L drift. Full deflection was rejected as too coarse; slight steering
+stayed below the menu D-pad threshold. Controls presentation reset Gas to
+Released and steering to Centered. An accidental overlapping nested-build
+attempt was terminated and rejected; all accepted builds remained one job and
+nice 15. Exactly one Simulator stayed booted.
+
+Commit `a3523c7a8` was created at 21:24:14. Its clean Simulator build exact-
+installed at staged/installed hash `443d08a9...dabc`, preserved the retail and
+slot-zero save inode/size/hash tuples, and visibly rendered copyright, title,
+full menu textures and the complete overlay. Gas + slight-right + L drift
+simultaneously reported Held; Gas and drift reached the retail poll; Controls
+returned all values to neutral; targeted log faults were zero.
+
+The same clean source compiled for iPhoneOS and macOS; 25/25 tests passed in
+27.84 seconds. At 21:35-21:36, the seven-member ARM64 unsigned IPA passed at
+`781f8c03...ebf0` and its 3,264-member corresponding source at
+`62562ce9...8ae0`, with zero forbidden members. A wrong-directory independent
+member-list command failed and was corrected against the unchanged artifacts.
+At 21:37:01, active time was 281,632 seconds (3 days, 6 hours, 13 minutes,
+52 seconds). The Simulator sustained-action gap is locally closed; Apple
+signing and every physical-iPad acceptance item remain open. See
+`docs/parity/2026-08-01-ios-sustained-accessible-controls.md`.
