@@ -24,9 +24,9 @@ adds a complete durable commit ledger.
   retained a timestamp. Work between durable checkpoints is described as an
   interval rather than assigned an invented minute.
 - The commit ledger contains every campaign commit through published head
-  `94f4d40ed`: 178 commits. Commands, temporary paths, hashes, rejected
+  `7e8466901`: 182 commits. Commands, temporary paths, hashes, rejected
   experiments and individual test results are intentionally not duplicated
-  178 times here;
+  182 times here;
   they remain in the linked engineering journal and parity reports.
 
 ## Time accounting
@@ -59,6 +59,7 @@ adds a complete durable commit ledger.
 | Structured CoreDevice/Simulator recheck | 2026-08-01 19:16:58 | Active goal time reached 3 days, 3 hours, 53 minutes, 30 seconds after closing arbitrary-text `devicectl` evidence and exact-installing the current one-Simulator build. |
 | Structured evidence main publication | 2026-08-01 19:29:27 | PR #14 merged the 16-file checkpoint into `main` as `94f4d40ed`; its 3,261-member source archive passed after correcting the independent zsh harness, and active goal time reached 3 days, 4 hours, 6 minutes, 8 seconds. |
 | Mandatory JSON-version audit | 2026-08-01 19:38:00 | Active goal time reached 3 days, 4 hours, 14 minutes, 42 seconds after reproducing and rejecting an unversioned CoreDevice envelope and passing 24/24 tests. |
+| Mandatory-version main publication | 2026-08-01 19:42:13 | PR #16 merged the exact 13-file checkpoint into `main` as `7e8466901`; active goal time reached 3 days, 4 hours, 18 minutes, 55 seconds. |
 
 ## Executive chronology
 
@@ -134,6 +135,7 @@ adds a complete durable commit ledger.
 | 18:59–19:17 | Structured CoreDevice evidence and current-build screen | Reproduced the installed-app arbitrary-text false positive; replaced it with versioned command/result validation; retained the initial JSON-parser failure; passed four positive/nine adversarial fixtures and 24/24 tests; then rebuilt, exact-installed and visibly opened the main menu on the sole Simulator with retail/save identity preserved. |
 | 19:26–19:29 | Structured-evidence GitHub publication | Committed the 16-file checkpoint, built its 3,261-member source archive, corrected an independent zsh `path`-array harness mistake, used authenticated CLI fallback after the private-repository connector 404, audited PR #14's exact one-commit scope and merged its protected head into `main` as `94f4d40ed`. |
 | 19:34–19:38 | Mandatory CoreDevice schema version | Removed `info.jsonVersion` from the accepted real list envelope, reproduced an incorrect `JSON_VERSION=not-reported` success, made the positive integer version mandatory, added the tenth adversarial fixture and passed 24/24 tests in 16.61 seconds without touching the sole Simulator. |
+| 19:40–19:42 | Mandatory-version GitHub publication | Committed the 13-file checkpoint, verified its 3,261-member source archive, used authenticated CLI fallback after the connector 404, audited PR #16 as an exact clean one-commit change, and merged its protected head to `main` as `7e8466901`. |
 
 ## Complete durable commit ledger
 
@@ -321,6 +323,10 @@ the engineering journal.
 2026-08-01 18:57:15  890ba3f4b  Merge pull request #13 from chrissotraidis/codex/simulator-performance-next
 2026-08-01 19:26:17  55932c2c1  Verify structured CoreDevice campaign evidence
 2026-08-01 19:28:59  94f4d40ed  Merge pull request #14 from chrissotraidis/codex/simulator-performance-next
+2026-08-01 19:30:23  2000a8cd8  Record CoreDevice evidence publication
+2026-08-01 19:31:04  5e8acb3f2  Merge pull request #15 from chrissotraidis/codex/simulator-performance-next
+2026-08-01 19:40:20  a139cce1c  Require versioned CoreDevice evidence
+2026-08-01 19:41:57  7e8466901  Merge pull request #16 from chrissotraidis/codex/simulator-performance-next
 ```
 
 ## What the process actually did
