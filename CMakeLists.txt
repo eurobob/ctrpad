@@ -218,12 +218,40 @@ if(CTR_NATIVE_MACOS_BUNDLE OR IOS)
     target_sources(ctr_native PRIVATE ${CTR_NATIVE_DISTRIBUTION_RESOURCES})
 endif()
 if(IOS)
+    file(GLOB_RECURSE CTR_NATIVE_IOS_ASSET_CATALOG_FILES CONFIGURE_DEPENDS
+        "${CMAKE_SOURCE_DIR}/platform/apple/Assets.xcassets/*"
+    )
+    set_source_files_properties(${CTR_NATIVE_IOS_ASSET_CATALOG_FILES} PROPERTIES HEADER_FILE_ONLY TRUE)
     target_sources(ctr_native PRIVATE
         platform/apple/native_ios_import.m
         platform/apple/native_ios_telemetry.m
         platform/apple/native_ios_touch.m
+        ${CTR_NATIVE_IOS_ASSET_CATALOG_FILES}
     )
     target_compile_options(ctr_native PRIVATE "$<$<COMPILE_LANGUAGE:OBJC>:-fobjc-arc>")
+
+    if(CMAKE_OSX_SYSROOT MATCHES "[Ss]imulator")
+        set(CTR_NATIVE_IOS_ASSET_PLATFORM iphonesimulator)
+    else()
+        set(CTR_NATIVE_IOS_ASSET_PLATFORM iphoneos)
+    endif()
+    add_custom_command(TARGET ctr_native POST_BUILD
+        COMMAND /usr/bin/xcrun actool
+            "${CMAKE_SOURCE_DIR}/platform/apple/Assets.xcassets"
+            --compile "$<TARGET_BUNDLE_DIR:ctr_native>"
+            --platform "${CTR_NATIVE_IOS_ASSET_PLATFORM}"
+            --minimum-deployment-target "${CMAKE_OSX_DEPLOYMENT_TARGET}"
+            --target-device iphone
+            --target-device ipad
+            --app-icon AppIcon
+            --output-partial-info-plist "${CMAKE_BINARY_DIR}/CTRPad-asset-info.plist"
+            --compress-pngs
+            --warnings
+            --errors
+            --notices
+        COMMENT "Compiling CTRPad iOS app icon asset catalog"
+        VERBATIM
+    )
 endif()
 set_target_properties(ctr_native PROPERTIES
     C_STANDARD 17
