@@ -3449,3 +3449,20 @@ unaccepted, and there is still no Apple identity/profile or connected physical
 iPad on this Mac. Hardware cadence, audio, thermals, lifecycle and save/update
 persistence must be measured on device. Full evidence is in
 `docs/parity/2026-08-02-simulator-performance-handoff.md`.
+
+**Exact package checkpoint**
+
+Commit `daba106ae9884` froze the seven-file/485-addition handoff documentation.
+The clean revision then built sequentially for iPhoneOS and macOS ARM64 with
+the established 32 warnings and zero errors per target. The final serialized
+macOS suite passed 25/25 in 22.51 seconds.
+
+The seven-member, 1,459,935-byte unsigned IPA passed sidecar, extraction,
+thin-ARM64, iOS load-command, full-identity, distribution-resource and
+retail-exclusion checks at SHA-256 `67ec61bf...1c34e5`. The matching
+17,735,992-byte, 3,267-member source archive excluded retail/runtime/package/
+profile/key material and passed its sidecar at `da8af630...fff3a3`.
+
+At 01:37:14 CDT, active goal time was 296,019 seconds: 3 days, 10 hours,
+13 minutes and 39 seconds. Publishing that exact source and its report to
+`main` remained next; Apple signing and physical acceptance remained open.

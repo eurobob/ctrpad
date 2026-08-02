@@ -15343,3 +15343,57 @@ At 01:24:27 CDT the goal API reported 295,248 seconds: 3 days, 10 hours and
 48 seconds. The goal remains active; this checkpoint does not claim a signed
 IPA, complete race, repeated three-boost chain or any physical performance,
 audio, thermal, lifecycle or update-persistence result.
+
+### Exact clean package and regression
+
+Commit `daba106ae988487978547c20ce01aa0656ae2265` froze the performance
+handoff report plus timeline, journal, progress log, roadmap, release
+re-baseline and parity index. A staged whitespace check initially reported one
+blank line at the new report's EOF. That line was removed with a patch, the
+staged check repeated cleanly and the unpushed commit was amended before any
+artifact or remote publication.
+
+`package-source.sh` ran at low priority from the exact clean commit and wrote a
+3,267-member archive:
+
+```text
+CTRPad-source-daba106ae988.tar.gz
+size 17735992
+sha256 da8af630754ec542ee8878ad9ae7e6afcd54a6a0abfca94b80c851c8f4fff3a3
+```
+
+The packager reported the full 40-character source and excluded retail media,
+runtime state, packages, profiles and keys. Its SHA-256 sidecar passed.
+
+With `CMAKE_BUILD_PARALLEL_LEVEL=1` and `nice -n 15`, `package-ios.sh --build`
+configured iOS 15+, ARM64, GLES/UIKit/CoreAudio and built seven changed targets.
+It emitted the same 32 established warnings and zero errors, then wrote:
+
+```text
+CTRPad-0.1.0-1-daba106ae988-unsigned.ipa
+size 1459935
+sha256 67ec61bfa637e2e5d7e6e4e96025bccb647a7c00b9b54bf0d4d79e716a1c34e5
+```
+
+The IPA sidecar passed. Its seven entries were the standard Payload/app
+directories, executable, Info.plist, GPL license, third-party notices and
+Installation Information. Independent extraction reported one ARM64 Mach-O,
+full source `daba106ae988487978547c20ce01aa0656ae2265`, clean build
+`daba106ae988` and the expected absence of a signature. No retail file existed.
+
+The same clean identity reconfigured and rebuilt macOS ARM64 with one
+low-priority job, the established 32 warnings and zero errors. A final
+serialized run:
+
+```sh
+nice -n 15 ctest --test-dir build-macos-arm64 --output-on-failure -j1
+```
+
+passed 25/25 tests with zero failures in 22.51 seconds. No overlapping test,
+second Simulator or live CTRPad renderer competed with this acceptance run.
+The sole `CTRPad Import Validation` Simulator remained booted; the app remained
+terminated; both artifacts remained ignored under `dist/`.
+
+At 01:37:14 CDT, the goal API reported 296,019 seconds: 3 days, 10 hours,
+13 minutes and 39 seconds. The package is an exact unsigned handoff for
+re-signing or rebuilding on the other Mac. It is not a signed-device positive.

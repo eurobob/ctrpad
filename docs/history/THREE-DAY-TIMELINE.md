@@ -79,6 +79,7 @@ adds a complete durable commit ledger.
 | Bounded-control main publication | 2026-08-02 00:30:55 | PR #22 merged its audited two-commit/eight-file head as `a1d51f021`; ancestry and refs passed, and active goal time reached 3 days, 9 hours, 7 minutes, 31 seconds. |
 | Bounded-control publication record | 2026-08-02 00:32:27 | PR #23 merged commit `cc51f003d` as final-main `0fee3da33`, making the PR #22 merge itself durable in repository history. |
 | Simulator performance handoff reading | 2026-08-02 01:24:27 | A one-Simulator touch route, exact log/screenshot audit, three-second sample and host-load inventory separated coherent gameplay from Apple Software Renderer/host contention; active goal time reached 3 days, 10 hours and 48 seconds. |
+| Physical-test handoff package | 2026-08-02 01:37:14 | Clean `daba106ae` produced a verified thin-ARM64 unsigned IPA, 3,267-member matching source archive and a serialized 25/25 macOS regression; active goal time reached 3 days, 10 hours, 13 minutes and 39 seconds. |
 
 ## Executive chronology
 
@@ -422,6 +423,7 @@ the engineering journal.
 2026-08-02 00:30:31  a1d51f021  Merge pull request #22 from chrissotraidis/codex/simulator-performance-next
 2026-08-02 00:31:52  cc51f003d  Record bounded control publication
 2026-08-02 00:32:26  0fee3da33  Merge pull request #23 from chrissotraidis/codex/simulator-performance-next
+2026-08-02 01:31:11  daba106ae  Document Simulator performance handoff
 ```
 
 ## What the process actually did
@@ -498,3 +500,11 @@ an independent live process sample and host load all attribute the visible
 slow motion to Apple Software Renderer draw submission compounded by extreme
 host oversubscription. The source is ready for a physical-iPad handoff; no
 signed or hardware result is implied.
+
+At 01:37:14 CDT, clean handoff source `daba106ae9884...` had rebuilt thin ARM64
+iPhoneOS and macOS products with 32 established warnings and zero errors per
+target. The final serialized macOS suite passed 25/25 in 22.51 seconds. Its
+seven-member unsigned IPA passed at `67ec61bf...1c34e5`; its 3,267-member
+matching source archive passed at `da8af630...fff3a3`. Both are retail-free,
+checksum-verified and ignored local artifacts. Signing and every device-only
+result remain open.

@@ -216,6 +216,37 @@ audio, thermals, lifecycle and save/update persistence. A device failure
 becomes the next concrete implementation task; a device pass closes the
 performance uncertainty without further Simulator-only optimization.
 
+## Exact package acceptance
+
+Commit `daba106ae988487978547c20ce01aa0656ae2265` froze this report and the
+six linked history/roadmap indexes. With CTRPad terminated, exactly one
+Simulator still booted, one low-priority compiler job and no parallel test
+suite, that clean source produced:
+
+| Artifact | Size | SHA-256 | Result |
+| --- | ---: | --- | --- |
+| `CTRPad-0.1.0-1-daba106ae988-unsigned.ipa` | 1,459,935 bytes | `67ec61bfa637e2e5d7e6e4e96025bccb647a7c00b9b54bf0d4d79e716a1c34e5` | Seven-member retail-free IPA; thin ARM64 iOS executable; full source and 12-character build identity match; intentionally unsigned. |
+| `CTRPad-source-daba106ae988.tar.gz` | 17,735,992 bytes | `da8af630754ec542ee8878ad9ae7e6afcd54a6a0abfca94b80c851c8f4fff3a3` | 3,267 members; retail media, runtime state, packages, profiles and keys excluded. |
+
+Both SHA-256 sidecars passed. Independent IPA extraction found only
+`Payload/CTRPad.app` with `CTRPad`, `Info.plist`, GPL license, third-party
+notices and installation information. `file` and `lipo` reported a single
+ARM64 Mach-O; plist extraction returned the exact full commit and clean short
+identity; `codesign` confirmed the expected unsigned state.
+
+The same exact source reconfigured and rebuilt macOS ARM64 with the established
+32 warnings and zero errors. Its final serialized test run passed 25/25 with
+zero failures in 22.51 seconds, including native state/replay/layout/input/
+audio/renderer/lifecycle/storage checks and the iOS entitlement, CoreDevice
+JSON and build-identity guards. The iPhoneOS build also completed with the
+same established 32 warnings and zero errors.
+
+At 01:37:14 CDT, active goal time was 296,019 seconds: 3 days, 10 hours,
+13 minutes and 39 seconds. The artifacts are ignored local handoff products;
+their source commit will be published to GitHub. They are not Apple-signed and
+cannot launch on an iPad until the user supplies a valid identity/profile or a
+compatible re-signing workflow.
+
 ## Evidence boundary
 
 The runtime log, sample report and screenshots are local diagnostic material.

@@ -1719,3 +1719,10 @@ Dependency order is therefore:
 
 Full evidence, exact hashes and the other-Mac commands are in
 `docs/parity/2026-08-02-simulator-performance-handoff.md`.
+
+Handoff step 1 is now locally complete for source `daba106ae9884`: thin ARM64
+iPhoneOS and macOS builds succeeded with zero errors, the final serialized
+macOS suite passed 25/25 in 22.51 seconds, the seven-member unsigned IPA passed
+at `67ec61bf...1c34e5`, and its 3,267-member matching source archive passed at
+`da8af630...fff3a3`. Both artifacts are retail-free and ignored. GitHub main
+publication remains the final part of step 1; steps 2-6 remain open.
