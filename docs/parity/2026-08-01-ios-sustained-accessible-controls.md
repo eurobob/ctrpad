@@ -6,8 +6,8 @@
 
 **Branch:** `codex/simulator-performance-next`
 
-**Status:** locally accepted and awaiting the documentation/publication
-checkpoint; signed physical-iPad acceptance remains open
+**Status:** locally accepted, documented and awaiting GitHub publication;
+signed physical-iPad acceptance remains open
 
 ## Question and result
 
@@ -115,6 +115,8 @@ reported as intervals rather than assigned an invented minute.
 | 21:36:19 | Packaged exact corresponding source. | 3,264 members; SHA-256 `62562ce9...8ae0`; forbidden retail/runtime/package/profile/key scan returned zero. |
 | 21:36-21:37 | Independently audited both artifacts. | Sidecars passed. The first member-list command incorrectly kept the shell in `dist/` and prefixed paths with `dist/`, so `unzip` and `tar` failed to find the unchanged files. The corrected root-directory repeat found seven IPA members, 3,264 source members and zero forbidden members. Extracted IPA reported ARM64, exact source/build metadata and expected unsigned `codesign` status 1. |
 | 21:37:01 | Read the active Codex goal clock. | `timeUsedSeconds=281632`: 3 days, 6 hours, 13 minutes, 52 seconds. Goal remains active. |
+| 21:43:31 | Committed the seven-document acceptance/history checkpoint as `76ef53931`. | The timestamped timeline, engineering journal, progress log, roadmap, decision, parity index and this report became durable. |
+| 21:44:16 | Verified the documentation commit's corresponding source and reread the goal clock. | 3,265 members, required history/report files present, zero forbidden members, SHA-256 `8f4cb489...57a4`; `timeUsedSeconds=282054` (3 days, 6 hours, 20 minutes, 54 seconds). |
 
 ## Clean artifact and persistence evidence
 

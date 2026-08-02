@@ -3326,3 +3326,9 @@ At 21:37:01, active time was 281,632 seconds (3 days, 6 hours, 13 minutes,
 52 seconds). The Simulator sustained-action gap is locally closed; Apple
 signing and every physical-iPad acceptance item remain open. See
 `docs/parity/2026-08-01-ios-sustained-accessible-controls.md`.
+
+At 21:43:31 CDT, commit `76ef53931` made the seven-document acceptance and
+timestamp history durable. Its 3,265-member source package contained the new
+report/timeline, passed the sidecar and forbidden-member scan, and hashed to
+`8f4cb489...57a4`. At 21:44:16, active time was 282,054 seconds (3 days,
+6 hours, 20 minutes, 54 seconds); GitHub publication remained next.

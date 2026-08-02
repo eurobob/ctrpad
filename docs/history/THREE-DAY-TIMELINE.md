@@ -24,10 +24,10 @@ adds a complete durable commit ledger.
   retained a timestamp. Work between durable checkpoints is described as an
   interval rather than assigned an invented minute.
 - The commit ledger contains every campaign commit through sustained-control
-  implementation head `a3523c7a8`: 191 commits. Commands, temporary paths,
+  documentation head `76ef53931`: 192 commits. Commands, temporary paths,
   hashes, rejected
   experiments and individual test results are intentionally not duplicated
-  191 times here;
+  192 times here;
   they remain in the linked engineering journal and parity reports.
 
 ## Time accounting
@@ -70,6 +70,7 @@ adds a complete durable commit ledger.
 | Exact-source main publication | 2026-08-01 20:41:47 | PR #18 merged its audited three-commit/18-file head to `main` as `d29a560e9`; the 3,264-member final-main source archive passed at `9ad1c168...80577`, and active goal time reached 3 days, 5 hours, 18 minutes, 33 seconds. |
 | Exact-source history publication | 2026-08-01 20:43:08 | PR #19 merged the publication record to `main` as `88e453999`; local/remote/main aligned and its 3,264-member final source archive passed at `b56a9832...4713`. |
 | Sustained-control clean acceptance reading | 2026-08-01 21:37:01 | Clean implementation `a3523c7a8` passed Simulator/device builds, 25/25 tests, exact install/persistence/visual/control checks and matching IPA/source packaging; active goal time reached 3 days, 6 hours, 13 minutes, 52 seconds. |
+| Sustained-control documentation package | 2026-08-01 21:44:16 | Documentation commit `76ef53931` recorded the control/timeline checkpoint; its 3,265-member source archive passed sidecar/required-file/exclusion checks at `8f4cb489...57a4`, and active goal time reached 3 days, 6 hours, 20 minutes, 54 seconds. |
 
 ## Executive chronology
 
@@ -161,6 +162,7 @@ adds a complete durable commit ledger.
 | 21:26–21:32 | Exact Simulator build, install and visible acceptance | Built with one low-priority job, installed staged/installed hash `443d08a9...dabc`, preserved exact retail/save tuples, observed complete graphics, held Gas/slight-right/L drift together and proved settings neutralization with zero targeted log faults. |
 | 21:33–21:35 | iPhoneOS and macOS matrix | Clean iPhoneOS compiled; clean macOS compiled and passed 25/25 tests in 27.84 seconds. |
 | 21:35–21:37 | Exact IPA/source packaging | Wrote seven-member ARM64 unsigned IPA `781f8c03...ebf0` and 3,264-member source `62562ce9...8ae0`; sidecars and corrected independent scans passed after retaining one wrong-directory audit failure. |
+| 21:43–21:44 | Timestamped history checkpoint | Committed the seven-document acceptance/history set as `76ef53931`; its 3,265-member source archive included the new report/timeline, passed its sidecar and returned zero forbidden members. |
 
 ## Complete durable commit ledger
 
@@ -361,6 +363,7 @@ the engineering journal.
 2026-08-01 20:42:40  be7b52e28  Record exact source publication
 2026-08-01 20:43:08  88e453999  Merge pull request #19 from chrissotraidis/codex/simulator-performance-next
 2026-08-01 21:24:14  a3523c7a8  Add sustained accessible touch controls
+2026-08-01 21:43:31  76ef53931  Document sustained control acceptance
 ```
 
 ## What the process actually did
