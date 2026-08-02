@@ -15202,3 +15202,19 @@ At 00:28:34 CDT, the pre-commit history audit reconciled the parity report,
 timeline, journal, progress log, roadmap, decision record and parity index.
 The goal API then reported 291,910 seconds: 3 days, 9 hours, 5 minutes and
 10 seconds. Publication remained next.
+
+### GitHub publication
+
+Commit `7f9f68b2e` made the seven-document audit durable at 00:29:07 CDT, and
+the exact two-commit branch pushed. The preferred GitHub connector returned
+the same private-repository 404 retained in earlier checkpoints. Authenticated
+CLI fallback opened ready PR #22. Its protected head was exactly
+`7f9f68b2e214b92b63eaaab413bf58c599edd138`: two commits, eight files, 475
+additions, 10 deletions, clean/mergeable and without configured checks.
+
+PR #22 merged at 00:30:31 as
+`a1d51f021167e8fc4aa51de89f8670d41f5d04de`. A fresh fetch proved the exact
+head was an ancestor of remote `main`, the remote campaign branch still named
+the protected head, and local `main` aligned to remote `main`. At 00:30:55,
+the goal API read 292,051 seconds: 3 days, 9 hours, 7 minutes and 31 seconds.
+Source publication is closed; the signed physical-iPad gates remain open.

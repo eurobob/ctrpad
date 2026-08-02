@@ -6,8 +6,8 @@
 
 **Branch:** `codex/simulator-performance-next`
 
-**Status:** locally accepted; publication and every signed physical-iPad gate
-remain open at this checkpoint
+**Status:** accepted and published to `main` as `a1d51f021167`; every signed
+physical-iPad gate remains open
 
 ## Question and result
 
@@ -102,6 +102,10 @@ minute, is authoritative.
 | 00:19:52 | Captured the exact clean Simulator visual checkpoint. | Local ignored JPEG (101,446 bytes) SHA-256 `17cf0ada...403a`; coherent demo textures and controls; retail-derived image is not committed. |
 | 00:20:53 | Read the active goal clock after validation. | `timeUsedSeconds=291459`: 3 days, 8 hours, 57 minutes, 39 seconds. Goal remains active. |
 | 00:28:34 | Completed the seven-document history audit before committing it. | `timeUsedSeconds=291910`: 3 days, 9 hours, 5 minutes, 10 seconds. Publication remained next. |
+| 00:29:07 | Committed the seven-document history as `7f9f68b2e`. | The branch now contained exactly the implementation and its evidence commit. |
+| 00:29-00:30 | Pushed the two-commit head and opened PR #22. | The preferred connector returned its known private-repository 404; authenticated CLI fallback opened the ready PR. Its exact head was clean/mergeable: two commits, eight files, 475 additions, 10 deletions and no configured checks. |
+| 00:30:31 | PR #22 merged protected head `7f9f68b2e214...` to `main`. | Merge `a1d51f021167e8fc4aa51de89f8670d41f5d04de`; ancestry and local/remote ref checks passed. |
+| 00:30:55 | Read the active goal clock after publication verification. | `timeUsedSeconds=292051`: 3 days, 9 hours, 7 minutes, 31 seconds. Publication closed; physical acceptance remains open. |
 
 The raw one-second proof begins at `2026-08-02T04:00:46.605Z`; its local
 conversion is 2026-08-01 23:00:46 CDT.
@@ -153,4 +157,7 @@ Still open:
 - physical cadence, frame pacing, audio latency, thermals and energy; and
 - physical lifecycle plus update/save persistence.
 
-The goal therefore remains active.
+PR #22 published the exact two-commit/eight-file checkpoint to `main` as
+`a1d51f021167`. Its protected head, ancestry, remote branch and `main` refs
+were verified after the merge. The goal remains active because every listed
+physical-device gate is still open.

@@ -3388,3 +3388,12 @@ three-lap touch race, repeated three-boost drift chain, Apple signing,
 physical-iPad lifecycle/save validation and hardware performance measurements
 remain open. Exact evidence is in
 `docs/parity/2026-08-02-ios-bounded-accessible-race-controls.md`.
+
+At 00:29-00:31 CDT, implementation `c56162f68` and history `7f9f68b2e`
+pushed. The preferred connector returned its retained private-repository 404;
+authenticated CLI fallback opened PR #22. Its exact two-commit/eight-file head
+was clean/mergeable, contained 475 additions/10 deletions and had no configured
+checks. Protected head `7f9f68b2e214...` merged at 00:30:31 as final-main
+`a1d51f021167`. Ancestry and branch/main ref alignment passed. At 00:30:55,
+active time was 292,051 seconds (3 days, 9 hours, 7 minutes, 31 seconds).
+Publication is closed; signed physical acceptance remains open.

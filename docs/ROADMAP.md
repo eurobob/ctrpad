@@ -1683,3 +1683,8 @@ The remaining dependency-ordered work is still:
 Full evidence and timestamps are in
 `docs/parity/2026-08-02-ios-bounded-accessible-race-controls.md` and
 `docs/history/THREE-DAY-TIMELINE.md`.
+
+PR #22 published the exact two-commit/eight-file bounded-control checkpoint to
+`main` as `a1d51f021167`. Its protected head and ancestry were verified after
+the merge. Source publication is complete; the five physical-device steps
+above remain open.
