@@ -35,14 +35,28 @@ static NSString *const s_touchOpacityKey = @"CTRPadTouchOpacity";
 @end
 
 @interface CTRPadInputButton : UIButton
+@property(nonatomic, assign) BOOL accessibilityHeld;
+@property(nonatomic, assign) BOOL accessibilityTapPending;
+- (BOOL)accessibilityHoldControl;
+- (BOOL)accessibilityReleaseControl;
 @end
 
 @interface CTRPadTouchStickView : UIView
 @property(nonatomic, strong) UIView *knob;
 @property(nonatomic, strong) UILabel *label;
 @property(nonatomic, assign) BOOL trackingTouch;
+@property(nonatomic, assign) BOOL accessibilitySteering;
 @property(nonatomic, assign) unsigned int directionMask;
 - (void)applyControlOpacity:(CGFloat)opacity;
+- (void)publishPoint:(CGPoint)point;
+- (void)releaseTouch;
+- (BOOL)accessibilityHoldLeft;
+- (BOOL)accessibilityHoldRight;
+- (BOOL)accessibilityHoldSlightLeft;
+- (BOOL)accessibilityHoldSlightRight;
+- (BOOL)accessibilityHoldUp;
+- (BOOL)accessibilityHoldDown;
+- (BOOL)accessibilityCenter;
 @end
 
 @interface CTRPadTouchOverlayViewController : UIViewController
@@ -50,6 +64,7 @@ static NSString *const s_touchOpacityKey = @"CTRPadTouchOpacity";
 @property(nonatomic, assign) CGFloat controlScale;
 @property(nonatomic, assign) CGFloat controlOpacity;
 - (void)applyPreferencesAndRebuildControls;
+- (void)resetControlState;
 @end
 
 @interface CTRPadTouchSettingsViewController : UIViewController
@@ -121,10 +136,44 @@ static CGFloat CTRPadTouch_OpacityForChoice(CTRPadTouchOpacity choice)
 	// a button's primary action without synthesizing UIControlEventTouchDown.
 	// Publish the same down/up pair as a physical finger so accessible controls
 	// cannot silently appear to press while the retail pad receives no edge.
+	[self accessibilityReleaseControl];
+	self.accessibilityTapPending = YES;
+	self.accessibilityValue = @"Pressed";
 	[self sendActionsForControlEvents:UIControlEventTouchDown];
 	dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.10 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
-		[self sendActionsForControlEvents:UIControlEventTouchUpInside];
+		if (self.accessibilityTapPending && !self.accessibilityHeld)
+		{
+			self.accessibilityTapPending = NO;
+			self.accessibilityValue = @"Released";
+			[self sendActionsForControlEvents:UIControlEventTouchUpInside];
+		}
 	});
+	return YES;
+}
+
+- (BOOL)accessibilityHoldControl
+{
+	BOOL wasActive = self.accessibilityHeld || self.accessibilityTapPending;
+	self.accessibilityTapPending = NO;
+	self.accessibilityHeld = YES;
+	self.accessibilityValue = @"Held";
+	if (!wasActive)
+	{
+		[self sendActionsForControlEvents:UIControlEventTouchDown];
+	}
+	return YES;
+}
+
+- (BOOL)accessibilityReleaseControl
+{
+	BOOL wasActive = self.accessibilityHeld || self.accessibilityTapPending;
+	self.accessibilityHeld = NO;
+	self.accessibilityTapPending = NO;
+	self.accessibilityValue = @"Released";
+	if (wasActive)
+	{
+		[self sendActionsForControlEvents:UIControlEventTouchUpInside];
+	}
 	return YES;
 }
 
@@ -141,7 +190,17 @@ static CGFloat CTRPadTouch_OpacityForChoice(CTRPadTouchOpacity choice)
 		self.multipleTouchEnabled = NO;
 		self.accessibilityIdentifier = @"ctrpad.touch.stick";
 		self.accessibilityLabel = @"Steering stick";
+		self.accessibilityValue = @"Centered";
 		self.isAccessibilityElement = YES;
+		self.accessibilityCustomActions = @[
+			[[UIAccessibilityCustomAction alloc] initWithName:@"Hold left" target:self selector:@selector(accessibilityHoldLeft)],
+			[[UIAccessibilityCustomAction alloc] initWithName:@"Hold right" target:self selector:@selector(accessibilityHoldRight)],
+			[[UIAccessibilityCustomAction alloc] initWithName:@"Hold slight left" target:self selector:@selector(accessibilityHoldSlightLeft)],
+			[[UIAccessibilityCustomAction alloc] initWithName:@"Hold slight right" target:self selector:@selector(accessibilityHoldSlightRight)],
+			[[UIAccessibilityCustomAction alloc] initWithName:@"Hold up" target:self selector:@selector(accessibilityHoldUp)],
+			[[UIAccessibilityCustomAction alloc] initWithName:@"Hold down" target:self selector:@selector(accessibilityHoldDown)],
+			[[UIAccessibilityCustomAction alloc] initWithName:@"Center" target:self selector:@selector(accessibilityCenter)],
+		];
 		self.backgroundColor = [UIColor colorWithWhite:0.04 alpha:0.42];
 		self.layer.borderColor = [UIColor colorWithWhite:1.0 alpha:0.42].CGColor;
 		self.layer.borderWidth = 2.0;
@@ -166,6 +225,54 @@ static CGFloat CTRPadTouch_OpacityForChoice(CTRPadTouchOpacity choice)
 		]];
 	}
 	return self;
+}
+
+- (BOOL)accessibilityHoldX:(CGFloat)x y:(CGFloat)y value:(NSString *)value
+{
+	[self releaseTouch];
+	self.accessibilitySteering = YES;
+	self.trackingTouch = YES;
+	CGPoint center = CGPointMake(CGRectGetMidX(self.bounds), CGRectGetMidY(self.bounds));
+	CGFloat radius = MAX(1.0, MIN(self.bounds.size.width, self.bounds.size.height) * 0.5 - self.knob.bounds.size.width * 0.5 - 4.0);
+	[self publishPoint:CGPointMake(center.x + x * radius, center.y + y * radius)];
+	self.accessibilityValue = value;
+	return YES;
+}
+
+- (BOOL)accessibilityHoldLeft
+{
+	return [self accessibilityHoldX:-1.0 y:0.0 value:@"Held left"];
+}
+
+- (BOOL)accessibilityHoldRight
+{
+	return [self accessibilityHoldX:1.0 y:0.0 value:@"Held right"];
+}
+
+- (BOOL)accessibilityHoldSlightLeft
+{
+	return [self accessibilityHoldX:-0.45 y:0.0 value:@"Held slight left"];
+}
+
+- (BOOL)accessibilityHoldSlightRight
+{
+	return [self accessibilityHoldX:0.45 y:0.0 value:@"Held slight right"];
+}
+
+- (BOOL)accessibilityHoldUp
+{
+	return [self accessibilityHoldX:0.0 y:-1.0 value:@"Held up"];
+}
+
+- (BOOL)accessibilityHoldDown
+{
+	return [self accessibilityHoldX:0.0 y:1.0 value:@"Held down"];
+}
+
+- (BOOL)accessibilityCenter
+{
+	[self releaseTouch];
+	return YES;
 }
 
 - (void)applyControlOpacity:(CGFloat)opacity
@@ -232,6 +339,10 @@ static CGFloat CTRPadTouch_OpacityForChoice(CTRPadTouchOpacity choice)
 	{
 		return;
 	}
+	if (self.accessibilitySteering)
+	{
+		[self releaseTouch];
+	}
 	self.trackingTouch = YES;
 	[self publishPoint:[touch locationInView:self]];
 }
@@ -249,6 +360,8 @@ static CGFloat CTRPadTouch_OpacityForChoice(CTRPadTouchOpacity choice)
 - (void)releaseTouch
 {
 	self.trackingTouch = NO;
+	self.accessibilitySteering = NO;
+	self.accessibilityValue = @"Centered";
 	self.knob.center = CGPointMake(CGRectGetMidX(self.bounds), CGRectGetMidY(self.bounds));
 	if (self.directionMask != 0)
 	{
@@ -419,14 +532,14 @@ static CGFloat CTRPadTouch_OpacityForChoice(CTRPadTouchOpacity choice)
 
 - (void)done
 {
-	Platform_InputTouchReset();
+	[self.overlayController resetControlState];
 	[self dismissViewControllerAnimated:YES completion:nil];
 }
 
 - (void)viewWillDisappear:(BOOL)animated
 {
 	[super viewWillDisappear:animated];
-	Platform_InputTouchReset();
+	[self.overlayController resetControlState];
 }
 
 @end
@@ -455,6 +568,11 @@ static CGFloat CTRPadTouch_OpacityForChoice(CTRPadTouchOpacity choice)
 	button.titleLabel.textAlignment = NSTextAlignmentCenter;
 	[button setTitle:title forState:UIControlStateNormal];
 	[button setTitleColor:UIColor.whiteColor forState:UIControlStateNormal];
+	button.accessibilityValue = @"Released";
+	button.accessibilityCustomActions = @[
+		[[UIAccessibilityCustomAction alloc] initWithName:@"Hold" target:button selector:@selector(accessibilityHoldControl)],
+		[[UIAccessibilityCustomAction alloc] initWithName:@"Release" target:button selector:@selector(accessibilityReleaseControl)],
+	];
 	[button addTarget:self action:@selector(buttonDown:) forControlEvents:UIControlEventTouchDown | UIControlEventTouchDragEnter];
 	[button addTarget:self
 	              action:@selector(buttonUp:)
@@ -481,13 +599,41 @@ static CGFloat CTRPadTouch_OpacityForChoice(CTRPadTouchOpacity choice)
 - (void)buttonDown:(UIButton *)sender
 {
 	sender.alpha = 0.92;
+	sender.accessibilityValue = @"Held";
 	Platform_InputTouchButton((unsigned int)sender.tag, 1);
 }
 
 - (void)buttonUp:(UIButton *)sender
 {
 	sender.alpha = 1.0;
+	if ([sender isKindOfClass:CTRPadInputButton.class])
+	{
+		CTRPadInputButton *inputButton = (CTRPadInputButton *)sender;
+		inputButton.accessibilityHeld = NO;
+		inputButton.accessibilityTapPending = NO;
+	}
+	sender.accessibilityValue = @"Released";
 	Platform_InputTouchButton((unsigned int)sender.tag, 0);
+}
+
+- (void)resetControlState
+{
+	for (UIView *control in self.view.subviews)
+	{
+		if ([control isKindOfClass:CTRPadInputButton.class])
+		{
+			CTRPadInputButton *button = (CTRPadInputButton *)control;
+			button.accessibilityHeld = NO;
+			button.accessibilityTapPending = NO;
+			button.accessibilityValue = @"Released";
+			button.alpha = 1.0;
+		}
+		else if ([control isKindOfClass:CTRPadTouchStickView.class])
+		{
+			[(CTRPadTouchStickView *)control releaseTouch];
+		}
+	}
+	Platform_InputTouchReset();
 }
 
 - (void)presentTouchSettings
@@ -497,7 +643,7 @@ static CGFloat CTRPadTouch_OpacityForChoice(CTRPadTouchOpacity choice)
 		return;
 	}
 
-	Platform_InputTouchReset();
+	[self resetControlState];
 	CTRPadTouchSettingsViewController *settings = [[CTRPadTouchSettingsViewController alloc] init];
 	settings.overlayController = self;
 	settings.modalPresentationStyle = UIModalPresentationFormSheet;
@@ -510,6 +656,7 @@ static CGFloat CTRPadTouch_OpacityForChoice(CTRPadTouchOpacity choice)
 	{
 		return;
 	}
+	[self resetControlState];
 
 	UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"Choose a different disc?"
 	                                                              message:@"CTRPad must stop the current game before opening Files. Memory-card saves are kept, but unsaved race progress will be lost."
@@ -540,7 +687,7 @@ static CGFloat CTRPadTouch_OpacityForChoice(CTRPadTouchOpacity choice)
 
 - (void)applyPreferencesAndRebuildControls
 {
-	Platform_InputTouchReset();
+	[self resetControlState];
 	for (UIView *subview in self.view.subviews.copy)
 	{
 		[subview removeFromSuperview];
