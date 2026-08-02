@@ -1805,3 +1805,12 @@ The final dependency order remains:
 Exact details are in
 `docs/parity/2026-08-02-remote-main-fresh-clone.md` and
 `docs/parity/2026-08-02-ios-start-control-clarity.md`.
+
+PR #28 completed step 1 at 03:18:01 CDT by merging exact head `a19337a30`
+as `028dd651e`; the Start correction, focused evidence and complete campaign
+history are on remote `main`. A separate bot now owns customizable iOS touch
+controls and the app icon, so those concurrent shared-checkout changes are not
+part of this checkpoint. The remaining order begins with Apple signing and a
+connected physical iPad, followed by the exact on-device acceptance items in
+steps 3-5 above. No further Simulator or renderer work should substitute for
+that physical evidence.

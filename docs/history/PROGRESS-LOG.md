@@ -3585,3 +3585,43 @@ zero booted Simulators and no matching build/runtime process. Work was limited
 to Markdown/source-scope review; no Simulator or compiler restarted. At
 03:10:09, active goal time was 301,588 seconds: 3 days, 11 hours, 46 minutes
 and 28 seconds.
+
+### 2026-08-02 03:05-03:21 CDT — Complete history published and final handoff
+
+**Outcome**
+
+- Added the canonical whole-campaign map in `docs/history/README.md`, expanded
+  the timestamped timeline and journals, and retained commands, failures,
+  corrections, hashes, accepted evidence and rejected claims across all 11
+  implementation phases.
+- Committed that record as `a19337a30345114c8459a910e3d829ba9e382468`.
+  PR #28 contained exactly it and Start-control commit `df1b80372`: 12 files,
+  772 additions, 13 deletions, clean/mergeable and no configured checks.
+- The GitHub connector's create-PR request returned HTTP 404. The supported
+  `gh` fallback created the ready PR; no scope was added during the fallback.
+- PR #28 merged at 03:18:01 CDT as
+  `028dd651efc473197c67e0ec8477174891504b3d`. Its second parent is the exact
+  protected head, `origin/main` resolved to the merge after fetch and the
+  ancestry check passed.
+- New shared-checkout files for customizable iOS touch controls and a user
+  reference directory appeared after the merge and belong to another bot.
+  They were not staged, edited, discarded or included. This closeout used a
+  separate worktree rooted at the published `origin/main`.
+- No build, Simulator or runtime process was started during this closeout.
+
+**Time**
+
+At 03:21:12 CDT, the goal was paused and its active clock read 301,777 seconds:
+3 days, 11 hours, 49 minutes and 37 seconds. The clock is an execution-history
+measure, not uninterrupted CPU time or person-hours.
+
+**Current boundary**
+
+The native Apple port, parity evidence, Files import, atomic saves, keyboard/
+controller/touch routes, structured logs, telemetry, unsigned IPA/source
+packaging, fresh-clone proof and discoverable Start control are published.
+The other bot owns the newer touch customization and icon work. The original
+goal is not release-complete until a valid Apple identity/profile and physical
+iPad are available for exact signed installation, a complete touch-only race
+and drift chain, device cadence/audio/thermal/lifecycle checks, and cold-launch/
+update persistence acceptance.
