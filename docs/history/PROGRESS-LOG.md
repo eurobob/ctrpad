@@ -3284,3 +3284,13 @@ ran from the repository root despite a basename-only sidecar and failed to
 locate the archive. The unchanged repeat from `dist/` passed at 20:38:17 with
 SHA-256 `27bd43cc...63ed0`. At 20:38:30, active goal time was 278,117 seconds:
 3 days, 5 hours, 15 minutes and 17 seconds.
+
+PR #18 publication first attempted the connected GitHub endpoint, which again
+returned 404 for the private repository, then used the authenticated CLI. Its
+audit found the exact three commits/18 files, 931 additions/40 deletions,
+protected head `4bc222fcb`, clean mergeability and zero configured checks. The
+draft was marked ready and the exact head merged at 20:40:38 CDT as final-main
+`d29a560e9`. The 3,264-member main source archive passed sidecar, end-anchored
+exclusions and extracted 2/6 fixture at SHA-256 `9ad1c168...80577`. At
+20:41:47, active goal time was 278,313 seconds: 3 days, 5 hours, 18 minutes and
+33 seconds. The sole Simulator remained booted throughout.

@@ -66,6 +66,7 @@ adds a complete durable commit ledger.
 | Visible pre-publication state | 2026-08-01 20:33:38 | Booted-device JSON again contained exactly one iPad Simulator; foregrounding the existing exact-source app showed the textured mode menu and complete touch overlay, captured locally at `ad7a9098...c41b0`. |
 | Final pre-publication regression | 2026-08-01 20:35 | The unchanged implementation passed 25/25 again in 26.40 seconds; source-identity test 25 passed its 2/6 cases in 4.85 seconds. |
 | Documentation source checkpoint | 2026-08-01 20:38:30 | Commit `f4c1300f9` recorded the exact-source/history docs; its 3,264-member archive passed exclusions, extraction and corrected-directory checksum at `27bd43cc...63ed0`; active goal time reached 3 days, 5 hours, 15 minutes, 17 seconds. |
+| Exact-source main publication | 2026-08-01 20:41:47 | PR #18 merged its audited three-commit/18-file head to `main` as `d29a560e9`; the 3,264-member final-main source archive passed at `9ad1c168...80577`, and active goal time reached 3 days, 5 hours, 18 minutes, 33 seconds. |
 
 ## Executive chronology
 
@@ -148,6 +149,7 @@ adds a complete durable commit ledger.
 | 20:33 | Final visible publication check | Reconfirmed exactly one booted Simulator, foregrounded the existing app without a reinstall, and captured the fully textured mode menu plus touch overlay; the ignored screenshot is evidence only and contains no committed retail graphics. |
 | 20:35 | Final regression repeat | Repeated all 25 macOS tests against the unchanged implementation; every test passed, including the exact-source identity fixture. |
 | 20:36–20:38 | Documentation source checkpoint | Committed the ten-file history/report checkpoint, packaged its 3,264-member corresponding source, preserved a wrong-directory checksum failure, then passed the unchanged sidecar from `dist/` plus extracted exclusions/identity checks. |
+| 20:39–20:41 | Exact-source GitHub publication | Pushed the three commits, used authenticated CLI after the private-repository connector 404, audited PR #18 as an exact clean 18-file change, merged its protected head to `main`, synchronized the branch and verified the 3,264-member final-main source archive. |
 
 ## Complete durable commit ledger
 

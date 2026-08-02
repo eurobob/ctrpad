@@ -14927,3 +14927,22 @@ passed for the unchanged archive at SHA-256
 `27bd43cc0deaea5fcb6248c095d0eca0e727c126d5197236ab1f7ac178363ed0`.
 At 20:38:30 CDT, the goal API reported 278,117 seconds: 3 days, 5 hours,
 15 minutes and 17 seconds.
+
+The branch was pushed without force, then PR #18 publication attempted the
+connected GitHub app as required. It returned the same private-repository 404
+seen in earlier checkpoints, so authenticated `gh` created the draft. The
+server-side audit reported exactly three commits, 18 changed files, 931
+additions, 40 deletions, clean mergeability, no configured checks and head
+`4bc222fcb44c614349c4487431490f1ae97cdb27`. After marking the draft ready, a
+protected-head merge created `d29a560e96f0731cc0528cab123b3bee4ce902c9` on
+`main` at 20:40:38 CDT. The campaign branch was fast-forwarded to that merge
+and pushed; booted-device JSON still contained the same sole Simulator.
+
+Final-main corresponding-source packaging then wrote
+`CTRPad-source-d29a560e96f0.tar.gz` with 3,264 members. Its sidecar passed;
+the independent end-anchored forbidden scan returned zero; and a fresh
+extraction passed the two-positive/six-negative identity fixture. SHA-256 was
+`9ad1c1680cbf325f1567e9ae838fd72c5edaf9d6e75f877e5fd8746ce4380577`.
+At 20:41:47 CDT, active goal time was 278,313 seconds: 3 days, 5 hours,
+18 minutes and 33 seconds. This published exact local identity evidence, not
+the still-missing signed physical-iPad result.
