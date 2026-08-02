@@ -3532,3 +3532,56 @@ Exact evidence is in `docs/parity/2026-08-02-ios-device-observability.md`.
 
 At 02:21:56 CDT, active goal time was 298,723 seconds: 3 days, 10 hours,
 58 minutes and 43 seconds.
+
+### 2026-08-02 02:23-03:04 CDT — Remote rebuild, Start clarity and explicit stop
+
+**Outcome**
+
+- PR #27 merged the telemetry publication record as remote `main`
+  `cb459a198798`; all telemetry implementation and history were on `main`.
+- Re-audited the release contract and selected the remaining locally answerable
+  handoff question: whether a GitHub clone depended on hidden workspace state.
+- Shut down the sole Simulator and used a new 81 MiB shallow HTTPS clone. It
+  built macOS ARM64 and iPhoneOS with 32 established warnings/zero errors per
+  target, passed 26/26 tests in 10.85 seconds and produced a verified
+  seven-member unsigned IPA (`c1622388...2ad`) plus 3,270-member source archive
+  (`38a55c92...531`).
+- Investigated why the game exposed no visible Start button. The Start input
+  was present but mislabeled only as `PAUSE`. Changed it to `START / PAUSE`,
+  added accessibility label `Start or pause`, visibly confirmed the layout and
+  tapped it to advance the real game to its textured main menu.
+- Guarded Simulator update preserved retail and slot-zero save invariants.
+  Exact implementation commit `df1b80372` then built for iPhoneOS and
+  Simulator with the established warnings and zero errors.
+- Retained all corrections: one build reached a still-running configure, one
+  source checksum ran from the wrong directory, one identity-pinned cache
+  rejected the new commit until its cached identity was cleared, and the live
+  Start proof was dirty development evidence rather than a clean-runtime claim.
+- When host load reached `188.43 181.14 128.81`, the user requested a complete
+  stop. The already-running final link completed before stop inspection. Final
+  state had zero booted Simulators, no project process, no uncommitted file and
+  no push.
+
+**Time**
+
+At 02:40:02 CDT, active goal time was 299,789 seconds: 3 days, 11 hours,
+16 minutes and 29 seconds. The fresh clone ran from 02:30:16 through source
+packaging at 02:38:50. The Start investigation ran from approximately 02:40
+through the explicit stop audit at approximately 03:04. These are task/runtime
+measurements, not person-hours.
+
+**Open boundary**
+
+The remote-main rebuild and discoverable Start control are now locally proven.
+The local `df1b80372` commit was deliberately not pushed during the stop turn.
+No Apple identity, profile or physical iPad is available; signed guarded-update
+installation and the complete physical touch/performance/audio/lifecycle/save
+campaign remain required. Exact evidence is in
+`docs/parity/2026-08-02-remote-main-fresh-clone.md` and
+`docs/parity/2026-08-02-ios-start-control-clarity.md`.
+
+At the 03:05 low-load publication resume, stopped-state inspection again found
+zero booted Simulators and no matching build/runtime process. Work was limited
+to Markdown/source-scope review; no Simulator or compiler restarted. At
+03:10:09, active goal time was 301,588 seconds: 3 days, 11 hours, 46 minutes
+and 28 seconds.

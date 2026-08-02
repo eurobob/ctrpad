@@ -285,8 +285,9 @@ or create a physical-device signature.
 2. Select your own NTSC-U, single-track raw MODE2/2352 BIN image. CTRPad stages,
    validates, and installs it in the app's Documents container; the image is
    never part of the IPA.
-3. Start the game using touch, create or update a memory-card save, background
-   and relaunch the app, and verify the profile remains visible.
+3. Start the game with the top-center **START / PAUSE** touch control, create or
+   update a memory-card save, background and relaunch the app, and verify the
+   profile remains visible.
 4. Before installing a replacement build, preserve the same bundle ID and use
    an update install. Deleting the app deletes its container, retail import,
    and saves unless the sideload tool separately backs them up.

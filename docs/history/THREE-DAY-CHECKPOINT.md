@@ -1,5 +1,11 @@
 # CTRPad three-day engineering checkpoint
 
+> **Historical boundary:** this snapshot ended at 2 days, 23 hours, 53 minutes
+> of active goal time. Work continued through the 3-day/11-hour checkpoint.
+> The canonical full-process map is now [`README.md`](README.md), with exact
+> timestamps and every durable commit in
+> [`THREE-DAY-TIMELINE.md`](THREE-DAY-TIMELINE.md).
+
 ## Purpose and exact boundary
 
 This document is the readable historical map of the CTRPad port from the

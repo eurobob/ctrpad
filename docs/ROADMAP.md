@@ -1767,3 +1767,41 @@ PR #26 published the exact two-commit, 16-file telemetry checkpoint to remote
 `21e214f6bf2f` is its second parent and the ancestry check passes. Local
 publication is complete; the next meaningful evidence must come from signing
 and the target iPad.
+
+## 2026-08-02 remote-main rebuild and Start-control clarity
+
+A new 81 MiB shallow HTTPS clone of GitHub `main` `cb459a198798` used none of
+the development worktree's ignored assets, caches or Git objects. It completed
+clean macOS ARM64 and iPhoneOS builds with the established 32 warnings/zero
+errors per target, passed serialized CTest 26/26 in 10.85 seconds and produced
+a verified seven-member unsigned IPA (`c1622388...2ad`) plus matching
+3,270-member source archive (`38a55c92...531`). This proves same-host remote-
+main rebuildability, not a second-Mac or physical-device result.
+
+The subsequent UI audit found one small but real touch-first defect: the
+production `START` input existed at the top center but was labeled only
+`PAUSE`. Commit `df1b803726b4` changes the visible title to `START / PAUSE` and
+adds the accessibility label `Start or pause` without changing its input mask.
+A one-Simulator tap advanced the retail copyright sequence to the textured CTR
+main menu, and guarded update-install preserved the retail image and slot-zero
+save exactly. Exact-commit device and Simulator compiles completed with the
+established warning set and zero errors.
+
+The host became severely contended during the exact Simulator rebuild. The
+user requested a full stop; CTRPad and the Simulator were stopped, no project
+process remained, and no push occurred in that turn. That event and the fact
+that the live proof was a dirty development identity are retained rather than
+silently upgraded to clean runtime evidence.
+
+The final dependency order remains:
+
+1. publish the committed Start-control correction and focused evidence;
+2. provide a valid Apple development identity and matching profile;
+3. connect the target iPad and guarded-update install the exact signed build;
+4. complete Files import, touch race/drift, controller, audio, lifecycle,
+   cadence/thermal and save/update persistence acceptance; and
+5. optimize only if measured target-device cadence is unacceptable.
+
+Exact details are in
+`docs/parity/2026-08-02-remote-main-fresh-clone.md` and
+`docs/parity/2026-08-02-ios-start-control-clarity.md`.
