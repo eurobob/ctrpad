@@ -105,8 +105,10 @@ for required_file in \
     .gitignore \
     CMakeLists.txt \
     CMakePresets.json \
+    CONTRIBUTING.md \
     LICENSE \
     README.md \
+    RIGHTS_AND_LICENSES.md \
     THIRD_PARTY_NOTICES.md \
     build.sh \
     docs/DECISIONS.md \

@@ -4,6 +4,7 @@
 
 #include "platform/native_input.h"
 #include "platform/native_ios_touch.h"
+#include "platform/native_renderer.h"
 
 typedef NS_ENUM(NSInteger, CTRPadTouchHandedness)
 {
@@ -18,21 +19,19 @@ typedef NS_ENUM(NSInteger, CTRPadTouchSize)
 	CTRPadTouchSizeLarge,
 };
 
-typedef NS_ENUM(NSInteger, CTRPadTouchOpacity)
-{
-	CTRPadTouchOpacityLow = 0,
-	CTRPadTouchOpacityStandard,
-	CTRPadTouchOpacityHigh,
-};
-
 static NSString *const s_touchHandednessKey = @"CTRPadTouchHandedness";
 static NSString *const s_touchSizeKey = @"CTRPadTouchSize";
 static NSString *const s_touchOpacityKey = @"CTRPadTouchOpacity";
 static NSString *const s_touchEnabledKey = @"CTRPadTouchEnabled";
 static NSString *const s_touchLayoutKeyPrefix = @"CTRPadTouchLayout";
+static NSString *const s_internalResolutionScaleKey = @"CTRPadInternalResolutionScale";
 static const NSTimeInterval s_gasLatchDelay = 2.0;
+static const CGFloat s_touchOpacityMinimum = 0.10;
+static const CGFloat s_touchOpacityDefault = 0.58;
+static const CGFloat s_touchOpacityMaximum = 1.0;
 
 @class CTRPadTouchOverlayViewController;
+@class CTRPadTouchStickView;
 
 @interface CTRPadTouchPassthroughView : UIView
 @end
@@ -64,7 +63,12 @@ static const NSTimeInterval s_gasLatchDelay = 2.0;
 @property(nonatomic, assign) NSUInteger accessibilitySteeringGeneration;
 @property(nonatomic, assign) unsigned int directionMask;
 @property(nonatomic, assign) BOOL layoutEditing;
+@property(nonatomic, assign) BOOL dynamicOriginActive;
+@property(nonatomic, assign) CGPoint restingCenter;
+@property(nonatomic, assign) CGFloat controlOpacity;
 - (void)applyControlOpacity:(CGFloat)opacity;
+- (void)beginDynamicTouchAtPoint:(CGPoint)point inView:(UIView *)view;
+- (void)continueDynamicTouchAtPoint:(CGPoint)point inView:(UIView *)view;
 - (void)publishPoint:(CGPoint)point;
 - (void)releaseTouch;
 - (BOOL)accessibilityHoldLeft;
@@ -80,12 +84,18 @@ static const NSTimeInterval s_gasLatchDelay = 2.0;
 - (BOOL)accessibilityCenter;
 @end
 
+@interface CTRPadTouchSteeringZoneView : UIView
+@property(nonatomic, weak) CTRPadTouchStickView *stick;
+@property(nonatomic, assign) BOOL layoutEditing;
+@end
+
 @interface CTRPadTouchOverlayViewController : UIViewController
 @property(nonatomic, assign) CTRPadTouchHandedness handedness;
 @property(nonatomic, assign) CGFloat controlScale;
 @property(nonatomic, assign) CGFloat controlOpacity;
 @property(nonatomic, assign) BOOL touchControlsEnabled;
 @property(nonatomic, assign) BOOL layoutEditing;
+@property(nonatomic, strong) CTRPadTouchSteeringZoneView *steeringZone;
 @property(nonatomic, strong) NSArray<UIView *> *editableControls;
 @property(nonatomic, strong) NSMutableArray<UIGestureRecognizer *> *editGestures;
 @property(nonatomic, strong) NSMutableDictionary<NSString *, NSArray<NSNumber *> *> *layoutCenters;
@@ -109,13 +119,16 @@ static const NSTimeInterval s_gasLatchDelay = 2.0;
 - (void)selectControl:(UIGestureRecognizer *)gesture;
 - (void)shrinkSelectedControl;
 - (void)growSelectedControl;
+- (void)presentDiscReselectionConfirmation;
 @end
 
 @interface CTRPadTouchSettingsViewController : UIViewController
 @property(nonatomic, weak) CTRPadTouchOverlayViewController *overlayController;
 @property(nonatomic, strong) UISegmentedControl *handednessControl;
 @property(nonatomic, strong) UISegmentedControl *sizeControl;
-@property(nonatomic, strong) UISegmentedControl *opacityControl;
+@property(nonatomic, strong) UISlider *opacitySlider;
+@property(nonatomic, strong) UILabel *opacityValueLabel;
+@property(nonatomic, strong) UISegmentedControl *internalResolutionControl;
 @property(nonatomic, strong) UISwitch *touchEnabledSwitch;
 @property(nonatomic, strong) UIButton *editLayoutButton;
 @end
@@ -150,18 +163,36 @@ static CGFloat CTRPadTouch_ScaleForChoice(CTRPadTouchSize choice)
 	return 1.0;
 }
 
-static CGFloat CTRPadTouch_OpacityForChoice(CTRPadTouchOpacity choice)
+static CGFloat CTRPadTouch_ReadOpacity(void)
 {
-	switch (choice)
+	id value = [NSUserDefaults.standardUserDefaults objectForKey:s_touchOpacityKey];
+	if (![value isKindOfClass:NSNumber.class])
 	{
-	case CTRPadTouchOpacityLow:
+		return s_touchOpacityDefault;
+	}
+
+	NSNumber *number = (NSNumber *)value;
+	if (CFNumberIsFloatType((__bridge CFNumberRef)number))
+	{
+		return MIN(s_touchOpacityMaximum, MAX(s_touchOpacityMinimum, number.doubleValue));
+	}
+
+	// Migrate the original Low / Standard / High integer preference in place.
+	switch (number.integerValue)
+	{
+	case 0:
 		return 0.36;
-	case CTRPadTouchOpacityHigh:
+	case 2:
 		return 0.80;
-	case CTRPadTouchOpacityStandard:
+	case 1:
 		return 0.58;
 	}
-	return 0.58;
+	return s_touchOpacityDefault;
+}
+
+static CGFloat CTRPadTouch_RelativeOpacity(CGFloat opacity)
+{
+	return opacity / s_touchOpacityDefault;
 }
 
 @implementation CTRPadTouchPassthroughView
@@ -178,14 +209,17 @@ static CGFloat CTRPadTouch_OpacityForChoice(CTRPadTouchOpacity choice)
 
 - (void)updateAppearance
 {
+	CGFloat relativeOpacity = CTRPadTouch_RelativeOpacity(self.controlOpacity);
 	UIColor *color = self.inputLatched
 	                     ? [UIColor colorWithRed:0.10 green:0.52 blue:0.98 alpha:1.0]
 	                     : (self.baseColor ?: [UIColor colorWithWhite:0.08 alpha:1.0]);
 	self.backgroundColor = [color colorWithAlphaComponent:self.inputLatched ? MAX(0.82, self.controlOpacity) : self.controlOpacity];
 	self.layer.borderColor = (self.inputLatched
 	                              ? [UIColor colorWithRed:0.72 green:0.88 blue:1.0 alpha:1.0]
-	                              : [UIColor colorWithWhite:1.0 alpha:0.68])
+	                              : [UIColor colorWithWhite:1.0 alpha:MIN(1.0, 0.68 * relativeOpacity)])
 	                             .CGColor;
+	[self setTitleColor:[UIColor colorWithWhite:1.0 alpha:self.inputLatched ? 1.0 : MIN(1.0, relativeOpacity)]
+	             forState:UIControlStateNormal];
 	self.alpha = self.inputPressed ? 0.92 : 1.0;
 }
 
@@ -285,7 +319,70 @@ static CGFloat CTRPadTouch_OpacityForChoice(CTRPadTouchOpacity choice)
 
 @end
 
+@implementation CTRPadTouchSteeringZoneView
+
+- (void)touchesBegan:(NSSet<UITouch *> *)touches withEvent:(UIEvent *)event
+{
+	(void)event;
+	if (self.layoutEditing)
+	{
+		return;
+	}
+	UITouch *touch = touches.anyObject;
+	if ((touch != nil) && (self.stick != nil))
+	{
+		[self.stick beginDynamicTouchAtPoint:[touch locationInView:self] inView:self];
+	}
+}
+
+- (void)touchesMoved:(NSSet<UITouch *> *)touches withEvent:(UIEvent *)event
+{
+	(void)event;
+	UITouch *touch = touches.anyObject;
+	if (!self.layoutEditing && (touch != nil) && self.stick.trackingTouch)
+	{
+		[self.stick continueDynamicTouchAtPoint:[touch locationInView:self] inView:self];
+	}
+}
+
+- (void)touchesEnded:(NSSet<UITouch *> *)touches withEvent:(UIEvent *)event
+{
+	(void)touches;
+	(void)event;
+	[self.stick releaseTouch];
+}
+
+- (void)touchesCancelled:(NSSet<UITouch *> *)touches withEvent:(UIEvent *)event
+{
+	(void)touches;
+	(void)event;
+	[self.stick releaseTouch];
+}
+
+@end
+
 @implementation CTRPadTouchStickView
+
+- (void)updateVisualAppearance
+{
+	BOOL visible = self.layoutEditing || self.trackingTouch;
+	CGFloat relativeOpacity = CTRPadTouch_RelativeOpacity(self.controlOpacity);
+	self.backgroundColor = visible ? [UIColor colorWithWhite:0.04 alpha:self.controlOpacity * 0.72] : UIColor.clearColor;
+	self.layer.borderColor = (visible ? [UIColor colorWithWhite:1.0 alpha:MIN(1.0, self.controlOpacity * 0.82)]
+	                                  : UIColor.clearColor)
+	                             .CGColor;
+	self.knob.hidden = !visible;
+	self.label.hidden = !visible;
+	if (visible)
+	{
+		self.knob.backgroundColor = [UIColor colorWithRed:0.16
+		                                           green:0.48
+		                                            blue:0.95
+		                                           alpha:MIN(1.0, 0.76 * relativeOpacity)];
+		self.knob.layer.borderColor = [UIColor colorWithWhite:1.0 alpha:MIN(1.0, 0.72 * relativeOpacity)].CGColor;
+		self.label.textColor = [UIColor colorWithWhite:1.0 alpha:MIN(1.0, 0.74 * relativeOpacity)];
+	}
+}
 
 - (instancetype)init
 {
@@ -337,11 +434,25 @@ static CGFloat CTRPadTouch_OpacityForChoice(CTRPadTouchOpacity choice)
 	return self;
 }
 
+- (BOOL)pointInside:(CGPoint)point withEvent:(UIEvent *)event
+{
+	// The transparent steering zone owns gameplay touches. The ring itself only
+	// becomes directly draggable while editing the saved layout.
+	return self.layoutEditing && [super pointInside:point withEvent:event];
+}
+
+- (void)setLayoutEditing:(BOOL)layoutEditing
+{
+	_layoutEditing = layoutEditing;
+	[self updateVisualAppearance];
+}
+
 - (BOOL)accessibilityHoldX:(CGFloat)x y:(CGFloat)y value:(NSString *)value
 {
 	[self releaseTouch];
 	self.accessibilitySteering = YES;
 	self.trackingTouch = YES;
+	[self updateVisualAppearance];
 	CGPoint center = CGPointMake(CGRectGetMidX(self.bounds), CGRectGetMidY(self.bounds));
 	CGFloat radius = MAX(1.0, MIN(self.bounds.size.width, self.bounds.size.height) * 0.5 - self.knob.bounds.size.width * 0.5 - 4.0);
 	[self publishPoint:CGPointMake(center.x + x * radius, center.y + y * radius)];
@@ -422,9 +533,8 @@ static CGFloat CTRPadTouch_OpacityForChoice(CTRPadTouchOpacity choice)
 
 - (void)applyControlOpacity:(CGFloat)opacity
 {
-	self.backgroundColor = [UIColor colorWithWhite:0.04 alpha:opacity * 0.72];
-	self.layer.borderColor = [UIColor colorWithWhite:1.0 alpha:MAX(0.42, opacity * 0.82)].CGColor;
-	self.knob.backgroundColor = [UIColor colorWithRed:0.16 green:0.48 blue:0.95 alpha:MIN(1.0, opacity + 0.18)];
+	self.controlOpacity = opacity;
+	[self updateVisualAppearance];
 }
 
 - (void)layoutSubviews
@@ -493,6 +603,7 @@ static CGFloat CTRPadTouch_OpacityForChoice(CTRPadTouchOpacity choice)
 		[self releaseTouch];
 	}
 	self.trackingTouch = YES;
+	[self updateVisualAppearance];
 	[self publishPoint:[touch locationInView:self]];
 }
 
@@ -510,6 +621,29 @@ static CGFloat CTRPadTouch_OpacityForChoice(CTRPadTouchOpacity choice)
 	}
 }
 
+- (void)beginDynamicTouchAtPoint:(CGPoint)point inView:(UIView *)view
+{
+	if (self.layoutEditing || (view == nil) || (self.superview == nil))
+	{
+		return;
+	}
+	[self releaseTouch];
+	self.dynamicOriginActive = YES;
+	self.center = [view convertPoint:point toView:self.superview];
+	self.trackingTouch = YES;
+	[self updateVisualAppearance];
+	[self publishPoint:CGPointMake(CGRectGetMidX(self.bounds), CGRectGetMidY(self.bounds))];
+}
+
+- (void)continueDynamicTouchAtPoint:(CGPoint)point inView:(UIView *)view
+{
+	if (!self.dynamicOriginActive || !self.trackingTouch || (view == nil))
+	{
+		return;
+	}
+	[self publishPoint:[view convertPoint:point toView:self]];
+}
+
 - (void)releaseTouch
 {
 	self.accessibilitySteeringGeneration += 1;
@@ -517,6 +651,12 @@ static CGFloat CTRPadTouch_OpacityForChoice(CTRPadTouchOpacity choice)
 	self.accessibilitySteering = NO;
 	self.accessibilityValue = @"Centered";
 	self.knob.center = CGPointMake(CGRectGetMidX(self.bounds), CGRectGetMidY(self.bounds));
+	if (self.dynamicOriginActive)
+	{
+		self.center = self.restingCenter;
+		self.dynamicOriginActive = NO;
+	}
+	[self updateVisualAppearance];
 	if (self.directionMask != 0)
 	{
 		Platform_InputTouchButton(self.directionMask, 0);
@@ -552,6 +692,16 @@ static CGFloat CTRPadTouch_OpacityForChoice(CTRPadTouchOpacity choice)
 	return label;
 }
 
+- (void)styleSegmentedControl:(UISegmentedControl *)control
+{
+	control.backgroundColor = [UIColor colorWithWhite:1.0 alpha:0.08];
+	control.selectedSegmentTintColor = [UIColor colorWithWhite:0.94 alpha:1.0];
+	[control setTitleTextAttributes:@{ NSForegroundColorAttributeName : [UIColor colorWithWhite:0.82 alpha:1.0] }
+	                       forState:UIControlStateNormal];
+	[control setTitleTextAttributes:@{ NSForegroundColorAttributeName : [UIColor colorWithWhite:0.05 alpha:1.0] }
+	                       forState:UIControlStateSelected];
+}
+
 - (void)viewDidLoad
 {
 	[super viewDidLoad];
@@ -559,13 +709,13 @@ static CGFloat CTRPadTouch_OpacityForChoice(CTRPadTouchOpacity choice)
 	self.preferredContentSize = CGSizeMake(520.0, 560.0);
 
 	UILabel *titleLabel = [[UILabel alloc] init];
-	titleLabel.text = @"Controls";
+	titleLabel.text = @"Options";
 	titleLabel.textColor = UIColor.whiteColor;
 	titleLabel.font = [UIFont systemFontOfSize:28.0 weight:UIFontWeightBold];
 	titleLabel.textAlignment = NSTextAlignmentCenter;
 
 	UILabel *bodyLabel = [[UILabel alloc] init];
-	bodyLabel.text = @"Turn gameplay controls on or off, or move and resize them in Edit Layout. Hold Gas for two seconds to lock it, then tap Gas to release.";
+	bodyLabel.text = @"Adjust display and touch controls, or choose a different disc.";
 	bodyLabel.textColor = [UIColor colorWithWhite:0.72 alpha:1.0];
 	bodyLabel.font = [UIFont systemFontOfSize:15.0 weight:UIFontWeightRegular];
 	bodyLabel.textAlignment = NSTextAlignmentCenter;
@@ -588,29 +738,47 @@ static CGFloat CTRPadTouch_OpacityForChoice(CTRPadTouchOpacity choice)
 	                                                                        CTRPadTouchHandednessSteerRight);
 	self.handednessControl.accessibilityIdentifier = @"ctrpad.touch.settings.handedness";
 	[self.handednessControl addTarget:self action:@selector(preferencesChanged) forControlEvents:UIControlEventValueChanged];
+	[self styleSegmentedControl:self.handednessControl];
 
 	self.sizeControl = [[UISegmentedControl alloc] initWithItems:@[ @"Small", @"Standard", @"Large" ]];
 	self.sizeControl.selectedSegmentIndex = CTRPadTouch_ReadPreference(s_touchSizeKey, CTRPadTouchSizeStandard, CTRPadTouchSizeLarge);
 	self.sizeControl.accessibilityIdentifier = @"ctrpad.touch.settings.size";
 	[self.sizeControl addTarget:self action:@selector(preferencesChanged) forControlEvents:UIControlEventValueChanged];
+	[self styleSegmentedControl:self.sizeControl];
 
-	self.opacityControl = [[UISegmentedControl alloc] initWithItems:@[ @"Low", @"Standard", @"High" ]];
-	self.opacityControl.selectedSegmentIndex = CTRPadTouch_ReadPreference(s_touchOpacityKey,
-	                                                                     CTRPadTouchOpacityStandard,
-	                                                                     CTRPadTouchOpacityHigh);
-	self.opacityControl.accessibilityIdentifier = @"ctrpad.touch.settings.opacity";
-	[self.opacityControl addTarget:self action:@selector(preferencesChanged) forControlEvents:UIControlEventValueChanged];
+	self.opacityValueLabel = [self sectionLabelWithText:@""];
+	self.opacityValueLabel.textAlignment = NSTextAlignmentRight;
+	UIStackView *opacityTitleRow = [[UIStackView alloc] initWithArrangedSubviews:@[
+		[self sectionLabelWithText:@"Control opacity"], self.opacityValueLabel
+	]];
+	opacityTitleRow.axis = UILayoutConstraintAxisHorizontal;
+	opacityTitleRow.alignment = UIStackViewAlignmentCenter;
+	opacityTitleRow.distribution = UIStackViewDistributionEqualSpacing;
 
-	UILabel *keyboardLabel = [self sectionLabelWithText:@"Keyboard test layout"];
-	UILabel *keyboardMap = [[UILabel alloc] init];
-	keyboardMap.text = @"Steer / menus   W A S D\n"
-	                   @"View Brake Gas Item   I J K L\n"
-	                   @"Drift / boost   Q / E\n"
-	                   @"Pause / Select   P / Tab";
-	keyboardMap.textColor = [UIColor colorWithWhite:0.76 alpha:1.0];
-	keyboardMap.font = [UIFont monospacedSystemFontOfSize:14.0 weight:UIFontWeightRegular];
-	keyboardMap.numberOfLines = 0;
-	keyboardMap.accessibilityLabel = @"Keyboard controls. W A S D steer and navigate menus. I J K L are view, brake, gas, and item. Q and E drift and boost. P pauses. Tab selects.";
+	self.opacitySlider = [[UISlider alloc] init];
+	self.opacitySlider.minimumValue = (float)s_touchOpacityMinimum;
+	self.opacitySlider.maximumValue = (float)s_touchOpacityMaximum;
+	self.opacitySlider.value = (float)CTRPadTouch_ReadOpacity();
+	self.opacitySlider.continuous = YES;
+	self.opacitySlider.minimumTrackTintColor = [UIColor colorWithRed:0.13 green:0.42 blue:0.84 alpha:1.0];
+	self.opacitySlider.maximumTrackTintColor = [UIColor colorWithWhite:1.0 alpha:0.18];
+	self.opacitySlider.accessibilityIdentifier = @"ctrpad.touch.settings.opacity";
+	self.opacitySlider.accessibilityLabel = @"Control opacity";
+	[self.opacitySlider addTarget:self action:@selector(opacityChanged) forControlEvents:UIControlEventValueChanged];
+	[self updateOpacityValueLabel];
+
+	self.internalResolutionControl = [[UISegmentedControl alloc] initWithItems:@[ @"1×", @"2×", @"3×", @"4×" ]];
+	self.internalResolutionControl.selectedSegmentIndex = CTRPadTouch_ReadPreference(s_internalResolutionScaleKey, 0, 3);
+	self.internalResolutionControl.accessibilityIdentifier = @"ctrpad.options.internal-resolution";
+	self.internalResolutionControl.accessibilityLabel = @"Internal resolution";
+	[self.internalResolutionControl addTarget:self action:@selector(preferencesChanged) forControlEvents:UIControlEventValueChanged];
+	[self styleSegmentedControl:self.internalResolutionControl];
+
+	UILabel *resolutionHelp = [[UILabel alloc] init];
+	resolutionHelp.text = @"Higher values clean up polygon edges while keeping textures sharp.";
+	resolutionHelp.textColor = [UIColor colorWithWhite:0.68 alpha:1.0];
+	resolutionHelp.font = [UIFont systemFontOfSize:13.0 weight:UIFontWeightRegular];
+	resolutionHelp.numberOfLines = 0;
 
 	UIButtonConfiguration *resetConfiguration = [UIButtonConfiguration tintedButtonConfiguration];
 	resetConfiguration.title = @"Reset defaults";
@@ -619,13 +787,22 @@ static CGFloat CTRPadTouch_OpacityForChoice(CTRPadTouchOpacity choice)
 	resetButton.accessibilityIdentifier = @"ctrpad.touch.settings.reset";
 	[resetButton addTarget:self action:@selector(resetDefaults) forControlEvents:UIControlEventTouchUpInside];
 
-	UIButtonConfiguration *editConfiguration = [UIButtonConfiguration tintedButtonConfiguration];
+	UIButtonConfiguration *editConfiguration = [UIButtonConfiguration filledButtonConfiguration];
 	editConfiguration.title = @"Edit touch layout";
-	editConfiguration.baseForegroundColor = [UIColor colorWithRed:0.34 green:0.70 blue:1.0 alpha:1.0];
+	editConfiguration.baseForegroundColor = UIColor.whiteColor;
+	editConfiguration.baseBackgroundColor = [UIColor colorWithRed:0.13 green:0.42 blue:0.84 alpha:1.0];
 	self.editLayoutButton = [UIButton buttonWithConfiguration:editConfiguration primaryAction:nil];
 	self.editLayoutButton.accessibilityIdentifier = @"ctrpad.touch.settings.edit-layout";
 	self.editLayoutButton.enabled = self.touchEnabledSwitch.on;
 	[self.editLayoutButton addTarget:self action:@selector(editLayout) forControlEvents:UIControlEventTouchUpInside];
+
+	UIButtonConfiguration *discConfiguration = [UIButtonConfiguration tintedButtonConfiguration];
+	discConfiguration.title = @"Change disc…";
+	discConfiguration.baseForegroundColor = UIColor.whiteColor;
+	UIButton *changeDiscButton = [UIButton buttonWithConfiguration:discConfiguration primaryAction:nil];
+	changeDiscButton.accessibilityIdentifier = @"ctrpad.options.change-disc";
+	changeDiscButton.accessibilityLabel = @"Change retail disc image";
+	[changeDiscButton addTarget:self action:@selector(changeDisc) forControlEvents:UIControlEventTouchUpInside];
 
 	UIButtonConfiguration *doneConfiguration = [UIButtonConfiguration filledButtonConfiguration];
 	doneConfiguration.title = @"Done";
@@ -637,16 +814,19 @@ static CGFloat CTRPadTouch_OpacityForChoice(CTRPadTouchOpacity choice)
 	UIStackView *stack = [[UIStackView alloc] initWithArrangedSubviews:@[
 		titleLabel,
 		bodyLabel,
+		changeDiscButton,
+		[self sectionLabelWithText:@"Touch controls"],
 		touchEnabledRow,
+		self.editLayoutButton,
+		[self sectionLabelWithText:@"Internal resolution"],
+		self.internalResolutionControl,
+		resolutionHelp,
 		[self sectionLabelWithText:@"Handedness"],
 		self.handednessControl,
 		[self sectionLabelWithText:@"Control size"],
 		self.sizeControl,
-		[self sectionLabelWithText:@"Control opacity"],
-		self.opacityControl,
-		keyboardLabel,
-		keyboardMap,
-		self.editLayoutButton,
+		opacityTitleRow,
+		self.opacitySlider,
 		resetButton,
 		doneButton,
 	]];
@@ -654,9 +834,10 @@ static CGFloat CTRPadTouch_OpacityForChoice(CTRPadTouchOpacity choice)
 	stack.axis = UILayoutConstraintAxisVertical;
 	stack.alignment = UIStackViewAlignmentFill;
 	stack.spacing = 12.0;
-	[stack setCustomSpacing:22.0 afterView:bodyLabel];
-	[stack setCustomSpacing:22.0 afterView:self.opacityControl];
-	[stack setCustomSpacing:20.0 afterView:keyboardMap];
+	[stack setCustomSpacing:16.0 afterView:bodyLabel];
+	[stack setCustomSpacing:22.0 afterView:changeDiscButton];
+	[stack setCustomSpacing:22.0 afterView:self.opacitySlider];
+	[stack setCustomSpacing:22.0 afterView:resolutionHelp];
 	UIScrollView *scrollView = [[UIScrollView alloc] init];
 	scrollView.translatesAutoresizingMaskIntoConstraints = NO;
 	scrollView.alwaysBounceVertical = NO;
@@ -677,11 +858,26 @@ static CGFloat CTRPadTouch_OpacityForChoice(CTRPadTouchOpacity choice)
 		[stack.widthAnchor constraintLessThanOrEqualToConstant:460.0],
 		[self.handednessControl.heightAnchor constraintGreaterThanOrEqualToConstant:44.0],
 		[self.sizeControl.heightAnchor constraintGreaterThanOrEqualToConstant:44.0],
-		[self.opacityControl.heightAnchor constraintGreaterThanOrEqualToConstant:44.0],
+		[self.opacitySlider.heightAnchor constraintGreaterThanOrEqualToConstant:44.0],
+		[self.internalResolutionControl.heightAnchor constraintGreaterThanOrEqualToConstant:44.0],
 		[self.editLayoutButton.heightAnchor constraintGreaterThanOrEqualToConstant:48.0],
+		[changeDiscButton.heightAnchor constraintGreaterThanOrEqualToConstant:44.0],
 		[resetButton.heightAnchor constraintGreaterThanOrEqualToConstant:44.0],
 		[doneButton.heightAnchor constraintGreaterThanOrEqualToConstant:50.0],
 	]];
+}
+
+- (void)updateOpacityValueLabel
+{
+	NSString *value = [NSString stringWithFormat:@"%.0f%%", self.opacitySlider.value * 100.0f];
+	self.opacityValueLabel.text = value;
+	self.opacitySlider.accessibilityValue = value;
+}
+
+- (void)opacityChanged
+{
+	[NSUserDefaults.standardUserDefaults setDouble:self.opacitySlider.value forKey:s_touchOpacityKey];
+	[self updateOpacityValueLabel];
 }
 
 - (void)preferencesChanged
@@ -689,7 +885,10 @@ static CGFloat CTRPadTouch_OpacityForChoice(CTRPadTouchOpacity choice)
 	NSUserDefaults *defaults = NSUserDefaults.standardUserDefaults;
 	[defaults setInteger:self.handednessControl.selectedSegmentIndex forKey:s_touchHandednessKey];
 	[defaults setInteger:self.sizeControl.selectedSegmentIndex forKey:s_touchSizeKey];
-	[defaults setInteger:self.opacityControl.selectedSegmentIndex forKey:s_touchOpacityKey];
+	NSInteger requestedScale = self.internalResolutionControl.selectedSegmentIndex + 1;
+	NSInteger appliedScale = NativeRenderer_SetInternalResolutionScale((int)requestedScale);
+	self.internalResolutionControl.selectedSegmentIndex = appliedScale - 1;
+	[defaults setInteger:self.internalResolutionControl.selectedSegmentIndex forKey:s_internalResolutionScaleKey];
 	[defaults setBool:self.touchEnabledSwitch.on forKey:s_touchEnabledKey];
 	self.editLayoutButton.enabled = self.touchEnabledSwitch.on;
 	[self.overlayController applyPreferencesAndRebuildControls];
@@ -702,14 +901,27 @@ static CGFloat CTRPadTouch_OpacityForChoice(CTRPadTouchOpacity choice)
 	[defaults removeObjectForKey:s_touchSizeKey];
 	[defaults removeObjectForKey:s_touchOpacityKey];
 	[defaults removeObjectForKey:s_touchEnabledKey];
+	[defaults removeObjectForKey:s_internalResolutionScaleKey];
 	self.handednessControl.selectedSegmentIndex = CTRPadTouchHandednessSteerLeft;
 	self.sizeControl.selectedSegmentIndex = CTRPadTouchSizeStandard;
-	self.opacityControl.selectedSegmentIndex = CTRPadTouchOpacityStandard;
+	self.opacitySlider.value = (float)s_touchOpacityDefault;
+	[self updateOpacityValueLabel];
 	self.touchEnabledSwitch.on = YES;
+	self.internalResolutionControl.selectedSegmentIndex = 0;
+	NativeRenderer_SetInternalResolutionScale(1);
 	self.editLayoutButton.enabled = YES;
 	[self.overlayController resetAllLayouts];
 	[self.overlayController applyPreferencesAndRebuildControls];
-	UIAccessibilityPostNotification(UIAccessibilityAnnouncementNotification, @"Touch controls reset to defaults.");
+	UIAccessibilityPostNotification(UIAccessibilityAnnouncementNotification, @"Options reset to defaults.");
+}
+
+- (void)changeDisc
+{
+	[self.overlayController resetControlState];
+	__weak CTRPadTouchOverlayViewController *overlay = self.overlayController;
+	[self dismissViewControllerAnimated:YES completion:^{
+		[overlay presentDiscReselectionConfirmation];
+	}];
 }
 
 - (void)editLayout
@@ -735,6 +947,7 @@ static CGFloat CTRPadTouch_OpacityForChoice(CTRPadTouchOpacity choice)
 {
 	[super viewWillDisappear:animated];
 	[self.overlayController resetControlState];
+	[self.overlayController applyPreferencesAndRebuildControls];
 }
 
 @end
@@ -758,13 +971,11 @@ static CGFloat CTRPadTouch_OpacityForChoice(CTRPadTouchOpacity choice)
 	button.baseColor = color;
 	button.controlOpacity = self.controlOpacity;
 	[button updateAppearance];
-	button.layer.borderColor = [UIColor colorWithWhite:1.0 alpha:0.68].CGColor;
 	button.layer.borderWidth = 2.0;
 	button.titleLabel.font = [UIFont systemFontOfSize:14.0 weight:UIFontWeightBold];
 	button.titleLabel.numberOfLines = 2;
 	button.titleLabel.textAlignment = NSTextAlignmentCenter;
 	[button setTitle:title forState:UIControlStateNormal];
-	[button setTitleColor:UIColor.whiteColor forState:UIControlStateNormal];
 	button.accessibilityValue = @"Released";
 	button.accessibilityCustomActions = @[
 		[[UIAccessibilityCustomAction alloc] initWithName:@"Press one second" target:button selector:@selector(accessibilityPressBriefly)],
@@ -782,15 +993,16 @@ static CGFloat CTRPadTouch_OpacityForChoice(CTRPadTouchOpacity choice)
 - (UIButton *)utilityButtonWithTitle:(NSString *)title action:(SEL)action
 {
 	UIButton *button = [UIButton buttonWithType:UIButtonTypeCustom];
+	CGFloat relativeOpacity = CTRPadTouch_RelativeOpacity(self.controlOpacity);
 	button.translatesAutoresizingMaskIntoConstraints = NO;
 	button.exclusiveTouch = YES;
 	button.backgroundColor = [[UIColor colorWithWhite:0.08 alpha:1.0] colorWithAlphaComponent:self.controlOpacity];
-	button.layer.borderColor = [UIColor colorWithWhite:1.0 alpha:0.68].CGColor;
+	button.layer.borderColor = [UIColor colorWithWhite:1.0 alpha:MIN(1.0, 0.68 * relativeOpacity)].CGColor;
 	button.layer.borderWidth = 2.0;
 	button.layer.cornerRadius = 12.0;
 	button.titleLabel.font = [UIFont systemFontOfSize:12.0 weight:UIFontWeightBold];
 	[button setTitle:title forState:UIControlStateNormal];
-	[button setTitleColor:UIColor.whiteColor forState:UIControlStateNormal];
+	[button setTitleColor:[UIColor colorWithWhite:1.0 alpha:MIN(1.0, relativeOpacity)] forState:UIControlStateNormal];
 	[button addTarget:self action:action forControlEvents:UIControlEventTouchUpInside];
 	return button;
 }
@@ -965,25 +1177,36 @@ static CGFloat CTRPadTouch_OpacityForChoice(CTRPadTouchOpacity choice)
 	CTRPadTouchSize sizeChoice = (CTRPadTouchSize)CTRPadTouch_ReadPreference(s_touchSizeKey,
 	                                                                       CTRPadTouchSizeStandard,
 	                                                                       CTRPadTouchSizeLarge);
-	CTRPadTouchOpacity opacityChoice = (CTRPadTouchOpacity)CTRPadTouch_ReadPreference(s_touchOpacityKey,
-	                                                                                CTRPadTouchOpacityStandard,
-	                                                                                CTRPadTouchOpacityHigh);
 	self.controlScale = CTRPadTouch_ScaleForChoice(sizeChoice);
-	self.controlOpacity = CTRPadTouch_OpacityForChoice(opacityChoice);
+	self.controlOpacity = CTRPadTouch_ReadOpacity();
 	self.touchControlsEnabled = CTRPadTouch_ReadPreference(s_touchEnabledKey, 1, 1) != 0;
+	BOOL phone = UIDevice.currentDevice.userInterfaceIdiom != UIUserInterfaceIdiomPad;
+	NSInteger requestedResolutionScale = CTRPadTouch_ReadPreference(s_internalResolutionScaleKey, 0, 3) + 1;
+	NSInteger appliedResolutionScale = NativeRenderer_SetInternalResolutionScale((int)requestedResolutionScale);
+	if (appliedResolutionScale != requestedResolutionScale)
+	{
+		[NSUserDefaults.standardUserDefaults setInteger:appliedResolutionScale - 1 forKey:s_internalResolutionScaleKey];
+	}
 
 	CTRPadTouchStickView *stick = [[CTRPadTouchStickView alloc] init];
 	[stick applyControlOpacity:self.controlOpacity];
+	CTRPadTouchSteeringZoneView *steeringZone = [[CTRPadTouchSteeringZoneView alloc] initWithFrame:CGRectZero];
+	steeringZone.multipleTouchEnabled = NO;
+	steeringZone.backgroundColor = UIColor.clearColor;
+	steeringZone.stick = stick;
+	steeringZone.hidden = !self.touchControlsEnabled;
+	steeringZone.userInteractionEnabled = self.touchControlsEnabled;
+	self.steeringZone = steeringZone;
+	[self.view addSubview:steeringZone];
 	CTRPadInputButton *cross = [self buttonWithTitle:@"GAS\n✕" mask:PLATFORM_INPUT_TOUCH_CROSS color:[UIColor colorWithRed:0.08 green:0.42 blue:0.95 alpha:1.0]];
 	CTRPadInputButton *square = [self buttonWithTitle:@"BRAKE\n□" mask:PLATFORM_INPUT_TOUCH_SQUARE color:[UIColor colorWithRed:0.93 green:0.19 blue:0.52 alpha:1.0]];
 	CTRPadInputButton *circle = [self buttonWithTitle:@"ITEM\n○" mask:PLATFORM_INPUT_TOUCH_CIRCLE color:[UIColor colorWithRed:0.93 green:0.16 blue:0.18 alpha:1.0]];
 	CTRPadInputButton *triangle = [self buttonWithTitle:@"VIEW\n△" mask:PLATFORM_INPUT_TOUCH_TRIANGLE color:[UIColor colorWithRed:0.08 green:0.68 blue:0.32 alpha:1.0]];
-	CTRPadInputButton *leftDrift = [self buttonWithTitle:@"L DRIFT / BOOST" mask:PLATFORM_INPUT_TOUCH_L1 color:[UIColor colorWithRed:0.94 green:0.59 blue:0.10 alpha:1.0]];
-	CTRPadInputButton *rightDrift = [self buttonWithTitle:@"R DRIFT / BOOST" mask:PLATFORM_INPUT_TOUCH_R1 color:[UIColor colorWithRed:0.94 green:0.59 blue:0.10 alpha:1.0]];
+	CTRPadInputButton *leftDrift = [self buttonWithTitle:(phone ? @"BOOST\nTAP" : @"L DRIFT / BOOST") mask:PLATFORM_INPUT_TOUCH_L1 color:[UIColor colorWithRed:0.94 green:0.59 blue:0.10 alpha:1.0]];
+	CTRPadInputButton *rightDrift = [self buttonWithTitle:(phone ? @"DRIFT\nHOLD" : @"R DRIFT / BOOST") mask:PLATFORM_INPUT_TOUCH_R1 color:[UIColor colorWithRed:0.94 green:0.59 blue:0.10 alpha:1.0]];
 	CTRPadInputButton *start = [self buttonWithTitle:@"START\nPAUSE" mask:PLATFORM_INPUT_TOUCH_START color:[UIColor colorWithWhite:0.08 alpha:1.0]];
 	CTRPadInputButton *select = [self buttonWithTitle:@"SELECT" mask:PLATFORM_INPUT_TOUCH_SELECT color:[UIColor colorWithWhite:0.08 alpha:1.0]];
-	UIButton *settings = [self utilityButtonWithTitle:@"CONTROLS" action:@selector(presentTouchSettings)];
-	UIButton *disc = [self utilityButtonWithTitle:@"CHANGE DISC" action:@selector(presentDiscReselectionConfirmation)];
+	UIButton *settings = [self utilityButtonWithTitle:@"OPTIONS" action:@selector(presentTouchSettings)];
 	cross.holdToLatch = YES;
 
 	cross.accessibilityIdentifier = @"ctrpad.touch.cross";
@@ -996,18 +1219,16 @@ static CGFloat CTRPadTouch_OpacityForChoice(CTRPadTouchOpacity choice)
 	start.accessibilityLabel = @"Start or pause";
 	select.accessibilityIdentifier = @"ctrpad.touch.select";
 	settings.accessibilityIdentifier = @"ctrpad.touch.settings";
-	settings.accessibilityLabel = @"Configure touch controls";
-	disc.accessibilityIdentifier = @"ctrpad.touch.disc";
-	disc.accessibilityLabel = @"Change retail disc image";
+	settings.accessibilityLabel = @"Open options";
 	cross.accessibilityLabel = @"Gas, PlayStation Cross";
 	square.accessibilityLabel = @"Brake, PlayStation Square";
 	circle.accessibilityLabel = @"Item, PlayStation Circle";
 	triangle.accessibilityLabel = @"View, PlayStation Triangle";
-	leftDrift.accessibilityLabel = @"Left drift or boost, PlayStation L1";
-	rightDrift.accessibilityLabel = @"Right drift or boost, PlayStation R1";
+	leftDrift.accessibilityLabel = phone ? @"Boost, tap while holding Drift, PlayStation L1" : @"Left drift or boost, PlayStation L1";
+	rightDrift.accessibilityLabel = phone ? @"Drift, hold while steering, PlayStation R1" : @"Right drift or boost, PlayStation R1";
 	select.accessibilityLabel = @"PlayStation Select";
 
-	NSArray<UIView *> *controls = @[ stick, cross, square, circle, triangle, leftDrift, rightDrift, start, select, settings, disc ];
+	NSArray<UIView *> *controls = @[ stick, cross, square, circle, triangle, leftDrift, rightDrift, start, select, settings ];
 	for (UIView *control in controls)
 	{
 		control.translatesAutoresizingMaskIntoConstraints = YES;
@@ -1197,7 +1418,12 @@ static CGFloat CTRPadTouch_OpacityForChoice(CTRPadTouchOpacity choice)
 	}
 
 #define CTRPAD_NORMALIZED_POINT(point) CGPointMake(((point).x - CGRectGetMinX(safe)) / safeWidth, ((point).y - CGRectGetMinY(safe)) / safeHeight)
-	[self setControl:[self controlWithIdentifier:@"ctrpad.touch.stick"] normalizedCenter:CTRPAD_NORMALIZED_POINT(stickPoint) size:stickSize mirror:NO];
+	CTRPadTouchStickView *stick = (CTRPadTouchStickView *)[self controlWithIdentifier:@"ctrpad.touch.stick"];
+	if (!stick.dynamicOriginActive)
+	{
+		[self setControl:stick normalizedCenter:CTRPAD_NORMALIZED_POINT(stickPoint) size:stickSize mirror:NO];
+		stick.restingCenter = stick.center;
+	}
 	[self setControl:[self controlWithIdentifier:@"ctrpad.touch.cross"] normalizedCenter:CTRPAD_NORMALIZED_POINT(gasPoint) size:gasSize mirror:NO];
 	[self setControl:[self controlWithIdentifier:@"ctrpad.touch.square"] normalizedCenter:CTRPAD_NORMALIZED_POINT(brakePoint) size:brakeSize mirror:NO];
 	[self setControl:[self controlWithIdentifier:@"ctrpad.touch.circle"] normalizedCenter:CTRPAD_NORMALIZED_POINT(itemPoint) size:itemSize mirror:NO];
@@ -1207,6 +1433,17 @@ static CGFloat CTRPadTouch_OpacityForChoice(CTRPadTouchOpacity choice)
 	[self setControl:[self controlWithIdentifier:@"ctrpad.touch.start"] normalizedCenter:CTRPAD_NORMALIZED_POINT(startPoint) size:startSize mirror:NO];
 	[self setControl:[self controlWithIdentifier:@"ctrpad.touch.select"] normalizedCenter:CTRPAD_NORMALIZED_POINT(selectPoint) size:selectSize mirror:NO];
 #undef CTRPAD_NORMALIZED_POINT
+
+	CGFloat steeringZoneWidth = safeWidth * 0.50;
+	CGFloat steeringZoneTop = CGRectGetMinY(safe) + safeHeight * 0.38;
+	self.steeringZone.frame = CGRectMake(self.handedness == CTRPadTouchHandednessSteerRight
+	                                        ? CGRectGetMaxX(safe) - steeringZoneWidth
+	                                        : CGRectGetMinX(safe),
+	                                    steeringZoneTop,
+	                                    steeringZoneWidth,
+	                                    CGRectGetMaxY(safe) - steeringZoneTop);
+	self.steeringZone.hidden = !self.touchControlsEnabled || self.layoutEditing;
+	self.steeringZone.userInteractionEnabled = self.touchControlsEnabled && !self.layoutEditing;
 
 	for (UIView *control in self.editableControls)
 	{
@@ -1229,15 +1466,12 @@ static CGFloat CTRPadTouch_OpacityForChoice(CTRPadTouchOpacity choice)
 	}
 
 	UIView *settings = [self controlWithIdentifier:@"ctrpad.touch.settings"];
-	UIView *disc = [self controlWithIdentifier:@"ctrpad.touch.disc"];
 	CGFloat utilityWidth = phone ? 102.0 : 112.0;
 	CGFloat utilityHeight = 44.0;
 	settings.bounds = CGRectMake(0.0, 0.0, utilityWidth, utilityHeight);
-	disc.bounds = CGRectMake(0.0, 0.0, utilityWidth, utilityHeight);
-	disc.center = CGPointMake(CGRectGetMaxX(safe) - utilityWidth * 0.5, CGRectGetMinY(safe) + utilityHeight * 0.5 + 4.0);
-	settings.center = CGPointMake(CGRectGetMinX(disc.frame) - 10.0 - utilityWidth * 0.5, disc.center.y);
+	settings.center = CGPointMake(CGRectGetMaxX(safe) - utilityWidth * 0.5,
+	                            CGRectGetMinY(safe) + utilityHeight * 0.5 + 4.0);
 	settings.hidden = self.layoutEditing;
-	disc.hidden = self.layoutEditing;
 
 	if (self.layoutEditing)
 	{
@@ -1406,6 +1640,9 @@ static CGFloat CTRPadTouch_OpacityForChoice(CTRPadTouchOpacity choice)
 	}
 	[self resetControlState];
 	self.layoutEditing = YES;
+	self.steeringZone.layoutEditing = YES;
+	self.steeringZone.hidden = YES;
+	self.steeringZone.userInteractionEnabled = NO;
 	for (UIView *control in self.editableControls)
 	{
 		if ([control isKindOfClass:CTRPadInputButton.class])
@@ -1444,6 +1681,9 @@ static CGFloat CTRPadTouch_OpacityForChoice(CTRPadTouchOpacity choice)
 	[self resetControlState];
 	[self saveCurrentLayout];
 	self.layoutEditing = NO;
+	self.steeringZone.layoutEditing = NO;
+	self.steeringZone.hidden = !self.touchControlsEnabled;
+	self.steeringZone.userInteractionEnabled = self.touchControlsEnabled;
 	for (UIView *control in self.editableControls)
 	{
 		if ([control isKindOfClass:CTRPadInputButton.class])

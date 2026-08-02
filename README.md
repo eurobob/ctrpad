@@ -4,112 +4,91 @@
   <img src="docs/design/ctrpad-app-icon-master.png" width="160" alt="CTRPad app icon">
 </p>
 
-Crash Team Racing rebuilt as a native app for iPhone, iPad, Apple Silicon Mac,
-Windows, and Linux.
+<p align="center">
+  <strong>Crash Team Racing, rebuilt as a native app for Apple Silicon Mac, iPhone, and iPad.</strong><br>
+  Native ARM64 rendering, touch controls, controller support, Files-based setup,
+  and 1×–4× internal resolution.
+</p>
 
-CTRPad is a native port built from the
-[CTR-ModSDK](https://github.com/CTR-tools/CTR-ModSDK) decompilation project. On
-iOS and iPadOS it provides Metal-backed presentation, Files-based disc import,
-customizable landscape touch controls, keyboard input, and SDL's native game
-controller path. Desktop builds provide resizable windows, native fullscreen,
-keyboard controls, and mouse-button gameplay shortcuts.
+<p align="center">
+  <a href="https://github.com/chrissotraidis/ctrpad/actions/workflows/apple-packages.yml"><img alt="Apple package builds" src="https://github.com/chrissotraidis/ctrpad/actions/workflows/apple-packages.yml/badge.svg"></a>
+  <img alt="macOS 11 or newer" src="https://img.shields.io/badge/macOS-11%2B-0A84FF?logo=apple">
+  <img alt="iOS and iPadOS 15 or newer" src="https://img.shields.io/badge/iOS%20%2F%20iPadOS-15%2B-0A84FF?logo=apple">
+  <img alt="Native OpenGL and GLES renderer" src="https://img.shields.io/badge/renderer-OpenGL%20%2F%20GLES%203-5E5CE6">
+  <img alt="Game data not included" src="https://img.shields.io/badge/game%20data-not%20included-FF453A">
+</p>
 
-This repository contains source code, platform integration, documentation, and
-retail-free build tooling. It does **not** contain Crash Team Racing, disc
-images, extracted retail assets, saves, signing credentials, or other
-copyrighted game data. You must supply your own compatible NTSC-U retail disc
-image.
+![CTRPad running Crash Cove on iPad with the touch controller](docs/readme/ctrpad-crash-cove-gameplay.png)
 
-CTRPad is an unofficial community project. It is not affiliated with or
-endorsed by Sony, PlayStation, Naughty Dog, or Activision.
+CTRPad is an unofficial native Apple-platform port built from
+[CTR Native](https://github.com/CTR-tools/ctr-native) and the
+[CTR-ModSDK](https://github.com/CTR-tools/CTR-ModSDK) decompilation project.
+It runs the decompiled game code directly; it is not an emulator and does not
+need a PlayStation BIOS.
+
+To our knowledge, this is the first documented native iPhone and iPad port
+built from the CTR-ModSDK/CTR Native codebase. That is an Apple-platform claim,
+not a claim that CTRPad created the first native CTR port: CTR Native established
+the Windows and Linux port on which this work is based.
+
+This repository contains source, Apple integration, documentation, and
+retail-free build tooling. It does **not** contain Crash Team Racing, a disc
+image, extracted retail assets, saves, Apple signing credentials, or other
+playable game data. You must provide your own legally acquired compatible
+NTSC-U retail disc image. Read the
+[rights and licensing boundary](RIGHTS_AND_LICENSES.md) before redistributing
+the project or a build.
+
+## Highlights
+
+- Native ARM64 application bundles for Apple Silicon macOS, iPhone, and iPad.
+- Native OpenGL on macOS and GLES 3 through SDL/UIKit on iOS and iPadOS.
+- Files-based disc selection with validation and non-destructive replacement.
+- Touch-anywhere analog steering, editable controls, Gas lock, handedness,
+  size, and 10%–100% opacity controls.
+- 1×, 2×, 3×, and 4× internal geometry resolution on iPhone and iPad.
+- SDL game-controller, keyboard, and desktop mouse-button input paths.
+- Private memory-card saves, rotating logs, and update installs that preserve
+  the application data container.
+- A committed engineering journal and parity ledger explaining how the port
+  was built, including failed and rejected approaches.
 
 ## Install status
 
-| Target | Status | Recommended path |
+| Target | Current status | Best path today |
 |---|---|---|
-| iPhone and iPad | User-signed development build | Download or build the unsigned IPA, then sign it with your Apple ID; see [the iOS installation guide](docs/INSTALL-IOS.md) |
-| iOS Simulator | Available for development | Build with the Simulator preset and boot exactly one Simulator |
-| Apple Silicon Mac | Packaged native application | Use a release that includes the macOS ZIP, or build it locally; move CTRPad to Applications and choose your BIN on first launch |
-| Windows | Native x86 builds available | Use MSVC or MinGW |
-| Linux | Native i686 build available | Use the Linux build script or CMake preset |
-| App Store / TestFlight | Not announced | No official listing or public TestFlight exists |
+| Apple Silicon Mac | **Source build available** | Build `CTRPad.app` locally using the commands below. No public macOS ZIP has been published yet. |
+| iPhone and iPad | **Source build and local signing available** | Build one universal iPhone/iPad app, produce an unsigned IPA, and sign it with your own Apple ID. No downloadable IPA has been published yet. |
+| iOS Simulator | **Available for development** | Build the Simulator preset and use the guarded installer. Simulator is not physical-device proof. |
+| Windows and Linux | **Supported by the native codebase** | Use the desktop scripts or CMake presets. Apple platforms are CTRPad's primary focus. |
+| App Store / TestFlight | **Not announced** | No official listing, public TestFlight, or paid build exists. |
 
-The iPhone and iPad Simulator builds have been exercised for disc import,
-launch, saves, touch gameplay, touch-layout editing, rotation, app updates, and
-background/foreground input cleanup. Simulator evidence is not physical-device
-proof. Real-device touch ergonomics and a representative Bluetooth/MFi
-controller matrix remain acceptance checks.
+Current development builds have been signed, installed, launched, and played
+on an iPad Pro and iPhone 14. The screenshots below are iPad captures. Physical
+controller compatibility still depends on the controller model and operating
+system, and the full controller hardware matrix remains open.
 
 ## Get started
 
-Every build requires your own NTSC-U single-track raw MODE2/2352 Crash Team
-Racing BIN. CTRPad and its release artifacts contain no game data.
+Every target requires your own NTSC-U, single-track raw MODE2/2352 Crash Team
+Racing BIN. A cooked 2048-byte ISO is not a substitute because it omits the
+raw XA/STR sector data used for music, speech, and video.
 
-### Download a build
-
-- **Apple Silicon Mac:** when a [GitHub release](https://github.com/chrissotraidis/ctrpad/releases)
-  includes `CTRPad-macOS-arm64-*.zip`, download it, move `CTRPad.app` to
-  Applications, and open it. The app prompts for your BIN and remembers its
-  external location. See [Install CTRPad on macOS](docs/INSTALL-MACOS.md).
-- **iPhone or iPad:** when a release includes an unsigned `.ipa`, download and
-  re-sign it with your own Apple ID, or build/sign locally. See
-  [Build, sign, and sideload CTRPad](docs/INSTALL-IOS.md).
-- **Windows or Linux:** use a matching release archive when provided, or use
-  the source-build instructions below.
-
-iOS/iPadOS packages cannot be installed unsigned, and no App Store or public
-TestFlight build is currently offered. Ad-hoc macOS developer previews may
-require Control-click → **Open** once; a notarized release opens normally.
-
-### Build from source
-
-You need:
+### Requirements
 
 - a clone of this repository;
 - CMake 3.20 or newer;
 - Ninja for the Apple presets;
 - Xcode and its command-line tools for Apple builds; and
-- your compatible retail BIN.
+- your own compatible NTSC-U retail disc image.
 
-Clone the project:
+On macOS, install the build tools with Homebrew:
 
 ```sh
+brew install cmake ninja
 git clone https://github.com/chrissotraidis/ctrpad.git
 cd ctrpad
 ```
-
-### iPhone and iPad Simulator
-
-```sh
-cmake --preset ios-simulator-arm64
-cmake --build --preset ios-simulator-arm64
-```
-
-Boot exactly one iPhone or iPad Simulator, then use the guarded installer:
-
-```sh
-./tools/install-ios-simulator.sh \
-  --device YOUR_BOOTED_SIMULATOR_UDID \
-  --launch
-```
-
-The installer signs an isolated staging copy and verifies that the installed
-executable matches the product that was just built. See
-[`docs/INSTALL-IOS.md`](docs/INSTALL-IOS.md) for physical-device signing,
-direct installation, and user-side IPA re-signing.
-
-### Physical iPhone or iPad build
-
-```sh
-cmake --preset ios-device-arm64
-cmake --build --preset ios-device-arm64
-./package-ios.sh
-```
-
-The default package is unsigned and contains no provisioning profile or
-maintainer identity. It must be signed with the installing user's own Apple
-credentials and a compatible profile. `package-ios.sh --build` combines the
-device build and packaging steps.
 
 ### Apple Silicon Mac
 
@@ -117,12 +96,56 @@ device build and packaging steps.
 cmake --preset macos-arm64-app
 cmake --build --preset macos-arm64-app
 ctest --preset macos-arm64-app
+open build-macos-arm64-app/CTRPad.app
 ```
 
-Open `build-macos-arm64-app/CTRPad.app`. First launch presents a native file
-picker, validates the selected BIN, remembers the external path, and starts
-the game. Saves and logs live under Application Support rather than beside or
-inside the app. `./package-macos.sh --build` creates a retail-free ZIP.
+CTRPad opens a native file picker on first launch. Choose your BIN once; the
+app validates it, remembers its external location, and keeps saves and logs in
+Application Support. For packaged builds, Gatekeeper behavior, disc changes,
+and optional Developer ID notarization, read
+[Install CTRPad on macOS](docs/INSTALL-MACOS.md).
+
+### iPhone or iPad
+
+The same device build supports both iPhone and iPad:
+
+```sh
+cmake --preset ios-device-arm64
+cmake --build --preset ios-device-arm64
+./package-ios.sh
+```
+
+The resulting IPA under `dist/` is deliberately unsigned. It contains no
+maintainer certificate, provisioning profile, game data, or save data. Sign it
+with your own Apple ID using a compatible sideloading tool, or supply your own
+Apple development identity and profile to `package-ios.sh` for direct device
+installation.
+
+The complete signing commands, profile requirements, AltStore Classic path,
+in-place update procedure, and device-verification workflow are in
+[Build, sign, and sideload CTRPad](docs/INSTALL-IOS.md). Deleting the app also
+deletes its private imported disc and saves unless your sideloading tool backs
+them up; update-install instead whenever possible.
+
+### iPhone or iPad Simulator
+
+```sh
+cmake --preset ios-simulator-arm64
+cmake --build --preset ios-simulator-arm64
+
+./tools/install-ios-simulator.sh \
+  --device YOUR_BOOTED_SIMULATOR_UDID \
+  --launch
+```
+
+Boot exactly one iPhone or iPad Simulator before running the installer. The
+helper signs an isolated Simulator copy and verifies that the installed
+executable matches the product just built.
+
+### Windows and Linux
+
+Windows MSVC and MinGW scripts plus the Linux build remain available for the
+desktop native port. See [Desktop builds](#desktop-builds) below.
 
 ## First launch on Apple platforms
 
@@ -131,29 +154,46 @@ CTRPad never downloads or bundles game data.
 On iPhone or iPad:
 
 1. Launch CTRPad and select **Choose CTR disc image**.
-2. Pick your own compatible NTSC-U raw BIN through Files.
-3. Wait while CTRPad validates and imports the image.
+2. Pick your own compatible raw NTSC-U BIN through Files.
+3. Wait while CTRPad stages, validates, and imports the image.
 4. The game starts in the same app process after a valid import.
 
 The imported image is stored privately under
-`Documents/CTRPad/assets/ctr-u.bin`. Invalid or cancelled selections do not
-replace a previously verified import. **Change Disc** remains available at the
-upper-right edge of the game screen.
+`Documents/CTRPad/assets/ctr-u.bin`. Invalid or cancelled replacements preserve
+the previous verified import. Open **Options → Change disc…** to select another
+image.
 
 On macOS, launch `CTRPad.app` and choose the BIN in the native first-launch
-panel. The app remembers the file's external location without placing game
-data inside the bundle. Use `CTRPad --choose-disc` to select a different image.
+panel. The app remembers the external file path without copying game data into
+the bundle. Run `CTRPad --choose-disc` when you deliberately want to select a
+different image.
 
-For desktop development builds, place the same image at `assets/ctr-u.bin`
-beside the source or packaged executable. A cooked 2048-byte ISO is not a
-substitute: it omits the XA/STR raw-sector data needed by the game.
+## Native resolution and Options
+
+Open **Options** during play on iPhone or iPad to select 1×, 2×, 3×, or 4×
+internal resolution. Higher values render game geometry at a larger internal
+framebuffer size, which improves polygon edges while retaining the original
+PS1 textures and logical VRAM effects. Higher scales use more GPU power; 1× is
+the compatibility baseline.
+
+Options also contains:
+
+- on-screen control visibility;
+- left- or right-side steering;
+- global control size;
+- a continuous 10%–100% opacity slider;
+- the touch-layout editor and reset action; and
+- safe disc reselection.
+
+CTRPad preserves the original 4:3 presentation. It does not stretch the image
+to fill a widescreen display.
 
 ## Touch controls
 
 CTRPad provides separate safe-area-aware landscape defaults for iPhone and
-iPad. The steering stick stays under one thumb while Gas, Brake, Item, View,
-Start, Select, and both Drift/Boost buttons form a reachable action cluster
-under the other. Right-hand steering mirrors the gameplay layout.
+iPad. Touch anywhere in the lower steering-side half to place the analog stick
+under your thumb. The stick follows the touch and disappears on release, so
+you never need to find a fixed control before steering.
 
 | Touch control | PlayStation input | Typical use |
 |---|---|---|
@@ -168,102 +208,147 @@ under the other. Right-hand steering mirrors the gameplay layout.
 | **Start / Pause** | Start | Start, advance, pause, or resume |
 | **Select** | Select | Retail Select input |
 
+On iPhone, the shoulder controls are labeled **Drift Hold** (R1) and
+**Boost Tap** (L1) to teach the power-slide technique: hold R1 to maintain the
+slide, then tap L1 when the meter is red. The original game reads the held and
+tapped shoulders separately, so both inputs remain available.
+
 ### Customize the layout
 
-1. Open **Controls** at the upper right.
-2. Turn **On-screen controls** off when using a physical controller, or leave
-   it on to use touch.
-3. Choose **Edit touch layout**.
-4. Drag any gameplay control to reposition it.
-5. Select a control and use **−** or **+** to resize it from 70% to 150%.
-6. Choose **Done** to return to play, or **Reset** to restore the CTRPad
-   default for the current device and steering side.
+1. Open **Options**.
+2. Choose **Edit touch layout**.
+3. Drag any gameplay control to reposition it.
+4. Select a control and use **−** or **+** to resize it from 70% to 150%.
+5. Choose **Done**, or **Reset** to restore the device and steering-side
+   defaults.
 
-Positions are stored as normalized safe-area coordinates and clamped again
-after rotation or window resizing. Phone/tablet and left/right-steering
-profiles are independent. Touch visibility persists between launches. Controls
-and Change Disc remain reachable even when gameplay controls are hidden. The
-settings sheet also provides global control size and opacity choices without
-shrinking the touch targets.
+Phone/tablet and left/right-steering profiles persist independently. Options
+remains reachable when the gameplay overlay is hidden.
 
 ### Gas lock
 
 Hold **Gas ✕** for two seconds to lock acceleration. CTRPad confirms the lock
-with visual and haptic feedback. Tap Gas again to release it. The latch and all
-other held inputs are released automatically when the editor opens, the
-overlay is rebuilt or hidden, gameplay ends, or the app moves to the
-background.
+with visual and haptic feedback. Tap Gas once to release it. All held inputs
+are released when controls are hidden or rebuilt, the editor opens, gameplay
+ends, or the app moves to the background.
 
-The overlay tracks touches independently, so steering and multiple buttons can
-be held together. Empty overlay space passes through and does not create game
-input.
+## Controllers and local multiplayer
 
-## Controllers, keyboard, mouse, and fullscreen
+CTRPad includes SDL's native game-controller path with both sticks, D-pad,
+face buttons, L1/L2/R1/R2, Start, Select/Back, hot-plug handling, and rumble
+when the controller and operating system support it. Touch can remain enabled
+beside a controller or be hidden from Options.
 
-Touch, keyboard, mouse buttons, and controller input are composed into the
-same player-one PlayStation pad state. Connecting a controller does not rewire
-the other mappings.
+The software input path and virtual-controller integration tests cover
+standardized buttons, axes, slot ownership, hot-plug, and rumble. A particular
+Bluetooth, USB, MFi, Xbox, PlayStation, or Nintendo controller still requires
+model-specific physical testing.
 
-SDL's iOS controller path includes:
+**Local multiplayer is not currently advertised as complete.** Desktop input
+supports four controller slots and a PlayStation multitap-shaped bus, but the
+current split-screen, battle, and multiplayer end-state paths have not had a
+complete acceptance run. On iPhone and iPad, touch, keyboard, and connected
+gamepads intentionally compose into player one instead of creating additional
+players.
 
-- both analog sticks and D-pad;
-- Cross, Circle, Square, and Triangle;
-- L1, L2, R1, and R2;
-- Start and Select/Back;
-- hot-plug events; and
-- rumble when supported by the controller and operating system.
+## Current screenshots
 
-The software path and host input tests are present, but physical Bluetooth/MFi
-pairing, reconnect behavior, latency, and rumble still need model-specific
-device verification.
+<table>
+  <tr>
+    <td width="50%"><img src="docs/readme/ctrpad-title-screen.png" alt="CTRPad title screen on iPad"></td>
+    <td width="50%"><img src="docs/readme/ctrpad-character-select.png" alt="CTRPad character selection on iPad"></td>
+  </tr>
+  <tr>
+    <td align="center"><strong>Native startup</strong><br>The complete retail presentation runs inside the iPad app.</td>
+    <td align="center"><strong>Menus and characters</strong><br>Models, textures, audio, UI, and touch input stay in one process.</td>
+  </tr>
+  <tr>
+    <td width="50%"><img src="docs/readme/ctrpad-polar-pass-grid.png" alt="Polar Pass starting grid in CTRPad on iPad"></td>
+    <td width="50%"><img src="docs/readme/ctrpad-polar-pass-gameplay.png" alt="Polar Pass race in CTRPad on iPad"></td>
+  </tr>
+  <tr>
+    <td align="center"><strong>Full race presentation</strong><br>Karts, effects, track scenes, and the editable overlay render together.</td>
+    <td align="center"><strong>Touch-first play</strong><br>Analog steering and every required PlayStation control remain reachable.</td>
+  </tr>
+</table>
 
-The desktop and iOS builds also accept these keyboard bindings:
-
-| PlayStation input | Test layout | Original layout |
-|---|---|---|
-| D-pad | `W` `A` `S` `D` | Arrow keys |
-| Triangle | `I` | `Z` |
-| Square | `J` | `X` |
-| Cross | `K` | `C` |
-| Circle | `L` | `V` |
-| L1 / R1 | `Q` / `E` | Left Shift / Right Shift |
-| L2 / R2 | Left Ctrl / Right Ctrl | Left Ctrl / Right Ctrl |
-| L3 / R3 | `[` / `]` | `[` / `]` |
-| Start | `P` | Return |
-| Select | Tab | Space |
-
-Desktop mouse buttons provide convenient held actions without replacing
-keyboard or controller steering:
-
-| Mouse input | PlayStation input |
-|---|---|
-| Left button | Cross / Gas |
-| Right button | Square / Brake |
-| Middle button | Circle / Item |
-| Mouse 4 | L1 / Drift |
-| Mouse 5 | R1 / Drift |
-
-Desktop windows are resizable and preserve the game presentation. Press `F11`
-or `Alt-Return` (`Option-Return` on macOS) to enter or leave fullscreen.
+All five README captures were supplied from an iPad running CTRPad with a
+locally provided retail image. The disc image, extracted assets, and saves used
+for these captures are not part of this repository or its packages.
 
 ## What works
 
 | Area | Current result |
 |---|---|
-| Native game | CTR-ModSDK game source runs through CTRPad's host platform layer |
-| Apple rendering | Native ARM64 macOS, iOS, and iPadOS presentation |
-| Game setup | Files picker import and validated raw-disc loading |
-| Touch | Analog steering, digital menu ring, face buttons, shoulders, Start, Select, persistent show/hide, editing, resizing, and Gas lock |
-| Desktop input | Keyboard, mouse-button actions, controllers, resizable window, and fullscreen shortcuts |
-| Controllers | SDL keyboard/gamepad composition and controller hot-plug path |
-| Saves | Private memory-card persistence and non-destructive app updates |
+| Native game | CTR Native/CTR-ModSDK game source runs through CTRPad's host platform layer |
+| Apple targets | Thin ARM64 macOS, iPhone, iPad, and Simulator products build |
+| Rendering | Native macOS OpenGL and shared GLES 3 Apple-mobile presentation |
+| Game setup | macOS file picker and iOS/iPadOS Files import with disc validation |
+| Resolution | 1×–4× internal geometry resolution on iPhone and iPad |
+| Touch | Dynamic analog steering, complete controls, layout editing, opacity, handedness, and Gas lock |
+| Controllers | SDL controller mapping, axes, hot-plug, slot ownership, and rumble path |
+| Saves | Private memory cards, atomic replacement, and non-destructive app updates |
 | Lifecycle | Rotation, resizing, background/foreground, and held-input cleanup |
-| Packaging | Retail-data exclusion, source identity, macOS ZIP/signing/notarization support, and unsigned or user-signed IPA output |
-| App icon | Original macOS, iPhone, and iPad icon resources |
+| Audio | Native mixing, XA/music/voice playback, and UIKit tracking-safe frame scheduling |
+| Packaging | Retail-data exclusion, exact source identity, macOS ZIP support, and unsigned or user-signed IPA output |
+| Local multiplayer | Original game paths and desktop controller slots are present; complete physical acceptance remains open |
 
-The full Apple-port evidence ledger, including what was tested only in
-Simulator, lives under [`docs/parity/`](docs/parity/README.md). The historical
-campaign record is under [`docs/history/`](docs/history/README.md).
+Detailed evidence and remaining hardware gates live under
+[the parity ledger](docs/parity/README.md).
+
+## How the Apple port was built
+
+CTRPad's Apple work was not a wrapper around an emulator. The project converted
+the inherited 32-bit host assumptions for LP64/ARM64, kept PlayStation-shaped
+serialized data separate from native pointers, brought the renderer to shared
+OpenGL/GLES semantics, added Apple storage and lifecycle boundaries, and then
+built touch, signing, packaging, and device-verification layers around the
+native game.
+
+The initial Apple campaign ran from July 29 through August 2, 2026. The
+repository intentionally retains the complete technical record:
+
+- [Build-history overview](docs/history/README.md) — the readable phase map.
+- [Three-day timeline](docs/history/THREE-DAY-TIMELINE.md) — chronological
+  milestones and publication boundaries.
+- [Engineering journal](docs/history/ENGINEERING-JOURNAL.md) — commands,
+  debugger evidence, hashes, failures, corrections, and rejected routes.
+- [Architecture records](docs/architecture/) — the LP64 conversion and durable
+  design decisions.
+- [Parity reports](docs/parity/README.md) — focused, timestamped validation
+  results and their explicit limits.
+
+The port was developed with AI-assisted engineering through Codex under
+maintainer direction. The committed journal is the auditable record: failed
+experiments are preserved, and build, Simulator, installed process, and
+physical play evidence are not treated as interchangeable.
+
+## Retail-free and reproducible
+
+The build never reads or packages your retail disc. Game data enters only on
+first launch through Files/macOS selection, or through an explicit ignored
+development path.
+
+```mermaid
+flowchart LR
+    A["CTRPad source"] --> B["Native Apple build"]
+    B --> C["Retail-free app or unsigned IPA"]
+    D["Your compatible retail BIN"] --> E["Local file selection"]
+    C --> F["CTRPad runtime"]
+    E --> F
+    F --> G["Private saves and logs"]
+```
+
+Create a corresponding-source archive from a clean committed checkout with:
+
+```sh
+./package-source.sh
+```
+
+The source, macOS, and iOS packagers reject disc images, extracted game data,
+saves, runtime containers, provisioning profiles, keys, and unrelated binary
+packages. Each Apple build records its full source commit, and the packaging
+workflow verifies that identity before producing an artifact.
 
 ## Desktop builds
 
@@ -278,7 +363,7 @@ build-msvc.bat
 
 ### Windows with MinGW
 
-Install the MSYS2 i686 GCC, CMake, and Make packages, then run:
+Install MSYS2 i686 GCC, CMake, and Make, then run:
 
 ```bat
 build.bat
@@ -295,25 +380,7 @@ chmod +x build.sh
 ./build.sh
 ```
 
-SDL3 is vendored and linked statically. The first build compiles it from
-source; subsequent builds reuse the selected build directory.
-
-## Retail-free and reproducible packaging
-
-The build does not read a disc image. Retail data enters only after
-installation or through an explicit ignored development path.
-
-Create the corresponding source archive from a clean committed checkout:
-
-```sh
-./package-source.sh
-```
-
-The source, macOS, and iOS packagers reject retail media, saves, runtime
-containers, provisioning profiles, private-key-like files, and unrelated
-binary packages.
-Each Apple build records its full 40-character source commit. The packaging
-workflow verifies that identity before producing release artifacts.
+SDL3 is vendored and linked statically.
 
 ## Frequently asked questions
 
@@ -322,88 +389,89 @@ workflow verifies that identity before producing release artifacts.
 No. Supply your own legally acquired compatible NTSC-U retail disc image. Do
 not request or attach game downloads, extracted assets, or saves in issues.
 
-### Can I move or resize the touch controls?
+### Is CTRPad an emulator?
 
-Yes. Open **Controls → Edit touch layout**. Layouts persist independently for
-iPhone, iPad, left-hand steering, and right-hand steering.
+No. CTRPad compiles decompiled C game code and a native host platform layer for
+the target operating system. It still uses your original retail disc data at
+runtime.
 
-### Can I hide the touch controls?
+### Can I download an IPA or macOS ZIP now?
 
-Yes. Open **Controls** and turn off **On-screen controls**. The Controls and
-Change Disc utility buttons remain available, and the setting persists.
+Not yet. The source-build and packaging paths are ready, but this repository
+does not currently publish a downloadable IPA or macOS archive. Do not confuse
+CI artifacts with an App Store, TestFlight, or notarized public release.
 
-### Can Gas stay held without keeping my thumb down?
+### Can I move, resize, fade, or hide the touch controls?
 
-Yes. Hold Gas for two seconds to lock it, then tap it once to release it.
+Yes. Open **Options** for visibility, handedness, size, and opacity. Open
+**Edit touch layout** to move and resize individual controls.
 
-### Does CTRPad support Bluetooth controllers?
+### Does it support controllers?
 
-CTRPad retains SDL's native iOS game-controller path and full PS1-shaped
-mapping alongside touch input. Physical behavior still depends on the
-controller model, iOS version, and signing/device environment, so controller
-pairing and rumble should be verified on real hardware.
+Yes at the software layer: CTRPad retains SDL's native controller path and a
+full PlayStation-shaped mapping alongside touch and keyboard input. Physical
+pairing, latency, reconnect, and rumble behavior depend on the controller and
+OS, so the hardware matrix is still being expanded.
+
+### Does local multiplayer work?
+
+Do not rely on it yet. Desktop multi-controller transport exists, but a full
+split-screen/battle acceptance run has not been completed. iPhone and iPad
+currently compose connected input sources into player one.
 
 ### Is the Simulator result proof that it works on my iPhone or iPad?
 
 No. Simulator is useful for builds, UI behavior, persistence, and automated
 input checks. It does not prove physical touch ergonomics, haptics, Bluetooth,
-performance, or device signing.
-
-### Is there an App Store, TestFlight, or official paid build?
-
-No. This repository documents local source builds and user-signed development
-packages. CTRPad does not sell or distribute the game.
+performance, thermals, or device signing.
 
 ## Project map
 
 | Path | Purpose |
 |---|---|
-| `main.c` | Process entry point and native platform boundary |
-| `platform/` | Audio, input, storage, disc, rendering, lifecycle, and PSX facade glue |
-| `game/` | CTR-ModSDK-derived game source used by the native build |
-| `include/` | Native and game-facing declarations |
-| `externals/SDL/` | Vendored SDL3 source |
-| `platform/apple/` | macOS/iOS integration, property lists, touch UI, and asset catalog |
-| `docs/INSTALL-MACOS.md` | macOS download, first launch, controls, and packaging guide |
-| `docs/INSTALL-IOS.md` | iOS build, signing, sideload, and device acceptance guide |
-| `docs/parity/` | Timestamped implementation and validation evidence |
-| `docs/history/` | Apple-port campaign history and decisions |
-| `package-ios.sh` | Retail-free unsigned or user-signed IPA creation |
-| `package-macos.sh` | Retail-free ad-hoc or notarized macOS ZIP creation |
-| `package-source.sh` | Deterministic corresponding-source archive |
-| `tools/install-ios-simulator.sh` | Guarded single-Simulator update and launch |
+| [`main.c`](main.c) | Process entry point and native platform boundary |
+| [`platform/`](platform/) | Audio, input, storage, disc, rendering, lifecycle, and PSX facade glue |
+| [`game/`](game/) | CTR-ModSDK-derived game source used by the native build |
+| [`include/`](include/) | Native and game-facing declarations |
+| [`externals/SDL/`](externals/SDL/) | Vendored SDL3 source |
+| [`platform/apple/`](platform/apple/) | macOS/iOS integration, property lists, touch UI, and asset catalog |
+| [`docs/INSTALL-MACOS.md`](docs/INSTALL-MACOS.md) | macOS build, install, controls, and packaging guide |
+| [`docs/INSTALL-IOS.md`](docs/INSTALL-IOS.md) | iOS/iPadOS build, signing, sideload, and device guide |
+| [`docs/history/`](docs/history/) | Complete Apple-port campaign history |
+| [`docs/parity/`](docs/parity/) | Timestamped implementation and validation evidence |
+| [`package-ios.sh`](package-ios.sh) | Retail-free unsigned or user-signed IPA creation |
+| [`package-macos.sh`](package-macos.sh) | Retail-free ad-hoc or notarized macOS ZIP creation |
+| [`package-source.sh`](package-source.sh) | Deterministic corresponding-source archive |
+| [`CONTRIBUTING.md`](CONTRIBUTING.md) | Contribution and validation expectations |
+| [`RIGHTS_AND_LICENSES.md`](RIGHTS_AND_LICENSES.md) | Source, third-party, game-data, and trademark boundaries |
 
 Generated build trees, packages, game data, saves, credentials, and local
 reference material must not be committed.
 
-## Architecture
+## Contributing and support
 
-```text
-main.c
-  ├── platform/native_*       host audio, input, storage, disc, and rendering
-  └── game/game_unity.h
-        └── game/             decompiled game implementation
-              └── include/    shared declarations and PS1-shaped interfaces
-```
-
-First-party native code targets portable C17. Platform-specific behavior stays
-behind the native boundary, while keyboard, touch, and game controllers all
-feed the same PlayStation-shaped input packets used by gameplay.
+Read [CONTRIBUTING.md](CONTRIBUTING.md) before opening a pull request. Bug
+reports should include the target platform, source commit, reproduction steps,
+and the relevant CTRPad log excerpt. Never attach or request game data.
 
 ## Legal and acknowledgements
 
-CTRPad is licensed under the [GNU General Public License v3](LICENSE). Each
-third-party component retains its own license and copyright.
+CTRPad source is licensed under the [GNU General Public License v3](LICENSE).
+Each third-party component retains its own license and copyright; see
+[THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
 
 This project builds on:
 
+- [CTR Native](https://github.com/CTR-tools/ctr-native), the native PC port and
+  platform architecture from which CTRPad was developed;
 - [CTR-ModSDK](https://github.com/CTR-tools/CTR-ModSDK), the decompilation
-  project on which CTRPad is based;
+  project on which CTR Native is based;
 - [PsyCross](https://github.com/OpenDriver2/PsyCross), from which portions of
   the owned native platform layer and PsyQ facade were derived; and
 - [SDL3](https://github.com/libsdl-org/SDL), the cross-platform multimedia and
   controller layer.
 
-Crash Team Racing and related names and marks belong to their respective
-owners. The original CTRPad icon and touch overlay contain no extracted game
-artwork, official logos, or PlayStation branding.
+CTRPad is an unofficial community project and is not affiliated with or
+endorsed by Sony, PlayStation, Naughty Dog, Activision, CTR Native, or the
+CTR-ModSDK maintainers. Crash Team Racing and related names, characters,
+imagery, and marks belong to their respective owners.

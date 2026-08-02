@@ -115,7 +115,7 @@ static void SDLCALL SDL_HideHomeIndicatorHintChanged(void *userdata, const char 
                 int frame_rate = (int)mode->refresh_rate;
                 displayLink = [CADisplayLink displayLinkWithTarget:self selector:@selector(doLoop:)];
                 displayLink.preferredFrameRateRange = CAFrameRateRangeMake((frame_rate * 2) / 3, frame_rate, frame_rate);
-                [displayLink addToRunLoop:NSRunLoop.currentRunLoop forMode:NSDefaultRunLoopMode];
+                [displayLink addToRunLoop:NSRunLoop.currentRunLoop forMode:NSRunLoopCommonModes];
             }
         }
     }
@@ -176,7 +176,7 @@ static void SDLCALL SDL_HideHomeIndicatorHintChanged(void *userdata, const char 
     displayLink.preferredFramesPerSecond = data.uiwindow.screen.maximumFramesPerSecond / animationInterval;
 #endif
 
-    [displayLink addToRunLoop:[NSRunLoop currentRunLoop] forMode:NSDefaultRunLoopMode];
+    [displayLink addToRunLoop:[NSRunLoop currentRunLoop] forMode:NSRunLoopCommonModes];
 }
 
 - (void)stopAnimation
