@@ -14745,3 +14745,23 @@ goal time was 274,482 seconds: 3 days, 4 hours, 14 minutes and 42 seconds. The
 physical inventory read at 19:34 still had zero identities, no profiles and no
 CoreDevice device. This closes an offline version-contract false positive; it
 does not change the signed hardware boundary.
+
+At 19:40:20 CDT the exact 13-file checkpoint became commit
+`a139cce1c26a2df3f48cedc1999d6906c2092f2e`. Its 3,261-member corresponding-
+source archive passed sidecar, forbidden-member scan and extracted 4/10 fixture
+suite at SHA-256
+`940c878dc180fa6cfdfc3eb1994fb5b5f074ca7d0d97ffdc8d582280145863e0`.
+
+The branch pushed unchanged. The preferred private-repository connector again
+returned HTTP 404 without creating a PR; authenticated CLI fallback opened
+draft PR #16. Its audit found one commit, the exact 13 intended files, 107
+additions, 23 deletions, head `a139cce1c26a...`, `MERGEABLE` / `CLEAN` and no
+configured checks. GitHub merged only that protected head at 19:41:57 CDT as
+`7e84669019117efc40d985b5f2490a79f47a58fa`.
+
+Fetching `origin/main` and fast-forwarding the local branch confirmed the merge
+and source. At 19:42:13 CDT active goal time was 274,735 seconds: 3 days,
+4 hours, 18 minutes and 55 seconds. Exactly one Simulator remained booted;
+signing identities and physical devices remained zero. The mandatory-version
+checkpoint is published, while the signed hardware acceptance gate remains
+open.
