@@ -14946,3 +14946,136 @@ extraction passed the two-positive/six-negative identity fixture. SHA-256 was
 At 20:41:47 CDT, active goal time was 278,313 seconds: 3 days, 5 hours,
 18 minutes and 33 seconds. This published exact local identity evidence, not
 the still-missing signed physical-iPad result.
+
+The publication record became commit `be7b52e28` at 20:42:40 CDT and merged
+through PR #19 at 20:43:08 as final-main `88e453999`. Local branch, remote
+branch and `main` aligned. The 3,264-member final-main source archive passed
+its sidecar, exclusions and extracted 2/6 identity fixture at SHA-256
+`b56a98328f9e171d2143cadefe18d5a872c2f4e91e3a99281239dd9f2c874713`.
+
+## 2026-08-01 — Added sustained accessible touch controls
+
+The next Simulator review used the existing sole `CTRPad Import Validation`
+iPad. Real stick drags and ordinary accessibility activation navigated main
+menu -> Time Trial -> Crash -> Crash Cove -> No Ghost. The route exposed a
+control-evidence gap: button accessibility activation emitted the intended
+100-ms edge pair, but desktop Computer Use cannot keep an iOS button depressed
+or synthesize genuine multi-touch. It therefore could not sustain Gas while
+independently steering and holding drift, even though a finger on a physical
+screen could.
+
+`CTRPadInputButton` now has explicit `Hold` and `Release` accessibility actions
+and visible `Held`/`Released` state. The steering element adds full-direction,
+45% slight-left/right and Center actions. All actions use the same production
+`Platform_InputTouchButton` and `Platform_InputTouchLeftStick` routes as
+physical touches. Full deflection still reaches the 68% D-pad outer ring for
+menus; the slight actions deliberately remain below it for menu-neutral analog
+steering. Physical stick contact cancels accessibility steering. A shared
+`resetControlState` clears every local action latch, visual state, analog/D-pad
+state and the engine touch state before settings, disc reselection and control
+rebuild. UIKit's current public header declares custom-action targets weak, so
+the owned actions do not retain their button or stick.
+
+### Dirty iteration retained as diagnostic evidence
+
+The first build invocation returned control while its one-job nested Ninja
+process was still running. Repeating the request briefly left two low-priority
+builders. PIDs `39048/39051/39061` and `39257/39263/39269` were explicitly
+terminated; the process table was verified clear; no overlapped output was
+accepted. Subsequent work used only one nice-15, `-j1` build. The Simulator
+itself was never duplicated.
+
+The first dirty session opened at 21:04:25 CDT as
+`88e453999a35-dirty`. Exact log rows show:
+
+- Down `0x0040` held at 21:06:27 and released at 21:07:00, moving the
+  Adventure highlight to Time Trial;
+- Gas `0x4000` held at 21:07:37 and released at 21:08:07;
+- short Gas presses through character/track/ghost selection;
+- Gas held from 21:10:35 while the Crash Cove timer advanced to 0:17.36 and
+  the kart visibly moved;
+- Left `0x0080` held/released at 21:11:18/21:11:53 while Gas remained held;
+  and
+- L drift `0x0400` held/released at 21:12:43/21:13:16 while Gas remained held.
+
+Full-direction stepping was too coarse for controlled race automation and
+also emitted menu D-pad state. The 21:15:33 dirty relaunch proved `Hold slight
+right` offset the knob and retained Adventure without moving the selection;
+Center neutralized it. The final dirty session opened at 21:18:01 after adding
+the shared reset. Gas was held, Controls was opened and dismissed, and the
+fresh accessibility tree returned Gas `Released` and steering `Centered`.
+Retail and save identity remained unchanged across every dirty update. These
+sessions established the design; their dirty build identity prevents them
+from serving as release evidence.
+
+### Exact clean acceptance
+
+Implementation commit `a3523c7a858379a030934932fb335e6ed502457e`
+(`Add sustained accessible touch controls`) was created at 21:24:14 CDT.
+After a clean preset reconfigure, the one-job iPhoneSimulator build linked at
+21:26:20 with exact plist source/build `a3523c7a8583...` / `a3523c7a8583`.
+The established 32 source warnings appeared; there were no errors.
+
+The guarded update installer stopped only the app process, left the sole
+Simulator booted, applied an isolated ad-hoc Simulator signature and required
+the staged and installed executable to match:
+
+```text
+SOURCE_EXECUTABLE_SHA256=089100e5090fc7ede2089cdb736d79c462bfc7da7ee2b97f0cac9fd46289c2c4
+SIGNED_STAGED_EXECUTABLE_SHA256=443d08a93b144f832ce2337df134cea7d74d7ca6394ee75810f9de926130dabc
+INSTALLED_EXECUTABLE_SHA256=443d08a93b144f832ce2337df134cea7d74d7ca6394ee75810f9de926130dabc
+PERSISTENCE_VERIFIED=retail-and-slot-zero
+LAUNCH_RESULT=io.github.chrissotraidis.ctrpad: 44201
+```
+
+The 605,698,800-byte retail image retained tuple
+`111131200|605698800|f780bf23...2c07c0`; the 6,016-byte slot-zero save retained
+`111222179|6016|6a01b0f5...0619a3`. The accepted log opened at 21:27:07,
+identified clean build `a3523c7a8583`, initialized GLES/Touch/UIKit and had
+zero `[ERROR]`, `[FATAL]`, `CTR AssetRef` or visibility signatures.
+
+Computer Use visibly observed the retail copyright screen, animated Crash and
+trophy title sequence, full textured mode menu and complete control overlay.
+On the exact build, Gas, slight-right steering and L drift simultaneously
+reported `Held`. The log recorded Gas at 21:29:31 and L drift at 21:30:23
+reaching the retail poll. Opening Controls and returning changed every button
+to `Released` and the stick to `Centered`. No three-lap completion is claimed:
+this exact run accepted independent sustained state and lifecycle reset, not
+desktop automation as a substitute for physical finger multi-touch.
+
+The clean iPhoneOS ARM64 product linked at 21:33:30 with the same full source
+identity, established warnings and no errors. The clean macOS ARM64 product
+then built and passed all 25/25 tests in 27.84 seconds. The app remained
+terminated during the long compiles so Apple Software Renderer did not consume
+CPU; the one Simulator remained booted.
+
+At 21:35:52, packaging wrote seven-member ARM64 unsigned
+`CTRPad-0.1.0-1-a3523c7a8583-unsigned.ipa` at SHA-256
+`781f8c03079370818f0d038c320799d1d64ec2343443f797a575382da757ebf0`.
+At 21:36:19, corresponding-source packaging wrote a 3,264-member archive at
+`62562ce95d1bdf311320d707f86dc55caede8e75b23bc4bf626473c5a4878ae0`.
+Both sidecars passed and the source forbidden-member scan returned zero.
+
+The first independent member-list command changed into `dist/` for checksum
+verification and then incorrectly supplied `dist/...` to `unzip` and `tar`.
+Those commands failed to find the unchanged artifacts and were not acceptance
+evidence. The corrected root-directory repeat found all seven IPA members,
+3,264 source members and zero forbidden members. An extracted IPA reported
+Mach-O ARM64, full source `a3523c7...`, build `a3523c7a8583` and expected
+unsigned `codesign` status 1.
+
+At 21:37:01 CDT, active goal time was 281,632 seconds: 3 days, 6 hours,
+13 minutes and 52 seconds. Exact details and the timestamp table are in
+`docs/parity/2026-08-01-ios-sustained-accessible-controls.md`. This closes the
+Simulator sustained-action gap. Apple credentials, a physical iPad, signed
+install/launch, genuine multi-touch race/boost ergonomics, hardware cadence,
+audio, thermal and persistence acceptance remain open; the goal stays active.
+
+At 21:43:31 CDT, the seven-document acceptance/history set became commit
+`76ef539313a97893130818ad360496f1fb102d44`. Its clean corresponding-source
+archive contained 3,265 members, included the sustained-control report and
+complete timeline, passed its sidecar and returned zero forbidden members at
+SHA-256
+`8f4cb489746b00ee31ac20c7f75d77ce0450101cac4ac498cd024cb5e0a857a4`.
+At 21:44:16, active goal time was 282,054 seconds: 3 days, 6 hours,
+20 minutes and 54 seconds. GitHub publication remained next.

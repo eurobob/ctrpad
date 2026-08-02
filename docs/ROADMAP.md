@@ -1622,3 +1622,32 @@ recorded zero targeted faults. This closes local package/source ambiguity. It
 does not add an Apple identity/profile, connected iPad, signed install or any
 hardware-only acceptance result. Full evidence is in
 `docs/parity/2026-08-01-ios-source-identity-binding.md`.
+
+## 2026-08-01 sustained-control Simulator checkpoint
+
+Implementation `a3523c7a8583` closes the remaining desktop-accessibility
+duration gap without altering physical touch semantics. Every retail button
+has explicit Hold/Release actions, the stick has full and 45% slight held
+directions plus Center, and modal/control transitions neutralize both local UI
+and engine state. On the exact clean sole-Simulator build, Gas, slight-right
+analog and L drift simultaneously reported Held; Gas and drift reached the
+retail poll; Controls returned all buttons to Released and the stick to
+Centered; complete retail copyright/title/menu textures rendered; and the
+targeted log scan returned zero.
+
+The same source compiles for iPhoneSimulator, iPhoneOS and macOS ARM64;
+25/25 tests pass. Guarded update install preserves exact retail/save tuples.
+The seven-member unsigned IPA and 3,264-member matching source archive pass at
+`781f8c03...ebf0` and `62562ce9...8ae0`. This is a stronger Simulator
+correctness and assistive-control result, not a replacement for physical
+multi-touch. Remaining dependency-ordered work is unchanged:
+
+1. obtain a valid Apple development identity and matching profile;
+2. install and launch the exact signed IPA on a connected iPad;
+3. complete a touch-only three-lap race and repeated three-boost drift chain;
+4. measure hardware cadence, frame pacing, audio latency and thermals; and
+5. verify lifecycle plus save/update persistence on that physical device.
+
+Full evidence and the post-three-day timestamp chronology are in
+`docs/parity/2026-08-01-ios-sustained-accessible-controls.md` and
+`docs/history/THREE-DAY-TIMELINE.md`.
