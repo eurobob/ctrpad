@@ -24,9 +24,9 @@ adds a complete durable commit ledger.
   retained a timestamp. Work between durable checkpoints is described as an
   interval rather than assigned an invented minute.
 - The commit ledger contains every campaign commit through published head
-  `890ba3f4b`: 176 commits. Commands, temporary paths, hashes, rejected
+  `94f4d40ed`: 178 commits. Commands, temporary paths, hashes, rejected
   experiments and individual test results are intentionally not duplicated
-  176 times here;
+  178 times here;
   they remain in the linked engineering journal and parity reports.
 
 ## Time accounting
@@ -57,6 +57,7 @@ adds a complete durable commit ledger.
 | Entitlement candidate repeat | 2026-08-01 18:51:23 | Active goal time reached 3 days, 3 hours, 28 minutes, 9 seconds after Boolean-type/final-wildcard hardening and a final 23/23 repeat. |
 | Entitlement main publication | 2026-08-01 18:55:55 | PR #12 merged the exact authorization checkpoint into `main` as `d9e3c5944`; its 3,258-member final-main source archive and extracted test passed at `760dcee6...68d0`, and active goal time reached 3 days, 3 hours, 32 minutes, 42 seconds. |
 | Structured CoreDevice/Simulator recheck | 2026-08-01 19:16:58 | Active goal time reached 3 days, 3 hours, 53 minutes, 30 seconds after closing arbitrary-text `devicectl` evidence and exact-installing the current one-Simulator build. |
+| Structured evidence main publication | 2026-08-01 19:29:27 | PR #14 merged the 16-file checkpoint into `main` as `94f4d40ed`; its 3,261-member source archive passed after correcting the independent zsh harness, and active goal time reached 3 days, 4 hours, 6 minutes, 8 seconds. |
 
 ## Executive chronology
 
@@ -130,6 +131,7 @@ adds a complete durable commit ledger.
 | 18:52–18:55 | Entitlement GitHub publication | Committed and packaged the 16-file checkpoint, used authenticated CLI fallback after the connector's private-repository 404, audited/merged exact PR #12, then verified the final-main source archive, exclusion scan and extracted-source entitlement test. |
 | 18:56–18:57 | Entitlement history publication | Recorded the accepted merge/source boundary and merged it through PR #13 as `890ba3f4b`, aligning local branch, remote branch and `main`. |
 | 18:59–19:17 | Structured CoreDevice evidence and current-build screen | Reproduced the installed-app arbitrary-text false positive; replaced it with versioned command/result validation; retained the initial JSON-parser failure; passed four positive/nine adversarial fixtures and 24/24 tests; then rebuilt, exact-installed and visibly opened the main menu on the sole Simulator with retail/save identity preserved. |
+| 19:26–19:29 | Structured-evidence GitHub publication | Committed the 16-file checkpoint, built its 3,261-member source archive, corrected an independent zsh `path`-array harness mistake, used authenticated CLI fallback after the private-repository connector 404, audited PR #14's exact one-commit scope and merged its protected head into `main` as `94f4d40ed`. |
 
 ## Complete durable commit ledger
 
@@ -315,6 +317,8 @@ the engineering journal.
 2026-08-01 18:54:32  d9e3c5944  Merge pull request #12 from chrissotraidis/codex/simulator-performance-next
 2026-08-01 18:56:30  1ac3708bf  Record entitlement authorization publication
 2026-08-01 18:57:15  890ba3f4b  Merge pull request #13 from chrissotraidis/codex/simulator-performance-next
+2026-08-01 19:26:17  55932c2c1  Verify structured CoreDevice campaign evidence
+2026-08-01 19:28:59  94f4d40ed  Merge pull request #14 from chrissotraidis/codex/simulator-performance-next
 ```
 
 ## What the process actually did

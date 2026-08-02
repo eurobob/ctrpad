@@ -174,3 +174,24 @@ resumed. At 19:16:58 CDT, after the structured evidence work and exact
 Simulator recheck, the active goal reading was 273,210 seconds: 3 days,
 3 hours, 53 minutes and 30 seconds. These are Codex active-goal readings, not
 invented wall-clock implementation durations.
+
+## Publication closure
+
+The exact 16-file checkpoint became commit `55932c2c1510` at 19:26:17 CDT.
+Its 3,261-member corresponding-source archive passed its sidecar at SHA-256
+`da7c7d22c7e3ac227ea13c1bedc8a50549ac79585c5fc924ce74afc0e8bcc3f7`.
+The first independent member check accidentally used zsh's special `path`
+array as a loop variable and lost command lookup after the checksum/member
+count; the unchanged retry used `member_path`, found the required verifier,
+test, report and timeline, found zero forbidden members and passed the extracted
+four-positive/nine-negative verifier.
+
+The preferred private-repository GitHub connector returned HTTP 404. The
+authenticated CLI fallback created PR #14, whose audit found one exact commit,
+16 intended files, 865 additions, 25 deletions, `MERGEABLE` / `CLEAN` and no
+configured checks. GitHub merged protected head `55932c2c1510...` at 19:28:59
+CDT as `94f4d40eda4b...`; fetched `origin/main` contained both tools and this
+report. At 19:29:27 CDT active goal time was 273,968 seconds: 3 days, 4 hours,
+6 minutes and 8 seconds. One Simulator, zero identities and no physical device
+remained, so publication is accepted while signed hardware acceptance stays
+open.
