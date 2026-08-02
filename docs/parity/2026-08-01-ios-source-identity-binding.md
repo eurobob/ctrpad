@@ -192,6 +192,17 @@ SHA-256 is
 `27bd43cc0deaea5fcb6248c095d0eca0e727c126d5197236ab1f7ac178363ed0`.
 The failed harness invocation is not counted as acceptance evidence.
 
+PR #18 publication used the authenticated GitHub CLI after the connected
+private-repository endpoint returned 404. Audit found exactly the intended
+three commits and 18 files, 931 additions/40 deletions, protected head
+`4bc222fcb44c614349c4487431490f1ae97cdb27`, clean mergeability and no
+configured checks. After conversion from draft, that exact head merged to
+`main` at 20:40:38 CDT as
+`d29a560e96f0731cc0528cab123b3bee4ce902c9`. The final-main source checkpoint
+contained 3,264 members, passed its sidecar, end-anchored exclusions and
+extracted 2/6 fixture, and hashed to
+`9ad1c1680cbf325f1567e9ae838fd72c5edaf9d6e75f877e5fd8746ce4380577`.
+
 ## Remaining boundary
 
 This closes ambiguous IPA/source pairing and confirms the exact build remains
@@ -205,3 +216,5 @@ was 277,567 seconds: 3 days, 5 hours, 6 minutes and 7 seconds.
 At 20:38:30 CDT, after committing and independently checking the documentation
 source checkpoint, active goal time was 278,117 seconds: 3 days, 5 hours,
 15 minutes and 17 seconds.
+At 20:41:47 CDT, after PR #18 and its final-main source validation, active goal
+time was 278,313 seconds: 3 days, 5 hours, 18 minutes and 33 seconds.
