@@ -3178,3 +3178,16 @@ returned 404, authenticated CLI fallback opened/audited PR #14, and GitHub
 merged the exact head into `main` as `94f4d40ed`. At 19:29:27 the active-time
 reading was 273,968 seconds (3 days, 4 hours, 6 minutes, 8 seconds). One
 Simulator, zero identities and no physical device remained.
+
+### 2026-08-01 — Made the CoreDevice JSON version mandatory
+
+- Reproduced that removing only `info.jsonVersion` from the real accepted list
+  envelope still produced a verified `JSON_VERSION=not-reported` manifest.
+- Made the schema version required, integer and positive; missing version now
+  fails without a manifest.
+- Expanded the device-JSON suite to four positives and ten negatives. The full
+  macOS suite passes 24/24 in 16.61 seconds.
+
+At 19:38:00 CDT active time was 274,482 seconds (3 days, 4 hours, 14 minutes,
+42 seconds). One Simulator remained untouched; zero signing identities,
+profiles and physical devices kept the final hardware gate open.

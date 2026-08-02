@@ -416,7 +416,7 @@ if(BUILD_TESTING)
             COMMAND "${CMAKE_CURRENT_SOURCE_DIR}/tools/test-devicectl-json.sh"
         )
         set_tests_properties(ctr_ios_devicectl_json PROPERTIES PASS_REGULAR_EXPRESSION
-            "^DEVICECTL_JSON_SELF_TEST=passed positives=4 negatives=9"
+            "^DEVICECTL_JSON_SELF_TEST=passed positives=4 negatives=10"
         )
     endif()
 endif()

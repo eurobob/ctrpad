@@ -182,7 +182,8 @@ launch without uninstalling:
 The helper saves `devicectl` 518-compatible versioned JSON and log files for
 device discovery, details, installation, installed-app lookup and launch. It
 structurally verifies the exact command type and success envelope, then requires
-the expected installed bundle/version/build and launched `CTRPad` process.
+an explicit positive integer JSON schema version, the expected installed
+bundle/version/build and launched `CTRPad` process.
 Bundle text elsewhere in a failed or empty response is not sufficient. The
 verified remote app URL and positive process identifier are retained in the
 ignored manifest. It hashes the signed packaged executable but does not claim

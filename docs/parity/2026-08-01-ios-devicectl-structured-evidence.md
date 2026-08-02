@@ -50,19 +50,19 @@ uses only that file interface and validates it in two layers:
 2. install, installed-app and launch operations must contain the exact
    operation-specific result rather than merely a matching string.
 
-`tools/verify-devicectl-json.sh:89-138` implements the envelope. Its specialized
+`tools/verify-devicectl-json.sh:89-147` implements the envelope. Its specialized
 checks require:
 
 - exactly one `result.installedApplications[0]` with the expected `bundleID`
-  and a `CTRPad.app` installation URL (`:148-167`);
+  and a `CTRPad.app` installation URL (`:158-175`);
 - the expected `matchingBundleIdentifier`, exactly one `result.apps[0]`, exact
-  bundle/version/build when preparing, and a `CTRPad.app` URL (`:168-209`); and
+  bundle/version/build when preparing, and a `CTRPad.app` URL (`:176-210`); and
 - a positive integer `result.process.processIdentifier` plus exact
-  `CTRPad.app/CTRPad` executable URL (`:210-230`).
+  `CTRPad.app/CTRPad` executable URL (`:211-227`).
 
 Only after those checks pass does it write a manifest containing the input JSON
 SHA-256, command/outcome/tool/JSON versions, bundle/version/build, remote URL and
-PID (`tools/verify-devicectl-json.sh:232-249`). In-repository manifests must be
+PID (`tools/verify-devicectl-json.sh:230-245`). In-repository manifests must be
 gitignored (`:78-87`).
 
 `tools/ios-device-campaign.sh:385-427` now applies the envelope and exact
@@ -195,3 +195,32 @@ report. At 19:29:27 CDT active goal time was 273,968 seconds: 3 days, 4 hours,
 6 minutes and 8 seconds. One Simulator, zero identities and no physical device
 remained, so publication is accepted while signed hardware acceptance stays
 open.
+
+## Post-publication mandatory-version audit
+
+At 19:34 CDT the accepted real device-list JSON was copied and only
+`info.jsonVersion` was removed. The published verifier incorrectly exited 0
+and wrote:
+
+```text
+VALIDATION_STATUS=verified
+JSON_VERSION=not-reported
+JSON_SHA256=14a54a58bc6125ac0e2339676ab3fb5f9f96aebb6d8db668033e46dbc9ed7af8
+```
+
+This contradicted the versioned-interface requirement. The schema version is
+now required through the same nonempty extractor as command type/outcome/tool
+version, then must have integer type and a positive value. The unchanged probe
+now fails with `missing JSON schema version` and writes no manifest.
+
+The deterministic suite retains its historical four-positive/nine-negative
+checkpoint and adds missing schema version as negative ten. Current output is:
+
+```text
+DEVICECTL_JSON_SELF_TEST=passed positives=4 negatives=10
+```
+
+After a full reconfigure/build, 24/24 macOS tests passed in 16.61 seconds. At
+19:38:00 CDT active goal time was 274,482 seconds: 3 days, 4 hours, 14 minutes
+and 42 seconds. One Simulator remained booted and untouched; the 19:34
+inventory still found zero identities, no profiles and no physical device.

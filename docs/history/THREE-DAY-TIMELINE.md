@@ -58,6 +58,7 @@ adds a complete durable commit ledger.
 | Entitlement main publication | 2026-08-01 18:55:55 | PR #12 merged the exact authorization checkpoint into `main` as `d9e3c5944`; its 3,258-member final-main source archive and extracted test passed at `760dcee6...68d0`, and active goal time reached 3 days, 3 hours, 32 minutes, 42 seconds. |
 | Structured CoreDevice/Simulator recheck | 2026-08-01 19:16:58 | Active goal time reached 3 days, 3 hours, 53 minutes, 30 seconds after closing arbitrary-text `devicectl` evidence and exact-installing the current one-Simulator build. |
 | Structured evidence main publication | 2026-08-01 19:29:27 | PR #14 merged the 16-file checkpoint into `main` as `94f4d40ed`; its 3,261-member source archive passed after correcting the independent zsh harness, and active goal time reached 3 days, 4 hours, 6 minutes, 8 seconds. |
+| Mandatory JSON-version audit | 2026-08-01 19:38:00 | Active goal time reached 3 days, 4 hours, 14 minutes, 42 seconds after reproducing and rejecting an unversioned CoreDevice envelope and passing 24/24 tests. |
 
 ## Executive chronology
 
@@ -132,6 +133,7 @@ adds a complete durable commit ledger.
 | 18:56–18:57 | Entitlement history publication | Recorded the accepted merge/source boundary and merged it through PR #13 as `890ba3f4b`, aligning local branch, remote branch and `main`. |
 | 18:59–19:17 | Structured CoreDevice evidence and current-build screen | Reproduced the installed-app arbitrary-text false positive; replaced it with versioned command/result validation; retained the initial JSON-parser failure; passed four positive/nine adversarial fixtures and 24/24 tests; then rebuilt, exact-installed and visibly opened the main menu on the sole Simulator with retail/save identity preserved. |
 | 19:26–19:29 | Structured-evidence GitHub publication | Committed the 16-file checkpoint, built its 3,261-member source archive, corrected an independent zsh `path`-array harness mistake, used authenticated CLI fallback after the private-repository connector 404, audited PR #14's exact one-commit scope and merged its protected head into `main` as `94f4d40ed`. |
+| 19:34–19:38 | Mandatory CoreDevice schema version | Removed `info.jsonVersion` from the accepted real list envelope, reproduced an incorrect `JSON_VERSION=not-reported` success, made the positive integer version mandatory, added the tenth adversarial fixture and passed 24/24 tests in 16.61 seconds without touching the sole Simulator. |
 
 ## Complete durable commit ledger
 

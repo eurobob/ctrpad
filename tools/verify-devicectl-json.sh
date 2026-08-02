@@ -140,15 +140,11 @@ devicectl_version="$(extract_required info.version 'devicectl version')"
 [[ "$devicectl_version" =~ ^[0-9]+([.][0-9]+)*$ ]] || \
     fail "devicectl version is malformed: $devicectl_version"
 
-json_version="not-reported"
-if json_version_candidate="$(plutil -extract info.jsonVersion raw -o - \
-    "$json_path" 2>/dev/null)"; then
-    [[ "$(plutil -type info.jsonVersion "$json_path")" == "integer" ]] || \
-        fail "devicectl jsonVersion is not an integer"
-    [[ "$json_version_candidate" =~ ^[1-9][0-9]*$ ]] || \
-        fail "devicectl jsonVersion is not positive: $json_version_candidate"
-    json_version="$json_version_candidate"
-fi
+json_version="$(extract_required info.jsonVersion 'JSON schema version')"
+[[ "$(plutil -type info.jsonVersion "$json_path")" == "integer" ]] || \
+    fail "devicectl jsonVersion is not an integer"
+[[ "$json_version" =~ ^[1-9][0-9]*$ ]] || \
+    fail "devicectl jsonVersion is not positive: $json_version"
 
 validated_bundle_id="not-applicable"
 validated_version="not-applicable"

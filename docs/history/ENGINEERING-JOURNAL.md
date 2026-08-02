@@ -14722,3 +14722,26 @@ goal time was 273,968 seconds: 3 days, 4 hours, 6 minutes and 8 seconds. Exactly
 one Simulator remained booted, identities remained zero and CoreDevice still
 found no physical device; publication is closed, signed hardware acceptance is
 not.
+
+## 2026-08-01 — Required the CoreDevice JSON schema version
+
+The next completion audit compared the published verifier's wording to its
+behavior. Although every claimed envelope was called versioned, the code made
+`info.jsonVersion` optional and recorded `not-reported`. At 19:34 CDT a copy of
+the real accepted device-list JSON had only that key removed. The published
+verifier still exited 0 and wrote a verified manifest at input SHA-256
+`14a54a58...7af8`, proving the contradiction rather than merely inferring it.
+
+`tools/verify-devicectl-json.sh` now extracts `info.jsonVersion` as required,
+then preserves the existing integer and positive-value checks. The fixture
+suite adds the missing-key mutation, which fails with
+`devicectl JSON is missing JSON schema version at info.jsonVersion` and writes
+no manifest. Four positives and ten negatives pass. Bash syntax and diff
+hygiene pass, and the fully reconfigured macOS suite passes 24/24 in 16.61
+seconds.
+
+At 19:38:00 CDT exactly one Simulator remained booted and untouched. Active
+goal time was 274,482 seconds: 3 days, 4 hours, 14 minutes and 42 seconds. The
+physical inventory read at 19:34 still had zero identities, no profiles and no
+CoreDevice device. This closes an offline version-contract false positive; it
+does not change the signed hardware boundary.

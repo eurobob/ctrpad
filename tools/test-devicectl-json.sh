@@ -145,6 +145,12 @@ expect_failure wrong-command 'command type devicectl.list.devices' installed-app
     --json "$wrong_command" --bundle-id io.github.chrissotraidis.ctrpad \
     --version 0.1.0 --build 1
 
+missing_json_version="$test_tmp_dir/missing-json-version.json"
+cp "$envelope_json" "$missing_json_version"
+plutil -remove info.jsonVersion "$missing_json_version"
+expect_failure missing-json-version 'missing JSON schema version' envelope \
+    --json "$missing_json_version" --command-type devicectl.list.devices
+
 wrong_bundle="$test_tmp_dir/wrong-bundle.json"
 create_installed_app "$wrong_bundle" io.github.chrissotraidis.other
 expect_failure wrong-bundle 'installed app bundle ID' installed-app \
@@ -183,4 +189,4 @@ expect_failure wrong-executable 'launched executable is not CTRPad.app/CTRPad' l
     --json "$wrong_executable" --bundle-id io.github.chrissotraidis.ctrpad \
     --executable CTRPad
 
-printf 'DEVICECTL_JSON_SELF_TEST=passed positives=4 negatives=9\n'
+printf 'DEVICECTL_JSON_SELF_TEST=passed positives=4 negatives=10\n'

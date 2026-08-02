@@ -223,7 +223,8 @@ authorization. It also shares `tools/verify-ios-entitlement-binding.sh`, so an
 App ID prefix or keychain/entitlement mismatch is rejected offline rather than
 first appearing as an iPad installation failure. Every CoreDevice result is
 also parsed by `tools/verify-devicectl-json.sh`: command type, success outcome,
-JSON/tool version and exact install/app/version/launch/copy result must match
+mandatory positive JSON schema version, tool version and exact install/app/
+version/launch/copy result must match
 before a campaign manifest can claim success. Searching arbitrary JSON text is
 not accepted as installed-app proof.
 
