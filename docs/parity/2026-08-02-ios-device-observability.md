@@ -133,3 +133,58 @@ sha256 6a01b0f5562ed7a279d8f8e51e3b1874ac39a6120f55db4fe3873288950619a3
 
 No signed installation, physical touch feel, physical cadence, thermal change,
 audio result, complete race or update-persistence result is claimed here.
+
+## Clean implementation and other-Mac handoff
+
+Commit `2bfa532074eb18fb013e4a7d8bc571bc00367e54` froze the 16-file telemetry,
+collector and documentation change. The worktree was clean and its staged
+scope contained no retail media, packages, profiles, keys, screenshots, build
+output or runtime data.
+
+The exact source identity then passed:
+
+- macOS ARM64 build: 32 established warnings, zero errors;
+- serialized macOS CTest: 26/26, zero failures in 27.98 seconds;
+- iPhoneOS build: 32 established warnings, zero errors;
+- iPhoneOS executable: thin ARM64, platform iOS, minimum 15.0, SDK 26.5;
+- bundle source identity: full `2bfa532074eb18fb013e4a7d8bc571bc00367e54`;
+  and
+- intentional signature state: unsigned.
+
+Clean build evidence SHA-256:
+
+```text
+macOS configure  c102397313af56d80186eba34b9c86b6f1c92edb3769f065ed07e12a81f3ddcc
+macOS build      9a00a00cf9ade3ab285f545a2eb30cb2f24f24f580cdca66596a479176c90708
+macOS CTest      112467dd5fc70a31254e658f65fa3669c0db1c0538ea0d22a1e5884352c1814e
+iPhoneOS config  9dd5441cb3e5966d1c806ae2aecf40a1e98df7f8757c9d5bf7522599a672c452
+iPhoneOS build   af5dbc0b9fa5d055aeeb85d431ef56131c30a7a0c2fb8ae3d5eb75f813c3b3de
+iPhoneOS binary  e287a2461781c5eaabafc9f80408894b74c688111ad22a5e278412ff1fc10a3e
+```
+
+Two ignored handoff artifacts were created from that commit:
+
+```text
+CTRPad-0.1.0-1-2bfa532074eb-unsigned.ipa
+size 1462189
+members 7
+sha256 e47db84e7d84eb1ac369244f2c74953d2e8ebab8fa45213500c7fa46928a344f
+
+CTRPad-source-2bfa532074eb.tar.gz
+size 17753198
+members 3270
+sha256 f483424180d5128611baf61a5ec3b1cca24026e402e91ccea2a8ddb6b490a431
+```
+
+The IPA checksum, zip structure, full source/build identity, thin ARM64 iOS
+load command, distribution resources and retail exclusion passed. `codesign`
+failed as expected for an unsigned handoff. The source sidecar passed from its
+`dist/` directory and the archive contains this report plus both telemetry
+source files. Retail extensions, runtime state, profiles and keys are absent.
+The two broad `dist` directory matches are committed vendored SDL paths under
+`externals/SDL/src/hidapi/dist/`, not generated packages.
+
+On another Mac, use the published branch or final `main`, verify the source
+archive sidecar from the directory containing it, and follow `docs/INSTALL-IOS.md`.
+The IPA can be re-signed only with the tester's matching Apple identity and
+profile; no credential is included.

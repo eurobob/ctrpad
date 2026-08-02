@@ -1754,3 +1754,11 @@ The dependency order is now sharper:
 
 Full implementation, timestamps, metric definitions, exact hashes and rejected
 claims are in `docs/parity/2026-08-02-ios-device-observability.md`.
+
+Implementation commit `2bfa532074eb` is now exact-clean validated: macOS and
+iPhoneOS builds each complete with 32 established warnings and zero errors,
+and serialized CTest passes 26/26 in 27.98 seconds. Its ignored seven-member
+unsigned IPA and 3,270-member corresponding-source archive pass at
+`e47db84e...44f` and `f4834241...a431`, with full identity, distribution
+resources and retail exclusion verified. GitHub publication remains the only
+local step before the physical-device dependency boundary.

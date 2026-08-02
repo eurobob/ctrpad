@@ -546,3 +546,10 @@ open.
 Focused evidence:
 [`../parity/2026-08-02-ios-device-observability.md`](../parity/2026-08-02-ios-device-observability.md).
 Clean publication and every signed/physical-iPad result remained open.
+
+At 02:11:22, implementation commit `2bfa532074eb` froze the 16-file change.
+Exact-clean macOS and iPhoneOS builds each completed with 32 established
+warnings and zero errors; serialized CTest passed 26/26 in 27.98 seconds. The
+seven-member unsigned IPA passed at `e47db84e...44f`; its 3,270-member matching
+source archive passed at `f4834241...a431`. Both are ignored and retail-free.
+Publication remained next; no signing or physical result was implied.

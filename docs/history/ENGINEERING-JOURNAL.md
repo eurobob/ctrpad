@@ -15530,3 +15530,49 @@ At 02:08:17 CDT, goal time was 297,897 seconds: 3 days, 10 hours, 44 minutes
 and 57 seconds. The exact implementation, metric definitions, hashes and open
 claims are in `docs/parity/2026-08-02-ios-device-observability.md`. Clean
 commit/publication and every physical-only acceptance item remained next.
+
+### Clean commit, exact rebuild and handoff artifacts
+
+At 02:11:22 CDT, staged scope contained 16 intentional files, 688 additions
+and 10 edits. `git diff --cached --check` passed and the staged path scan found
+no retail/package/profile/key extension. Commit
+`2bfa532074eb18fb013e4a7d8bc571bc00367e54` froze the change.
+
+The exact commit then rebuilt macOS ARM64 and iPhoneOS serially with the
+established 32 warnings and zero errors per target. Serialized CTest passed
+26/26 in 27.98 seconds. The iPhoneOS plist contains full source identity
+`2bfa532074eb18fb013e4a7d8bc571bc00367e54` and build label `2bfa532074eb`;
+the thin ARM64 executable targets iOS 15.0 with SDK 26.5 and is intentionally
+unsigned.
+
+The first package-help lookup mistakenly used `./tools/package-ios.sh` and
+`./tools/package-source.sh`; both commands returned “no such file” because the
+scripts live at repository root. The corrected root scripts wrote:
+
+```text
+CTRPad-0.1.0-1-2bfa532074eb-unsigned.ipa
+size 1462189, members 7
+sha256 e47db84e7d84eb1ac369244f2c74953d2e8ebab8fa45213500c7fa46928a344f
+
+CTRPad-source-2bfa532074eb.tar.gz
+size 17753198, members 3270
+sha256 f483424180d5128611baf61a5ec3b1cca24026e402e91ccea2a8ddb6b490a431
+```
+
+The IPA sidecar, zip test, full plist identity, thin ARM64 iOS load command,
+three distribution resources, unsigned state and retail exclusion passed. The
+first source-sidecar command ran from repository root even though the sidecar
+contains a basename, so it reported a missing file; rerunning from `dist/`
+passed exactly. A deliberately broad archive scan found two `dist` paths; both
+were committed vendored SDL sources under `externals/SDL/src/hidapi/dist/`.
+Retail extensions and runtime/profile/key directories were absent.
+
+An extracted-IPA check with a recursive temp cleanup was rejected before
+execution by the command guard. It was rerun without cleanup and passed; the
+created extraction directory and the earlier fresh device-build directory were
+then validated by explicit prefixes and deleted with `find -depth -delete`.
+Both were disposable system-temp outputs. Ignored `dist/` artifacts and hashed
+`/tmp` verification logs remain.
+
+The exact clean implementation and artifacts were ready to push. GitHub
+publication and every physical-iPad-only acceptance condition remained open.

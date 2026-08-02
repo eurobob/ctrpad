@@ -3520,8 +3520,10 @@ or person-hours.
 
 **Open boundary**
 
-The telemetry is validated locally but is not yet a clean published commit.
+The telemetry is frozen as clean implementation commit `2bfa532074eb`. Its
+exact macOS/iPhoneOS rebuilds pass, serialized CTest passes 26/26 in 27.98
+seconds, and checksum-verified unsigned IPA/source handoff artifacts pass at
+`e47db84e...44f` and `f4834241...a431`. Publication to GitHub `main` is next.
 Apple signing, real-iPad cadence/thermal/audio/touch/lifecycle, a complete
 three-lap race, repeated three-boost drift and update persistence remain open.
-Exact evidence is in
-`docs/parity/2026-08-02-ios-device-observability.md`.
+Exact evidence is in `docs/parity/2026-08-02-ios-device-observability.md`.
