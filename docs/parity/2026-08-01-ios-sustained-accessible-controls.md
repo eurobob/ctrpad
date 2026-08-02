@@ -6,8 +6,9 @@
 
 **Branch:** `codex/simulator-performance-next`
 
-**Status:** locally accepted, documented and awaiting GitHub publication;
-signed physical-iPad acceptance remains open
+**Status:** locally accepted, documented and published to `main` as
+`be9c81605133d2329041f36ac7ca77b6f9347ead`; signed physical-iPad acceptance
+remains open
 
 ## Question and result
 
@@ -117,6 +118,9 @@ reported as intervals rather than assigned an invented minute.
 | 21:37:01 | Read the active Codex goal clock. | `timeUsedSeconds=281632`: 3 days, 6 hours, 13 minutes, 52 seconds. Goal remains active. |
 | 21:43:31 | Committed the seven-document acceptance/history checkpoint as `76ef53931`. | The timestamped timeline, engineering journal, progress log, roadmap, decision, parity index and this report became durable. |
 | 21:44:16 | Verified the documentation commit's corresponding source and reread the goal clock. | 3,265 members, required history/report files present, zero forbidden members, SHA-256 `8f4cb489...57a4`; `timeUsedSeconds=282054` (3 days, 6 hours, 20 minutes, 54 seconds). |
+| 21:44-21:45 | Pushed three commits and opened draft PR #20. | Preferred GitHub connector returned private-repository HTTP 404 without creating a PR; authenticated CLI fallback created it. Audit found exact head `718fb73b0`, three commits, eight files, 611 additions/eight deletions, `MERGEABLE`/`CLEAN` and no configured checks. |
+| 21:45:48 | Marked PR #20 ready and merged only protected head `718fb73b0`. | GitHub created final-main merge `be9c81605133d2329041f36ac7ca77b6f9347ead`; ancestry verification passed and the working branch fast-forwarded/pushed to it. |
+| 21:46:42 | Verified final-main corresponding source and reread the goal clock. | 3,265 members, required files present, zero forbidden members, SHA-256 `e08098bb...a463`; `timeUsedSeconds=282209` (3 days, 6 hours, 23 minutes, 29 seconds). |
 
 ## Clean artifact and persistence evidence
 
@@ -184,7 +188,7 @@ Still open:
 - a complete touch-only three-lap race and repeated three-boost drift chain;
 - hardware cadence, frame pacing, audio latency, thermals, lifecycle and
   update-save persistence; and
-- final publication of this implementation/history checkpoint to `main`.
+- final signed physical-iPad acceptance campaign.
 
 Therefore the overall goal remains active. The game is visibly and
 interactively functional in the Simulator, but the signed physical-iPad

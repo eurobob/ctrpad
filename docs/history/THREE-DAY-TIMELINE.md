@@ -24,10 +24,10 @@ adds a complete durable commit ledger.
   retained a timestamp. Work between durable checkpoints is described as an
   interval rather than assigned an invented minute.
 - The commit ledger contains every campaign commit through sustained-control
-  documentation head `76ef53931`: 192 commits. Commands, temporary paths,
-  hashes, rejected
-  experiments and individual test results are intentionally not duplicated
-  192 times here;
+  main publication `be9c81605`: 194 commits. Commands, temporary paths,
+  hashes, rejected experiments and individual test results are intentionally
+  not duplicated
+  194 times here;
   they remain in the linked engineering journal and parity reports.
 
 ## Time accounting
@@ -71,6 +71,7 @@ adds a complete durable commit ledger.
 | Exact-source history publication | 2026-08-01 20:43:08 | PR #19 merged the publication record to `main` as `88e453999`; local/remote/main aligned and its 3,264-member final source archive passed at `b56a9832...4713`. |
 | Sustained-control clean acceptance reading | 2026-08-01 21:37:01 | Clean implementation `a3523c7a8` passed Simulator/device builds, 25/25 tests, exact install/persistence/visual/control checks and matching IPA/source packaging; active goal time reached 3 days, 6 hours, 13 minutes, 52 seconds. |
 | Sustained-control documentation package | 2026-08-01 21:44:16 | Documentation commit `76ef53931` recorded the control/timeline checkpoint; its 3,265-member source archive passed sidecar/required-file/exclusion checks at `8f4cb489...57a4`, and active goal time reached 3 days, 6 hours, 20 minutes, 54 seconds. |
+| Sustained-control main publication | 2026-08-01 21:46:42 | PR #20 merged its audited three-commit/eight-file head as `be9c81605`; its 3,265-member final-main source passed at `e08098bb...a463`, and active goal time reached 3 days, 6 hours, 23 minutes, 29 seconds. |
 
 ## Executive chronology
 
@@ -163,6 +164,8 @@ adds a complete durable commit ledger.
 | 21:33–21:35 | iPhoneOS and macOS matrix | Clean iPhoneOS compiled; clean macOS compiled and passed 25/25 tests in 27.84 seconds. |
 | 21:35–21:37 | Exact IPA/source packaging | Wrote seven-member ARM64 unsigned IPA `781f8c03...ebf0` and 3,264-member source `62562ce9...8ae0`; sidecars and corrected independent scans passed after retaining one wrong-directory audit failure. |
 | 21:43–21:44 | Timestamped history checkpoint | Committed the seven-document acceptance/history set as `76ef53931`; its 3,265-member source archive included the new report/timeline, passed its sidecar and returned zero forbidden members. |
+| 21:44–21:46 | Sustained-control GitHub publication | Pushed three commits, recorded the private-repository connector 404, opened draft PR #20 with authenticated CLI fallback, audited exact head `718fb73b0` as three commits/eight files/611 additions/eight deletions with clean mergeability and no checks, then merged its protected head as final-main `be9c81605`. |
+| 21:46 | Final-main corresponding source | Packaged 3,265 members, found both required history files, zero forbidden members and passing sidecar at `e08098bb...a463`; local/remote branch and main contained the accepted implementation. |
 
 ## Complete durable commit ledger
 
@@ -364,6 +367,8 @@ the engineering journal.
 2026-08-01 20:43:08  88e453999  Merge pull request #19 from chrissotraidis/codex/simulator-performance-next
 2026-08-01 21:24:14  a3523c7a8  Add sustained accessible touch controls
 2026-08-01 21:43:31  76ef53931  Document sustained control acceptance
+2026-08-01 21:44:51  718fb73b0  Record sustained control package proof
+2026-08-01 21:45:48  be9c81605  Merge pull request #20 from chrissotraidis/codex/simulator-performance-next
 ```
 
 ## What the process actually did

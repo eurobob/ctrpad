@@ -3332,3 +3332,14 @@ timestamp history durable. Its 3,265-member source package contained the new
 report/timeline, passed the sidecar and forbidden-member scan, and hashed to
 `8f4cb489...57a4`. At 21:44:16, active time was 282,054 seconds (3 days,
 6 hours, 20 minutes, 54 seconds); GitHub publication remained next.
+
+At 21:44-21:46 CDT, all three commits pushed. The preferred connector returned
+its documented private-repository 404; authenticated CLI fallback opened and
+audited PR #20 as exact head `718fb73b0`, three commits/eight files,
+611 additions/eight deletions, clean/mergeable and without configured checks.
+The protected head merged at 21:45:48 as final-main `be9c81605`; ancestry and
+ref alignment passed. Its 3,265-member source archive contained both required
+history files, returned zero forbidden members and passed at
+`e08098bb...a463`. At 21:46:42, active time was 282,209 seconds (3 days,
+6 hours, 23 minutes, 29 seconds). Publication is closed; physical acceptance
+remains open.
