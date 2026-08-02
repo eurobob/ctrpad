@@ -1760,5 +1760,10 @@ iPhoneOS builds each complete with 32 established warnings and zero errors,
 and serialized CTest passes 26/26 in 27.98 seconds. Its ignored seven-member
 unsigned IPA and 3,270-member corresponding-source archive pass at
 `e47db84e...44f` and `f4834241...a431`, with full identity, distribution
-resources and retail exclusion verified. GitHub publication remains the only
-local step before the physical-device dependency boundary.
+resources and retail exclusion verified.
+
+PR #26 published the exact two-commit, 16-file telemetry checkpoint to remote
+`main` at 02:21:42 CDT as merge `15f8d92127f1`. Protected head
+`21e214f6bf2f` is its second parent and the ancestry check passes. Local
+publication is complete; the next meaningful evidence must come from signing
+and the target iPad.

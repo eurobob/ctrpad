@@ -188,3 +188,13 @@ On another Mac, use the published branch or final `main`, verify the source
 archive sidecar from the directory containing it, and follow `docs/INSTALL-IOS.md`.
 The IPA can be re-signed only with the tester's matching Apple identity and
 profile; no credential is included.
+
+## GitHub publication
+
+Exact branch head `21e214f6bf2f38adf11c55fdebf2c08d285ed3dd` pushed with two
+commits and 16 files. PR #26 reported 806 additions, 10 deletions,
+`mergeable=true`, clean state and no configured checks. It merged at 02:21:42
+CDT as `15f8d92127f129197cce2b734c4ab4b90e9fa95b`. GitHub reports the PR
+merged, the merge has the protected head as its second parent, and a fresh
+remote ancestry check passes. The source and telemetry workflow are therefore
+on `main`; the signed physical-device boundary is unchanged.

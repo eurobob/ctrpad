@@ -15576,3 +15576,22 @@ Both were disposable system-temp outputs. Ignored `dist/` artifacts and hashed
 
 The exact clean implementation and artifacts were ready to push. GitHub
 publication and every physical-iPad-only acceptance condition remained open.
+
+### GitHub publication
+
+Branch `codex/device-telemetry` pushed at exact head
+`21e214f6bf2f38adf11c55fdebf2c08d285ed3dd`. Ready PR #26 exposed exactly two
+commits and 16 files with 806 additions and 10 deletions. CLI and REST agreed
+on base `83a618139`, exact head, `mergeable=true`, clean merge state and no
+configured checks.
+
+The exact-head merge completed at 02:21:42 CDT as
+`15f8d92127f129197cce2b734c4ab4b90e9fa95b`. GitHub reports PR #26 `MERGED`;
+the merge's second parent is protected head `21e214f6b`, a fresh fetch resolved
+remote `main` to the merge, and `merge-base --is-ancestor` returned zero. This
+publishes the implementation, collector, acceptance instructions and complete
+pre-publication history.
+
+At 02:21:56 CDT, goal time was 298,723 seconds: 3 days, 10 hours, 58 minutes
+and 43 seconds. Source publication was complete. Apple signing, a connected
+physical iPad and every device-only acceptance result remained open.
