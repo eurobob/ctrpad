@@ -23,8 +23,8 @@ adds a complete durable commit ledger.
 - Runtime observations are called exact only where the journal, log or report
   retained a timestamp. Work between durable checkpoints is described as an
   interval rather than assigned an invented minute.
-- The commit ledger contains every campaign commit through bounded-control
-  publication-record main merge `0fee3da33`: 201 commits. Commands, temporary
+- The commit ledger contains every campaign commit through performance-handoff
+  main merge `8ed2ce98a`: 204 commits. Commands, temporary
   paths, hashes, rejected experiments and individual test results are
   intentionally not duplicated for every commit;
   they remain in the linked engineering journal and parity reports.
@@ -80,6 +80,7 @@ adds a complete durable commit ledger.
 | Bounded-control publication record | 2026-08-02 00:32:27 | PR #23 merged commit `cc51f003d` as final-main `0fee3da33`, making the PR #22 merge itself durable in repository history. |
 | Simulator performance handoff reading | 2026-08-02 01:24:27 | A one-Simulator touch route, exact log/screenshot audit, three-second sample and host-load inventory separated coherent gameplay from Apple Software Renderer/host contention; active goal time reached 3 days, 10 hours and 48 seconds. |
 | Physical-test handoff package | 2026-08-02 01:37:14 | Clean `daba106ae` produced a verified thin-ARM64 unsigned IPA, 3,267-member matching source archive and a serialized 25/25 macOS regression; active goal time reached 3 days, 10 hours, 13 minutes and 39 seconds. |
+| Performance-handoff main publication | 2026-08-02 01:40:23 | PR #24 merged protected head `d44c5b0b0` as `8ed2ce98a`; two commits/seven files/604 additions/5 corrections were clean and exact-head ancestry passed; active goal time reached 3 days, 10 hours, 16 minutes and 54 seconds. |
 
 ## Executive chronology
 
@@ -424,6 +425,8 @@ the engineering journal.
 2026-08-02 00:31:52  cc51f003d  Record bounded control publication
 2026-08-02 00:32:26  0fee3da33  Merge pull request #23 from chrissotraidis/codex/simulator-performance-next
 2026-08-02 01:31:11  daba106ae  Document Simulator performance handoff
+2026-08-02 01:38:53  d44c5b0b0  Record exact handoff package
+2026-08-02 01:39:55  8ed2ce98a  Merge pull request #24 from chrissotraidis/codex/simulator-performance-next
 ```
 
 ## What the process actually did
@@ -508,3 +511,11 @@ seven-member unsigned IPA passed at `67ec61bf...1c34e5`; its 3,267-member
 matching source archive passed at `da8af630...fff3a3`. Both are retail-free,
 checksum-verified and ignored local artifacts. Signing and every device-only
 result remain open.
+
+PR #24 then exposed exactly the two handoff commits and seven documentation
+files: 604 additions and 5 corrections, clean/mergeable and with no configured
+checks. GitHub protected head `d44c5b0b06c...` merged at 01:39:55 CDT as
+`8ed2ce98a9bb...`; a fresh fetch and ancestry test passed. At 01:40:23, active
+goal time was 296,214 seconds: 3 days, 10 hours, 16 minutes and 54 seconds.
+The complete handoff source is on remote `main`; physical acceptance is still
+open.

@@ -1725,4 +1725,5 @@ iPhoneOS and macOS builds succeeded with zero errors, the final serialized
 macOS suite passed 25/25 in 22.51 seconds, the seven-member unsigned IPA passed
 at `67ec61bf...1c34e5`, and its 3,267-member matching source archive passed at
 `da8af630...fff3a3`. Both artifacts are retail-free and ignored. GitHub main
-publication remains the final part of step 1; steps 2-6 remain open.
+publication completed through PR #24 as `8ed2ce98a9bb`; step 1 is complete and
+steps 2-6 remain open.

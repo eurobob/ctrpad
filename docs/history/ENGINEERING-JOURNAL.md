@@ -15397,3 +15397,27 @@ terminated; both artifacts remained ignored under `dist/`.
 At 01:37:14 CDT, the goal API reported 296,019 seconds: 3 days, 10 hours,
 13 minutes and 39 seconds. The package is an exact unsigned handoff for
 re-signing or rebuilding on the other Mac. It is not a signed-device positive.
+
+### Performance-handoff GitHub publication
+
+The clean branch contained exactly two commits over remote `main`:
+`daba106ae` and `d44c5b0b0`. The seven-file diff had 604 additions and five
+corrections. `git diff --check` passed, the local and remote branch heads both
+resolved to full `d44c5b0b06c6f93ecd558d8c2526541e91f514a9`, and no generated
+artifact appeared in status.
+
+Every GitHub command explicitly targeted `chrissotraidis/ctrpad`; otherwise
+the checkout's additional `upstream` remote can make repository inference pick
+`CTR-tools/ctr-native`. Ready PR #24 opened with the exact root cause, user
+impact and validation body. GitHub CLI plus REST agreed on base
+`0fee3da33c04...`, protected head `d44c5b0b06c...`, two commits, seven files,
+604 additions, five deletions, `mergeable=true`, state `clean`, and no
+configured checks.
+
+Exact-head merge completed at 01:39:55 CDT as
+`8ed2ce98a9bbe694e2db8986da2c305fe2b579c7`. A fresh fetch confirmed the PR
+head is an ancestor of remote `main`. At 01:40:23, the goal API reported
+296,214 seconds: 3 days, 10 hours, 16 minutes and 54 seconds. The source,
+history, handoff commands and exact package proof are now on GitHub `main`.
+The unsigned local IPA remains under ignored `dist/`; signing and every
+physical-only result remain open.

@@ -3466,3 +3466,15 @@ profile/key material and passed its sidecar at `da8af630...fff3a3`.
 At 01:37:14 CDT, active goal time was 296,019 seconds: 3 days, 10 hours,
 13 minutes and 39 seconds. Publishing that exact source and its report to
 `main` remained next; Apple signing and physical acceptance remained open.
+
+**GitHub publication**
+
+Both handoff commits pushed at exact remote head `d44c5b0b06c6...`. Ready PR
+#24 contained two commits, seven documentation files, 604 additions and five
+corrections. REST/CLI audit agreed that the base was `0fee3da33`, the head was
+exact, mergeability/state were clean and there were no configured checks.
+
+PR #24 merged at 01:39:55 CDT as `8ed2ce98a9bb...`. A fresh fetch proved
+`d44c5b0b0` is an ancestor of remote `main`. At 01:40:23, active goal time was
+296,214 seconds: 3 days, 10 hours, 16 minutes and 54 seconds. Source/history
+publication is complete; Apple signing and physical acceptance remain open.
