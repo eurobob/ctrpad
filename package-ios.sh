@@ -39,6 +39,7 @@ require_command() {
 
 script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)"
 repo_root="$script_dir"
+cd "$repo_root"
 app_path="$repo_root/build-ios-device-arm64/CTRPad.app"
 output_path=""
 expected_bundle_id=""
