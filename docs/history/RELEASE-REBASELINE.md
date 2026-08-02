@@ -147,3 +147,18 @@ limitations are in
 `docs/parity/2026-08-01-release-rebaseline-clean-smoke.md`. Real signing and the
 physical-device campaign remain open because this machine still has no valid
 Apple identity, provisioning profile or connected device.
+
+## 2026-08-02 handoff confirmation
+
+A resumed touch-only Simulator attempt did not complete a lap and therefore
+did not broaden acceptance. It did confirm the re-baseline's performance
+ownership: the runtime named Apple Software Renderer; an independent process
+sample placed about 70% of the main-thread stacks under ordered draw submission
+into `GLRendererFloat`; and the eight-logical-CPU host carried a load average
+above 88. Coherent graphics, retail-poll touch, save identity and clean targeted
+logs remained intact.
+
+This makes a physical-iPad package/test the shortest honest next step. It does
+not waive the complete-race, repeated-drift, signing, device lifecycle, audio,
+thermal or save/update gates. Exact evidence is in
+`docs/parity/2026-08-02-simulator-performance-handoff.md`.

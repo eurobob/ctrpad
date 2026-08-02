@@ -3397,3 +3397,55 @@ checks. Protected head `7f9f68b2e214...` merged at 00:30:31 as final-main
 `a1d51f021167`. Ancestry and branch/main ref alignment passed. At 00:30:55,
 active time was 292,051 seconds (3 days, 9 hours, 7 minutes, 31 seconds).
 Publication is closed; signed physical acceptance remains open.
+
+### 2026-08-02 00:32-01:24 CDT — Resumed race rejection and performance handoff
+
+**Outcome**
+
+- Confirmed PR #23 merged the prior bounded-control publication record to
+  remote `main` as `0fee3da33` before new work began.
+- Kept exactly one `CTRPad Import Validation` iPad Simulator booted and
+  relaunched installed implementation `c56162f68a74`.
+- Navigated through production touch to Time Trial / Crash Cove, exercised a
+  failed race recovery, paused, selected Restart with touch steering, and
+  confirmed a fresh green-light start. The route again stayed on `LAP 1/3`;
+  it is rejected as a full race.
+- Captured exact screenshots of the coherent pause, track, kart, HUD, minimap,
+  textures and complete overlay. Only their hashes were retained because the
+  pixels are retail-derived.
+- Verified touch Gas, Brake, steering and Pause at the retail poll; the
+  19,257-byte session log at `94e81785...48ff3` contained zero targeted
+  error/fatal/asset/visibility/shader/abort/assert rows.
+- Rechecked slot-zero save inode/size/mtime/hash as
+  `111222179/6016/1785525736/6a01b0f5...19a3` after the controlled lifecycle.
+- Measured race samples from 4.32 to 11.95 FPS while the runtime explicitly
+  named Apple Software Renderer. A three-second `sample` placed 1,236 of 1,768
+  main-thread stacks beneath `DrawOTag -> DrawAllSplits`, primarily in
+  software `glDrawArrays` / `GLRendererFloat` triangle work.
+- Recorded host load averages `88.64 50.16 32.89` on eight logical CPUs with
+  simultaneous high-cost WindowServer, Codex, File Provider, Docker/VM and
+  CrossOver work. This compounds, but does not create, the known software
+  renderer bottleneck.
+- Terminated only CTRPad by exact bundle ID, leaving the sole Simulator
+  booted. No user process was killed.
+
+**Decision**
+
+Publish a complete source/history handoff and measure the exact build on the
+target iPad before attempting another Simulator renderer rewrite. The existing
+logical resolve, coherent fetch and same-state batching improvements stay; the
+previous correct-but-slower prototypes stay rejected.
+
+**Exact elapsed reading**
+
+At 01:24:27 CDT, active goal time was 295,248 seconds: 3 days, 10 hours and
+48 seconds. This is Codex goal time, not person-hours or uninterrupted compute.
+
+**Current boundary**
+
+The game is working as a coherent, input-consuming Simulator build, but it is
+not release-complete. A complete touch race and repeated drift boost remain
+unaccepted, and there is still no Apple identity/profile or connected physical
+iPad on this Mac. Hardware cadence, audio, thermals, lifecycle and save/update
+persistence must be measured on device. Full evidence is in
+`docs/parity/2026-08-02-simulator-performance-handoff.md`.

@@ -15218,3 +15218,128 @@ head was an ancestor of remote `main`, the remote campaign branch still named
 the protected head, and local `main` aligned to remote `main`. At 00:30:55,
 the goal API read 292,051 seconds: 3 days, 9 hours, 7 minutes and 31 seconds.
 Source publication is closed; the signed physical-iPad gates remain open.
+
+## 2026-08-02 — Rejected second Simulator race and diagnosed the slow path
+
+**Starting source:** `codex/simulator-performance-next` at
+`cc51f003d52cef0856c40aa2ef0da268b901ecd1`; remote `main` at
+`0fee3da33c045b9b5b6a8d3c75b7947de1e3e99d`.
+
+### Publication and machine inventory
+
+REST inspection confirmed PR #23 merged the prior bounded-control publication
+record at 00:32:27 CDT. Its exact head was `cc51f003d`; remote `main` was
+`0fee3da33`. The worktree was clean and the branch head was already an ancestor
+of main.
+
+Local external gates remained unchanged:
+
+- `security find-identity -v -p codesigning`: zero valid identities;
+- `xcrun devicectl list devices --timeout 10`: no devices found;
+- exactly one booted iPad Simulator, `CTRPad Import Validation`; and
+- one Simulator GUI process.
+
+### Resumed touch route
+
+The installed exact implementation opened a new rotating session at 00:57:29
+CDT as `c56162f68a74`, reporting a 1,032-by-1,376 drawable, framebuffer and
+renderbuffer 1, Apple Software Renderer, GLES 3.0, framebuffer fetch, all four
+PSX shaders and both VRAM pipelines.
+
+The first resumed route navigated retail presentation and menus into Time Trial
+with Crash at Crash Cove and no ghost. A long monitored race attempt entered
+shoreline, wall, sand, grass and cliff scenery while production Gas, Brake,
+Left and Right edges all reached the retail pad poll. It remained `LAP 1/3`.
+That run was rejected as a lap or race proof.
+
+Pause was then invoked through the production control. An exact screenshot
+showed coherent kart, track, HUD, minimap and pause menu. A bounded Down input
+selected `RESTART`; one-second Gas/Cross confirmed it. Exact subsequent frames
+showed the restart flag, Time Trial / Crash Cove presentation, Crash and kart,
+and a fresh green-light `LAP 1/3` start. A bounded Gas segment moved the kart
+from the line and returned to neutral. It still did not complete a lap and was
+not promoted.
+
+The current hardware-keyboard capture experiment did not produce a new
+keyboard edge in the session log. Earlier exact keyboard acceptance remains in
+its dedicated report, but this run adds no keyboard claim.
+
+### Lifecycle and save preservation
+
+Before the race restart, an exact app-only terminate/relaunch retained the
+slot-zero save tuple:
+
+```text
+inode 111222179
+size 6016
+mtime 1785525736
+sha256 6a01b0f5562ed7a279d8f8e51e3b1874ac39a6120f55db4fe3873288950619a3
+```
+
+The relaunched PID was `81570`. No second Simulator was booted. At the end of
+the audit, exact-bundle `simctl terminate` stopped only CTRPad so documentation,
+tests and packaging would not compete with the software renderer. The sole
+Simulator remained available and no unrelated user process was terminated.
+
+### Logging and retail-poll evidence
+
+The current 19,257-byte log hashed to
+`94e81785e8aaf63998538de9d3dc238679101db510f4da31335591c13fc48ff3`.
+It retained exact UTC timestamps, source identity, container roots, renderer,
+FPS and input edges. The targeted case-insensitive scan for error, fatal,
+visibility exhaustion, asset failure, shader failure, abort and assertion
+returned zero rows.
+
+Touch masks observed at the retail consumer included Gas `0x4000`, Brake
+`0x8000`, Left `0x0080`, Right `0x0020` and Pause `0x0008`. Examples include
+Gas down/poll/up at 01:08:41-01:08:44 CDT, Brake plus Right at
+01:09:49-01:09:54, Gas plus Left at 01:10:54-01:11:00, and Pause at
+01:15:04-01:15:05.
+
+The ignored screenshots and hashes are enumerated in
+`docs/parity/2026-08-02-simulator-performance-handoff.md`. They remain under
+`/tmp` because retail-derived pixels are not corresponding source.
+
+### Root-cause audit
+
+The runtime's race FPS samples ranged from 4.32 through 11.95; lighter early
+presentations briefly reported 50.58 and 55.61 FPS. A three-second live sample
+at 01:21:40 produced local report SHA-256
+`07f91ce6856a0da087dcabdd82df030da1173f601c7cde3cec106d692e068741`.
+
+Of 1,768 main-thread samples, 1,269 were inside `RenderSubmit` and 1,236 were
+under `DrawOTag`; the `DrawAllSplits` branches also total 1,236. The largest
+path entered `NativeRenderer_DrawTriangles`, `glDrawArrays`, GLEngine flush and
+`GLRendererFloat` polygon/triangle fill. The process was advancing through the
+UIKit display link, not deadlocked or waiting on asset I/O. This independent
+sample agrees with the earlier matched 165.879-ms Crash Cove profile and shows
+that ordered PS1 draw/feedback work, not the final presentation blit, dominates
+the Simulator frame.
+
+The machine was also unusably oversubscribed: eight logical CPUs, load averages
+`88.64 50.16 32.89`, CTRPad about 69%, WindowServer about 62%, Codex renderer
+about 92%, File Provider about 46%, plus Docker/virtualization and
+CrossOver/wineserver/Steam helpers. Point CPU samples are not additive capacity
+measurements, but the load average proves a deep runnable queue. After CTRPad
+termination the one-minute load remained above 80 because unrelated queued
+work persisted. No attempt was made to kill user processes.
+
+### Decision and boundary
+
+The game has coherent graphics, retail-poll touch input, persistence and
+diagnostics, but its complex Simulator scenes are not fast. Because the
+Simulator explicitly uses a CPU rasterizer and the host is deeply overloaded,
+this does not predict target-iPad performance. Another speculative renderer
+change before device measurement would repeat the already rejected pattern of
+lower draw counts with worse matched live time.
+
+The chosen next step is a complete GitHub/source handoff followed by an exact
+physical-iPad campaign. If hardware reproduces the bottleneck, profile the
+device and choose a bounded GLES or Metal correction from that evidence. If
+hardware meets cadence, retain the accepted renderer and close only the
+remaining race/drift/lifecycle/save checks.
+
+At 01:24:27 CDT the goal API reported 295,248 seconds: 3 days, 10 hours and
+48 seconds. The goal remains active; this checkpoint does not claim a signed
+IPA, complete race, repeated three-boost chain or any physical performance,
+audio, thermal, lifecycle or update-persistence result.

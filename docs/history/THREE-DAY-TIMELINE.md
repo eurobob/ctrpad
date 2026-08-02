@@ -24,11 +24,9 @@ adds a complete durable commit ledger.
   retained a timestamp. Work between durable checkpoints is described as an
   interval rather than assigned an invented minute.
 - The commit ledger contains every campaign commit through bounded-control
-  main publication `a1d51f021`: 199 commits. The later publication-record
-  commit remains visible in ordinary Git history. Commands, temporary paths,
-  hashes, rejected experiments and individual test results are intentionally
-  not duplicated
-  194 times here;
+  publication-record main merge `0fee3da33`: 201 commits. Commands, temporary
+  paths, hashes, rejected experiments and individual test results are
+  intentionally not duplicated for every commit;
   they remain in the linked engineering journal and parity reports.
 
 ## Time accounting
@@ -79,6 +77,8 @@ adds a complete durable commit ledger.
 | Bounded-control clean acceptance reading | 2026-08-02 00:20:53 | Exact Simulator/iPhoneOS/macOS builds, sole-Simulator update/persistence/visual/log evidence and a final serialized 25/25 suite passed; active goal time reached 3 days, 8 hours, 57 minutes, 39 seconds. |
 | Bounded-control history audit | 2026-08-02 00:28:34 | Seven timestamp/history/parity documents reconciled the live route, rejected attempts, hashes and still-open physical gates; active goal time reached 3 days, 9 hours, 5 minutes, 10 seconds. |
 | Bounded-control main publication | 2026-08-02 00:30:55 | PR #22 merged its audited two-commit/eight-file head as `a1d51f021`; ancestry and refs passed, and active goal time reached 3 days, 9 hours, 7 minutes, 31 seconds. |
+| Bounded-control publication record | 2026-08-02 00:32:27 | PR #23 merged commit `cc51f003d` as final-main `0fee3da33`, making the PR #22 merge itself durable in repository history. |
+| Simulator performance handoff reading | 2026-08-02 01:24:27 | A one-Simulator touch route, exact log/screenshot audit, three-second sample and host-load inventory separated coherent gameplay from Apple Software Renderer/host contention; active goal time reached 3 days, 10 hours and 48 seconds. |
 
 ## Executive chronology
 
@@ -196,6 +196,22 @@ adds a complete durable commit ledger.
 Full source citations, hashes, input intervals, rejected routes and the exact
 open boundary are in
 [`../parity/2026-08-02-ios-bounded-accessible-race-controls.md`](../parity/2026-08-02-ios-bounded-accessible-race-controls.md).
+
+### 2026-08-02 — Simulator root-cause audit and device handoff
+
+| Time | Durable event | Result |
+| --- | --- | --- |
+| 00:32 | Bounded-control history merged through PR #23 | Remote `main` reached `0fee3da33`; branch implementation/history was recoverable before the resumed run. |
+| 00:57-01:15 | Exact implementation relaunched and driven from retail presentation into Time Trial / Crash Cove | Copyright, menus, character, track, kart, HUD, minimap and overlay rendered; touch edges reached the retail poll; save identity survived the controlled lifecycle. |
+| 01:15-01:18 | First failed race paused and restarted through production touch | The run remained `LAP 1/3`; failure was retained rather than promoted. Restart, track presentation and green-light start were visually accepted. |
+| 01:18-01:22 | Bounded restart segment, runtime scan and live process sample | Race speed fell to about 4.32-5.09 FPS; targeted fault scan stayed empty; about 70% of main-thread samples were beneath ordered draw submission into Apple's software GL rasterizer. |
+| 01:20 | Host-load snapshot | Eight logical CPUs carried load averages `88.64 50.16 32.89` with CTRPad plus substantial WindowServer, Codex, File Provider, Docker/VM and CrossOver work. |
+| 01:22 | Exact app-only termination | CTRPad stopped; the sole Simulator remained and no user process was killed. |
+| 01:24 | Handoff decision | Publish the exact source and measure the physical iPad before another renderer rewrite; signed/device/race/drift/performance/lifecycle/save gates remain open. |
+
+Full hashes, call stacks, claim boundaries and the other-Mac execution route are
+in
+[`../parity/2026-08-02-simulator-performance-handoff.md`](../parity/2026-08-02-simulator-performance-handoff.md).
 
 ## Complete durable commit ledger
 
@@ -404,6 +420,8 @@ the engineering journal.
 2026-08-02 00:00:58  c56162f68  Add bounded accessible control actions
 2026-08-02 00:29:07  7f9f68b2e  Document bounded race-control checkpoint
 2026-08-02 00:30:31  a1d51f021  Merge pull request #22 from chrissotraidis/codex/simulator-performance-next
+2026-08-02 00:31:52  cc51f003d  Record bounded control publication
+2026-08-02 00:32:26  0fee3da33  Merge pull request #23 from chrissotraidis/codex/simulator-performance-next
 ```
 
 ## What the process actually did
@@ -471,3 +489,12 @@ three Apple products, 25/25 tests, exact one-Simulator visual/input/reset/log
 evidence and a matching unsigned IPA/source pair. It still did not add Apple
 credentials, a physical device, physical multi-touch or a complete on-device
 race, so the definition-of-done boundary is unchanged.
+
+At 01:24:27 CDT on 2026-08-02, the resumed one-Simulator audit reached 295,248
+seconds of active goal time: 3 days, 10 hours and 48 seconds. The exact app
+again rendered coherent retail-derived graphics and consumed production touch,
+but a second attempted race stayed on lap one. Runtime identity, FPS history,
+an independent live process sample and host load all attribute the visible
+slow motion to Apple Software Renderer draw submission compounded by extreme
+host oversubscription. The source is ready for a physical-iPad handoff; no
+signed or hardware result is implied.
