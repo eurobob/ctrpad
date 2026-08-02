@@ -49,6 +49,18 @@ global_variable int s_pinnedVramDisplayH = 0;
 #endif
 global_variable int s_fpsFrameCount = 0;
 global_variable u64 s_fpsLastCounter = 0;
+global_variable u64 s_fpsPreviousCounter = 0;
+global_variable u64 s_fpsFrameDurations[NATIVE_FPS_REPORT_FRAME_WINDOW];
+
+struct NativeFrameStats
+{
+	f64 meanMilliseconds;
+	f64 medianMilliseconds;
+	f64 p95Milliseconds;
+	f64 p99Milliseconds;
+	f64 maxMilliseconds;
+	f64 framesPerSecond;
+};
 
 enum NativeLifecyclePhase
 {
@@ -80,6 +92,65 @@ global_variable struct NativeLifecycleStatus s_lifecycleStatus = {NATIVE_LIFECYC
 global_variable int s_lifecycleEventWatchInstalled = 0;
 
 internal void Native_RebaseVBlankClock(void);
+
+internal void NativeFrameStats_Reset(void)
+{
+	s_fpsFrameCount = 0;
+	s_fpsLastCounter = 0;
+	s_fpsPreviousCounter = 0;
+}
+
+internal int NativeFrameStats_CompareCounters(const void *left, const void *right)
+{
+	const u64 leftValue = *(const u64 *)left;
+	const u64 rightValue = *(const u64 *)right;
+
+	return (leftValue > rightValue) - (leftValue < rightValue);
+}
+
+internal int NativeFrameStats_PercentileIndex(int sampleCount, int percentile)
+{
+	return (((sampleCount * percentile) + 99) / 100) - 1;
+}
+
+internal int NativeFrameStats_Calculate(const u64 *durations, int sampleCount, u64 frequency, struct NativeFrameStats *stats)
+{
+	u64 sortedDurations[NATIVE_FPS_REPORT_FRAME_WINDOW];
+	f64 totalTicks = 0.0;
+	f64 medianTicks;
+	f64 millisecondsPerTick;
+
+	if ((durations == NULL) || (stats == NULL) || (sampleCount <= 0) ||
+	    (sampleCount > NATIVE_FPS_REPORT_FRAME_WINDOW) || (frequency == 0))
+	{
+		return 0;
+	}
+
+	memcpy(sortedDurations, durations, (size_t)sampleCount * sizeof(sortedDurations[0]));
+	qsort(sortedDurations, (size_t)sampleCount, sizeof(sortedDurations[0]), NativeFrameStats_CompareCounters);
+	for (int sampleIndex = 0; sampleIndex < sampleCount; sampleIndex++)
+	{
+		totalTicks += (f64)sortedDurations[sampleIndex];
+	}
+
+	if ((sampleCount & 1) != 0)
+	{
+		medianTicks = (f64)sortedDurations[sampleCount / 2];
+	}
+	else
+	{
+		medianTicks = ((f64)sortedDurations[(sampleCount / 2) - 1] + (f64)sortedDurations[sampleCount / 2]) * 0.5;
+	}
+
+	millisecondsPerTick = 1000.0 / (f64)frequency;
+	stats->meanMilliseconds = (totalTicks / (f64)sampleCount) * millisecondsPerTick;
+	stats->medianMilliseconds = medianTicks * millisecondsPerTick;
+	stats->p95Milliseconds = (f64)sortedDurations[NativeFrameStats_PercentileIndex(sampleCount, 95)] * millisecondsPerTick;
+	stats->p99Milliseconds = (f64)sortedDurations[NativeFrameStats_PercentileIndex(sampleCount, 99)] * millisecondsPerTick;
+	stats->maxMilliseconds = (f64)sortedDurations[sampleCount - 1] * millisecondsPerTick;
+	stats->framesPerSecond = stats->meanMilliseconds > 0.0 ? 1000.0 / stats->meanMilliseconds : 0.0;
+	return 1;
+}
 
 internal const char *NativeLifecycle_PhaseName(enum NativeLifecyclePhase phase)
 {
@@ -226,8 +297,7 @@ internal void NativeLifecycle_ApplyEvent(Uint32 eventType)
 	if (actions.rebaseVBlankClock != 0)
 	{
 		Native_RebaseVBlankClock();
-		s_fpsFrameCount = 0;
-		s_fpsLastCounter = 0;
+		NativeFrameStats_Reset();
 	}
 	if ((actions.resumeOutput != 0) && !NativeAudio_ResumeOutput())
 	{
@@ -270,10 +340,21 @@ internal void Platform_CalcFPS(void)
 	if (s_fpsLastCounter == 0)
 	{
 		s_fpsLastCounter = now;
+		s_fpsPreviousCounter = now;
 		s_fpsFrameCount = 0;
 		return;
 	}
 
+	if (now <= s_fpsPreviousCounter)
+	{
+		NativeFrameStats_Reset();
+		s_fpsLastCounter = now;
+		s_fpsPreviousCounter = now;
+		return;
+	}
+
+	s_fpsFrameDurations[s_fpsFrameCount] = now - s_fpsPreviousCounter;
+	s_fpsPreviousCounter = now;
 	s_fpsFrameCount++;
 	if (s_fpsFrameCount < NATIVE_FPS_REPORT_FRAME_WINDOW)
 	{
@@ -282,14 +363,22 @@ internal void Platform_CalcFPS(void)
 
 	if (now > s_fpsLastCounter)
 	{
+		struct NativeFrameStats stats;
 		const f64 elapsedSeconds = (f64)(now - s_fpsLastCounter) / (f64)freq;
 		const f64 fps = (f64)s_fpsFrameCount / elapsedSeconds;
 
 		Platform_Log("[CTR Native] FPS: %.2f (last %d frames)\n", fps, s_fpsFrameCount);
+		if (NativeFrameStats_Calculate(s_fpsFrameDurations, s_fpsFrameCount, freq, &stats))
+		{
+			Platform_Log("[CTR FrameStats] frames=%d mean_ms=%.3f median_ms=%.3f p95_ms=%.3f p99_ms=%.3f max_ms=%.3f fps=%.2f\n",
+			             s_fpsFrameCount, stats.meanMilliseconds, stats.medianMilliseconds, stats.p95Milliseconds,
+			             stats.p99Milliseconds, stats.maxMilliseconds, stats.framesPerSecond);
+		}
 	}
 
-	s_fpsFrameCount = 0;
+	NativeFrameStats_Reset();
 	s_fpsLastCounter = now;
+	s_fpsPreviousCounter = now;
 #endif
 }
 
@@ -1203,5 +1292,38 @@ int Platform_RunLifecycleSelfTest(void)
 	s_nextVBlankCounter = savedNextVBlankCounter;
 	s_vblankRemainder = savedVBlankRemainder;
 	printf("[CTR Lifecycle] self-test passed: background=idempotent foreground=rebase quit=cooperative audio=paired low-memory=flush\n");
+	return 0;
+}
+
+int Platform_RunFrameStatsSelfTest(void)
+{
+	const u64 oddDurations[] = {1, 2, 3, 4, 100};
+	const u64 evenDurations[] = {4, 1, 3, 2};
+	struct NativeFrameStats stats;
+
+	if (!NativeFrameStats_Calculate(oddDurations, 5, 1000, &stats) || (stats.meanMilliseconds != 22.0) ||
+	    (stats.medianMilliseconds != 3.0) || (stats.p95Milliseconds != 100.0) || (stats.p99Milliseconds != 100.0) ||
+	    (stats.maxMilliseconds != 100.0) || (oddDurations[0] != 1) || (oddDurations[4] != 100))
+	{
+		fprintf(stderr, "[CTR FrameStats] self-test failed: odd nearest-rank percentiles\n");
+		return 1;
+	}
+
+	if (!NativeFrameStats_Calculate(evenDurations, 4, 1000, &stats) || (stats.meanMilliseconds != 2.5) ||
+	    (stats.medianMilliseconds != 2.5) || (stats.p95Milliseconds != 4.0) || (stats.p99Milliseconds != 4.0) ||
+	    (stats.maxMilliseconds != 4.0))
+	{
+		fprintf(stderr, "[CTR FrameStats] self-test failed: even median\n");
+		return 1;
+	}
+
+	if (NativeFrameStats_Calculate(NULL, 4, 1000, &stats) || NativeFrameStats_Calculate(evenDurations, 0, 1000, &stats) ||
+	    NativeFrameStats_Calculate(evenDurations, 4, 0, &stats))
+	{
+		fprintf(stderr, "[CTR FrameStats] self-test failed: invalid input\n");
+		return 1;
+	}
+
+	printf("[CTR FrameStats] self-test passed: mean=checked median=odd+even p95=nearest-rank p99=nearest-rank input=immutable\n");
 	return 0;
 }

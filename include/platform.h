@@ -33,6 +33,7 @@ void Platform_InputAcknowledgeRetailPoll(void);
 int Platform_StartDisplayLoop(void (*callback)(void *), void *userdata);
 void Platform_StopDisplayLoop(void);
 int Platform_RunLifecycleSelfTest(void);
+int Platform_RunFrameStatsSelfTest(void);
 
 #if defined(CTR_NATIVE)
 int NikoGetEnterKey(void);

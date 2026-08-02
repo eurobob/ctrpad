@@ -122,15 +122,19 @@ Observed issue/timestamps:
 
 Simulator FPS is not evidence here. State the scene, measurement duration and
 tool or log source. Do not replace missing device telemetry with visual feel.
+Use `frame-stats-rows.txt` for the app's 120-frame wall-cadence windows and
+`device-state-rows.txt` for thermal/Low Power/battery context. Separate loading
+or transition windows from sustained race windows; a zero-row file is missing
+evidence, not a pass. p95/p99 use the nearest-rank definition.
 
 | Metric | Exact observation |
 | --- | --- |
 | Track/scene | `<value>` |
 | Measurement duration | `<value>` |
-| Mean/median/p95 frame time or FPS | `<value or not measured>` |
+| Sustained mean/median/p95/p99/max frame time and FPS | `<value or not measured>` |
 | Visible pacing stalls | `<count/description>` |
-| Thermal state or surface observation | `<value>` |
-| Battery/energy observation | `<value or not measured>` |
+| Thermal state transitions and surface observation | `<value>` |
+| Low Power Mode and battery/energy observation | `<value or not measured>` |
 
 ## Save and update persistence
 

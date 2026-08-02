@@ -3478,3 +3478,52 @@ PR #24 merged at 01:39:55 CDT as `8ed2ce98a9bb...`. A fresh fetch proved
 `d44c5b0b0` is an ancestor of remote `main`. At 01:40:23, active goal time was
 296,214 seconds: 3 days, 10 hours, 16 minutes and 54 seconds. Source/history
 publication is complete; Apple signing and physical acceptance remain open.
+
+### 2026-08-02 01:46-02:08 CDT — Targeted physical-device observability
+
+**Completed**
+
+- Reconfirmed remote `main` `83a618139` contains exact pushed head
+  `008bfe4d1` as a merge parent. GitHub's compare API reports nothing missing;
+  PR #25 metadata remains stale/open after the earlier 502, so no duplicate
+  merge was issued.
+- Added iOS 120-frame wall-cadence rows containing
+  mean/median/nearest-rank p95/p99/maximum and FPS while preserving the prior
+  average-FPS line.
+- Added main-queue iOS startup/change rows for thermal state, Low Power Mode,
+  battery state and percentage, with observer cleanup and restoration of the
+  prior battery-monitoring setting.
+- Extended physical collection to retain frame, device, campaign and save row
+  counts. Updated the acceptance template, install guide, roadmap, decision log
+  and focused parity evidence.
+- Added a deterministic frame-statistics self-test. macOS ARM64 built with 32
+  established warnings and zero errors; serialized CTest passed 26/26 in
+  48.58 seconds.
+- Retained the expected rejection when the existing iPhoneOS cache's clean
+  source identity did not match the new checkout head. A fresh temporary
+  iPhoneOS build then compiled all 247 steps and linked thin ARM64 iOS 15.0
+  with 32 established warnings and zero errors.
+- Incrementally rebuilt and guarded-update-installed the dirty development
+  Simulator app on the sole booted iPad. Live logs separated an 11.7-second
+  startup/transition maximum from a later 55.68-FPS steady window, emitted
+  nominal/off/unknown Simulator device context, and returned zero campaign
+  fault rows.
+- Stopped CTRPad after the bounded check. Slot-zero inode/size/mtime/hash stayed
+  `111222179/6016/1785525736/6a01b0f5...19a3`; exactly one Simulator remained
+  booted.
+
+**Time**
+
+At 02:08:17 CDT, active goal time was 297,897 seconds: 3 days, 10 hours,
+44 minutes and 57 seconds. This is Codex goal time, not uninterrupted compute
+or person-hours.
+
+**Open boundary**
+
+The telemetry is frozen as clean implementation commit `2bfa532074eb`. Its
+exact macOS/iPhoneOS rebuilds pass, serialized CTest passes 26/26 in 27.98
+seconds, and checksum-verified unsigned IPA/source handoff artifacts pass at
+`e47db84e...44f` and `f4834241...a431`. Publication to GitHub `main` is next.
+Apple signing, real-iPad cadence/thermal/audio/touch/lifecycle, a complete
+three-lap race, repeated three-boost drift and update persistence remain open.
+Exact evidence is in `docs/parity/2026-08-02-ios-device-observability.md`.

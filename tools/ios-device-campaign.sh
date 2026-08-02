@@ -516,6 +516,10 @@ case "$command_name" in
             >"$collection_dir/targeted-fault-scan.txt" || true
         rg -n --glob 'Crash Team Racing.log*' '\[CTR Native\] FPS:' \
             "$collection_dir/app-support" >"$collection_dir/fps-rows.txt" || true
+        rg -n --glob 'Crash Team Racing.log*' '\[CTR FrameStats\]' \
+            "$collection_dir/app-support" >"$collection_dir/frame-stats-rows.txt" || true
+        rg -n --glob 'Crash Team Racing.log*' '\[CTR Device\]' \
+            "$collection_dir/app-support" >"$collection_dir/device-state-rows.txt" || true
         rg -n --glob 'Crash Team Racing.log*' \
             '\[CTR (Session|Input|Touch|Lifecycle|Import)\]' \
             "$collection_dir/app-support" >"$collection_dir/campaign-rows.txt" || true
@@ -535,6 +539,10 @@ case "$command_name" in
             printf 'APP_SUPPORT=%s\n' "$collection_dir/app-support"
             printf 'TARGETED_FAULT_ROWS=%s\n' "$(awk 'END { print NR + 0 }' "$collection_dir/targeted-fault-scan.txt")"
             printf 'FPS_ROWS=%s\n' "$(awk 'END { print NR + 0 }' "$collection_dir/fps-rows.txt")"
+            printf 'FRAME_STATS_ROWS=%s\n' "$(awk 'END { print NR + 0 }' "$collection_dir/frame-stats-rows.txt")"
+            printf 'DEVICE_STATE_ROWS=%s\n' "$(awk 'END { print NR + 0 }' "$collection_dir/device-state-rows.txt")"
+            printf 'CAMPAIGN_ROWS=%s\n' "$(awk 'END { print NR + 0 }' "$collection_dir/campaign-rows.txt")"
+            printf 'SAVE_HASH_ROWS=%s\n' "$(awk 'END { print NR + 0 }' "$collection_dir/save-sha256.txt")"
         } >"$collection_dir/collect-manifest.txt"
         printf 'DEVICE_EVIDENCE_COLLECTED=%s\n' "$collection_dir"
         ;;

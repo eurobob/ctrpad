@@ -1727,3 +1727,38 @@ at `67ec61bf...1c34e5`, and its 3,267-member matching source archive passed at
 `da8af630...fff3a3`. Both artifacts are retail-free and ignored. GitHub main
 publication completed through PR #24 as `8ed2ce98a9bb`; step 1 is complete and
 steps 2-6 remain open.
+
+## 2026-08-02 physical-device observability gate
+
+The Simulator root-cause handoff exposed one missing prerequisite for a useful
+hardware decision: average FPS alone could not distinguish a transition stall
+from sustained pacing and the device bundle did not preserve thermal or Low
+Power state. The bounded telemetry branch now records 120-frame
+mean/median/nearest-rank p95/p99/max wall cadence plus iOS thermal, Low Power
+and battery context, without touching gameplay or renderer behavior.
+
+macOS ARM64 builds with the established 32 warnings and zero errors; the
+serialized suite passes 26/26. Fresh iPhoneOS and incremental iPhoneSimulator
+builds also pass with 32 established warnings and zero errors. A dirty
+one-Simulator runtime proof emitted both state and frame-stat rows, separated a
+single 11.7-second transition stall from later 55.68-FPS steady presentation,
+returned zero campaign-fault rows and preserved the exact slot-zero tuple.
+
+The dependency order is now sharper:
+
+1. publish the telemetry source and rebuild/sign that exact clean commit;
+2. collect multiple named-scene 120-frame windows on the target iPad;
+3. finish the physical touch/race/audio/lifecycle/save-update gates; and
+4. only if physical cadence is unacceptable, profile and optimize the measured
+   device draw path under the accepted pixel/parity gates.
+
+Full implementation, timestamps, metric definitions, exact hashes and rejected
+claims are in `docs/parity/2026-08-02-ios-device-observability.md`.
+
+Implementation commit `2bfa532074eb` is now exact-clean validated: macOS and
+iPhoneOS builds each complete with 32 established warnings and zero errors,
+and serialized CTest passes 26/26 in 27.98 seconds. Its ignored seven-member
+unsigned IPA and 3,270-member corresponding-source archive pass at
+`e47db84e...44f` and `f4834241...a431`, with full identity, distribution
+resources and retail exclusion verified. GitHub publication remains the only
+local step before the physical-device dependency boundary.

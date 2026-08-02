@@ -224,13 +224,18 @@ evidence contains a device identifier and user save data, so the tool permits
 in-repository output only under a gitignored path such as `dist/`; review and
 redact it before sharing. Collection first requires the successful matching
 prepare manifest and exact device/bundle values, then writes targeted-fault,
-FPS, campaign-event and save-hash summaries beside the versioned CoreDevice
-files. Collection also requires an exact installed-app result, records its
+FPS, frame-distribution, device-state, campaign-event and save-hash summaries
+beside the versioned CoreDevice files. `frame-stats-rows.txt` retains each
+120-frame mean/median/nearest-rank p95/p99/maximum wall-cadence window, while
+`device-state-rows.txt` retains startup and change events for thermal state,
+Low Power Mode and battery context. Zero rows mean missing evidence, not a
+pass. Collection also requires an exact installed-app result, records its
 observed version/build, and validates the `devicectl.device.copy.from` success
 envelope before claiming collection success. Copy
 `docs/templates/IOS-DEVICE-ACCEPTANCE.md` into a dated `docs/parity/` report and
-fill every result from observation. The script cannot certify human touch
-ergonomics, a complete race, audio quality, sustained cadence, thermals, Files
+fill every result from observation. The logs measure sustained cadence and
+system thermal/power states but cannot certify human touch ergonomics, a
+complete race, audio quality, enclosure temperature, energy consumption, Files
 behavior or update persistence automatically.
 
 ## Install an exact Simulator build
