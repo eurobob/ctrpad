@@ -783,7 +783,7 @@ static CGFloat CTRPadTouch_OpacityForChoice(CTRPadTouchOpacity choice)
 	UIButton *triangle = [self buttonWithTitle:@"VIEW\n△" mask:PLATFORM_INPUT_TOUCH_TRIANGLE color:[UIColor colorWithRed:0.08 green:0.68 blue:0.32 alpha:1.0]];
 	UIButton *leftDrift = [self buttonWithTitle:@"L DRIFT / BOOST" mask:PLATFORM_INPUT_TOUCH_L1 color:[UIColor colorWithRed:0.94 green:0.59 blue:0.10 alpha:1.0]];
 	UIButton *rightDrift = [self buttonWithTitle:@"R DRIFT / BOOST" mask:PLATFORM_INPUT_TOUCH_R1 color:[UIColor colorWithRed:0.94 green:0.59 blue:0.10 alpha:1.0]];
-	UIButton *start = [self buttonWithTitle:@"PAUSE" mask:PLATFORM_INPUT_TOUCH_START color:[UIColor colorWithWhite:0.08 alpha:1.0]];
+	UIButton *start = [self buttonWithTitle:@"START\nPAUSE" mask:PLATFORM_INPUT_TOUCH_START color:[UIColor colorWithWhite:0.08 alpha:1.0]];
 	UIButton *select = [self buttonWithTitle:@"SELECT" mask:PLATFORM_INPUT_TOUCH_SELECT color:[UIColor colorWithWhite:0.08 alpha:1.0]];
 	UIButton *settings = [self utilityButtonWithTitle:@"CONTROLS" action:@selector(presentTouchSettings)];
 	UIButton *disc = [self utilityButtonWithTitle:@"CHANGE DISC" action:@selector(presentDiscReselectionConfirmation)];
@@ -795,6 +795,7 @@ static CGFloat CTRPadTouch_OpacityForChoice(CTRPadTouchOpacity choice)
 	leftDrift.accessibilityIdentifier = @"ctrpad.touch.l1";
 	rightDrift.accessibilityIdentifier = @"ctrpad.touch.r1";
 	start.accessibilityIdentifier = @"ctrpad.touch.start";
+	start.accessibilityLabel = @"Start or pause";
 	select.accessibilityIdentifier = @"ctrpad.touch.select";
 	settings.accessibilityIdentifier = @"ctrpad.touch.settings";
 	settings.accessibilityLabel = @"Configure touch controls";
