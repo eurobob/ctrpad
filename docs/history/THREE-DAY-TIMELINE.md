@@ -23,10 +23,10 @@ adds a complete durable commit ledger.
 - Runtime observations are called exact only where the journal, log or report
   retained a timestamp. Work between durable checkpoints is described as an
   interval rather than assigned an invented minute.
-- The commit ledger contains every commit reachable from the working branch
-  between the first viability document and the last pre-timeline assessment:
-  151 commits. Commands, temporary paths, hashes, rejected experiments and
-  individual test results are intentionally not duplicated 151 times here;
+- The commit ledger contains every campaign commit through published head
+  `890ba3f4b`: 176 commits. Commands, temporary paths, hashes, rejected
+  experiments and individual test results are intentionally not duplicated
+  176 times here;
   they remain in the linked engineering journal and parity reports.
 
 ## Time accounting
@@ -56,6 +56,7 @@ adds a complete durable commit ledger.
 | Entitlement-authorization audit | 2026-08-01 18:48:30 | Active goal time reached 3 days, 3 hours, 25 minutes, 19 seconds after replacing suffix-only App ID validation with exact profile/signature authorization and expanding the suite to 23 tests. |
 | Entitlement candidate repeat | 2026-08-01 18:51:23 | Active goal time reached 3 days, 3 hours, 28 minutes, 9 seconds after Boolean-type/final-wildcard hardening and a final 23/23 repeat. |
 | Entitlement main publication | 2026-08-01 18:55:55 | PR #12 merged the exact authorization checkpoint into `main` as `d9e3c5944`; its 3,258-member final-main source archive and extracted test passed at `760dcee6...68d0`, and active goal time reached 3 days, 3 hours, 32 minutes, 42 seconds. |
+| Structured CoreDevice/Simulator recheck | 2026-08-01 19:16:58 | Active goal time reached 3 days, 3 hours, 53 minutes, 30 seconds after closing arbitrary-text `devicectl` evidence and exact-installing the current one-Simulator build. |
 
 ## Executive chronology
 
@@ -127,6 +128,8 @@ adds a complete durable commit ledger.
 | 18:33–18:36 | Apple trust GitHub publication | Committed the exact 14-file checkpoint, verified its source archive, pushed the branch, recorded the private-repository connector 404, opened/audited PR #10 with authenticated CLI fallback, merged the exact head into `main`, then verified the 3,255-member final-main source archive and its exclusion scan. |
 | 18:40–18:51 | Signed-entitlement authorization | Audited Apple's install-time rules, found suffix-only App ID comparison, added exact prefix/team/keychain/debugger/minimal-entitlement binding shared by packaging and device preflight, passed two positive/seven negative fixtures plus two 23/23 CTest runs, and retained deterministic unsigned packaging; real signing/device execution remains open. |
 | 18:52–18:55 | Entitlement GitHub publication | Committed and packaged the 16-file checkpoint, used authenticated CLI fallback after the connector's private-repository 404, audited/merged exact PR #12, then verified the final-main source archive, exclusion scan and extracted-source entitlement test. |
+| 18:56–18:57 | Entitlement history publication | Recorded the accepted merge/source boundary and merged it through PR #13 as `890ba3f4b`, aligning local branch, remote branch and `main`. |
+| 18:59–19:17 | Structured CoreDevice evidence and current-build screen | Reproduced the installed-app arbitrary-text false positive; replaced it with versioned command/result validation; retained the initial JSON-parser failure; passed four positive/nine adversarial fixtures and 24/24 tests; then rebuilt, exact-installed and visibly opened the main menu on the sole Simulator with retail/save identity preserved. |
 
 ## Complete durable commit ledger
 
@@ -286,7 +289,32 @@ the engineering journal.
 2026-08-01 15:00:47  32e82d8da  Record main publication boundary
 2026-08-01 15:18:42  d5772375f  Rebaseline release acceptance on physical iPad
 2026-08-01 15:44:56  cd41e62c5  Document clean Apple release smoke
+2026-08-01 15:45:38  9b4a175f5  Merge pull request #2 from chrissotraidis/codex/simulator-performance-next
 2026-08-01 15:54:52  79152b7b5  Document UIKit self-test teardown boundary
+2026-08-01 15:55:44  cd4804186  Merge pull request #3 from chrissotraidis/codex/simulator-performance-next
+2026-08-01 16:39:06  f6834b78e  Document complete timestamped Apple port timeline
+2026-08-01 16:40:52  03b4eddad  Merge pull request #4 from chrissotraidis/codex/simulator-performance-next
+2026-08-01 17:16:59  b80d7b5af  Correct stale Simulator handoff evidence
+2026-08-01 17:18:21  89091839d  Merge pull request #5 from chrissotraidis/codex/simulator-performance-next
+2026-08-01 17:32:23  67b4c6276  Enforce exact Simulator install identity
+2026-08-01 17:33:38  f9b5d4fa0  Document installer source package proof
+2026-08-01 17:35:35  e2dfe9709  Merge pull request #6 from chrissotraidis/codex/simulator-performance-next
+2026-08-01 17:59:44  4349bae8d  Add physical iPad campaign handoff
+2026-08-01 18:00:56  e7af0bc32  Document physical handoff package proof
+2026-08-01 18:02:32  0458baff2  Record physical handoff publication
+2026-08-01 18:02:58  a19c1a5ef  Merge pull request #7 from chrissotraidis/codex/simulator-performance-next
+2026-08-01 18:04:01  cc332f0db  Record physical handoff main merge
+2026-08-01 18:04:38  7087cc6e0  Merge pull request #8 from chrissotraidis/codex/simulator-performance-next
+2026-08-01 18:07:25  47edfdfb1  Close physical handoff publication record
+2026-08-01 18:07:50  7a31a8fdb  Merge pull request #9 from chrissotraidis/codex/simulator-performance-next
+2026-08-01 18:33:14  5af382409  Harden iOS signing trust preflight
+2026-08-01 18:35:26  8f3b2be37  Merge pull request #10 from chrissotraidis/codex/simulator-performance-next
+2026-08-01 18:37:33  0e1ac22be  Record Apple trust publication
+2026-08-01 18:38:15  d0d6e8058  Merge pull request #11 from chrissotraidis/codex/simulator-performance-next
+2026-08-01 18:52:18  c89bdfc23  Bind iOS entitlements to provisioning profiles
+2026-08-01 18:54:32  d9e3c5944  Merge pull request #12 from chrissotraidis/codex/simulator-performance-next
+2026-08-01 18:56:30  1ac3708bf  Record entitlement authorization publication
+2026-08-01 18:57:15  890ba3f4b  Merge pull request #13 from chrissotraidis/codex/simulator-performance-next
 ```
 
 ## What the process actually did
@@ -319,6 +347,10 @@ The final clean-smoke details, hashes and exact commands are in
 The holistic boundary is in [`RELEASE-REBASELINE.md`](RELEASE-REBASELINE.md),
 and the test-only UIKit warning assessment is in
 [`../parity/2026-08-01-ios-uikit-view-lifecycle.md`](../parity/2026-08-01-ios-uikit-view-lifecycle.md).
+The later physical handoff and structured CoreDevice claim audit are in
+[`../parity/2026-08-01-ios-physical-campaign-handoff.md`](../parity/2026-08-01-ios-physical-campaign-handoff.md)
+and
+[`../parity/2026-08-01-ios-devicectl-structured-evidence.md`](../parity/2026-08-01-ios-devicectl-structured-evidence.md).
 
 At the 15:56:54 boundary, local evidence included:
 

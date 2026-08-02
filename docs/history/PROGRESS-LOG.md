@@ -3145,3 +3145,26 @@ The final-main 3,258-member source archive passed checksum/exclusion and
 extracted-source tests at `760dcee6...68d0`. The 18:55:55 active-time reading
 was 271,962 seconds (3 days, 3 hours, 32 minutes, 42 seconds); real signing and
 physical acceptance remain open.
+
+### 2026-08-01 — Structured the physical CoreDevice result gate
+
+- Reproduced that the prior installed-app `grep` accepted a failed/empty result
+  merely because the requested bundle ID remained elsewhere in the JSON.
+- Added an error-free/versioned/command-specific envelope verifier plus exact
+  install, bundle/version/build, app URL, launched PID/executable and copy-from
+  checks. Success manifests are written only after every field verifies.
+- Retained the first `plutil -lint` JSON parsing failure and corrected it to
+  `plutil -p` before accepting the implementation.
+- Passed four positive and nine adversarial fixtures. A real no-device list
+  envelope passed; a real CoreDevice error 1000 app query was rejected without
+  a success manifest. The complete macOS suite passed 24/24 in 46.57 seconds.
+- Kept one Simulator, rebuilt with one low-priority job, installed the exact
+  isolated signature at `88b5e79f...400979`, preserved retail and slot-zero
+  save identity, launched PID 4571 and visibly reached the fully textured main
+  menu through the touch Gas control. The new log had zero targeted faults.
+
+At 19:16:58 CDT active goal time was 273,210 seconds: 3 days, 3 hours,
+53 minutes and 30 seconds. The signed profile/device gate remains unexecuted;
+this is stronger campaign evidence handling and current Simulator proof, not
+physical-iPad completion. Exact evidence is in
+`docs/parity/2026-08-01-ios-devicectl-structured-evidence.md`.

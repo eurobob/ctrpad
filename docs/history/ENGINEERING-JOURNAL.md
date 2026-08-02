@@ -14647,3 +14647,51 @@ members; sidecar, independent SHA-256 at `760dcee6...68d0`, forbidden-member
 scan and extracted-source test all passed. At 18:55:55, active goal time was
 271,962 seconds (3 days, 3 hours, 32 minutes, 42 seconds). Apple credentials
 and a physical device remained absent.
+
+## 2026-08-01 — Replaced arbitrary-text CoreDevice evidence
+
+After the entitlement history merged through PR #13 at 18:57:15 CDT as
+`890ba3f4be57`, the next audit followed the physical campaign into its supported
+`devicectl --json-output` files. The installed-app proof still used `grep -Fq`
+for the bundle ID across the entire JSON document. A real failed nonexistent-
+device app query retained the requested bundle text in `info.arguments`; the
+old grep therefore returned success even though the JSON contained CoreDevice
+error 1000, `outcome=failed` and no app result. A synthetic successful envelope
+with an empty `result.apps` array reproduced the same class through
+`matchingBundleIdentifier`.
+
+New `tools/verify-devicectl-json.sh` now checks the exact command type, success
+outcome, absence of an error object, tool/JSON versions and operation-specific
+result. Install requires one exact bundle/CTRPad app URL; installed-app requires
+one exact bundle plus nonempty version/build/app URL, with prepare pinning both
+versions; launch requires a positive PID and exact `CTRPad.app/CTRPad` URL.
+Every generic details/list/copy call also validates its command envelope. No
+manifest is written until validation passes, and tracked output is refused.
+
+The first self-test failed because this macOS `plutil -lint` rejects JSON at
+the opening brace. Replacing that parser step with `plutil -p` accepted valid
+JSON while retaining malformed-input failure. The completed fixture suite
+passed four positive and nine isolated negative cases, including the two
+bundle-text false positives, wrong command/bundle/version, duplicate app,
+wrong install bundle, zero PID and wrong executable. A real empty device list
+at `devicectl 518.33` / JSON version 3 passed the envelope at SHA-256
+`71bd029c...6c6d8c`; the real failed app query was rejected with no success
+manifest. An unsigned IPA still failed for no embedded profile before any
+device call.
+
+The complete macOS suite passed 24/24 in 46.57 seconds. At 19:10:02 CDT exactly
+one Simulator was booted, identities remained zero and CoreDevice still found
+no device. The iOS Simulator product was then rebuilt at nice 15 / one job and
+guarded-update-installed. The staged/installed executable matched at
+`88b5e79f...400979`; the 605,698,800-byte retail image and 6,016-byte save kept
+their exact inode/size/SHA-256 tuples; launch returned PID 4571. Computer Use
+observed current copyright, Naughty Dog and complete main-menu pixels with all
+touch controls; the Gas touch reached the retail poll. The current log had zero
+targeted faults and later settled near 7.8 FPS on Apple Software Renderer.
+
+At 19:16:58 CDT active goal time was 273,210 seconds: 3 days, 3 hours,
+53 minutes and 30 seconds. The earlier user-requested 3-day/50-minute boundary
+remains separately recorded at exactly 262,238 seconds. The structured evidence
+and visible Simulator route are accepted; signed physical execution and every
+hardware-only acceptance item remain open. Full detail is in
+`docs/parity/2026-08-01-ios-devicectl-structured-evidence.md`.

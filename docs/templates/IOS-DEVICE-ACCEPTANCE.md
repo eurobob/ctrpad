@@ -46,7 +46,11 @@ that are necessary to reproduce the conclusion.
 - [ ] The signed app contained GPL/install resources and no retail/runtime
       data.
 - [ ] `ios-device-campaign.sh prepare` completed without uninstalling CTRPad.
-- [ ] `devicectl` recorded the installed bundle and launched it in foreground.
+- [ ] Every retained `devicectl` result had the expected command type,
+      `outcome=success`, supported JSON/tool version and no error object.
+- [ ] The exact installed bundle, version, build and `CTRPad.app` URL verified;
+      a text search or empty app result was not treated as proof.
+- [ ] The exact `CTRPad.app/CTRPad` process launched with a positive PID.
 
 Exact command/output summary:
 
@@ -146,6 +150,8 @@ retail revalidation evidence: <value; do not commit retail data>
 | Check | Result |
 | --- | --- |
 | Current plus rotated CTRPad logs collected | `<value>` |
+| Structured installed-app result/version/build | `<value>` |
+| Structured app-container copy result | `<value>` |
 | `[ERROR]` / `[FATAL]` rows | `<count and disposition>` |
 | `[CTR AssetRef]` / visibility rows | `<count and disposition>` |
 | Import/save/lifecycle faults | `<count and disposition>` |

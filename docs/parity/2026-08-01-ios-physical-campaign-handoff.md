@@ -19,6 +19,13 @@ Files import, complete race, touch ergonomics, cadence, audio, thermal or update
 result is accepted here. The new workflow reduces ambiguity at that external
 boundary; it does not move the boundary by assertion.
 
+The later structural audit in
+`docs/parity/2026-08-01-ios-devicectl-structured-evidence.md` supersedes this
+report's original whole-file installed-app text check. Every CoreDevice command
+now requires an exact successful versioned envelope, and install/app/launch
+also require their exact result objects. The historical description below is
+retained to show what existed and why it changed.
+
 The work began from clean local branch head
 `f9b5d4fa0a3ed0baea7c55557edac984edeb53ab`. That head was already merged into
 GitHub `main` through PR #6 at

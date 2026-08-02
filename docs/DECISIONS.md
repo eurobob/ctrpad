@@ -756,3 +756,27 @@ fail without a success manifest. The normal macOS suite now passes 23/23 and
 two unsigned IPAs remain byte-identical. This is an offline authorization
 proof, not a real Apple-profile or iPad result. Exact evidence is in
 `docs/parity/2026-08-01-ios-entitlement-authorization.md`.
+
+## 2026-08-01 — Require structural CoreDevice success evidence
+
+**Decision:** accept a `devicectl` operation only after its file-based JSON has
+the exact command type, `outcome=success`, no error object and valid tool/JSON
+version. For install, installed-app and launch, also require the exact bundle,
+version/build, CTRPad app/executable URL and positive PID as applicable. Do not
+use arbitrary-text search as proof that an app exists.
+
+**Why:** CoreDevice echoes command arguments into its JSON. A failed request and
+an empty successful app result can therefore contain the requested bundle ID
+without an installed app. The old `grep -Fq` accepted both shapes. The local
+tool explicitly makes versioned `--json-output` the supported automation
+surface, so the repository validates that structure instead of reducing it
+back to text.
+
+**Verification boundary:** four valid fixtures pass and nine isolated failed,
+empty, wrong-command/bundle/version/install/PID/executable mutations fail before
+a success manifest. A real no-device list envelope from `devicectl 518.33` /
+JSON version 3 passes; a real CoreDevice error 1000 app query is rejected. The
+full suite passes 24/24 and the exact one-Simulator rebuild visibly reaches the
+main menu with retail/save preservation. No signed physical result exists.
+Exact evidence is in
+`docs/parity/2026-08-01-ios-devicectl-structured-evidence.md`.

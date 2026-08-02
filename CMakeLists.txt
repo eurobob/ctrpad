@@ -412,5 +412,11 @@ if(BUILD_TESTING)
         set_tests_properties(ctr_ios_entitlement_binding PROPERTIES PASS_REGULAR_EXPRESSION
             "^IOS_ENTITLEMENT_BINDING_SELF_TEST=passed positives=2 negatives=7"
         )
+        add_test(NAME ctr_ios_devicectl_json
+            COMMAND "${CMAKE_CURRENT_SOURCE_DIR}/tools/test-devicectl-json.sh"
+        )
+        set_tests_properties(ctr_ios_devicectl_json PROPERTIES PASS_REGULAR_EXPRESSION
+            "^DEVICECTL_JSON_SELF_TEST=passed positives=4 negatives=9"
+        )
     endif()
 endif()

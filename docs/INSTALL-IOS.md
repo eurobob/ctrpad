@@ -181,9 +181,13 @@ launch without uninstalling:
 
 The helper saves `devicectl` 518-compatible versioned JSON and log files for
 device discovery, details, installation, installed-app lookup and launch. It
-hashes the signed packaged executable but does not claim it can read back the
-installed executable from iPadOS. It never calls `uninstall` and never copies
-the retail image to or from the Mac.
+structurally verifies the exact command type and success envelope, then requires
+the expected installed bundle/version/build and launched `CTRPad` process.
+Bundle text elsewhere in a failed or empty response is not sufficient. The
+verified remote app URL and positive process identifier are retained in the
+ignored manifest. It hashes the signed packaged executable but does not claim
+it can read back the installed executable from iPadOS. It never calls
+`uninstall` and never copies the retail image to or from the Mac.
 
 After the human touch/race/lifecycle test, collect CTRPad's rotating logs,
 diagnostics and saves:
@@ -202,7 +206,9 @@ in-repository output only under a gitignored path such as `dist/`; review and
 redact it before sharing. Collection first requires the successful matching
 prepare manifest and exact device/bundle values, then writes targeted-fault,
 FPS, campaign-event and save-hash summaries beside the versioned CoreDevice
-files. Copy
+files. Collection also requires an exact installed-app result, records its
+observed version/build, and validates the `devicectl.device.copy.from` success
+envelope before claiming collection success. Copy
 `docs/templates/IOS-DEVICE-ACCEPTANCE.md` into a dated `docs/parity/` report and
 fill every result from observation. The script cannot certify human touch
 ergonomics, a complete race, audio quality, sustained cadence, thermals, Files
