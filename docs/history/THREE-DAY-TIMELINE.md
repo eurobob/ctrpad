@@ -519,3 +519,30 @@ checks. GitHub protected head `d44c5b0b06c...` merged at 01:39:55 CDT as
 goal time was 296,214 seconds: 3 days, 10 hours, 16 minutes and 54 seconds.
 The complete handoff source is on remote `main`; physical acceptance is still
 open.
+
+## 2026-08-02 01:46-02:08 CDT — Measure before optimizing
+
+- Revalidated remote `main` `83a618139`: prior pushed head `008bfe4d1` is its
+  exact merge parent and GitHub compare reports nothing missing. PR #25's API
+  status stayed stale/open after the earlier 502; no duplicate merge was sent.
+- Identified a physical-campaign evidence gap: average FPS could not separate
+  stalls from sustained cadence, and no thermal/Low Power context was retained.
+- Added 120-frame mean/median/nearest-rank p95/p99/max wall cadence, iOS thermal/
+  power/battery change rows, lifecycle cleanup, collector integration and a
+  deterministic statistics self-test without changing game behavior.
+- macOS ARM64 built with 32 established warnings/zero errors; serialized CTest
+  passed 26/26 in 48.58 seconds.
+- Preserved an expected source-identity-cache configure rejection, then built a
+  fresh thin ARM64 iPhoneOS 15.0 product through 247 serialized steps with the
+  same 32 warnings/zero errors.
+- Rebuilt and guarded-update-installed the dirty development app on the sole
+  Simulator. Live telemetry separated an 11.7-second transition maximum from
+  a later 55.68-FPS steady window, reported zero campaign faults and preserved
+  the exact slot-zero tuple. CTRPad was stopped afterward; one Simulator stayed
+  booted.
+- At 02:08:17, active goal time was 297,897 seconds: 3 days, 10 hours,
+  44 minutes and 57 seconds.
+
+Focused evidence:
+[`../parity/2026-08-02-ios-device-observability.md`](../parity/2026-08-02-ios-device-observability.md).
+Clean publication and every signed/physical-iPad result remained open.

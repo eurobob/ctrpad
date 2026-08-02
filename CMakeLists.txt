@@ -220,6 +220,7 @@ endif()
 if(IOS)
     target_sources(ctr_native PRIVATE
         platform/apple/native_ios_import.m
+        platform/apple/native_ios_telemetry.m
         platform/apple/native_ios_touch.m
     )
     target_compile_options(ctr_native PRIVATE "$<$<COMPILE_LANGUAGE:OBJC>:-fobjc-arc>")
@@ -406,6 +407,10 @@ if(BUILD_TESTING)
     add_test(NAME ctr_native_lifecycle COMMAND $<TARGET_FILE:ctr_native> --self-test-lifecycle)
     set_tests_properties(ctr_native_lifecycle PROPERTIES PASS_REGULAR_EXPRESSION
         "^\\[CTR Lifecycle\\] self-test passed: background=idempotent foreground=rebase quit=cooperative audio=paired low-memory=flush"
+    )
+    add_test(NAME ctr_native_frame_stats COMMAND $<TARGET_FILE:ctr_native> --self-test-frame-stats)
+    set_tests_properties(ctr_native_frame_stats PROPERTIES PASS_REGULAR_EXPRESSION
+        "^\\[CTR FrameStats\\] self-test passed: mean=checked median=odd\\+even p95=nearest-rank p99=nearest-rank input=immutable"
     )
     add_test(NAME ctr_native_storage COMMAND $<TARGET_FILE:ctr_native> --self-test-storage)
     set_tests_properties(ctr_native_storage PROPERTIES PASS_REGULAR_EXPRESSION

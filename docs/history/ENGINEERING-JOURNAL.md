@@ -15421,3 +15421,112 @@ head is an ancestor of remote `main`. At 01:40:23, the goal API reported
 history, handoff commands and exact package proof are now on GitHub `main`.
 The unsigned local IPA remains under ignored `dist/`; signing and every
 physical-only result remain open.
+
+## 2026-08-02 01:46-02:08 CDT — Device telemetry before renderer work
+
+### Remote-main audit and decision
+
+The session began from new branch `codex/device-telemetry` at remote `main`
+`83a61813967a2a328acb8a063c3cd4f5ad59053d`. That merge commit has exact prior
+pushed head `008bfe4d1e9ad5815c9a2ffde1d8be0c2ace0348` as its second parent;
+`merge-base --is-ancestor` returned zero and GitHub compare reported `main`
+ahead with no missing head commit. PR #25's API record still said open with no
+merge commit after the earlier 502. Because content ancestry is definitive, a
+second merge request was deliberately not sent.
+
+The zoomed-out gap was not another known renderer optimization. Existing
+`Platform_CalcFPS` preserved only one mean over 120 iOS frames, and
+`ios-device-campaign.sh collect` saved only those FPS rows. The hardware plan
+required frame pacing and thermal evidence but provided neither stall
+distribution nor system power context. The bounded decision was to instrument
+that decision point before changing rendering code.
+
+### Implementation
+
+`platform/native_platform.c` now records successive end-frame counter deltas,
+calculates mean, even/odd median, nearest-rank p95/p99, maximum and derived FPS
+from a sorted copy, and resets a partial window when foregrounding rebases the
+VBlank clock. It retains the legacy FPS row and adds a structured
+`[CTR FrameStats]` row. `--self-test-frame-stats` covers odd/even medians,
+nearest-rank tails, immutable input and invalid arguments.
+
+New `platform/apple/native_ios_telemetry.m` logs initial and changed thermal,
+Low Power and battery context, flushes each state row, removes every observer
+on normal runtime/reselection shutdown, and restores the prior battery
+monitoring flag. It contains no device identifier. Runtime start/stop error
+paths were wired in `main.c`; CMake compiles the Objective-C bridge only for
+iOS.
+
+The physical collector now writes `frame-stats-rows.txt` and
+`device-state-rows.txt` and records frame/device/campaign/save counts. The
+acceptance template explicitly treats zero rows as missing evidence and asks
+testers to separate transition from sustained race windows.
+
+An attempted `clang-format -i` failed immediately because `clang-format` is
+not installed on `PATH`; it changed nothing. Manual style inspection,
+`git diff --check` and `bash -n tools/ios-device-campaign.sh` passed.
+
+### Build and self-test evidence
+
+The existing macOS ARM64 tree reconfigured at 01:51 and compiled at one
+low-priority job with the established 32 warnings and zero errors. Serialized
+CTest passed 26/26 in 48.58 seconds, including the new frame-statistics case.
+
+The first device-preset configure correctly stopped at:
+
+```text
+CTR_NATIVE_SOURCE_COMMIT does not match the source checkout commit.
+```
+
+Its build cache was deliberately pinned to prior clean source
+`daba106ae988487978547c20ce01aa0656ae2265`; the current checkout was a dirty
+new implementation at `83a618139`. The guard was retained. A fresh `mktemp`
+iPhoneOS build with no asserted clean commit then configured and compiled 247
+steps serially. At 02:01 it linked a thin ARM64, platform-iOS binary with
+minimum iOS 15.0 and SDK 26.5. `main.c`, import, telemetry and touch all
+compiled; result: 32 established warnings, zero errors. Configure/build/binary
+SHA-256 values were `f6064d5d...2113`, `201a017e...0f` and
+`aadc4e6d...22de`.
+
+The iPhoneSimulator tree rebuilt eight changed steps serially with the same
+warning/error result. Its configure/build logs hash to `874d7885...036e0f` and
+`33119ccd...6108`.
+
+### Bounded live Simulator proof
+
+Exactly one `CTRPad Import Validation` Simulator remained booted. CTRPad was
+stopped before the build. The guarded update installed a separately ad-hoc
+signed copy and proved staged/installed executable identity
+`0314710e1af42497a872fc90ca285597353db8023af9a6383d6ac3755fa2dd36`, then
+launched PID 99312. The log explicitly identified dirty development build
+`83a61813967a-dirty`; this was not treated as release evidence.
+
+At 07:05:07.581 UTC the first device row reported Simulator values
+`thermal=nominal low_power=off battery_state=unknown battery_percent=-1`.
+Completed windows then reported:
+
+```text
+07:05:25.252Z frames=120 mean_ms=114.612 median_ms=16.833
+               p95_ms=19.765 p99_ms=47.647 max_ms=11732.305 fps=8.73
+07:05:27.408Z frames=120 mean_ms=17.960 median_ms=17.008
+               p95_ms=26.954 p99_ms=30.689 max_ms=33.432 fps=55.68
+```
+
+The first window proves a single startup/transition stall is visible instead
+of disappearing into average FPS; the second demonstrates steady-window
+separation. Later windows also reflected rising host/render contention and are
+not a target-device performance claim.
+
+CTRPad was terminated by exact bundle ID immediately after the bounded check.
+The campaign fault regex returned zero. A deliberately broader grep returned
+five INFO lines saying shaders were compiling/ready; inspection rejected them
+as faults. The final runtime log hash was
+`eb3f18dfed78efd3fa26566f260209d2b837bb9a1e4cc50c40a7e2502acad618`.
+Slot-zero inode, size, mtime and hash remained `111222179`, `6016`,
+`1785525736` and `6a01b0f5...19a3`. No CTRPad process and only one booted
+Simulator remained.
+
+At 02:08:17 CDT, goal time was 297,897 seconds: 3 days, 10 hours, 44 minutes
+and 57 seconds. The exact implementation, metric definitions, hashes and open
+claims are in `docs/parity/2026-08-02-ios-device-observability.md`. Clean
+commit/publication and every physical-only acceptance item remained next.

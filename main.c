@@ -27,6 +27,7 @@
 #include "platform/native_guest_ref.h"
 #if defined(SDL_PLATFORM_IOS)
 #include "platform/native_ios_import.h"
+#include "platform/native_ios_telemetry.h"
 #include "platform/native_ios_touch.h"
 #endif
 #include "platform/native_log.h"
@@ -239,6 +240,11 @@ static int NativeArg_IsLifecycleSelfTest(const char *arg)
 	return (arg != NULL) && (strcmp(arg, "--self-test-lifecycle") == 0);
 }
 
+static int NativeArg_IsFrameStatsSelfTest(const char *arg)
+{
+	return (arg != NULL) && (strcmp(arg, "--self-test-frame-stats") == 0);
+}
+
 static int NativeArg_IsStorageSelfTest(const char *arg)
 {
 	return (arg != NULL) && (strcmp(arg, "--self-test-storage") == 0);
@@ -328,6 +334,7 @@ static void SDLCALL NativeIOS_DisplayIteration(void *userdata)
 	{
 		Platform_StopDisplayLoop();
 		NativeIOSTouch_End();
+		NativeIOSTelemetry_End();
 		Platform_Shutdown();
 	}
 }
@@ -457,9 +464,16 @@ static int NativeApp_StartRuntime(const struct NativeLaunchOptions *options)
 
 #if defined(SDL_PLATFORM_IOS)
 	s_nativeIOSDiscReselectionRequested = 0;
+	if (!NativeIOSTelemetry_Begin())
+	{
+		Platform_LogError("[CTR Device] Failed to start iOS runtime telemetry.\n");
+		Platform_Shutdown();
+		return NativeConsole_Return(1);
+	}
 	if (!Platform_StartDisplayLoop(NativeIOS_DisplayIteration, NULL))
 	{
 		Platform_LogError("[CTR Native] Failed to start iOS display loop: %s\n", SDL_GetError());
+		NativeIOSTelemetry_End();
 		Platform_Shutdown();
 		return NativeConsole_Return(1);
 	}
@@ -467,6 +481,7 @@ static int NativeApp_StartRuntime(const struct NativeLaunchOptions *options)
 	{
 		Platform_LogError("[CTR Touch] Failed to attach the iOS touch overlay.\n");
 		Platform_StopDisplayLoop();
+		NativeIOSTelemetry_End();
 		Platform_Shutdown();
 		return NativeConsole_Return(1);
 	}
@@ -559,6 +574,7 @@ static void NativeIOS_StopRuntimeForDiscReselection(void)
 	Platform_Log("[CTR Import] stopping the current game before disc re-selection\n");
 	Platform_StopDisplayLoop();
 	NativeIOSTouch_End();
+	NativeIOSTelemetry_End();
 	Platform_Shutdown();
 	NativeDiscImage_Shutdown();
 
@@ -648,6 +664,10 @@ int main(int argc, char *argv[])
 		if (NativeArg_IsLifecycleSelfTest(argv[argIndex]))
 		{
 			return Platform_RunLifecycleSelfTest();
+		}
+		if (NativeArg_IsFrameStatsSelfTest(argv[argIndex]))
+		{
+			return Platform_RunFrameStatsSelfTest();
 		}
 		if (NativeArg_IsStorageSelfTest(argv[argIndex]))
 		{

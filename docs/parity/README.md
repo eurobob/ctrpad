@@ -229,6 +229,11 @@ Current evidence and procedures:
   sample, eight-CPU host oversubscription, app-only termination and the
   decision to publish for target-iPad measurement before another renderer
   rewrite.
+- `2026-08-02-ios-device-observability.md` records the targeted decision to
+  measure before optimizing, 120-frame mean/median/p95/p99/max wall cadence,
+  iOS thermal/Low Power/battery-state events, collector integration,
+  deterministic percentile coverage, cross-SDK builds and a one-Simulator
+  live proof while keeping every physical-device result open.
 - `2026-07-31-macos-arm64-keyboard-tap.md` records the missing quick-tap root
   cause, historical one-snapshot press-edge transport, its later two-snapshot
   supersession, direct live PSX packet traces, and exact-commit

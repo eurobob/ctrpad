@@ -866,3 +866,29 @@ route stopped at `LAP 1/3`; physical multi-touch, a completed three-lap race,
 three-boost drift ergonomics, signing and hardware measurements remain open.
 Exact evidence is in
 `docs/parity/2026-08-02-ios-bounded-accessible-race-controls.md`.
+
+## 2026-08-02 — Measure physical cadence before another renderer change
+
+**Decision:** retain per-frame wall intervals and report 120-frame
+mean/median/nearest-rank p95/p99/maximum plus FPS on iOS. Log system thermal,
+Low Power Mode and battery context at startup and on changes. Preserve both row
+types in the ignored physical-device evidence bundle. Do not begin another GLES
+or Metal rewrite unless the same named scene is slow on target hardware.
+
+**Why:** a live Simulator sample already localized most main-thread time to
+software OpenGL triangle work while the eight-logical-CPU host was severely
+oversubscribed. The physical campaign previously retained only average FPS,
+which cannot distinguish one large transition stall from sustained slow
+frames, and retained no thermal/power context. The missing evidence made the
+next renderer decision ambiguous. Instrumentation is smaller and lower risk
+than guessing at another render path.
+
+**Verification boundary:** macOS ARM64 and fresh iPhoneOS builds pass with the
+established 32 warnings and zero errors; the serialized suite passes 26/26. A
+dirty one-Simulator run emitted initial device state and multiple complete
+frame windows, including an 11.7-second maximum hidden by the first window's
+average and a later 55.68-FPS steady window. Campaign fault rows are zero and
+the slot-zero tuple is unchanged. This proves telemetry behavior, not signed
+installation, physical cadence, thermal behavior, touch ergonomics or race
+completion. Exact evidence is in
+`docs/parity/2026-08-02-ios-device-observability.md`.
