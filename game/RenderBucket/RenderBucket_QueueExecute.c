@@ -1120,8 +1120,7 @@ static void RenderBucket_ProjectFrameBounds(struct ModelFrame *frame, struct Mod
 	// helper 0x80071524. Native keeps the register tuple as explicit bounds fields.
 	gte_SetRotMatrix(projectionMvp);
 	gte_SetTransMatrix(projectionMvp);
-	gte_SetGeomOffset(pb->rect.w >> 1, pb->rect.h >> 1);
-	gte_SetGeomScreen(pb->distanceToScreen_PREV);
+	PushBuffer_SetPsyqGeom(pb);
 
 	MTC2(minXY, 0);
 	MTC2(minZ, 1);
@@ -5270,8 +5269,7 @@ static int RenderBucket_PrepareDrawContext(struct RenderBucketDrawContext *ctx, 
 		scratch->pushBufferPtr32 = (u32)(uintptr_t)pb;
 		scratch->geomW = pb->rect.w;
 		scratch->geomH = pb->rect.h;
-		gte_SetGeomOffset(pb->rect.w >> 1, pb->rect.h >> 1);
-		gte_SetGeomScreen(pb->distanceToScreen_PREV);
+		PushBuffer_SetPsyqGeom(pb);
 	}
 	if (nextFrame != 0)
 	{

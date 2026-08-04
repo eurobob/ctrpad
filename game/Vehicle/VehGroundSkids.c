@@ -232,8 +232,7 @@ static void VehGroundSkids_TryEmitSegment(struct VehGroundSkidsScratch *scratch,
 // NOTE(aalhendi): ASM-verified NTSC-U 926 0x8005c354-0x8005ca24.
 void VehGroundSkids_Main(struct Thread *thread, struct PushBuffer *pb)
 {
-	gte_SetGeomOffset(pb->rect.w >> 1, pb->rect.h >> 1);
-	gte_SetGeomScreen(pb->distanceToScreen_PREV);
+	PushBuffer_SetPsyqGeom(pb);
 
 	struct VehGroundSkidsScratch *scratch = CTR_SCRATCHPAD_PTR(struct VehGroundSkidsScratch, 0x0);
 

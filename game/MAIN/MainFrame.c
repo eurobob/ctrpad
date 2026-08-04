@@ -19,7 +19,12 @@ static void MainFrame_RegisterGpuLinkRanges(struct GameTracker *gGT)
 		NativeGpuLinks_RegisterRangeChecked(otLabels[i], db->otMem.start, db->otMem.capacityBytes);
 	}
 
-	u32 swapchainOTBytes = ((u32)gGT->numPlyrCurrGame << 12) | 0x18u;
+	u32 swapchainViewCount = gGT->numPlyrCurrGame;
+	if ((swapchainViewCount == 1) && ((u32)NativeVision_GetAllocationLayerCount() > swapchainViewCount))
+	{
+		swapchainViewCount = (u32)NativeVision_GetAllocationLayerCount();
+	}
+	u32 swapchainOTBytes = (swapchainViewCount << 12) | 0x18u;
 	for (int i = 0; i < 2; i++)
 	{
 		NativeGpuLinks_RegisterRangeChecked(swapchainLabels[i], gGT->otSwapchainDB[i], swapchainOTBytes);
@@ -80,12 +85,19 @@ void MainFrame_ResetDB(struct GameTracker *gGT)
 	CTR_EmptyFunc_MainFrame_ResetDB();
 	DecalGlobal_EmptyFunc_MainFrame_ResetDB();
 
-	ClearOTagR(otSwapchainDB, sdata->gGT->numPlyrCurrGame << 10 | 6);
+	int renderLayerCount = sdata->gGT->numPlyrCurrGame;
+#if defined(CTR_NATIVE)
+	if ((renderLayerCount == 1) && (NativeVision_GetAllocationLayerCount() > renderLayerCount))
+	{
+		renderLayerCount = NativeVision_GetAllocationLayerCount();
+	}
+#endif
+	ClearOTagR(otSwapchainDB, renderLayerCount << 10 | 6);
 
-	for (iVar4 = 0; iVar4 < sdata->gGT->numPlyrCurrGame; iVar4++)
+	for (iVar4 = 0; iVar4 < renderLayerCount; iVar4++)
 	{
 		gGT->pushBuffer[iVar4].ptrOT =
-		    (uint32_t *)((u8 *)otSwapchainDB + (sdata->gGT->numPlyrCurrGame - iVar4 - 1) * 0x1000 + 0x18);
+		    (uint32_t *)((u8 *)otSwapchainDB + (renderLayerCount - iVar4 - 1) * 0x1000 + 0x18);
 	}
 
 	for (; iVar4 < 4; iVar4++)

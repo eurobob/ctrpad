@@ -5,9 +5,9 @@
 </p>
 
 <p align="center">
-  <strong>Crash Team Racing, rebuilt as a native app for Apple Silicon Mac, iPhone, and iPad.</strong><br>
-  Native ARM64 rendering, touch controls, controller support, Files-based setup,
-  and 1×–4× internal resolution.
+  <strong>Crash Team Racing, rebuilt as a native app for Apple platforms.</strong><br>
+  Native ARM64 rendering, visionOS stereo, touch and controller support,
+  Files-based setup, and 1×–4× internal resolution.
 </p>
 
 <p align="center">
@@ -42,6 +42,8 @@ the project or a build.
 ## Highlights
 
 - Native ARM64 application bundles for Apple Silicon macOS, iPhone, and iPad.
+- A visionOS Metal/Compositor Services path with a mixed-immersion portal,
+  full-immersion cockpit view, separate eye cameras, and a 4:3 window fallback.
 - Native OpenGL on macOS and GLES 3 through SDL/UIKit on iOS and iPadOS.
 - Files-based disc selection with validation and non-destructive replacement.
 - Touch-anywhere analog steering, editable controls, Gas lock, handedness,
@@ -62,6 +64,7 @@ the project or a build.
 | Apple Silicon Mac | **Supported** | Download `CTRPad-macOS-arm64-*.zip` from [GitHub Releases](https://github.com/chrissotraidis/ctrpad/releases), or build `CTRPad.app` locally. |
 | iPhone and iPad | **Supported** | Download the retail-free unsigned IPA from [GitHub Releases](https://github.com/chrissotraidis/ctrpad/releases), then sign it with your own Apple ID. One IPA supports both device families. |
 | iOS Simulator | **Available for development** | Build the Simulator preset and use the guarded installer. Simulator is not physical-device proof. |
+| Apple Vision Pro | **Development preview** | Build the visionOS device preset on a Mac. Portal and cockpit stereo are implemented; physical-headset acceptance is still required. |
 | Windows and Linux | **Supported by the native codebase** | Use the desktop scripts or CMake presets. Apple platforms are CTRPad's primary focus. |
 | App Store / TestFlight | **Not announced** | No official listing, public TestFlight, or paid build exists. |
 
@@ -188,6 +191,31 @@ cmake --build --preset ios-simulator-arm64
 Boot exactly one iPhone or iPad Simulator before running the installer. The
 helper signs an isolated Simulator copy and verifies that the installed
 executable matches the product just built.
+
+### Apple Vision Pro
+
+The visionOS target keeps the normal 4:3 game window and adds two true-stereo
+Compositor Services presentations:
+
+- **Portal** places a fixed opening into the CTR world in your room. Head
+  translation and the physical eye separation drive two game cameras, so it
+  behaves as a view into the scene rather than a flat duplicated screen.
+- **Cockpit VR** switches CTR to its first-person kart camera, hides the local
+  kart body for the world passes, and applies predicted headset pose to both
+  eye cameras in a fully immersive space.
+
+```sh
+cmake --preset visionos-simulator-arm64
+cmake --build --preset visionos-simulator-arm64
+
+# Physical headset build:
+cmake --preset visionos-device-arm64
+cmake --build --preset visionos-device-arm64
+```
+
+Open the generated app in Xcode or sign/install it with your own development
+team. See [Build and run CTRPad on visionOS](docs/INSTALL-VISIONOS.md) for the
+disc import flow, controls, signing, and stereo architecture.
 
 ### Windows and Linux
 

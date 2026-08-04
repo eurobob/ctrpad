@@ -153,7 +153,12 @@ void PushBuffer_Init(struct PushBuffer *pb, int id, int total)
 // NOTE(aalhendi): ASM-verified NTSC-U 926 0x80042910-0x80042974.
 void PushBuffer_SetPsyqGeom(struct PushBuffer *pb)
 {
-	gte_SetGeomOffset(pb->rect.w / 2, pb->rect.h / 2);
+	int geomX = pb->rect.w / 2;
+	int geomY = pb->rect.h / 2;
+#if defined(CTR_NATIVE)
+	NativeVision_AdjustGeomOffset(pb, &geomX, &geomY);
+#endif
+	gte_SetGeomOffset(geomX, geomY);
 	gte_SetGeomScreen(pb->distanceToScreen_PREV);
 	return;
 }

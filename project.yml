@@ -1,0 +1,35 @@
+name: CTRPad
+options:
+  bundleIdPrefix: io.github.chrissotraidis
+  createIntermediateGroups: true
+  deploymentTarget:
+    visionOS: "2.0"
+
+# Mesa's mac-verify bridge consumes an Xcode project. The native app itself
+# remains a CMake target; this lightweight target gives Xcode ownership of
+# signing, installation, and launch, then replaces its bootstrap product with
+# the app produced by the canonical CMake visionOS preset.
+targets:
+  CTRPad:
+    type: application
+    platform: visionOS
+    deploymentTarget: "2.0"
+    sources:
+      - path: platform/visionos/CTRDeployBootstrap.swift
+    settings:
+      base:
+        PRODUCT_NAME: CTRPad
+        PRODUCT_BUNDLE_IDENTIFIER: io.github.chrissotraidis.ctrpad.vision
+        MARKETING_VERSION: "0.1.0"
+        CURRENT_PROJECT_VERSION: "1"
+        SWIFT_VERSION: "5.0"
+        TARGETED_DEVICE_FAMILY: "7"
+        CODE_SIGN_STYLE: Automatic
+        GENERATE_INFOPLIST_FILE: YES
+        INFOPLIST_KEY_CFBundleDisplayName: CTRPad
+        ENABLE_USER_SCRIPT_SANDBOXING: NO
+    postBuildScripts:
+      - name: Build native visionOS product
+        script: |
+          /bin/bash "$SRCROOT/platform/visionos/build-mesa-product.sh"
+        basedOnDependencyAnalysis: false

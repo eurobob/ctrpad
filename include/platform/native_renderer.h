@@ -43,6 +43,7 @@ void NativeRenderer_SetPSXTextureSemiTransPass(int pass);
 void NativeRenderer_SetPSXFramebufferFetchBlendMode(int blendMode);
 void NativeRenderer_SetPSXTextureOutputSTP(int enabled);
 void NativeRenderer_SetPSXDrawMaskSet(int maskSet);
+void NativeRenderer_SetVisionLayer(int layer);
 int NativeRenderer_UsesFramebufferFetch(void);
 void NativeRenderer_UpdateVertexBuffer(const GrVertex *vertices, int count);
 void NativeRenderer_DrawTriangles(int startVertex, int triangles);

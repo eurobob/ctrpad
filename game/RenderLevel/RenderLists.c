@@ -61,8 +61,7 @@ static void RenderLists_Load1P2PGteState(struct PushBuffer *pb)
 	// NOTE(aalhendi): Retail 0x8006fecc loads RT/TR/OFX/OFY/H once before traversal; frustum helpers only touch the light-matrix/RBK controls.
 	gte_SetRotMatrix(&pb->matrix_ViewProj);
 	gte_SetTransMatrix(&pb->matrix_ViewProj);
-	gte_SetGeomOffset(pb->rect.w >> 1, pb->rect.h >> 1);
-	gte_SetGeomScreen(pb->distanceToScreen_PREV);
+	PushBuffer_SetPsyqGeom(pb);
 }
 
 static int RenderLists_FrustumRejectsCorner(const struct PushBufferFrustumPlane *plane, const s16 *point)

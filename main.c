@@ -14,7 +14,7 @@
 #endif
 
 #include <SDL3/SDL.h>
-#if !defined(SDL_PLATFORM_IOS)
+#if !defined(SDL_PLATFORM_IOS) || defined(SDL_PLATFORM_VISIONOS)
 #define SDL_MAIN_HANDLED
 #endif
 #include <SDL3/SDL_main.h>
@@ -25,7 +25,7 @@
 #include "platform/native_assets.h"
 #include "platform/native_asset_relocation.h"
 #include "platform/native_guest_ref.h"
-#if defined(SDL_PLATFORM_IOS)
+#if defined(SDL_PLATFORM_IOS) && !defined(SDL_PLATFORM_VISIONOS)
 #include "platform/native_ios_import.h"
 #include "platform/native_ios_telemetry.h"
 #include "platform/native_ios_touch.h"
@@ -41,6 +41,7 @@
 #include "platform/native_savestate.h"
 #include "platform/native_state_digest.h"
 #include "platform/native_storage.h"
+#include "platform/native_vision.h"
 
 #include <platform.h>
 
@@ -65,7 +66,9 @@
 #include "platform/native_gpu_links.c"
 #include "platform/native_gpu.c"
 #include "platform/native_gte_core.c"
+#if !defined(SDL_PLATFORM_VISIONOS)
 #include "platform/native_glad.c"
+#endif
 #include "platform/native_input.c"
 #include "platform/native_inline_c.c"
 #include "platform/native_libapi.c"
@@ -80,12 +83,15 @@
 #include "platform/native_perf.c"
 #include "platform/native_platform.c"
 #include "platform/native_replay_scheduler.c"
+#if !defined(SDL_PLATFORM_VISIONOS)
 #include "platform/native_renderer.c"
+#endif
 #include "platform/native_savestate.c"
 #include "platform/native_state.c"
 #include "platform/native_state_digest.c"
 #include "platform/native_storage.c"
 #include "platform/native_str.c"
+#include "platform/native_vision.c"
 
 #ifndef CC
 #if defined(__GNUC__)
@@ -117,7 +123,9 @@
 #define CTR_NATIVE_BUILD_ID "unknown"
 #endif
 
-#if defined(SDL_PLATFORM_IOS)
+#if defined(SDL_PLATFORM_VISIONOS)
+#define CTR_NATIVE_TARGET_NAME "visionos"
+#elif defined(SDL_PLATFORM_IOS)
 #define CTR_NATIVE_TARGET_NAME "ios"
 #elif defined(__APPLE__)
 #define CTR_NATIVE_TARGET_NAME "macos"
@@ -191,6 +199,16 @@ static int NativeArg_IsGuestRefSelfTest(const char *arg)
 static int NativeArg_IsAssetRelocationSelfTest(const char *arg)
 {
 	return (arg != NULL) && (strcmp(arg, "--self-test-asset-relocation") == 0);
+}
+
+static int NativeArg_IsVisionStereoSelfTest(const char *arg)
+{
+	return (arg != NULL) && (strcmp(arg, "--self-test-vision-stereo") == 0);
+}
+
+static int NativeArg_IsDiscPath(const char *arg)
+{
+	return (arg != NULL) && (strcmp(arg, "--disc") == 0);
 }
 
 static int NativeArg_IsInputSelfTest(const char *arg)
@@ -314,7 +332,7 @@ static int NativeArg_ParseScrapbookSTRProbeFrames(const char *text, s32 *frameCo
 	return 1;
 }
 
-#if defined(SDL_PLATFORM_IOS)
+#if defined(SDL_PLATFORM_IOS) && !defined(SDL_PLATFORM_VISIONOS)
 static int s_nativeIOSDiscReselectionRequested;
 
 static void NativeIOS_RequestDiscReselection(void *userdata);
@@ -484,7 +502,7 @@ static int NativeApp_StartRuntime(const struct NativeLaunchOptions *options)
 	(void)options;
 #endif
 
-#if defined(SDL_PLATFORM_IOS)
+#if defined(SDL_PLATFORM_IOS) && !defined(SDL_PLATFORM_VISIONOS)
 	s_nativeIOSDiscReselectionRequested = 0;
 	if (!NativeIOSTelemetry_Begin())
 	{
@@ -525,7 +543,7 @@ static int NativeApp_StartRuntime(const struct NativeLaunchOptions *options)
 #endif
 }
 
-#if defined(SDL_PLATFORM_IOS)
+#if defined(SDL_PLATFORM_IOS) && !defined(SDL_PLATFORM_VISIONOS)
 static struct NativeLaunchOptions s_nativeIOSLaunchOptions;
 
 static enum NativeIOSImportValidationResult NativeIOS_ValidateStagedImport(const char *stagingBasePath, char *detail,
@@ -608,13 +626,23 @@ static void NativeIOS_StopRuntimeForDiscReselection(void)
 }
 #endif
 
+#if defined(SDL_PLATFORM_VISIONOS)
+#undef main
+int CTRNativeMain(int argc, char *argv[])
+#else
 int main(int argc, char *argv[])
+#endif
 {
+#if defined(SDL_PLATFORM_VISIONOS)
+	/* SwiftUI owns the process entry point, so complete SDL's handled-main contract. */
+	SDL_SetMainReady();
+#endif
 	s32 scrapbookSTRProbeFrames = 0;
 	s32 scrapbookSTRPresentProbeFrames = 0;
 	const char *scrapbookSTRPresentProbePath = NULL;
 	int rendererPixelSelfTest = 0;
 	int chooseDisc = 0;
+	const char *discImagePath = NULL;
 
 	for (int argIndex = 1; argIndex < argc; argIndex++)
 	{
@@ -642,6 +670,19 @@ int main(int argc, char *argv[])
 		if (NativeArg_IsAssetRelocationSelfTest(argv[argIndex]))
 		{
 			return NativeAssetRelocation_RunSelfTest();
+		}
+		if (NativeArg_IsVisionStereoSelfTest(argv[argIndex]))
+		{
+			return NativeVision_RunStereoMathSelfTest();
+		}
+		if (NativeArg_IsDiscPath(argv[argIndex]))
+		{
+			if ((discImagePath != NULL) || (argIndex + 1 >= argc) || (argv[argIndex + 1][0] == '\0'))
+			{
+				fprintf(stderr, "[CTR Native] --disc requires one image path\n");
+				return 1;
+			}
+			discImagePath = argv[++argIndex];
 		}
 		if (NativeArg_IsInputSelfTest(argv[argIndex]))
 		{
@@ -779,7 +820,8 @@ int main(int argc, char *argv[])
 	launchOptions.scrapbookSTRPresentProbeFrames = scrapbookSTRPresentProbeFrames;
 	launchOptions.scrapbookSTRPresentProbePath = scrapbookSTRPresentProbePath;
 	launchOptions.sdlBasePath = sdlBasePath;
-	assetSelectionStatus = NativeApp_SelectAndValidateAssets(sdlBasePath);
+	assetSelectionStatus = discImagePath != NULL ? NativeApp_SelectAndValidateDiscPath(sdlBasePath, discImagePath)
+	                                            : NativeApp_SelectAndValidateAssets(sdlBasePath);
 
 #if defined(__APPLE__) && defined(CTR_NATIVE_MACOS_BUNDLE) && !defined(SDL_PLATFORM_IOS)
 	if ((assetSelectionStatus == 0) || ((assetSelectionStatus == 1) && (chooseDisc != 0)))
@@ -830,7 +872,7 @@ int main(int argc, char *argv[])
 
 	if (assetSelectionStatus != 1)
 	{
-#if defined(SDL_PLATFORM_IOS)
+#if defined(SDL_PLATFORM_IOS) && !defined(SDL_PLATFORM_VISIONOS)
 		if (assetSelectionStatus == 0)
 		{
 			s_nativeIOSLaunchOptions = launchOptions;
@@ -849,7 +891,7 @@ int main(int argc, char *argv[])
 		return NativeConsole_Return(1);
 	}
 
-#if defined(SDL_PLATFORM_IOS)
+#if defined(SDL_PLATFORM_IOS) && !defined(SDL_PLATFORM_VISIONOS)
 	int recoveredImportCount = NativeIOSImport_RecoverStaleStages(NativeStorage_GetImportBaseDir());
 	if (recoveredImportCount < 0)
 	{

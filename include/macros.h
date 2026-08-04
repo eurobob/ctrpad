@@ -7,7 +7,11 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#if defined(__cplusplus)
+#define CTR_STATIC_ASSERT(expr) static_assert((expr), #expr)
+#else
 #define CTR_STATIC_ASSERT(expr) _Static_assert((expr), #expr)
+#endif
 
 typedef uint64_t u64;
 typedef int64_t s64;
@@ -50,7 +54,9 @@ typedef double f64;
 #define MINUTES(x)                 ((s32)(((f32)(x)) * MINUTE))
 #define HOURS(x)                   ((s32)(((f32)(x)) * HOUR))
 
+#if !defined(__cplusplus)
 #define nullptr                    ((void *)0)
+#endif
 
 #define force_inline CTR_FORCE_INLINE
 

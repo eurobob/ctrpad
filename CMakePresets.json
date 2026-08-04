@@ -179,6 +179,45 @@
       "cacheVariables": {
         "CMAKE_OSX_SYSROOT": "iphoneos"
       }
+    },
+    {
+      "name": "visionos-arm64-common",
+      "hidden": true,
+      "inherits": "common",
+      "generator": "Ninja",
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Darwin"
+      },
+      "cacheVariables": {
+        "BUILD_TESTING": "OFF",
+        "CMAKE_BUILD_TYPE": "RelWithDebInfo",
+        "CMAKE_SYSTEM_NAME": "visionOS",
+        "CMAKE_OSX_ARCHITECTURES": "arm64",
+        "CMAKE_OSX_DEPLOYMENT_TARGET": "2.0",
+        "CTR_NATIVE_RENDERER_GLES": "OFF"
+      }
+    },
+    {
+      "name": "visionos-simulator-arm64",
+      "displayName": "visionOS Simulator ARM64",
+      "description": "ARM64 Apple Vision simulator app with Compositor Services stereo rendering",
+      "inherits": "visionos-arm64-common",
+      "binaryDir": "${sourceDir}/build-visionos-simulator-arm64",
+      "cacheVariables": {
+        "CMAKE_OSX_SYSROOT": "xrsimulator"
+      }
+    },
+    {
+      "name": "visionos-device-arm64",
+      "displayName": "visionOS Device ARM64",
+      "description": "Unsigned Apple Vision app with portal and cockpit stereo modes",
+      "inherits": "visionos-arm64-common",
+      "binaryDir": "${sourceDir}/build-visionos-device-arm64",
+      "cacheVariables": {
+        "CMAKE_OSX_SYSROOT": "xros"
+      }
     }
   ],
   "buildPresets": [
@@ -223,6 +262,14 @@
     {
       "name": "ios-device-arm64",
       "configurePreset": "ios-device-arm64"
+    },
+    {
+      "name": "visionos-simulator-arm64",
+      "configurePreset": "visionos-simulator-arm64"
+    },
+    {
+      "name": "visionos-device-arm64",
+      "configurePreset": "visionos-device-arm64"
     }
   ],
   "testPresets": [

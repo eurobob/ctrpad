@@ -1,9 +1,19 @@
 cmake_minimum_required(VERSION 3.20)
+
+set(CTR_NATIVE_VISIONOS OFF)
+if(CMAKE_SYSTEM_NAME STREQUAL "visionOS" OR CMAKE_OSX_SYSROOT MATCHES "(^|/)(xros|xrsimulator)$")
+    set(CTR_NATIVE_VISIONOS ON)
+endif()
+
 project(CTR-Native C)
 include(CheckCCompilerFlag)
 
-if(IOS OR APPLE)
+if(IOS OR APPLE OR CTR_NATIVE_VISIONOS)
     enable_language(OBJC)
+endif()
+if(CTR_NATIVE_VISIONOS)
+    enable_language(OBJCXX)
+    enable_language(Swift)
 endif()
 
 set(CTR_NATIVE_VERSION "0.1.0")
@@ -14,9 +24,12 @@ set(CTR_NATIVE_SOURCE_COMMIT "" CACHE STRING
 set(CTR_NATIVE_IOS_BUNDLE_IDENTIFIER "io.github.chrissotraidis.ctrpad" CACHE STRING
     "Reverse-DNS bundle identifier for iOS and iPadOS builds"
 )
+set(CTR_NATIVE_VISIONOS_BUNDLE_IDENTIFIER "io.github.chrissotraidis.ctrpad.vision" CACHE STRING
+    "Reverse-DNS bundle identifier for visionOS builds"
+)
 
 set(CTR_NATIVE_RENDERER_GLES_DEFAULT OFF)
-if(ANDROID OR IOS)
+if(ANDROID OR (IOS AND NOT CTR_NATIVE_VISIONOS))
     set(CTR_NATIVE_RENDERER_GLES_DEFAULT ON)
 endif()
 option(CTR_NATIVE_RENDERER_GLES
@@ -172,7 +185,9 @@ function(ctr_native_add_label_warning_if_supported target warning flag_check)
     set(CMAKE_REQUIRED_FLAGS "${saved_required_flags}")
 
     if(${flag_check})
-        target_compile_options(${target} PRIVATE "${warning}")
+        target_compile_options(${target} PRIVATE
+            "$<$<COMPILE_LANGUAGE:C,OBJC,OBJCXX>:${warning}>"
+        )
     endif()
 endfunction()
 
@@ -201,17 +216,20 @@ add_subdirectory(externals/SDL)
 
 # CTR Native
 set(CTR_NATIVE_EXECUTABLE_OPTIONS)
-if(CTR_NATIVE_MACOS_BUNDLE OR IOS)
+if(CTR_NATIVE_MACOS_BUNDLE OR IOS OR CTR_NATIVE_VISIONOS)
     list(APPEND CTR_NATIVE_EXECUTABLE_OPTIONS MACOSX_BUNDLE)
 endif()
 
 add_executable(ctr_native ${CTR_NATIVE_EXECUTABLE_OPTIONS} main.c)
-if(CTR_NATIVE_MACOS_BUNDLE OR IOS)
+if(CTR_NATIVE_MACOS_BUNDLE OR IOS OR CTR_NATIVE_VISIONOS)
     set(CTR_NATIVE_DISTRIBUTION_RESOURCES
         "${CMAKE_SOURCE_DIR}/LICENSE"
         "${CMAKE_SOURCE_DIR}/THIRD_PARTY_NOTICES.md"
     )
-    if(IOS)
+    if(CTR_NATIVE_VISIONOS)
+        list(APPEND CTR_NATIVE_DISTRIBUTION_RESOURCES
+            "${CMAKE_SOURCE_DIR}/docs/INSTALL-VISIONOS.md")
+    elseif(IOS)
         list(APPEND CTR_NATIVE_DISTRIBUTION_RESOURCES
             "${CMAKE_SOURCE_DIR}/docs/INSTALL-IOS.md")
     else()
@@ -223,7 +241,7 @@ if(CTR_NATIVE_MACOS_BUNDLE OR IOS)
     )
     target_sources(ctr_native PRIVATE ${CTR_NATIVE_DISTRIBUTION_RESOURCES})
 endif()
-if(IOS)
+if(IOS AND NOT CTR_NATIVE_VISIONOS)
     file(GLOB_RECURSE CTR_NATIVE_IOS_ASSET_CATALOG_FILES CONFIGURE_DEPENDS
         "${CMAKE_SOURCE_DIR}/platform/apple/Assets.xcassets/*"
     )
@@ -257,6 +275,35 @@ if(IOS)
             --notices
         COMMENT "Compiling CTRPad iOS app icon asset catalog"
         VERBATIM
+    )
+endif()
+if(CTR_NATIVE_VISIONOS)
+    target_sources(ctr_native PRIVATE
+        platform/visionos/CTRVisionApp.swift
+        platform/visionos/CTRWindowRenderer.swift
+        platform/visionos/CTRCompositorRenderer.swift
+        platform/visionos/native_renderer_vision.m
+    )
+    set_source_files_properties(platform/visionos/native_renderer_vision.m PROPERTIES
+        LANGUAGE OBJCXX
+    )
+    target_compile_options(ctr_native PRIVATE
+        "$<$<COMPILE_LANGUAGE:OBJCXX>:-fobjc-arc>"
+    )
+    if(CMAKE_GENERATOR STREQUAL "Xcode")
+        set_target_properties(ctr_native PROPERTIES
+            XCODE_ATTRIBUTE_SWIFT_OBJC_BRIDGING_HEADER "${CMAKE_SOURCE_DIR}/platform/visionos/CTRVision-Bridging-Header.h"
+            XCODE_ATTRIBUTE_SWIFT_VERSION "5.0"
+        )
+    else()
+        target_compile_options(ctr_native PRIVATE
+            "$<$<COMPILE_LANGUAGE:Swift>:-import-objc-header>"
+            "$<$<COMPILE_LANGUAGE:Swift>:${CMAKE_SOURCE_DIR}/platform/visionos/CTRVision-Bridging-Header.h>"
+        )
+    endif()
+    set_target_properties(ctr_native PROPERTIES
+        LINKER_LANGUAGE Swift
+        Swift_LANGUAGE_VERSION 5
     )
 endif()
 set_target_properties(ctr_native PROPERTIES
@@ -301,7 +348,7 @@ if(CTR_NATIVE_MACOS_BUNDLE)
         VERBATIM
     )
 endif()
-if(IOS)
+if(IOS AND NOT CTR_NATIVE_VISIONOS)
     set_target_properties(ctr_native PROPERTIES
         OUTPUT_NAME "CTRPad"
         MACOSX_BUNDLE_BUNDLE_NAME "CTRPad"
@@ -316,16 +363,33 @@ if(IOS)
         XCODE_ATTRIBUTE_TARGETED_DEVICE_FAMILY "1,2"
     )
 endif()
+if(CTR_NATIVE_VISIONOS)
+    set_target_properties(ctr_native PROPERTIES
+        OUTPUT_NAME "CTRPad"
+        MACOSX_BUNDLE_BUNDLE_NAME "CTRPad"
+        MACOSX_BUNDLE_GUI_IDENTIFIER "${CTR_NATIVE_VISIONOS_BUNDLE_IDENTIFIER}"
+        MACOSX_BUNDLE_INFO_STRING "Stereo Crash Team Racing runtime for Apple Vision"
+        MACOSX_BUNDLE_LONG_VERSION_STRING "${CTR_NATIVE_VERSION}"
+        MACOSX_BUNDLE_SHORT_VERSION_STRING "${CTR_NATIVE_VERSION}"
+        MACOSX_BUNDLE_BUNDLE_VERSION "1"
+        MACOSX_BUNDLE_COPYRIGHT "GPL-3.0; retail game data is user-supplied"
+        MACOSX_BUNDLE_INFO_PLIST "${CMAKE_SOURCE_DIR}/platform/visionos/Info-visionOS.plist.in"
+        XCODE_ATTRIBUTE_PRODUCT_BUNDLE_IDENTIFIER "${CTR_NATIVE_VISIONOS_BUNDLE_IDENTIFIER}"
+        XCODE_ATTRIBUTE_TARGETED_DEVICE_FAMILY "7"
+    )
+endif()
 target_include_directories(ctr_native PRIVATE ${CMAKE_SOURCE_DIR}/include)
 target_compile_definitions(ctr_native PRIVATE
-    CTR_NATIVE
-    BUILD=926
-    CTR_INTERNAL
-    CTR_NATIVE_VERSION=\"${CTR_NATIVE_VERSION}\"
-    CTR_NATIVE_BUILD_ID=\"${CTR_NATIVE_BUILD_ID}\"
+    "$<$<COMPILE_LANGUAGE:C,OBJC,OBJCXX>:CTR_NATIVE>"
+    "$<$<COMPILE_LANGUAGE:C,OBJC,OBJCXX>:BUILD=926>"
+    "$<$<COMPILE_LANGUAGE:C,OBJC,OBJCXX>:CTR_INTERNAL>"
+    "$<$<COMPILE_LANGUAGE:C,OBJC,OBJCXX>:CTR_NATIVE_VERSION=\"${CTR_NATIVE_VERSION}\">"
+    "$<$<COMPILE_LANGUAGE:C,OBJC,OBJCXX>:CTR_NATIVE_BUILD_ID=\"${CTR_NATIVE_BUILD_ID}\">"
 )
 if(CTR_NATIVE_RENDERER_GLES)
-    target_compile_definitions(ctr_native PRIVATE CTR_NATIVE_RENDERER_GLES=1)
+    target_compile_definitions(ctr_native PRIVATE
+        "$<$<COMPILE_LANGUAGE:C,OBJC,OBJCXX>:CTR_NATIVE_RENDERER_GLES=1>"
+    )
 endif()
 if(CTR_NATIVE_MSVC_FRONTEND)
     target_compile_options(ctr_native PRIVATE
@@ -342,27 +406,33 @@ if(CTR_NATIVE_MSVC_FRONTEND)
     endif()
 else()
     target_compile_options(ctr_native PRIVATE
-        -Wenum-conversion
-        -Wenum-compare
-        -Wswitch-enum
-        -Wformat
-        -Wparentheses
-        $<$<CONFIG:Release>:-O2>
-        $<$<CONFIG:Release>:-g>
+        "$<$<COMPILE_LANGUAGE:C,OBJC,OBJCXX>:-Wenum-conversion>"
+        "$<$<COMPILE_LANGUAGE:C,OBJC,OBJCXX>:-Wenum-compare>"
+        "$<$<COMPILE_LANGUAGE:C,OBJC,OBJCXX>:-Wswitch-enum>"
+        "$<$<COMPILE_LANGUAGE:C,OBJC,OBJCXX>:-Wformat>"
+        "$<$<COMPILE_LANGUAGE:C,OBJC,OBJCXX>:-Wparentheses>"
+        "$<$<AND:$<COMPILE_LANGUAGE:C,OBJC,OBJCXX>,$<CONFIG:Release>>:-O2>"
+        "$<$<AND:$<COMPILE_LANGUAGE:C,OBJC,OBJCXX>,$<CONFIG:Release>>:-g>"
     )
 
     if(CTR_NATIVE_X86_TARGET)
-        target_compile_options(ctr_native PRIVATE -msse)
+        target_compile_options(ctr_native PRIVATE
+            "$<$<COMPILE_LANGUAGE:C,OBJC,OBJCXX>:-msse>"
+        )
     endif()
 
     check_c_compiler_flag("-fno-strict-aliasing" CTR_HAS_FNO_STRICT_ALIASING)
     if(CTR_HAS_FNO_STRICT_ALIASING)
-        target_compile_options(ctr_native PRIVATE -fno-strict-aliasing)
+        target_compile_options(ctr_native PRIVATE
+            "$<$<COMPILE_LANGUAGE:C,OBJC,OBJCXX>:-fno-strict-aliasing>"
+        )
     endif()
 
     check_c_compiler_flag("-fwrapv" CTR_HAS_FWRAPV)
     if(CTR_HAS_FWRAPV)
-        target_compile_options(ctr_native PRIVATE -fwrapv)
+        target_compile_options(ctr_native PRIVATE
+            "$<$<COMPILE_LANGUAGE:C,OBJC,OBJCXX>:-fwrapv>"
+        )
     endif()
 
     if(CMAKE_C_COMPILER_ID STREQUAL "GNU")
@@ -373,8 +443,21 @@ else()
     endif()
 endif()
 target_link_libraries(ctr_native SDL3::SDL3)
-if(IOS)
+if(IOS AND NOT CTR_NATIVE_VISIONOS)
     target_link_libraries(ctr_native "-framework UIKit" "-framework UniformTypeIdentifiers")
+endif()
+if(CTR_NATIVE_VISIONOS)
+    target_link_libraries(ctr_native
+        "-framework ARKit"
+        "-framework CompositorServices"
+        "-framework Foundation"
+        "-framework Metal"
+        "-framework MetalKit"
+        "-framework QuartzCore"
+        "-framework SwiftUI"
+        "-framework UIKit"
+        "-framework UniformTypeIdentifiers"
+    )
 endif()
 if(CMAKE_C_COMPILER_ID STREQUAL "GNU")
     target_link_options(ctr_native PRIVATE -static-libgcc)
@@ -387,6 +470,10 @@ include(CTest)
 if(BUILD_TESTING)
     add_test(NAME ctr_native_version COMMAND $<TARGET_FILE:ctr_native> --version)
     set_tests_properties(ctr_native_version PROPERTIES PASS_REGULAR_EXPRESSION "^CTR Native ")
+    add_test(NAME ctr_native_vision_stereo COMMAND $<TARGET_FILE:ctr_native> --self-test-vision-stereo)
+    set_tests_properties(ctr_native_vision_stereo PROPERTIES PASS_REGULAR_EXPRESSION
+        "^\\[CTR Vision\\] stereo math self-test passed: ipd=0.064 convergence=4.000 shifts=symmetric"
+    )
     add_test(NAME ctr_native_state_digest COMMAND $<TARGET_FILE:ctr_native> --self-test-state-digest)
     set_tests_properties(ctr_native_state_digest PROPERTIES PASS_REGULAR_EXPRESSION
         "^\\[CTR StateDigest\\] self-test passed: .* mutation component=drivers"

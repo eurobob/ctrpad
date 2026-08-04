@@ -13,8 +13,21 @@
 volatile int gCtrDebugSkipLevelGeometry = 0;
 #endif
 
+#if defined(CTR_NATIVE)
+static int MainFrame_RenderStereo(struct GameTracker *gGT, struct GamepadSystem *gGamepads);
+#endif
+
 void MainFrame_RenderFrame(struct GameTracker *gGT, struct GamepadSystem *gGamepads)
 {
+#if defined(CTR_NATIVE)
+	if ((gGT->numPlyrCurrGame == 1) && NativeVision_IsStereoActive())
+	{
+		if (MainFrame_RenderStereo(gGT, gGamepads))
+		{
+			return;
+		}
+	}
+#endif
 	struct Level *lev = gGT->level1;
 	struct mesh_info *ptr_mesh_info = 0;
 
@@ -220,6 +233,148 @@ void MainFrame_RenderFrame(struct GameTracker *gGT, struct GamepadSystem *gGamep
 
 	RenderSubmit(gGT);
 }
+
+#if defined(CTR_NATIVE)
+static void MainFrame_RenderStereoWorld(struct GameTracker *gGT, struct Level *lev, struct mesh_info *mesh)
+{
+	RenderAllWeather(gGT);
+	RenderAllConfetti(gGT);
+	if (((gGT->renderFlags & RENDER_FLAG_STARS) != 0) && (gGT->stars.numStars != 0))
+	{
+		RenderStars(&gGT->pushBuffer[0], &gGT->backBuffer->primMem, &gGT->stars, 1);
+	}
+	RenderAllBeakerRain(gGT);
+	RenderBucket_QueueAllInstances(gGT);
+	RenderAllNormalParticles(gGT);
+	RenderDispEnv_World(gGT);
+	RenderAllFlag0x40(gGT);
+	RenderAllTitleDPP(gGT);
+	RenderBucket_ExecuteAllInstances(gGT);
+	RenderAllTires(gGT);
+	RenderAllShadows(gGT);
+	RenderAllHeatParticles(gGT);
+
+	if (((gGT->renderFlags & RENDER_FLAG_DRAW_LEVEL) != 0) && (mesh != NULL))
+	{
+#ifdef CTR_INTERNAL
+		if (gCtrDebugSkipLevelGeometry == 0)
+#endif
+		{
+			RenderAllLevelGeometry(gGT, lev, mesh);
+		}
+		RenderDispEnv_World(gGT);
+	}
+
+	if ((gGT->renderFlags & RENDER_FLAG_CLEAR_BACK_BUFFER) != 0 && lev != NULL &&
+	    ((lev->clearColor[0].enable != 0) || (lev->clearColor[1].enable != 0)))
+	{
+		CAM_ClearScreen(gGT);
+	}
+}
+
+static void MainFrame_RenderStereoHud(struct GameTracker *gGT, struct GamepadSystem *gGamepads, int drewLevelGeometry)
+{
+	DrawUnpluggedMsg(gGT, gGamepads);
+	DrawFinalLap(gGT);
+	RenderAllHUD(gGT);
+	RenderAllBoxSceneSplitLines(gGT);
+
+	if (((gGT->hudFlags & HUD_FLAG_RACE_HUD) != 0) && (gGT->numPlyrCurrGame > 1))
+	{
+		UI_RenderFrame_Wumpa3D_2P3P4P(gGT);
+	}
+
+	int dotLightsLoadReady = sdata->Loading.stage != LOAD_REQUESTED;
+	if (drewLevelGeometry && ((gGT->gameMode1 & (GAME_CUTSCENE | ADVENTURE_ARENA | MAIN_MENU)) == 0) && dotLightsLoadReady)
+	{
+		DotLights_AudioAndVideo(gGT);
+	}
+
+	if ((gGT->renderFlags & RENDER_FLAG_SPLIT_SCREEN_LINES) != 0)
+	{
+		WindowBoxLines(gGT);
+		WindowDivsionLines(gGT);
+	}
+
+	PushBuffer_FadeOneWindow(&gGT->pushBuffer[0]);
+	PushBuffer_FadeOneWindow(&gGT->pushBuffer_UI);
+
+	if ((gGT->renderFlags & RENDER_FLAG_CHECKERED_FLAG) != 0)
+	{
+		RaceFlag_DrawSelf();
+	}
+	RenderDispEnv_UI(gGT);
+}
+
+static int MainFrame_RenderStereo(struct GameTracker *gGT, struct GamepadSystem *gGamepads)
+{
+	struct Level *lev = gGT->level1;
+	struct mesh_info *mesh = lev != NULL ? Level_GetMeshInfo(lev, "MainFrame_RenderStereo mesh") : NULL;
+	int drewLevelGeometry = ((gGT->renderFlags & RENDER_FLAG_DRAW_LEVEL) != 0) && (mesh != NULL);
+
+	if (!NativeVision_BeginStereoFrame(gGT))
+	{
+		return 0;
+	}
+	ElimBG_HandleState(gGT);
+
+	if ((gGT->renderFlags & RENDER_FLAG_VISMEM_REFRESH_MASK) != 0)
+	{
+		MainFrame_VisMemFullFrame(gGT, lev);
+	}
+	if (((gGT->renderFlags & RENDER_FLAG_DRAW_LEVEL) != 0) && (gGT->visMem1 != NULL) && (lev != NULL))
+	{
+		CTR_CycleTex_LEV(Level_GetAnimTex(lev, "MainFrame_RenderStereo animated textures"), gGT->timer);
+	}
+	if ((sdata->ptrActiveMenu != NULL) || ((gGT->gameMode1 & END_OF_RACE) != 0))
+	{
+		RECTMENU_CollectInput();
+	}
+	if ((sdata->ptrActiveMenu != NULL) && (sdata->Loading.stage == LOAD_IDLE))
+	{
+		RECTMENU_ProcessState();
+	}
+	RainLogic(gGT);
+	DropRain_MakeSound(gGT);
+	MenuHighlight();
+
+	for (int eye = 0; eye < 2; eye++)
+	{
+		NativeVision_BeginEye(gGT, eye);
+		MainFrame_RenderStereoWorld(gGT, lev, mesh);
+		NativeVision_AddLayerMarker(gGT, eye);
+	}
+
+	NativeVision_BeginHud(gGT);
+	MainFrame_RenderStereoHud(gGT, gGamepads, drewLevelGeometry);
+
+	if (drewLevelGeometry)
+	{
+		if (sdata->Loading.stage == LOAD_IDLE)
+		{
+			if ((gGT->gameMode1 & PAUSE_ALL) == 0)
+			{
+				PickupBots_Update();
+			}
+			if ((lev != NULL) && (Level_GetRestartPoints(lev, "MainFrame stereo lap restart points") != NULL) &&
+			    (lev->cnt_restart_points != 0))
+			{
+				PlayLevel_UpdateLapStats();
+			}
+		}
+	}
+	if ((gGT->gameMode1 & (ADVENTURE_ARENA | END_OF_RACE | MAIN_MENU)) != 0)
+	{
+		RefreshCard_Entry();
+	}
+
+	RenderVSYNC(gGT);
+	NativeVision_AddLayerMarker(gGT, NATIVE_VISION_LAYER_HUD);
+	NativeVision_EndStereoFrame(gGT);
+	RenderSubmit(gGT);
+	return 1;
+}
+#endif
 
 void DrawUnpluggedMsg(struct GameTracker *gGT, struct GamepadSystem *gGamepads)
 {
@@ -794,6 +949,7 @@ void RenderBucket_ExecuteAllInstances(struct GameTracker *gGT)
 		return;
 	}
 
+	PushBuffer_SetPsyqGeom(&gGT->pushBuffer[0]);
 	RenderBucket_Execute(gGT->ptrRenderBucketInstance, &gGT->backBuffer->primMem);
 }
 

@@ -1748,6 +1748,12 @@ void NativeRenderer_SetPSXDrawMaskSet(int maskSet)
 	}
 }
 
+void NativeRenderer_SetVisionLayer(int layer)
+{
+	/* The GL window remains mono. visionOS overrides this in its Metal backend. */
+	(void)layer;
+}
+
 internal void NativeRenderer_DestroyTexture(TextureID texture)
 {
 	if (texture == (TextureID)-1)

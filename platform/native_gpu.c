@@ -85,6 +85,7 @@ typedef struct
 	bool psxTexturedSemiTrans;
 	bool psxTextureOutputSTP;
 	bool psxDrawMaskSet;
+	int visionLayer;
 
 	u16 startVertex;
 	u16 numVerts;
@@ -104,6 +105,7 @@ typedef struct
 	int drawPrimMode;
 	bool psxDrawMaskSet;
 	bool framebufferFeedbackRunActive;
+	int currentVisionLayer;
 
 	GrVertex vertexBuffer[MAX_VERTEX_BUFFER_SIZE];
 	GPUDrawSplit splits[MAX_DRAW_SPLITS];
@@ -302,7 +304,9 @@ void ClearSplits(void)
 	s_gpu.splits[0].psxTexturedSemiTrans = false;
 	s_gpu.splits[0].psxTextureOutputSTP = false;
 	s_gpu.splits[0].psxDrawMaskSet = false;
+	s_gpu.splits[0].visionLayer = 0;
 	s_gpu.framebufferFeedbackRunActive = false;
+	s_gpu.currentVisionLayer = 0;
 }
 
 int NativeGpu_GetStateSize(void)
@@ -997,6 +1001,7 @@ internal void AddSplit(bool semiTrans, bool textured, bool framebufferFeedback)
 	if (!psxTexturedSemiTrans && curSplit->blendMode == blendMode && curSplit->texFormat == texFormat && curSplit->textureId == textureId &&
 	    curSplit->drawPrimMode == s_gpu.drawPrimMode && curSplit->psxTexturedSemiTrans == psxTexturedSemiTrans &&
 	    curSplit->psxTextureOutputSTP == psxTextureOutputSTP && curSplit->psxDrawMaskSet == s_gpu.psxDrawMaskSet &&
+	    curSplit->visionLayer == s_gpu.currentVisionLayer &&
 	    curSplit->drawenv.clip.x == activeDrawEnv.clip.x && curSplit->drawenv.clip.y == activeDrawEnv.clip.y &&
 	    curSplit->drawenv.clip.w == activeDrawEnv.clip.w && curSplit->drawenv.clip.h == activeDrawEnv.clip.h && curSplit->drawenv.dfe == activeDrawEnv.dfe &&
 	    curSplit->debugText == s_gpu.currentSplitDebugText)
@@ -1020,6 +1025,7 @@ internal void AddSplit(bool semiTrans, bool textured, bool framebufferFeedback)
 	split->psxTexturedSemiTrans = psxTexturedSemiTrans;
 	split->psxTextureOutputSTP = psxTextureOutputSTP;
 	split->psxDrawMaskSet = s_gpu.psxDrawMaskSet;
+	split->visionLayer = s_gpu.currentVisionLayer;
 	split->drawenv = activeDrawEnv;
 	split->dispenv = activeDispEnv;
 	split->debugText = s_gpu.currentSplitDebugText;
@@ -1048,7 +1054,7 @@ internal bool NativeGpu_CanBatchFramebufferFetchSplits(const GPUDrawSplit *first
 
 	return first->blendMode == next->blendMode && first->texFormat == next->texFormat && first->textureId == next->textureId &&
 	       first->drawPrimMode == next->drawPrimMode && first->psxTextureOutputSTP == next->psxTextureOutputSTP &&
-	       first->psxDrawMaskSet == next->psxDrawMaskSet && first->debugText == next->debugText &&
+	       first->psxDrawMaskSet == next->psxDrawMaskSet && first->visionLayer == next->visionLayer && first->debugText == next->debugText &&
 	       memcmp(&first->drawenv, &next->drawenv, sizeof(first->drawenv)) == 0 &&
 	       memcmp(&first->dispenv, &next->dispenv, sizeof(first->dispenv)) == 0;
 }
@@ -1076,6 +1082,7 @@ internal int NativeGpu_DrawSplitRange(const GPUDrawSplit *split, int numVerts, u
 	}
 
 	NativeRenderer_SetStencilMode(split->drawPrimMode); // draw with mask 0x16
+	NativeRenderer_SetVisionLayer(split->visionLayer);
 
 	NativeRenderer_SetTexture(split->textureId, split->texFormat);
 
@@ -2022,6 +2029,23 @@ internal int ProcessPsyXPrims(P_TAG *polyTag)
 		// [A] Psy-X custom debug marker packet
 		DR_PSYX_DBGMARKER *psydbg = (DR_PSYX_DBGMARKER *)polyTag;
 		s_gpu.currentSplitDebugText = psydbg->text;
+		return 2;
+	}
+	case 0x03:
+	{
+		struct NativeVisionLayerPacket
+		{
+			u32 tag;
+			u8 pad0;
+			u8 pad1;
+			u8 pad2;
+			u8 code;
+			u32 layer;
+		};
+		const struct NativeVisionLayerPacket *vision = (const struct NativeVisionLayerPacket *)polyTag;
+		GPUDrawSplit *current = &s_gpu.splits[s_gpu.splitIndex];
+		current->numVerts = s_gpu.vertexIndex - current->startVertex;
+		s_gpu.currentVisionLayer = vision->layer < NATIVE_VISION_LAYER_COUNT ? (int)vision->layer : NATIVE_VISION_LAYER_HUD;
 		return 2;
 	}
 	}

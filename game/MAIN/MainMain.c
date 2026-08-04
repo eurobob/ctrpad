@@ -417,6 +417,9 @@ u32 main(void)
 
 			if ((gGT->gameMode1 & LOADING) == 0)
 			{
+#if defined(CTR_NATIVE)
+				NativeVision_UpdateCockpitCameraMode(gGT);
+#endif
 #if defined(CTR_NATIVE) && defined(CTR_INTERNAL)
 				NativePerf_BeginScope(NATIVE_PERF_BUCKET_GAME_LOGIC);
 #endif
@@ -520,7 +523,11 @@ u32 main(void)
 #ifdef CTR_NATIVE
 u32 CTR_Main(void)
 {
+#if defined(SDL_PLATFORM_VISIONOS)
+	while (NativeVision_RunMainStepWithAutoreleasePool() != 0)
+#else
 	while (CTR_MainStep() != 0)
+#endif
 	{
 	}
 	return 0;

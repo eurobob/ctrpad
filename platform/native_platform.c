@@ -471,6 +471,9 @@ internal void Platform_UpdateHostAltKeyState(const s32 key, const s8 down)
 #if defined(CTR_INTERNAL)
 internal void Platform_TakeScreenshot(void)
 {
+#if defined(SDL_PLATFORM_VISIONOS)
+	Platform_LogWarn("[CTR Vision] screenshots are captured from the visionOS window or compositor\n");
+#else
 	u8 *pixels = (u8 *)malloc(g_windowWidth * g_windowHeight * 4);
 
 	glReadPixels(0, 0, g_windowWidth, g_windowHeight, GL_BGRA, GL_UNSIGNED_BYTE, pixels);
@@ -481,6 +484,7 @@ internal void Platform_TakeScreenshot(void)
 	SDL_DestroySurface(surface);
 
 	free(pixels);
+#endif
 }
 #endif
 
@@ -562,7 +566,7 @@ void Platform_Init(const char *title, int width, int height)
 
 	Platform_Log("[CTR Native] Initialising platform\n");
 
-#if defined(SDL_PLATFORM_IOS)
+#if defined(SDL_PLATFORM_IOS) && !defined(SDL_PLATFORM_VISIONOS)
 	// UIKit intersects this hint with the target-specific Info.plist mask.
 	// iPhone therefore remains landscape-only, while iPad can honor its declared
 	// portrait and dynamically resized scenes instead of clipping a landscape
@@ -571,7 +575,12 @@ void Platform_Init(const char *title, int width, int height)
 	            "Portrait PortraitUpsideDown LandscapeLeft LandscapeRight");
 #endif
 
+	/* SwiftUI owns all visionOS scenes; SDL supplies events, controllers and audio only. */
+#if defined(SDL_PLATFORM_VISIONOS)
+	if (SDL_Init(SDL_INIT_EVENTS) == 0)
+#else
 	if (SDL_Init(SDL_INIT_VIDEO) == 0)
+#endif
 	{
 		Platform_LogError("[CTR Native] Failed to initialise SDL: %s\n", SDL_GetError());
 		Platform_LogShutdown();

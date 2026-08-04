@@ -359,6 +359,9 @@ void MainInit_PrimMem(struct GameTracker *gGT)
 		return;
 	}
 
+#if defined(CTR_NATIVE)
+	size *= NativeVision_GetPrimitiveMemoryScale();
+#endif
 	MainDB_PrimMem(&gGT->db[0].primMem, size);
 	MainDB_PrimMem(&gGT->db[1].primMem, size);
 }
@@ -412,11 +415,22 @@ void MainInit_OTMem(struct GameTracker *gGT)
 
 EndFunc:
 
+#if defined(CTR_NATIVE)
+	size *= NativeVision_GetPrimitiveMemoryScale();
+#endif
+
 	MainDB_OTMem(&gGT->db[0].otMem, size);
 	MainDB_OTMem(&gGT->db[1].otMem, size);
 
 	// 0x1000 per player, plus 0x18 for linking
-	size = ((gGT->numPlyrCurrGame) << 0xC) | 0x18;
+	int swapchainViewCount = gGT->numPlyrCurrGame;
+#if defined(CTR_NATIVE)
+	if ((swapchainViewCount == 1) && (NativeVision_GetAllocationLayerCount() > swapchainViewCount))
+	{
+		swapchainViewCount = NativeVision_GetAllocationLayerCount();
+	}
+#endif
+	size = (swapchainViewCount << 0xC) | 0x18;
 	gGT->otSwapchainDB[0] = MEMPACK_AllocMem(size); // "ot1"
 	gGT->otSwapchainDB[1] = MEMPACK_AllocMem(size); // "ot2"
 }
