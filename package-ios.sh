@@ -368,7 +368,12 @@ unzip -Z1 "$archive_path" | grep -q '^Payload/CTRPad\.app/Info\.plist$' || \
     fail "IPA does not contain the expected Payload/CTRPad.app"
 
 mv "$archive_path" "$output_path"
-shasum -a 256 "$output_path" >"$output_path.sha256"
+output_hash="$(shasum -a 256 "$output_path" | awk '{print $1}')"
+printf '%s  %s\n' "$output_hash" "$(basename "$output_path")" >"$output_path.sha256"
+(
+    cd "$output_dir"
+    shasum -a 256 -c "$(basename "$output_path").sha256" >/dev/null
+)
 
 printf 'Wrote %s\n' "$output_path"
 printf 'Wrote %s\n' "$output_path.sha256"
