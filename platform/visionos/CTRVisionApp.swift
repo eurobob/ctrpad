@@ -46,7 +46,6 @@ struct CTRVisionApp: App {
             CompositorLayer(configuration: CTRCompositorConfiguration()) { layerRenderer in
                 CTRCompositorRenderer.startRenderLoop(layerRenderer, mode: .portal)
             }
-            .handlesGameControllerEvents(matching: .gamepad)
         }
         .immersionStyle(selection: .constant(.mixed), in: .mixed)
 
@@ -54,7 +53,6 @@ struct CTRVisionApp: App {
             CompositorLayer(configuration: CTRCompositorConfiguration()) { layerRenderer in
                 CTRCompositorRenderer.startRenderLoop(layerRenderer, mode: .cockpit)
             }
-            .handlesGameControllerEvents(matching: .gamepad)
         }
         .immersionStyle(selection: .constant(.full), in: .full)
     }
