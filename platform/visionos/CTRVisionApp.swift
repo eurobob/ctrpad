@@ -247,7 +247,7 @@ private struct CTRLauncherView: View {
                     .font(.footnote.weight(.semibold))
                 Slider(value: $stereoDepthScale, in: 0...2, step: 0.25)
                     .frame(maxWidth: 250)
-                Text("\(stereoDepthScale, specifier: \"%.2g\")×")
+                Text(String(format: "%.2g×", stereoDepthScale))
                     .font(.footnote.monospacedDigit().weight(.semibold))
                     .frame(width: 44, alignment: .trailing)
             }
