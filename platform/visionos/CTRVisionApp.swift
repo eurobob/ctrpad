@@ -6,6 +6,22 @@ import UniformTypeIdentifiers
 import _CompositorServices_SwiftUI
 import Darwin
 
+private struct CTRDiscValidationError: LocalizedError {
+    let message: String
+
+    var errorDescription: String? { message }
+}
+
+private func discValidationFailure(at url: URL) -> String? {
+    var message = [CChar](repeating: 0, count: 512)
+    let valid = message.withUnsafeMutableBufferPointer { messageBuffer in
+        url.path.withCString { path in
+            NativeVision_ValidateDiscImage(path, messageBuffer.baseAddress!, messageBuffer.count)
+        }
+    }
+    return valid != 0 ? nil : String(cString: message)
+}
+
 @main
 struct CTRVisionApp: App {
     static let portalSpaceID = "CTRPortal"
@@ -45,8 +61,13 @@ final class CTRVisionRuntime: ObservableObject {
 
     init() {
         if FileManager.default.fileExists(atPath: importedDiscURL.path) {
-            discName = "Imported CTR disc"
-            launch(discURL: importedDiscURL)
+            if let failure = discValidationFailure(at: importedDiscURL) {
+                status = failure
+                try? FileManager.default.removeItem(at: importedDiscURL)
+            } else {
+                discName = "Imported CTR disc"
+                launch(discURL: importedDiscURL)
+            }
         }
     }
 
@@ -82,6 +103,10 @@ final class CTRVisionRuntime: ObservableObject {
                     try FileManager.default.removeItem(at: staging)
                 }
                 try FileManager.default.copyItem(at: selectedURL, to: staging)
+                if let failure = discValidationFailure(at: staging) {
+                    try? FileManager.default.removeItem(at: staging)
+                    throw CTRDiscValidationError(message: failure)
+                }
                 if FileManager.default.fileExists(atPath: destination.path) {
                     _ = try FileManager.default.replaceItemAt(destination, withItemAt: staging)
                 } else {

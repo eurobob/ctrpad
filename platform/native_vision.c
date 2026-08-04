@@ -1,6 +1,8 @@
 #include <common.h>
 
+#include <platform/native_assets.h>
 #include <platform/native_vision.h>
+#include <platform/native_disc_image.h>
 
 #include <math.h>
 #include <stdio.h>
@@ -147,6 +149,58 @@ void NativeVision_ResetTracking(void)
 {
 	struct NativeVisionTrackingFrame frame = NativeVision_DefaultTracking();
 	NativeVision_PublishTrackingFrame(&frame);
+}
+
+int NativeVision_ValidateDiscImage(const char *path, char *message, size_t messageSize)
+{
+	int valid = 0;
+
+	if ((message != NULL) && (messageSize != 0))
+	{
+		message[0] = '\0';
+	}
+	if ((path == NULL) || (path[0] == '\0'))
+	{
+		if ((message != NULL) && (messageSize != 0))
+		{
+			snprintf(message, messageSize, "No disc image was selected.");
+		}
+		goto DONE;
+	}
+	if (!NativeAssets_InitWithDiscImage(".", NULL, path))
+	{
+		if ((message != NULL) && (messageSize != 0))
+		{
+			snprintf(message, messageSize,
+			         "That file is not a readable single-track MODE2/2352 image. Select the .img data file, not .ccd or .sub.");
+		}
+		goto DONE;
+	}
+	if (!NativeDiscImage_IsExpectedNTSCU())
+	{
+		if ((message != NULL) && (messageSize != 0))
+		{
+			snprintf(message, messageSize,
+			         "This disc identifies as %s. CTRPad currently requires the North American NTSC-U disc %s.",
+			         NativeDiscImage_GetDiscID(), NativeDiscImage_GetExpectedDiscID());
+		}
+		goto DONE;
+	}
+	if (!NativeAssets_Validate())
+	{
+		if ((message != NULL) && (messageSize != 0))
+		{
+			snprintf(message, messageSize,
+			         "This NTSC-U image opened, but required CTR files were missing or unreadable. Try a complete raw CloneCD .img data file.");
+		}
+		goto DONE;
+	}
+
+	valid = 1;
+
+DONE:
+	NativeDiscImage_Shutdown();
+	return valid;
 }
 
 int NativeVision_IsStereoActive(void)

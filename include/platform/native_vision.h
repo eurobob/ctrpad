@@ -1,6 +1,7 @@
 #ifndef NATIVE_VISION_H
 #define NATIVE_VISION_H
 
+#include <stddef.h>
 #include <stdint.h>
 
 struct GameTracker;
@@ -48,6 +49,9 @@ void NativeVision_PublishEyeTracking(uint64_t timestampNanoseconds,
 	float rightX, float rightY, float rightZ, float rightPitch, float rightYaw, float rightRoll,
 	float convergenceMetres, float unitsPerMetre);
 void NativeVision_ResetTracking(void);
+
+/* Returns 1 for the supported raw NTSC-U image, otherwise 0 with a message. */
+int NativeVision_ValidateDiscImage(const char *path, char *message, size_t messageSize);
 
 int NativeVision_IsStereoActive(void);
 int NativeVision_GetRenderLayerCount(void);
