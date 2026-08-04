@@ -119,7 +119,7 @@ final class CTRVisionRuntime: ObservableObject {
                 }
 
                 let result = storage.withUnsafeMutableBufferPointer { buffer in
-                    CTRNativeMain(Int32(arguments.count), buffer.baseAddress)
+                    CTRNativeMain(Int32(arguments.count), buffer.baseAddress!)
                 }
                 Task { @MainActor [weak self] in
                     self?.isRunning = false

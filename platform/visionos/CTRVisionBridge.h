@@ -8,7 +8,10 @@ NS_ASSUME_NONNULL_BEGIN
 #ifdef __cplusplus
 extern "C" {
 #endif
-FOUNDATION_EXPORT int CTRNativeMain(int argc, char *argv[]);
+FOUNDATION_EXPORT int CTRNativeMain(
+	int argc,
+	char * _Nullable * _Nonnull argv
+);
 #ifdef __cplusplus
 }
 #endif
