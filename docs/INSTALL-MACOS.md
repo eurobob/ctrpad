@@ -6,8 +6,7 @@ own compatible NTSC-U single-track raw MODE2/2352 BIN.
 
 Build `CTRPad.app` locally using the short sequence below, or use a
 `CTRPad-macOS-arm64-*.zip` from a tagged
-[GitHub Release](https://github.com/chrissotraidis/ctrpad/releases) when one is
-available.
+[GitHub Release](https://github.com/chrissotraidis/ctrpad/releases).
 
 ## Quick local build
 

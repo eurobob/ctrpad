@@ -59,18 +59,63 @@ the project or a build.
 
 | Target | Current status | Best path today |
 |---|---|---|
-| Apple Silicon Mac | **Native Apple Silicon build** | Build `CTRPad.app` locally or use a `CTRPad-macOS-arm64-*.zip` from [GitHub Releases](https://github.com/chrissotraidis/ctrpad/releases) when available. |
-| iPhone and iPad | **Native iPhone and iPad build** | Build locally or use the unsigned IPA from a tagged release, then sign it with your own Apple ID. One app supports both device families. |
+| Apple Silicon Mac | **Supported** | Download `CTRPad-macOS-arm64-*.zip` from [GitHub Releases](https://github.com/chrissotraidis/ctrpad/releases), or build `CTRPad.app` locally. |
+| iPhone and iPad | **Supported** | Download the retail-free unsigned IPA from [GitHub Releases](https://github.com/chrissotraidis/ctrpad/releases), then sign it with your own Apple ID. One IPA supports both device families. |
 | iOS Simulator | **Available for development** | Build the Simulator preset and use the guarded installer. Simulator is not physical-device proof. |
 | Windows and Linux | **Supported by the native codebase** | Use the desktop scripts or CMake presets. Apple platforms are CTRPad's primary focus. |
 | App Store / TestFlight | **Not announced** | No official listing, public TestFlight, or paid build exists. |
 
-Current development builds have been signed, installed, launched, and played
-on an iPad Pro and iPhone 14. The screenshots below are iPad captures. Physical
-controller compatibility still depends on the controller model and operating
-system, and the full controller hardware matrix remains open.
+The current Apple builds have been launched and played on Apple Silicon macOS,
+an iPad Pro, and an iPhone 14. The screenshots below are iPad captures.
+Physical controller compatibility still depends on the controller model and
+operating system, and the full controller hardware matrix remains open.
 
-## Get started
+## Download and install
+
+You need two separate things:
+
+1. **CTRPad**, downloaded from [GitHub Releases](https://github.com/chrissotraidis/ctrpad/releases).
+2. **Your own compatible Crash Team Racing disc image.** Game data is never
+   included in CTRPad, its source, or its release packages.
+
+### Apple Silicon Mac
+
+1. Download `CTRPad-macOS-arm64-*.zip` from the latest release.
+2. Open the ZIP and move `CTRPad.app` to Applications.
+3. Open CTRPad. If macOS blocks an ad-hoc-signed build, Control-click the app,
+   choose **Open**, and confirm once. Do not disable Gatekeeper system-wide.
+4. Select your compatible retail BIN when CTRPad asks for it.
+
+See [Install CTRPad on macOS](docs/INSTALL-MACOS.md) for build-from-source,
+fullscreen, controls, saves, and signing details.
+
+### iPhone or iPad
+
+1. Download `CTRPad-*-unsigned.ipa` from the latest release.
+2. Sign the IPA with your own Apple ID using a compatible sideloading tool,
+   such as AltStore Classic, then install it on the device. The downloaded IPA
+   is intentionally unsigned and cannot be installed directly.
+3. Launch CTRPad and choose your compatible retail BIN through Files.
+4. For later CTRPad versions, update-install over the existing app whenever
+   possible. Deleting the app also deletes its private imported disc and saves.
+
+The same IPA supports iOS and iPadOS 15 or newer. See
+[Build, sign, and sideload CTRPad](docs/INSTALL-IOS.md) for personal signing,
+developer signing, source builds, and safe updates.
+
+### Required Crash Team Racing disc image
+
+CTRPad accepts the North American NTSC-U retail disc identified as
+`SCUS_944.26`, stored as a **single-track raw MODE2/2352 BIN whose data track
+starts at byte zero**. When a dumping tool creates a BIN/CUE pair, select the
+`.bin` data track in CTRPad, not the `.cue` file.
+
+CTRPad rejects cooked 2048-byte ISOs, CUE files, CHD or compressed archives,
+other regions, and incomplete images. Those formats do not provide the exact
+raw XA audio and STR video sectors required by the game. CTRPad validates the
+image before replacing a working import. A PlayStation BIOS is not required.
+
+## Build from source
 
 Every target requires your own NTSC-U, single-track raw MODE2/2352 Crash Team
 Racing BIN. A cooked 2048-byte ISO is not a substitute because it omits the
@@ -427,11 +472,11 @@ runtime.
 
 ### Can I download an IPA or macOS ZIP?
 
-Tagged [GitHub Releases](https://github.com/chrissotraidis/ctrpad/releases), when
-available, include a retail-free unsigned IPA, an Apple Silicon macOS ZIP, and
-the exact corresponding-source archive with SHA-256 sidecars. The IPA still
-requires user-side signing, and an ad-hoc-signed macOS package is not an App
-Store, TestFlight, or notarized public release.
+Yes. Tagged [GitHub Releases](https://github.com/chrissotraidis/ctrpad/releases)
+include a retail-free unsigned IPA, an Apple Silicon macOS ZIP, and the exact
+corresponding-source archive with SHA-256 sidecars. The IPA still requires
+user-side signing, and an ad-hoc-signed macOS package is not an App Store,
+TestFlight, or notarized public release.
 
 ### Can I move, resize, fade, or hide the touch controls?
 

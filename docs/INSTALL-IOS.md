@@ -10,10 +10,10 @@ This document is Installation Information for the sideloaded build. It is not
 legal advice and does not grant rights to retail game data or Sony/Naughty Dog
 marks. Use only your own compatible NTSC-U retail disc image.
 
-Tagged [GitHub Releases](https://github.com/chrissotraidis/ctrpad/releases), when
-available, provide a retail-free unsigned IPA and its exact corresponding
-source. You can also build the app from this repository. In either case, sign
-the IPA with your own Apple ID; one device build supports both iPhone and iPad.
+Tagged [GitHub Releases](https://github.com/chrissotraidis/ctrpad/releases)
+provide a retail-free unsigned IPA and its exact corresponding source. You can
+also build the app from this repository. In either case, sign the IPA with your
+own Apple ID; one device build supports both iPhone and iPad.
 
 ## Choose an installation path
 
