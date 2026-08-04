@@ -1,6 +1,7 @@
 #if os(visionOS)
 
 import Foundation
+import CompositorServices
 import GameController
 import os
 import SwiftUI
@@ -43,14 +44,14 @@ struct CTRVisionApp: App {
         .defaultSize(width: 760, height: 650)
 
         ImmersiveSpace(id: Self.portalSpaceID) {
-            CompositorLayer(configuration: CTRCompositorConfiguration()) { layerRenderer in
+            CompositorLayer(configuration: DefaultCompositorLayerConfiguration()) { layerRenderer in
                 CTRCompositorRenderer.startRenderLoop(layerRenderer, mode: .portal)
             }
         }
         .immersionStyle(selection: .constant(.mixed), in: .mixed)
 
         ImmersiveSpace(id: Self.cockpitSpaceID) {
-            CompositorLayer(configuration: CTRCompositorConfiguration()) { layerRenderer in
+            CompositorLayer(configuration: DefaultCompositorLayerConfiguration()) { layerRenderer in
                 CTRCompositorRenderer.startRenderLoop(layerRenderer, mode: .cockpit)
             }
         }
@@ -196,6 +197,9 @@ private struct CTRLauncherView: View {
                     .font(.largeTitle.bold())
                 Text("visionOS stereo preview")
                     .foregroundStyle(.secondary)
+                Text("Build \(buildIdentity)")
+                    .font(.caption2.monospaced())
+                    .foregroundStyle(.tertiary)
             }
 
             CTRGameMetalView()
@@ -344,7 +348,7 @@ private struct CTRLauncherView: View {
                 NativeVision_SetMode(0)
                 NativeVision_ResetTracking()
                 activeSpaceID = nil
-                runtime.setPresentationStatus("visionOS could not open \(modeName). Try again after closing any other immersive app.")
+                runtime.setPresentationStatus("visionOS rejected the \(modeName) immersive scene.")
                 ctrVisionLog.error("[CTR Swift] immersive open failed mode=\(modeName, privacy: .public)")
             @unknown default:
                 NativeVision_SetMode(0)
@@ -355,6 +359,11 @@ private struct CTRLauncherView: View {
             }
             isOpeningImmersiveSpace = false
         }
+    }
+
+    private var buildIdentity: String {
+        let identity = Bundle.main.object(forInfoDictionaryKey: "CTRNativeSourceCommit") as? String
+        return String((identity ?? "unknown").prefix(12))
     }
 }
 

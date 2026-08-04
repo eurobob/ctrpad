@@ -49,23 +49,6 @@ extension LayerRenderer.Clock.Instant {
     }
 }
 
-@MainActor
-struct CTRCompositorConfiguration: _CompositorServices_SwiftUI.CompositorLayerConfiguration {
-    func makeConfiguration(
-        capabilities: LayerRenderer.Capabilities,
-        configuration: inout LayerRenderer.Configuration
-    ) {
-        let supportsFoveation = capabilities.supportsFoveation
-        let layouts = capabilities.supportedLayouts(
-            options: supportsFoveation ? [.foveationEnabled] : []
-        )
-        configuration.layout = layouts.contains(.layered) ? .layered : .dedicated
-        configuration.colorFormat = .bgra8Unorm_srgb
-        configuration.depthFormat = .depth32Float
-        configuration.isFoveationEnabled = supportsFoveation
-    }
-}
-
 enum CTRCompositorRenderer {
     @MainActor
     static func startRenderLoop(_ layerRenderer: LayerRenderer, mode: CTRImmersiveMode) {
