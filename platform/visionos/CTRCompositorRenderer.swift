@@ -15,6 +15,27 @@ enum CTRImmersiveMode: Int32, Sendable {
     case cockpit = 2
 }
 
+@MainActor
+struct CTRCompositorLayerConfiguration: _CompositorServices_SwiftUI.CompositorLayerConfiguration {
+    func makeConfiguration(
+        capabilities: LayerRenderer.Capabilities,
+        configuration: inout LayerRenderer.Configuration
+    ) {
+        // CTR composites one inexpensive quad per eye. Dedicated, unfoveated
+        // targets avoid applying a layered left-eye rasterization map to the
+        // explicitly rendered right-eye slice.
+        let layouts = capabilities.supportedLayouts(options: [])
+        if layouts.contains(.dedicated) {
+            configuration.layout = .dedicated
+        } else if layouts.contains(.layered) {
+            configuration.layout = .layered
+        }
+        configuration.colorFormat = .bgra8Unorm_srgb
+        configuration.depthFormat = .depth32Float
+        configuration.isFoveationEnabled = false
+    }
+}
+
 extension Notification.Name {
     static let ctrImmersiveSpaceDidClose = Notification.Name("CTRImmersiveSpaceDidClose")
     static let ctrImmersiveSpaceDidFail = Notification.Name("CTRImmersiveSpaceDidFail")
@@ -333,9 +354,6 @@ private final class CTRLayerRenderer: @unchecked Sendable {
             let depthTexture = textureIndex < drawable.depthTextures.count
                 ? drawable.depthTextures[textureIndex]
                 : nil
-            let rateMap = textureIndex < drawable.rasterizationRateMaps.count
-                ? drawable.rasterizationRateMaps[textureIndex]
-                : drawable.rasterizationRateMaps.first
             encodePass(
                 drawable: drawable,
                 anchor: anchor,
@@ -343,7 +361,6 @@ private final class CTRLayerRenderer: @unchecked Sendable {
                 sourceEyeIndex: min(1, eyeBaseIndex + viewIndex),
                 colorTexture: drawable.colorTextures[textureIndex],
                 depthTexture: depthTexture,
-                rasterizationRateMap: rateMap,
                 commandBuffer: commandBuffer
             )
         }
@@ -356,7 +373,6 @@ private final class CTRLayerRenderer: @unchecked Sendable {
         sourceEyeIndex: Int,
         colorTexture: MTLTexture,
         depthTexture: MTLTexture?,
-        rasterizationRateMap: MTLRasterizationRateMap?,
         commandBuffer: MTLCommandBuffer
     ) {
         guard preparePipeline(
@@ -390,8 +406,6 @@ private final class CTRLayerRenderer: @unchecked Sendable {
                 pass.depthAttachment.slice = textureMap.sliceIndex
             }
         }
-        pass.rasterizationRateMap = rasterizationRateMap
-
         guard let encoder = commandBuffer.makeRenderCommandEncoder(descriptor: pass) else {
             return
         }
