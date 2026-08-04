@@ -44,14 +44,14 @@ struct CTRVisionApp: App {
         .defaultSize(width: 760, height: 650)
 
         ImmersiveSpace(id: Self.portalSpaceID) {
-            CompositorLayer(configuration: DefaultCompositorLayerConfiguration()) { layerRenderer in
+            CompositorLayer(configuration: .default) { layerRenderer in
                 CTRCompositorRenderer.startRenderLoop(layerRenderer, mode: .portal)
             }
         }
         .immersionStyle(selection: .constant(.mixed), in: .mixed)
 
         ImmersiveSpace(id: Self.cockpitSpaceID) {
-            CompositorLayer(configuration: DefaultCompositorLayerConfiguration()) { layerRenderer in
+            CompositorLayer(configuration: .default) { layerRenderer in
                 CTRCompositorRenderer.startRenderLoop(layerRenderer, mode: .cockpit)
             }
         }
