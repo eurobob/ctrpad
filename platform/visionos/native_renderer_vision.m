@@ -17,10 +17,13 @@ extern "C" {
 #include <string.h>
 
 extern "C" {
-extern int g_cfg_bilinearFiltering;
-extern int g_windowHeight;
-extern int g_windowWidth;
 extern u32 CTR_MainStep(void);
+
+int g_cfg_bilinearFiltering = 0;
+int g_dbg_texturelessMode = 0;
+int g_dbg_wireframeMode = 0;
+int g_windowHeight = 0;
+int g_windowWidth = 0;
 }
 
 #define CTR_VISION_OUTPUT_RING 3
