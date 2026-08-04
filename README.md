@@ -46,8 +46,10 @@ the project or a build.
 - Files-based disc selection with validation and non-destructive replacement.
 - Touch-anywhere analog steering, editable controls, Gas lock, handedness,
   size, and 10%–100% opacity controls.
-- 1×, 2×, 3×, and 4× internal geometry resolution on iPhone and iPad.
-- SDL game-controller, keyboard, and desktop mouse-button input paths.
+- 1×, 2×, 3×, and 4× internal geometry resolution across macOS, iPhone, and
+  iPad, with 4× as the Apple Silicon Mac default.
+- Consistent SDL game-controller input across Apple platforms, plus
+  racing-first, remappable keyboard controls on macOS.
 - Private memory-card saves, rotating logs, and update installs that preserve
   the application data container.
 - A committed engineering journal and parity ledger explaining how the port
@@ -57,18 +59,63 @@ the project or a build.
 
 | Target | Current status | Best path today |
 |---|---|---|
-| Apple Silicon Mac | **Source build available** | Build `CTRPad.app` locally using the commands below. No public macOS ZIP has been published yet. |
-| iPhone and iPad | **Source build and local signing available** | Build one universal iPhone/iPad app, produce an unsigned IPA, and sign it with your own Apple ID. No downloadable IPA has been published yet. |
+| Apple Silicon Mac | **Supported** | Download `CTRPad-macOS-arm64-*.zip` from [GitHub Releases](https://github.com/chrissotraidis/ctrpad/releases), or build `CTRPad.app` locally. |
+| iPhone and iPad | **Supported** | Download the retail-free unsigned IPA from [GitHub Releases](https://github.com/chrissotraidis/ctrpad/releases), then sign it with your own Apple ID. One IPA supports both device families. |
 | iOS Simulator | **Available for development** | Build the Simulator preset and use the guarded installer. Simulator is not physical-device proof. |
 | Windows and Linux | **Supported by the native codebase** | Use the desktop scripts or CMake presets. Apple platforms are CTRPad's primary focus. |
 | App Store / TestFlight | **Not announced** | No official listing, public TestFlight, or paid build exists. |
 
-Current development builds have been signed, installed, launched, and played
-on an iPad Pro and iPhone 14. The screenshots below are iPad captures. Physical
-controller compatibility still depends on the controller model and operating
-system, and the full controller hardware matrix remains open.
+The current Apple builds have been launched and played on Apple Silicon macOS,
+an iPad Pro, and an iPhone 14. The screenshots below are iPad captures.
+Physical controller compatibility still depends on the controller model and
+operating system, and the full controller hardware matrix remains open.
 
-## Get started
+## Download and install
+
+You need two separate things:
+
+1. **CTRPad**, downloaded from [GitHub Releases](https://github.com/chrissotraidis/ctrpad/releases).
+2. **Your own compatible Crash Team Racing disc image.** Game data is never
+   included in CTRPad, its source, or its release packages.
+
+### Apple Silicon Mac
+
+1. Download `CTRPad-macOS-arm64-*.zip` from the latest release.
+2. Open the ZIP and move `CTRPad.app` to Applications.
+3. Open CTRPad. If macOS blocks an ad-hoc-signed build, Control-click the app,
+   choose **Open**, and confirm once. Do not disable Gatekeeper system-wide.
+4. Select your compatible retail BIN when CTRPad asks for it.
+
+See [Install CTRPad on macOS](docs/INSTALL-MACOS.md) for build-from-source,
+fullscreen, controls, saves, and signing details.
+
+### iPhone or iPad
+
+1. Download `CTRPad-*-unsigned.ipa` from the latest release.
+2. Sign the IPA with your own Apple ID using a compatible sideloading tool,
+   such as AltStore Classic, then install it on the device. The downloaded IPA
+   is intentionally unsigned and cannot be installed directly.
+3. Launch CTRPad and choose your compatible retail BIN through Files.
+4. For later CTRPad versions, update-install over the existing app whenever
+   possible. Deleting the app also deletes its private imported disc and saves.
+
+The same IPA supports iOS and iPadOS 15 or newer. See
+[Build, sign, and sideload CTRPad](docs/INSTALL-IOS.md) for personal signing,
+developer signing, source builds, and safe updates.
+
+### Required Crash Team Racing disc image
+
+CTRPad accepts the North American NTSC-U retail disc identified as
+`SCUS_944.26`, stored as a **single-track raw MODE2/2352 BIN whose data track
+starts at byte zero**. When a dumping tool creates a BIN/CUE pair, select the
+`.bin` data track in CTRPad, not the `.cue` file.
+
+CTRPad rejects cooked 2048-byte ISOs, CUE files, CHD or compressed archives,
+other regions, and incomplete images. Those formats do not provide the exact
+raw XA audio and STR video sectors required by the game. CTRPad validates the
+image before replacing a working import. A PlayStation BIOS is not required.
+
+## Build from source
 
 Every target requires your own NTSC-U, single-track raw MODE2/2352 Crash Team
 Racing BIN. A cooked 2048-byte ISO is not a substitute because it omits the
@@ -168,13 +215,36 @@ panel. The app remembers the external file path without copying game data into
 the bundle. Run `CTRPad --choose-disc` when you deliberately want to select a
 different image.
 
+### macOS keyboard controls
+
+The default macOS layout is designed to be playable without consulting the
+original PlayStation bindings:
+
+| Action | Default keys |
+|---|---|
+| Steer and navigate | `W` `A` `S` `D` or arrow keys |
+| Accelerate / confirm | Either Shift key |
+| Brake / reverse | `E` (alternate: `X`) |
+| Use item | Space (alternate: `V`) |
+| Camera / back | Escape (alternate: `Z`) |
+| Drift / boost | `Q` or `R` |
+| Start / pause | Return (alternate: `P`) |
+| Select | Tab |
+
+Click the **•••** button at the top right of the macOS game window to open the
+native **Display**, **Keyboard**, and **Controller** tabs. The Keyboard tab
+remaps primary and alternate keys or restores these defaults. Keyboard
+preferences are host-side aliases: changing them does not modify the retail
+game's controls.
+
 ## Native resolution and Options
 
-Open **Options** during play on iPhone or iPad to select 1×, 2×, 3×, or 4×
+Open **Options** during play on any Apple target to select 1×, 2×, 3×, or 4×
 internal resolution. Higher values render game geometry at a larger internal
 framebuffer size, which improves polygon edges while retaining the original
 PS1 textures and logical VRAM effects. Higher scales use more GPU power; 1× is
-the compatibility baseline.
+the compatibility baseline. Apple Silicon Mac builds default to 4× and apply
+changes immediately. iPhone and iPad keep their existing mobile defaults.
 
 Options also contains:
 
@@ -239,6 +309,11 @@ face buttons, L1/L2/R1/R2, Start, Select/Back, hot-plug handling, and rumble
 when the controller and operating system support it. Touch can remain enabled
 beside a controller or be hidden from Options.
 
+The controller mapping is shared by the macOS, iOS, and iPadOS builds. A
+standard controller's south/east/west/north buttons map to Cross/Circle/Square/
+Triangle, its shoulders and triggers map to L1/R1/L2/R2, and its D-pad, sticks,
+Start, and Back/Select retain their corresponding PlayStation inputs.
+
 The software input path and virtual-controller integration tests cover
 standardized buttons, axes, slot ownership, hot-plug, and rumble. A particular
 Bluetooth, USB, MFi, Xbox, PlayStation, or Nintendo controller still requires
@@ -284,7 +359,7 @@ for these captures are not part of this repository or its packages.
 | Apple targets | Thin ARM64 macOS, iPhone, iPad, and Simulator products build |
 | Rendering | Native macOS OpenGL and shared GLES 3 Apple-mobile presentation |
 | Game setup | macOS file picker and iOS/iPadOS Files import with disc validation |
-| Resolution | 1×–4× internal geometry resolution on iPhone and iPad |
+| Resolution | Persistent 1×–4× internal geometry resolution across macOS, iPhone, and iPad |
 | Touch | Dynamic analog steering, complete controls, layout editing, opacity, handedness, and Gas lock |
 | Controllers | SDL controller mapping, axes, hot-plug, slot ownership, and rumble path |
 | Saves | Private memory cards, atomic replacement, and non-destructive app updates |
@@ -395,11 +470,13 @@ No. CTRPad compiles decompiled C game code and a native host platform layer for
 the target operating system. It still uses your original retail disc data at
 runtime.
 
-### Can I download an IPA or macOS ZIP now?
+### Can I download an IPA or macOS ZIP?
 
-Not yet. The source-build and packaging paths are ready, but this repository
-does not currently publish a downloadable IPA or macOS archive. Do not confuse
-CI artifacts with an App Store, TestFlight, or notarized public release.
+Yes. Tagged [GitHub Releases](https://github.com/chrissotraidis/ctrpad/releases)
+include a retail-free unsigned IPA, an Apple Silicon macOS ZIP, and the exact
+corresponding-source archive with SHA-256 sidecars. The IPA still requires
+user-side signing, and an ad-hoc-signed macOS package is not an App Store,
+TestFlight, or notarized public release.
 
 ### Can I move, resize, fade, or hide the touch controls?
 

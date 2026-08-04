@@ -3018,6 +3018,9 @@ int NativeRenderer_RunPixelSelfTest(void)
 		fprintf(stderr, "[CTR Renderer] pixel self-test failed: platform initialization\n");
 		return 1;
 	}
+	// The pixel oracle owns a fixed logical baseline. Ignore any persisted host
+	// presentation scale so a user's 2x-4x preference cannot resize its target.
+	NativeRenderer_SetInternalResolutionScale(1);
 	presentWidth = g_windowWidth;
 	presentHeight = g_windowHeight;
 	if ((presentWidth <= 0) || (presentHeight <= 0) ||

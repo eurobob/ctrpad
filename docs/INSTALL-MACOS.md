@@ -4,9 +4,9 @@ CTRPad is a native Apple Silicon application for macOS 11 or newer. The app
 contains no Crash Team Racing data. On first launch it asks you to choose your
 own compatible NTSC-U single-track raw MODE2/2352 BIN.
 
-No public macOS archive is published yet. Build `CTRPad.app` locally using the
-short sequence below, or use the packaged-build instructions once a GitHub
-release provides `CTRPad-macOS-arm64-*.zip`.
+Build `CTRPad.app` locally using the short sequence below, or use a
+`CTRPad-macOS-arm64-*.zip` from a tagged
+[GitHub Release](https://github.com/chrissotraidis/ctrpad/releases).
 
 ## Quick local build
 
@@ -52,17 +52,32 @@ or `Option-Return` to enter or leave fullscreen.
 | PlayStation input | Keyboard | Mouse |
 |---|---|---|
 | D-pad / steer | `W` `A` `S` `D` or arrow keys | — |
-| Triangle / View | `I` or `Z` | — |
-| Square / Brake | `J` or `X` | Right button |
-| Cross / Gas | `K` or `C` | Left button |
-| Circle / Item | `L` or `V` | Middle button |
-| L1 / R1 drift | `Q` / `E` or Shift keys | Mouse 4 / Mouse 5 |
+| Triangle / View / Back | Escape or `Z` | — |
+| Square / Brake | `E` or `X` | Right button |
+| Cross / Gas | Either Shift key | Left button |
+| Circle / Item | Space or `V` | Middle button |
+| L1 / R1 drift | `Q` / `R` | Mouse 4 / Mouse 5 |
 | L2 / R2 | Control keys | — |
 | Start / Pause | `P` or Return | — |
-| Select | Tab or Space | — |
+| Select | Tab | — |
+
+Click the **•••** button at the top right of the game window to open CTRPad's
+native Mac Options panel:
+
+- **Display** selects 1×, 2×, 3×, or 4× internal geometry resolution. Apple
+  Silicon Macs default to 4×; changes apply immediately and persist.
+- **Keyboard** changes either binding for every PlayStation input or restores
+  the racing-first defaults. Press Backspace while capturing to clear a key.
+- **Controller** shows the shared controller layout and whether macOS currently
+  detects a compatible gamepad.
+
+Keyboard remapping changes only CTRPad's host aliases, not any control setting
+stored by the retail game. Display scaling preserves the original textures,
+logical VRAM effects, aspect ratio, and retail game state.
 
 Standard SDL-compatible Bluetooth and USB controllers are supported alongside
-keyboard and mouse input.
+keyboard and mouse input. macOS, iOS, and iPadOS use the same standard SDL
+gamepad-to-PlayStation mapping.
 
 ## Saves, logs, and preferences
 
@@ -73,8 +88,8 @@ CTRPad keeps writable data outside the application bundle under:
 ```
 
 That directory contains memory-card saves and `Crash Team Racing.log`. App
-updates do not need to replace it. The remembered disc path is a macOS app
-preference, not a copy of the game.
+updates do not need to replace it. The remembered disc path and custom keyboard
+bindings are macOS app preferences, not copies of the game.
 
 ## Build locally
 

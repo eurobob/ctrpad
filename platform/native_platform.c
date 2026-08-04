@@ -7,6 +7,9 @@
 #include "platform/native_gpu.h"
 #include "platform/native_input.h"
 #include "platform/native_log.h"
+#if defined(CTR_NATIVE_MACOS_BUNDLE)
+#include "platform/native_macos_controls.h"
+#endif
 #include "platform/native_perf.h"
 #include "platform/native_renderer.h"
 #include "platform/native_replay_scheduler.h"
@@ -601,6 +604,9 @@ void Platform_Init(const char *title, int width, int height)
 	atexit(Platform_Shutdown);
 	Platform_UpdateCursorVisibility();
 	Platform_InputInit();
+#if defined(CTR_NATIVE_MACOS_BUNDLE)
+	NativeMacOSControls_Install(g_window);
+#endif
 }
 
 int Platform_IsInitialized(void)
@@ -635,6 +641,9 @@ void Platform_Shutdown(void)
 	NativeRenderer_FinishGpuMeasurements();
 	NativePerf_Shutdown();
 	NativeReplayScheduler_Shutdown();
+#endif
+#if defined(CTR_NATIVE_MACOS_BUNDLE)
+	NativeMacOSControls_Shutdown();
 #endif
 	Platform_InputShutdown();
 	NativeAudio_Shutdown();
