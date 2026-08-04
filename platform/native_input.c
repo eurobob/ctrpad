@@ -3,6 +3,9 @@
 #include <macros.h>
 #include "psx/libpad.h"
 #include "platform/native_log.h"
+#if defined(SDL_PLATFORM_VISIONOS)
+#include "platform/native_gamepad_vision.h"
+#endif
 
 #include <SDL3/SDL.h>
 #include <stdio.h>
@@ -113,6 +116,10 @@ global_variable u16 s_mouseLatchedButtons;
 // likewise retained until the retail consumer polls; held contacts and the
 // analog stick remain live until UIKit releases them.
 global_variable struct NativeInputTouchState s_touchState;
+#if defined(SDL_PLATFORM_VISIONOS)
+global_variable s32 s_visionGamepadConnected;
+global_variable u16 s_visionGamepadLastButtons;
+#endif
 
 extern s32 g_padCommEnable;
 
@@ -796,6 +803,50 @@ internal void NativeInput_ApplyController(s32 slot)
 	snapshot->analog[3] = NativeInput_AxisToByte(leftY);
 }
 
+#if defined(SDL_PLATFORM_VISIONOS)
+internal void NativeInput_ApplyVisionGamepad(s32 slot)
+{
+	struct NativeVisionGamepadState state;
+	struct PlatformInputPadSnapshot *snapshot;
+	u16 buttons;
+	int connected;
+
+	if (slot != 0)
+	{
+		return;
+	}
+
+	connected = NativeVisionGamepad_Read(&state);
+	if (connected != s_visionGamepadConnected)
+	{
+		Platform_Log("[CTR Input] GCController %s\n", connected != 0 ? "connected" : "disconnected");
+		s_visionGamepadConnected = connected;
+	}
+	if (!connected)
+	{
+		s_visionGamepadLastButtons = 0;
+		return;
+	}
+
+	snapshot = &s_controllers[slot].snapshot;
+	snapshot->connected = 1;
+	snapshot->status = 0;
+	snapshot->id = NATIVE_INPUT_PAD_ANALOG;
+	buttons = NativeInput_GetSnapshotButtons(snapshot);
+	NativeInput_SetSnapshotButtons(snapshot, buttons & (u16)~state.pressedButtons);
+	snapshot->analog[0] = NativeInput_AxisToByte(state.rightX);
+	snapshot->analog[1] = NativeInput_AxisToByte(state.rightY);
+	snapshot->analog[2] = NativeInput_AxisToByte(state.leftX);
+	snapshot->analog[3] = NativeInput_AxisToByte(state.leftY);
+
+	if ((state.pressedButtons != 0) && (state.pressedButtons != s_visionGamepadLastButtons))
+	{
+		Platform_Log("[CTR Input] source=GCController pressed=0x%04x\n", (unsigned int)state.pressedButtons);
+	}
+	s_visionGamepadLastButtons = state.pressedButtons;
+}
+#endif
+
 internal u16 NativeInput_ReadKeyboard(void)
 {
 	static const u16 buttonBits[PLATFORM_INPUT_KEYBOARD_ACTION_COUNT] = {
@@ -994,6 +1045,9 @@ internal void NativeInput_OpenController(SDL_JoystickID instanceId, s32 slot)
 
 	if (SDL_IsGamepad(instanceId) == 0)
 	{
+#if defined(SDL_PLATFORM_VISIONOS)
+		Platform_LogWarn("[CTR Input] SDL device %d is not a mapped gamepad: %s\n", (int)instanceId, SDL_GetError());
+#endif
 		return;
 	}
 
@@ -1006,6 +1060,9 @@ internal void NativeInput_OpenController(SDL_JoystickID instanceId, s32 slot)
 	controller->controller = SDL_OpenGamepad(instanceId);
 	if (controller->controller == NULL)
 	{
+#if defined(SDL_PLATFORM_VISIONOS)
+		Platform_LogWarn("[CTR Input] SDL failed to open gamepad %d: %s\n", (int)instanceId, SDL_GetError());
+#endif
 		return;
 	}
 
@@ -1015,6 +1072,13 @@ internal void NativeInput_OpenController(SDL_JoystickID instanceId, s32 slot)
 	controller->switchingAnalog = 0;
 	s_controllerToSlotMapping[slot] = controller->instanceId;
 	NativeInput_AssignKeyboardForController(slot, NativeInput_SharePrimaryInputSources());
+#if defined(SDL_PLATFORM_VISIONOS)
+	{
+		const char *name = SDL_GetGamepadName(controller->controller);
+		Platform_Log("[CTR Input] SDL gamepad opened slot=%d id=%d name=%s\n", slot, (int)controller->instanceId,
+		             name != NULL ? name : "unknown");
+	}
+#endif
 }
 
 internal void NativeInput_OpenKnownControllers(void)
@@ -1024,6 +1088,9 @@ internal void NativeInput_OpenKnownControllers(void)
 	s32 i;
 
 	gamepads = SDL_GetGamepads(&count);
+#if defined(SDL_PLATFORM_VISIONOS)
+	Platform_Log("[CTR Input] SDL enumerated %d gamepad(s)\n", (int)count);
+#endif
 	for (i = 0; i < count; i++)
 	{
 		s32 slot = NativeInput_FindSlotForDeviceIndex(gamepads[i]);
@@ -1061,18 +1128,28 @@ int Platform_InputInit(void)
 	s_keyboardState = SDL_GetKeyboardState(NULL);
 	s_submitNameKey = 0;
 	s_keyboardSuppressed = 0;
+#if defined(SDL_PLATFORM_VISIONOS)
+	s_visionGamepadConnected = 0;
+	s_visionGamepadLastButtons = 0;
+#endif
 	NativeInput_ClearKeyboardLatch();
 	NativeInput_ResetMouseButtons();
 	NativeInput_ResetTouchContacts();
 
 	if (SDL_InitSubSystem(SDL_INIT_GAMEPAD | SDL_INIT_HAPTIC) == 0)
 	{
+#if defined(SDL_PLATFORM_VISIONOS)
+		Platform_LogWarn("[CTR Input] SDL input unavailable; retaining direct GCController fallback: %s\n", SDL_GetError());
+#else
 		fprintf(stderr, "[CTR Native] Failed to initialise SDL input subsystem: %s\n", SDL_GetError());
 		return 0;
+#endif
 	}
-
-	SDL_AddGamepadMappingsFromFile("gamecontrollerdb.txt");
-	NativeInput_OpenKnownControllers();
+	else
+	{
+		SDL_AddGamepadMappingsFromFile("gamecontrollerdb.txt");
+		NativeInput_OpenKnownControllers();
+	}
 
 	s_inputInitialized = 1;
 	return 1;
@@ -1151,6 +1228,9 @@ void Platform_InputUpdate(void)
 	{
 		NativeInput_ResetSnapshot(slot);
 		NativeInput_ApplyController(slot);
+#if defined(SDL_PLATFORM_VISIONOS)
+		NativeInput_ApplyVisionGamepad(slot);
+#endif
 		NativeInput_ApplyKeyboard(slot, keyboardButtons);
 		NativeInput_ApplyMouse(slot, mouseButtons);
 		NativeInput_ApplyTouch(slot, touchButtons);

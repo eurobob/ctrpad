@@ -8,6 +8,10 @@
 #include <string.h>
 #include <time.h>
 
+#if defined(SDL_PLATFORM_VISIONOS)
+#include <os/log.h>
+#endif
+
 #ifdef _WIN32
 #include "platform/native_win32.h"
 #endif
@@ -115,6 +119,12 @@ internal void Platform_LogWrite(FILE *consoleStream, const char *level, const ch
 #endif
 
 	fputs(text, stream);
+
+#if defined(SDL_PLATFORM_VISIONOS)
+	os_log_with_type(OS_LOG_DEFAULT,
+	                 strcmp(level, "ERROR") == 0 ? OS_LOG_TYPE_ERROR : OS_LOG_TYPE_DEFAULT,
+	                 "%{public}s", text);
+#endif
 
 	if (s_logStream != NULL)
 	{

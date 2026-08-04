@@ -613,6 +613,13 @@ void Platform_Init(const char *title, int width, int height)
 	atexit(Platform_Shutdown);
 	Platform_UpdateCursorVisibility();
 	Platform_InputInit();
+#if defined(SDL_PLATFORM_VISIONOS)
+	// Advance SPU/XA from the game-owned VBlank clock. visionOS can withhold
+	// audio callbacks while a SwiftUI scene changes focus; startup must not
+	// remain trapped on a publisher screen waiting for that callback.
+	NativeAudio_SetDeterministicRenderMode(1);
+	Platform_Log("[CTR Audio] visionOS VBlank-owned rendering active\n");
+#endif
 #if defined(CTR_NATIVE_MACOS_BUNDLE)
 	NativeMacOSControls_Install(g_window);
 #endif
@@ -953,10 +960,10 @@ int NikoGetEnterKey(void)
 #define NATIVE_VSYNC_CATCHUP_MAX 8
 // NOTE(aalhendi): Desktop uses SDL_DelayPrecise plus a final bounded spin.
 // UIKit uses a fully yielding sleep because CADisplayLink owns its main thread.
-#if defined(SDL_PLATFORM_IOS)
+#if defined(SDL_PLATFORM_IOS) || defined(SDL_PLATFORM_VISIONOS)
 // CADisplayLink owns the outer iOS loop. Do not burn the final 200 us of each
-// synthetic NTSC VBlank on the UIKit main thread; an absolute deadline still
-// prevents drift when SDL_DelayPrecise wakes late.
+// synthetic NTSC VBlank on Apple UI threads; an absolute deadline still
+// prevents drift when the yielding sleep wakes late.
 #define NATIVE_VSYNC_SPIN_US 0
 #else
 #define NATIVE_VSYNC_SPIN_US 200
@@ -1047,7 +1054,7 @@ internal void Native_WaitUntilVBlankTarget(void)
 			// final sub-millisecond interval, so iOS uses the fully yielding system
 			// sleep. Waking slightly late is safe: the target is absolute and the
 			// catch-up limiter handles elapsed VBlanks without accumulating drift.
-#if defined(SDL_PLATFORM_IOS)
+#if defined(SDL_PLATFORM_IOS) || defined(SDL_PLATFORM_VISIONOS)
 			SDL_DelayNS(sleepUs * 1000ull);
 #else
 			// Other hosts retain the established high-resolution pacing path used

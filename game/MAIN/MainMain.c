@@ -334,6 +334,16 @@ u32 main(void)
 			// frame counter, not represented in common.h currently
 			sdata->frameCounter++;
 
+#if defined(SDL_PLATFORM_VISIONOS)
+			if ((sdata->frameCounter % 300) == 0)
+			{
+				Platform_Log("[CTR Runtime] frame=%u state=%d loading=%d level=%d mode=0x%x titleFrame=%d held=0x%x tap=0x%x\n",
+				             (unsigned int)sdata->frameCounter, sdata->mainGameState, sdata->Loading.stage,
+				             gGT->levelID, (unsigned int)gGT->gameMode1, D230.titleIntroFrame,
+				             (unsigned int)gGS->anyoneHeldCurr, (unsigned int)sdata->buttonTapPerPlayer[0]);
+			}
+#endif
+
 			// Process all gamepad input
 #if defined(CTR_NATIVE) && defined(CTR_INTERNAL)
 			{
@@ -698,6 +708,11 @@ void StateZero()
 	// "Start your engines, for Sony Computer..."
 	CDSYS_XAPlay(CDSYS_XA_TYPE_EXTRA, 0x50);
 
+#if defined(SDL_PLATFORM_VISIONOS)
+	Platform_Log("[CTR Boot] SCEA XA wait begin state=%d playing=%d\n", sdata->XA_State,
+	             NativeAudio_IsXAPlaying());
+#endif
+
 	while (sdata->XA_State != 0)
 	{
 		// WARNING: Read-only address (ram, 0x8008d888) is written
@@ -709,6 +724,9 @@ void StateZero()
 #endif
 		CDSYS_XAPauseAtEnd();
 	}
+#if defined(SDL_PLATFORM_VISIONOS)
+	Platform_Log("[CTR Boot] SCEA XA wait complete vblank=%d\n", Platform_GetVBlankCount());
+#endif
 
 	DecalGlobal_Clear(gGT);
 

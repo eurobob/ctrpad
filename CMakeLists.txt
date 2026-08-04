@@ -282,6 +282,7 @@ if(CTR_NATIVE_VISIONOS)
         platform/visionos/CTRVisionApp.swift
         platform/visionos/CTRWindowRenderer.swift
         platform/visionos/CTRCompositorRenderer.swift
+        platform/visionos/native_gamepad_vision.m
         platform/visionos/native_renderer_vision.m
     )
     set_source_files_properties(platform/visionos/native_renderer_vision.m PROPERTIES
@@ -451,6 +452,7 @@ if(CTR_NATIVE_VISIONOS)
         "-framework ARKit"
         "-framework CompositorServices"
         "-framework Foundation"
+        "-framework GameController"
         "-framework Metal"
         "-framework MetalKit"
         "-framework QuartzCore"

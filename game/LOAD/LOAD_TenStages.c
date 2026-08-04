@@ -74,11 +74,19 @@ int LOAD_TenStages(struct GameTracker *gGT, int loadingStage, struct BigHeader *
 			// the point retail normally reaches while loading the ND crate.
 			// Present every wait tick so both host swapchain images are
 			// overwritten with copyright instead of briefly revealing SCEA.
+#if defined(SDL_PLATFORM_VISIONOS)
+			Platform_Log("[CTR Boot] copyright wait begin songFlags=0x%x songTime=%d\n",
+			             sdata->songPool[0].flags, sdata->songPool[0].timeSpentPlaying);
+#endif
 			while (((sdata->songPool[0].flags & 3) == 1) && (sdata->songPool[0].timeSpentPlaying < LOAD_NATIVE_NDBOX_INTRO_SONG_SYNC_TIME))
 			{
 				VSync(0);
 				Platform_PresentVRAMDisplay();
 			}
+#if defined(SDL_PLATFORM_VISIONOS)
+			Platform_Log("[CTR Boot] copyright wait complete songFlags=0x%x songTime=%d\n",
+			             sdata->songPool[0].flags, sdata->songPool[0].timeSpentPlaying);
+#endif
 #endif
 
 			gGT->db[0].drawEnv.isbg = 0;
