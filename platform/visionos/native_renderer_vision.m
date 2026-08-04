@@ -63,7 +63,8 @@ static uint64_t s_publishedSerial;
 static BOOL s_publishedHasHud;
 static int s_outputWidth = 512;
 static int s_outputHeight = 216;
-static int s_resolutionScale = 2;
+static int s_resolutionScale = 3;
+static int s_requestedResolutionScale = 3;
 static int s_currentLayer;
 static int s_currentTextureFormat;
 static int s_currentSemiTransPass;
@@ -447,6 +448,8 @@ int NativeRenderer_InitialisePSX(void)
 	s_vramTexture.label = @"CTR PS1 VRAM";
 	s_vramDirty = YES;
 	CTRVision_EnsureOutputs();
+	Platform_Log("[CTR Vision] internal resolution initialized at %dx (%dx%d)\n", s_resolutionScale,
+	             s_outputWidth * s_resolutionScale, s_outputHeight * s_resolutionScale);
 	return s_vramTexture != nil;
 }
 
@@ -473,14 +476,26 @@ void NativeRenderer_ResetDevice(void) {}
 void NativeRenderer_UpdateSwapIntervalState(int swapInterval) { (void)swapInterval; }
 int NativeRenderer_SetInternalResolutionScale(int scale)
 {
-	s_resolutionScale = MAX(1, MIN(scale, 4));
-	CTRVision_EnsureOutputs();
-	return s_resolutionScale;
+	int requestedScale = MAX(1, MIN(scale, 4));
+	[s_frameLock lock];
+	s_requestedResolutionScale = requestedScale;
+	[s_frameLock unlock];
+	return requestedScale;
 }
 
 void NativeRenderer_BeginScene(void)
 {
 	CTRVision_EndEncoder();
+	[s_frameLock lock];
+	int requestedResolutionScale = s_requestedResolutionScale;
+	[s_frameLock unlock];
+	if (s_resolutionScale != requestedResolutionScale)
+	{
+		s_resolutionScale = requestedResolutionScale;
+		CTRVision_EnsureOutputs();
+		Platform_Log("[CTR Vision] internal resolution changed to %dx (%dx%d)\n", s_resolutionScale,
+		             s_outputWidth * s_resolutionScale, s_outputHeight * s_resolutionScale);
+	}
 	s_writeIndex = s_nextWriteIndex;
 	s_nextWriteIndex = (s_nextWriteIndex + 1) % CTR_VISION_OUTPUT_RING;
 	s_commandBuffer = [s_queue commandBuffer];

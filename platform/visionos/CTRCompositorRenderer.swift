@@ -5,6 +5,7 @@ import CompositorServices
 import Darwin
 import Foundation
 import Metal
+import os
 import QuartzCore
 import simd
 import _CompositorServices_SwiftUI
@@ -12,6 +13,32 @@ import _CompositorServices_SwiftUI
 enum CTRImmersiveMode: Int32, Sendable {
     case portal = 1
     case cockpit = 2
+}
+
+extension Notification.Name {
+    static let ctrImmersiveSpaceDidClose = Notification.Name("CTRImmersiveSpaceDidClose")
+    static let ctrImmersiveSpaceDidFail = Notification.Name("CTRImmersiveSpaceDidFail")
+}
+
+private let ctrCompositorLog = Logger(
+    subsystem: Bundle.main.bundleIdentifier ?? "io.github.chrissotraidis.ctrpad.vision",
+    category: "VisionCompositor"
+)
+
+private final class CTRRenderTaskExecutor: TaskExecutor {
+    private let queue = DispatchQueue(label: "CTRCompositorRenderQueue", qos: .userInteractive)
+
+    func enqueue(_ job: UnownedJob) {
+        queue.async {
+            job.runSynchronously(on: self.asUnownedSerialExecutor())
+        }
+    }
+
+    nonisolated func asUnownedSerialExecutor() -> UnownedTaskExecutor {
+        UnownedTaskExecutor(ordinary: self)
+    }
+
+    static let shared = CTRRenderTaskExecutor()
 }
 
 extension LayerRenderer.Clock.Instant {
@@ -42,15 +69,24 @@ struct CTRCompositorConfiguration: _CompositorServices_SwiftUI.CompositorLayerCo
 enum CTRCompositorRenderer {
     @MainActor
     static func startRenderLoop(_ layerRenderer: LayerRenderer, mode: CTRImmersiveMode) {
+        ctrCompositorLog.notice("[CTR Compositor] layer created mode=\(mode.rawValue)")
         NativeVision_SetMode(mode.rawValue)
         NativeVision_ResetTracking()
-        Task.detached(priority: .userInteractive) {
+        Task(executorPreference: CTRRenderTaskExecutor.shared) {
             guard let renderer = CTRLayerRenderer(layerRenderer: layerRenderer, mode: mode) else {
+                ctrCompositorLog.error("[CTR Compositor] renderer setup failed mode=\(mode.rawValue)")
                 NativeVision_SetMode(0)
+                await MainActor.run {
+                    NotificationCenter.default.post(name: .ctrImmersiveSpaceDidFail, object: nil)
+                }
                 return
             }
             guard await renderer.startTracking() else {
+                ctrCompositorLog.error("[CTR Compositor] tracking startup failed mode=\(mode.rawValue)")
                 NativeVision_SetMode(0)
+                await MainActor.run {
+                    NotificationCenter.default.post(name: .ctrImmersiveSpaceDidFail, object: nil)
+                }
                 return
             }
             renderer.run()
@@ -81,6 +117,7 @@ private final class CTRLayerRenderer: @unchecked Sendable {
     private var cockpitReference: simd_float4x4?
     private var portalTransform: simd_float4x4?
     private var lastAnchor: DeviceAnchor?
+    private var didLogFirstFrame = false
 
     init?(layerRenderer: LayerRenderer, mode: CTRImmersiveMode) {
         self.layerRenderer = layerRenderer
@@ -90,12 +127,21 @@ private final class CTRLayerRenderer: @unchecked Sendable {
     }
 
     func startTracking() async -> Bool {
-        guard WorldTrackingProvider.isSupported else { return false }
+        guard WorldTrackingProvider.isSupported else {
+            ctrCompositorLog.error("[CTR Compositor] world tracking unsupported")
+            return false
+        }
 #if !targetEnvironment(simulator)
         let results = await arSession.requestAuthorization(
             for: Array(WorldTrackingProvider.requiredAuthorizations)
         )
+        for (authorization, status) in results {
+            ctrCompositorLog.notice(
+                "[CTR Compositor] authorization \(String(describing: authorization), privacy: .public)=\(String(describing: status), privacy: .public)"
+            )
+        }
         if results.values.contains(.denied) {
+            ctrCompositorLog.error("[CTR Compositor] world tracking authorization denied")
             return false
         }
 #endif
@@ -109,14 +155,19 @@ private final class CTRLayerRenderer: @unchecked Sendable {
         for _ in 0..<200 {
             if worldTracking.state == .running,
                worldTracking.queryDeviceAnchor(atTimestamp: CACurrentMediaTime()) != nil {
+                ctrCompositorLog.notice("[CTR Compositor] world tracking ready mode=\(self.mode.rawValue)")
                 return true
             }
             try? await Task.sleep(nanoseconds: 10_000_000)
         }
+        ctrCompositorLog.error(
+            "[CTR Compositor] world tracking timed out state=\(String(describing: self.worldTracking.state), privacy: .public)"
+        )
         return false
     }
 
     func run() {
+        ctrCompositorLog.notice("[CTR Compositor] render loop entered mode=\(self.mode.rawValue)")
         var isRendering = true
         while isRendering {
             autoreleasepool {
@@ -137,6 +188,10 @@ private final class CTRLayerRenderer: @unchecked Sendable {
             NativeVision_SetMode(0)
             NativeVision_ResetTracking()
         }
+        ctrCompositorLog.notice("[CTR Compositor] render loop closed mode=\(self.mode.rawValue)")
+        DispatchQueue.main.async {
+            NotificationCenter.default.post(name: .ctrImmersiveSpaceDidClose, object: nil)
+        }
     }
 
     private func renderFrame() {
@@ -151,31 +206,61 @@ private final class CTRLayerRenderer: @unchecked Sendable {
         guard layerRenderer.state == .running else { return }
 
         frame.startSubmission()
-        guard let drawable = frame.queryDrawable() else {
+        let drawables: [LayerRenderer.Drawable]
+        if #available(visionOS 26.0, *) {
+            drawables = frame.queryDrawables()
+        } else if let drawable = frame.queryDrawable() {
+            drawables = [drawable]
+        } else {
+            drawables = []
+        }
+        guard !drawables.isEmpty else {
             frame.endSubmission()
             return
         }
 
         guard let commandBuffer = commandQueue.makeCommandBuffer() else {
-            submitEmpty(drawable: drawable, frame: frame)
+            submitEmpty(drawables: drawables, frame: frame)
             return
         }
 
-        let anchor = queryAnchor(for: drawable)
+        let anchor = queryAnchor(for: drawables[0])
         if let anchor {
-            drawable.deviceAnchor = anchor
-            updateTracking(anchor: anchor, drawable: drawable)
+            for drawable in drawables {
+                drawable.deviceAnchor = anchor
+            }
+            updateTracking(anchor: anchor, drawables: drawables)
         }
 
-        encode(drawable: drawable, anchor: anchor, commandBuffer: commandBuffer)
-        drawable.encodePresent(commandBuffer: commandBuffer)
+        var eyeBaseIndex = 0
+        for drawable in drawables {
+            encode(
+                drawable: drawable,
+                anchor: anchor,
+                eyeBaseIndex: eyeBaseIndex,
+                commandBuffer: commandBuffer
+            )
+            drawable.encodePresent(commandBuffer: commandBuffer)
+            eyeBaseIndex += drawable.views.count
+        }
         commandBuffer.commit()
         frame.endSubmission()
+
+        if !didLogFirstFrame {
+            didLogFirstFrame = true
+            let viewCount = drawables.reduce(0) { $0 + $1.views.count }
+            let source = CTRVisionFrameHub.currentSceneTexture()
+            ctrCompositorLog.notice(
+                "[CTR Compositor] first frame mode=\(self.mode.rawValue) drawables=\(drawables.count) views=\(viewCount) source=\(source?.width ?? 0)x\(source?.height ?? 0)"
+            )
+        }
     }
 
-    private func submitEmpty(drawable: LayerRenderer.Drawable, frame: LayerRenderer.Frame) {
+    private func submitEmpty(drawables: [LayerRenderer.Drawable], frame: LayerRenderer.Frame) {
         if let commandBuffer = commandQueue.makeCommandBuffer() {
-            drawable.encodePresent(commandBuffer: commandBuffer)
+            for drawable in drawables {
+                drawable.encodePresent(commandBuffer: commandBuffer)
+            }
             commandBuffer.commit()
         }
         frame.endSubmission()
@@ -198,7 +283,7 @@ private final class CTRLayerRenderer: @unchecked Sendable {
         return lastAnchor
     }
 
-    private func updateTracking(anchor: DeviceAnchor, drawable: LayerRenderer.Drawable) {
+    private func updateTracking(anchor: DeviceAnchor, drawables: [LayerRenderer.Drawable]) {
         let head = anchor.originFromAnchorTransform
         if mode == .portal {
             if trackingBasis == nil {
@@ -212,17 +297,19 @@ private final class CTRLayerRenderer: @unchecked Sendable {
         }
 
         guard let basis = trackingBasis else { return }
-        let views = drawable.views
-        guard !views.isEmpty else { return }
+        let viewTransforms = drawables.flatMap { drawable in
+            drawable.views.map(\.transform)
+        }
+        guard !viewTransforms.isEmpty else { return }
 
         let basisInverse = simd_inverse(basis)
         var eyePositions = [SIMD3<Float>](repeating: .zero, count: 2)
-        for index in 0..<min(2, views.count) {
-            let eyeWorld = head * views[index].transform
+        for index in 0..<min(2, viewTransforms.count) {
+            let eyeWorld = head * viewTransforms[index]
             let local = basisInverse * eyeWorld
             eyePositions[index] = SIMD3<Float>(local.columns.3.x, local.columns.3.y, local.columns.3.z)
         }
-        if views.count == 1 {
+        if viewTransforms.count == 1 {
             eyePositions[1] = eyePositions[0]
         }
 
@@ -233,7 +320,9 @@ private final class CTRLayerRenderer: @unchecked Sendable {
             rotation = .zero
         }
 
-        let timestamp = UInt64(max(0, drawable.frameTiming.presentationTime.ctrTimeInterval) * 1_000_000_000)
+        let timestamp = UInt64(
+            max(0, drawables[0].frameTiming.presentationTime.ctrTimeInterval) * 1_000_000_000
+        )
         NativeVision_PublishEyeTracking(
             timestamp,
             eyePositions[0].x, eyePositions[0].y, eyePositions[0].z,
@@ -247,23 +336,87 @@ private final class CTRLayerRenderer: @unchecked Sendable {
     private func encode(
         drawable: LayerRenderer.Drawable,
         anchor: DeviceAnchor?,
+        eyeBaseIndex: Int,
         commandBuffer: MTLCommandBuffer
     ) {
         let views = drawable.views
-        guard !views.isEmpty else { return }
-        let textureIndex = views[0].textureMap.textureIndex
-        guard textureIndex < drawable.colorTextures.count else { return }
+        guard !views.isEmpty,
+              CTRVisionFrameHub.currentSceneTexture() != nil,
+              CTRVisionFrameHub.currentHudTexture() != nil else { return }
 
-        let colorTexture = drawable.colorTextures[textureIndex]
-        let depthTexture = textureIndex < drawable.depthTextures.count
-            ? drawable.depthTextures[textureIndex]
-            : nil
-        guard preparePipeline(colorFormat: colorTexture.pixelFormat,
-                              depthFormat: depthTexture?.pixelFormat ?? .invalid) else {
+        let firstTextureIndex = views[0].textureMap.textureIndex
+        guard firstTextureIndex < drawable.colorTextures.count else { return }
+        let firstColorTexture = drawable.colorTextures[firstTextureIndex]
+        let layered = firstColorTexture.textureType == .type2DArray
+
+        if layered {
+            let viewIndices = Array(0..<min(2, views.count))
+            let depthTexture = firstTextureIndex < drawable.depthTextures.count
+                ? drawable.depthTextures[firstTextureIndex]
+                : nil
+            let rateMap = firstTextureIndex < drawable.rasterizationRateMaps.count
+                ? drawable.rasterizationRateMaps[firstTextureIndex]
+                : drawable.rasterizationRateMaps.first
+            encodePass(
+                drawable: drawable,
+                anchor: anchor,
+                eyeBaseIndex: eyeBaseIndex,
+                viewIndices: viewIndices,
+                colorTexture: firstColorTexture,
+                depthTexture: depthTexture,
+                rasterizationRateMap: rateMap,
+                amplified: viewIndices.count > 1,
+                commandBuffer: commandBuffer
+            )
             return
         }
 
-        let eyeCount = min(2, views.count)
+        for viewIndex in views.indices {
+            let textureIndex = views[viewIndex].textureMap.textureIndex
+            guard textureIndex < drawable.colorTextures.count else { continue }
+            let depthTexture = textureIndex < drawable.depthTextures.count
+                ? drawable.depthTextures[textureIndex]
+                : nil
+            let rateMap = textureIndex < drawable.rasterizationRateMaps.count
+                ? drawable.rasterizationRateMaps[textureIndex]
+                : drawable.rasterizationRateMaps.first
+            encodePass(
+                drawable: drawable,
+                anchor: anchor,
+                eyeBaseIndex: eyeBaseIndex,
+                viewIndices: [viewIndex],
+                colorTexture: drawable.colorTextures[textureIndex],
+                depthTexture: depthTexture,
+                rasterizationRateMap: rateMap,
+                amplified: false,
+                commandBuffer: commandBuffer
+            )
+        }
+    }
+
+    private func encodePass(
+        drawable: LayerRenderer.Drawable,
+        anchor: DeviceAnchor?,
+        eyeBaseIndex: Int,
+        viewIndices: [Int],
+        colorTexture: MTLTexture,
+        depthTexture: MTLTexture?,
+        rasterizationRateMap: MTLRasterizationRateMap?,
+        amplified: Bool,
+        commandBuffer: MTLCommandBuffer
+    ) {
+        guard !viewIndices.isEmpty,
+              preparePipeline(
+                  colorFormat: colorTexture.pixelFormat,
+                  depthFormat: depthTexture?.pixelFormat ?? .invalid
+              ),
+              let pipeline,
+              let sampler,
+              let sceneTexture = CTRVisionFrameHub.currentSceneTexture(),
+              let hudTexture = CTRVisionFrameHub.currentHudTexture() else {
+            return
+        }
+
         let pass = MTLRenderPassDescriptor()
         pass.colorAttachments[0].texture = colorTexture
         pass.colorAttachments[0].loadAction = .clear
@@ -271,38 +424,31 @@ private final class CTRLayerRenderer: @unchecked Sendable {
         pass.colorAttachments[0].clearColor = mode == .portal
             ? MTLClearColorMake(0, 0, 0, 0)
             : MTLClearColorMake(0, 0, 0, 1)
-        pass.renderTargetArrayLength = eyeCount
-        if let depthTexture,
-           depthTexture.textureType == .type2DArray,
-           depthTexture.arrayLength >= eyeCount {
+        if amplified {
+            pass.renderTargetArrayLength = viewIndices.count
+        }
+        if let depthTexture {
             pass.depthAttachment.texture = depthTexture
             pass.depthAttachment.loadAction = .clear
             pass.depthAttachment.storeAction = .store
             pass.depthAttachment.clearDepth = 0.0
         }
-        pass.rasterizationRateMap = drawable.rasterizationRateMaps.first
+        pass.rasterizationRateMap = rasterizationRateMap
 
         guard let encoder = commandBuffer.makeRenderCommandEncoder(descriptor: pass),
-              let pipeline,
-              let sampler else {
+              !viewIndices.isEmpty else {
             return
         }
         encoder.label = mode == .portal ? "CTR portal" : "CTR cockpit"
         encoder.setRenderPipelineState(pipeline)
         encoder.setDepthStencilState(depthState)
 
-        guard let sceneTexture = CTRVisionFrameHub.currentSceneTexture(),
-              let hudTexture = CTRVisionFrameHub.currentHudTexture() else {
-            encoder.endEncoding()
-            return
-        }
-
         var uniforms = [EyeUniform]()
-        for index in 0..<eyeCount {
+        for viewIndex in viewIndices {
             let mvp: simd_float4x4
             if mode == .portal, let anchor, let portalTransform {
-                let eyeWorld = anchor.originFromAnchorTransform * views[index].transform
-                mvp = drawable.computeProjection(convention: .rightUpBack, viewIndex: index)
+                let eyeWorld = anchor.originFromAnchorTransform * drawable.views[viewIndex].transform
+                mvp = drawable.computeProjection(convention: .rightUpBack, viewIndex: viewIndex)
                     * simd_inverse(eyeWorld)
                     * portalTransform
             } else {
@@ -312,13 +458,17 @@ private final class CTRLayerRenderer: @unchecked Sendable {
                 modelViewProjection: mvp,
                 halfSize: mode == .portal ? SIMD2<Float>(0.36, 0.27) : SIMD2<Float>(1, 1),
                 mode: UInt32(mode.rawValue),
-                eye: UInt32(index)
+                eye: UInt32(min(1, eyeBaseIndex + viewIndex))
             ))
         }
 
-        let viewports = views.prefix(eyeCount).map(\.textureMap.viewport)
-        encoder.setVertexAmplificationCount(eyeCount, viewMappings: nil)
-        encoder.setViewports(viewports)
+        if amplified {
+            let viewports = viewIndices.map { drawable.views[$0].textureMap.viewport }
+            encoder.setVertexAmplificationCount(viewIndices.count, viewMappings: nil)
+            encoder.setViewports(viewports)
+        } else if let viewIndex = viewIndices.first {
+            encoder.setViewport(drawable.views[viewIndex].textureMap.viewport)
+        }
         uniforms.withUnsafeBufferPointer { buffer in
             if let baseAddress = buffer.baseAddress {
                 encoder.setVertexBytes(

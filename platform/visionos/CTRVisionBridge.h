@@ -12,6 +12,7 @@ FOUNDATION_EXPORT int CTRNativeMain(
 	int argc,
 	char * _Nullable * _Nonnull argv
 );
+FOUNDATION_EXPORT int NativeRenderer_SetInternalResolutionScale(int scale);
 #ifdef __cplusplus
 }
 #endif

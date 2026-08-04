@@ -89,6 +89,11 @@ final class CTRVisionRuntime: ObservableObject {
         launch(discURL: importedDiscURL)
     }
 
+    func setPresentationStatus(_ message: String) {
+        guard isRunning else { return }
+        status = message
+    }
+
     func importDisc(from selectedURL: URL) async {
         guard !didLaunch else {
             status = "Restart CTRPad to replace the disc image."
@@ -181,6 +186,8 @@ private struct CTRLauncherView: View {
 
     @State private var isImporting = false
     @State private var activeSpaceID: String?
+    @State private var isOpeningImmersiveSpace = false
+    @AppStorage("CTRPadInternalResolutionScale") private var resolutionScale = 3
 
     var body: some View {
         VStack(spacing: 22) {
@@ -216,6 +223,18 @@ private struct CTRLauncherView: View {
             }
 
             HStack(spacing: 12) {
+                Text("Internal resolution")
+                    .font(.footnote.weight(.semibold))
+                Picker("Internal resolution", selection: $resolutionScale) {
+                    ForEach(1...4, id: \.self) { scale in
+                        Text("\(scale)×").tag(scale)
+                    }
+                }
+                .pickerStyle(.segmented)
+                .frame(maxWidth: 320)
+            }
+
+            HStack(spacing: 12) {
                 Button("Choose Disc…", systemImage: "opticaldisc") {
                     isImporting = true
                 }
@@ -224,12 +243,12 @@ private struct CTRLauncherView: View {
                 Button("Portal", systemImage: "rectangle.inset.filled") {
                     open(mode: .portal, spaceID: CTRVisionApp.portalSpaceID)
                 }
-                .disabled(!runtime.isRunning)
+                .disabled(!runtime.isRunning || isOpeningImmersiveSpace)
 
                 Button("Cockpit VR", systemImage: "visionpro") {
                     open(mode: .cockpit, spaceID: CTRVisionApp.cockpitSpaceID)
                 }
-                .disabled(!runtime.isRunning)
+                .disabled(!runtime.isRunning || isOpeningImmersiveSpace)
 
                 if activeSpaceID != nil {
                     Button("Exit", systemImage: "xmark") {
@@ -249,11 +268,39 @@ private struct CTRLauncherView: View {
         .task {
             // Let SwiftUI establish the controller-event routing surface before
             // the detached native loop begins polling GameController.
+            resolutionScale = Int(NativeRenderer_SetInternalResolutionScale(Int32(resolutionScale)))
             await Task.yield()
             runtime.startImportedDiscIfReady()
         }
+        .onChange(of: resolutionScale) { scale in
+            let applied = Int(NativeRenderer_SetInternalResolutionScale(Int32(scale)))
+            if applied != scale {
+                resolutionScale = applied
+            }
+            runtime.setPresentationStatus(
+                "Running at \(applied)× internal resolution (\(512 * applied)×\(216 * applied))."
+            )
+            ctrVisionLog.notice("[CTR Swift] requested internal resolution scale=\(applied)")
+        }
         .onChange(of: scenePhase) { phase in
             ctrVisionLog.notice("[CTR Swift] window scene phase=\(String(describing: phase), privacy: .public)")
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .ctrImmersiveSpaceDidClose)) { _ in
+            activeSpaceID = nil
+            isOpeningImmersiveSpace = false
+            runtime.setPresentationStatus("Immersive space closed. Running in the window.")
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .ctrImmersiveSpaceDidFail)) { _ in
+            Task {
+                await dismissImmersiveSpace()
+                NativeVision_SetMode(0)
+                NativeVision_ResetTracking()
+                activeSpaceID = nil
+                isOpeningImmersiveSpace = false
+                runtime.setPresentationStatus(
+                    "Immersive rendering could not start. Check world-sensing permission and try again."
+                )
+            }
         }
         .fileImporter(
             isPresented: $isImporting,
@@ -269,20 +316,44 @@ private struct CTRLauncherView: View {
     }
 
     private func open(mode: CTRImmersiveMode, spaceID: String) {
+        guard !isOpeningImmersiveSpace else { return }
+        isOpeningImmersiveSpace = true
+        let modeName = mode == .portal ? "Portal" : "Cockpit VR"
+        runtime.setPresentationStatus("Opening \(modeName)…")
+        ctrVisionLog.notice("[CTR Swift] immersive open requested mode=\(modeName, privacy: .public) id=\(spaceID, privacy: .public)")
+
         Task {
             if activeSpaceID != nil {
                 await dismissImmersiveSpace()
+                activeSpaceID = nil
             }
-            NativeVision_SetMode(mode.rawValue)
-            NativeVision_ResetTracking()
             let result = await openImmersiveSpace(id: spaceID)
-            if case .opened = result {
+
+            switch result {
+            case .opened:
                 activeSpaceID = spaceID
-            } else {
+                runtime.setPresentationStatus("\(modeName) active. Use Exit to return to the window.")
+                ctrVisionLog.notice("[CTR Swift] immersive open succeeded mode=\(modeName, privacy: .public)")
+            case .userCancelled:
                 NativeVision_SetMode(0)
                 NativeVision_ResetTracking()
                 activeSpaceID = nil
+                runtime.setPresentationStatus("\(modeName) was cancelled.")
+                ctrVisionLog.notice("[CTR Swift] immersive open cancelled mode=\(modeName, privacy: .public)")
+            case .error:
+                NativeVision_SetMode(0)
+                NativeVision_ResetTracking()
+                activeSpaceID = nil
+                runtime.setPresentationStatus("visionOS could not open \(modeName). Try again after closing any other immersive app.")
+                ctrVisionLog.error("[CTR Swift] immersive open failed mode=\(modeName, privacy: .public)")
+            @unknown default:
+                NativeVision_SetMode(0)
+                NativeVision_ResetTracking()
+                activeSpaceID = nil
+                runtime.setPresentationStatus("visionOS returned an unknown result while opening \(modeName).")
+                ctrVisionLog.error("[CTR Swift] immersive open returned unknown result mode=\(modeName, privacy: .public)")
             }
+            isOpeningImmersiveSpace = false
         }
     }
 }
