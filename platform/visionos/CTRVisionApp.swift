@@ -183,6 +183,7 @@ private struct CTRLauncherView: View {
     @Environment(\.openImmersiveSpace) private var openImmersiveSpace
     @Environment(\.dismissImmersiveSpace) private var dismissImmersiveSpace
     @Environment(\.scenePhase) private var scenePhase
+    @Environment(\.supportsMultipleWindows) private var supportsMultipleScenes
     @ObservedObject var runtime: CTRVisionRuntime
 
     @State private var isImporting = false
@@ -321,6 +322,12 @@ private struct CTRLauncherView: View {
 
     private func open(mode: CTRImmersiveMode, spaceID: String) {
         guard !isOpeningImmersiveSpace else { return }
+        guard supportsMultipleScenes else {
+            runtime.setPresentationStatus(
+                "This installed build does not have multi-scene support; immersive spaces cannot open."
+            )
+            return
+        }
         isOpeningImmersiveSpace = true
         let modeName = mode == .portal ? "Portal" : "Cockpit VR"
         runtime.setPresentationStatus("Opening \(modeName)…")
