@@ -5,6 +5,29 @@
 
 #define PLATFORM_INPUT_PAD_COUNT 4
 
+enum PlatformInputKeyboardAction
+{
+	PLATFORM_INPUT_KEYBOARD_UP = 0,
+	PLATFORM_INPUT_KEYBOARD_DOWN,
+	PLATFORM_INPUT_KEYBOARD_LEFT,
+	PLATFORM_INPUT_KEYBOARD_RIGHT,
+	PLATFORM_INPUT_KEYBOARD_CROSS,
+	PLATFORM_INPUT_KEYBOARD_SQUARE,
+	PLATFORM_INPUT_KEYBOARD_CIRCLE,
+	PLATFORM_INPUT_KEYBOARD_TRIANGLE,
+	PLATFORM_INPUT_KEYBOARD_L1,
+	PLATFORM_INPUT_KEYBOARD_R1,
+	PLATFORM_INPUT_KEYBOARD_L2,
+	PLATFORM_INPUT_KEYBOARD_R2,
+	PLATFORM_INPUT_KEYBOARD_L3,
+	PLATFORM_INPUT_KEYBOARD_R3,
+	PLATFORM_INPUT_KEYBOARD_START,
+	PLATFORM_INPUT_KEYBOARD_SELECT,
+	PLATFORM_INPUT_KEYBOARD_ACTION_COUNT,
+};
+
+#define PLATFORM_INPUT_KEYBOARD_BINDING_COUNT 2
+
 enum PlatformInputTouchButton
 {
 	PLATFORM_INPUT_TOUCH_SELECT = 0x0001,
@@ -41,6 +64,10 @@ void Platform_InputUpdate(void);
 void Platform_InputSuspend(void);
 void Platform_InputResume(void);
 void Platform_InputKeyboardEvent(int key, int down);
+int Platform_InputGetKeyboardBinding(int action, int binding);
+int Platform_InputSetKeyboardBinding(int action, int binding, int key);
+void Platform_InputResetKeyboardBindings(void);
+void Platform_InputSetKeyboardSuppressed(int suppressed);
 void Platform_InputMouseButtonEvent(int button, int down);
 void Platform_InputTouchSetEnabled(int enabled);
 void Platform_InputTouchButton(unsigned int buttonMask, int down);

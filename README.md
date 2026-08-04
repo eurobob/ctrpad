@@ -47,7 +47,8 @@ the project or a build.
 - Touch-anywhere analog steering, editable controls, Gas lock, handedness,
   size, and 10%–100% opacity controls.
 - 1×, 2×, 3×, and 4× internal geometry resolution on iPhone and iPad.
-- SDL game-controller, keyboard, and desktop mouse-button input paths.
+- Consistent SDL game-controller input across Apple platforms, plus
+  racing-first, remappable keyboard controls on macOS.
 - Private memory-card saves, rotating logs, and update installs that preserve
   the application data container.
 - A committed engineering journal and parity ledger explaining how the port
@@ -57,8 +58,8 @@ the project or a build.
 
 | Target | Current status | Best path today |
 |---|---|---|
-| Apple Silicon Mac | **Source build available** | Build `CTRPad.app` locally using the commands below. No public macOS ZIP has been published yet. |
-| iPhone and iPad | **Source build and local signing available** | Build one universal iPhone/iPad app, produce an unsigned IPA, and sign it with your own Apple ID. No downloadable IPA has been published yet. |
+| Apple Silicon Mac | **Native Apple Silicon build** | Build `CTRPad.app` locally or use a `CTRPad-macOS-arm64-*.zip` from [GitHub Releases](https://github.com/chrissotraidis/ctrpad/releases) when available. |
+| iPhone and iPad | **Native iPhone and iPad build** | Build locally or use the unsigned IPA from a tagged release, then sign it with your own Apple ID. One app supports both device families. |
 | iOS Simulator | **Available for development** | Build the Simulator preset and use the guarded installer. Simulator is not physical-device proof. |
 | Windows and Linux | **Supported by the native codebase** | Use the desktop scripts or CMake presets. Apple platforms are CTRPad's primary focus. |
 | App Store / TestFlight | **Not announced** | No official listing, public TestFlight, or paid build exists. |
@@ -168,6 +169,26 @@ panel. The app remembers the external file path without copying game data into
 the bundle. Run `CTRPad --choose-disc` when you deliberately want to select a
 different image.
 
+### macOS keyboard controls
+
+The default macOS layout is designed to be playable without consulting the
+original PlayStation bindings:
+
+| Action | Default keys |
+|---|---|
+| Steer and navigate | `W` `A` `S` `D` or arrow keys |
+| Accelerate / confirm | Either Shift key |
+| Brake / reverse | `E` (alternate: `X`) |
+| Use item | Space (alternate: `V`) |
+| Camera / back | Escape (alternate: `Z`) |
+| Drift / boost | `Q` or `R` |
+| Start / pause | Return (alternate: `P`) |
+| Select | Tab |
+
+Click the **•••** button at the top right of the macOS game window to remap
+primary and alternate keys or restore these defaults. Keyboard preferences are
+host-side aliases: changing them does not modify the retail game's controls.
+
 ## Native resolution and Options
 
 Open **Options** during play on iPhone or iPad to select 1×, 2×, 3×, or 4×
@@ -238,6 +259,11 @@ CTRPad includes SDL's native game-controller path with both sticks, D-pad,
 face buttons, L1/L2/R1/R2, Start, Select/Back, hot-plug handling, and rumble
 when the controller and operating system support it. Touch can remain enabled
 beside a controller or be hidden from Options.
+
+The controller mapping is shared by the macOS, iOS, and iPadOS builds. A
+standard controller's south/east/west/north buttons map to Cross/Circle/Square/
+Triangle, its shoulders and triggers map to L1/R1/L2/R2, and its D-pad, sticks,
+Start, and Back/Select retain their corresponding PlayStation inputs.
 
 The software input path and virtual-controller integration tests cover
 standardized buttons, axes, slot ownership, hot-plug, and rumble. A particular
@@ -395,11 +421,13 @@ No. CTRPad compiles decompiled C game code and a native host platform layer for
 the target operating system. It still uses your original retail disc data at
 runtime.
 
-### Can I download an IPA or macOS ZIP now?
+### Can I download an IPA or macOS ZIP?
 
-Not yet. The source-build and packaging paths are ready, but this repository
-does not currently publish a downloadable IPA or macOS archive. Do not confuse
-CI artifacts with an App Store, TestFlight, or notarized public release.
+Tagged [GitHub Releases](https://github.com/chrissotraidis/ctrpad/releases), when
+available, include a retail-free unsigned IPA, an Apple Silicon macOS ZIP, and
+the exact corresponding-source archive with SHA-256 sidecars. The IPA still
+requires user-side signing, and an ad-hoc-signed macOS package is not an App
+Store, TestFlight, or notarized public release.
 
 ### Can I move, resize, fade, or hide the touch controls?
 

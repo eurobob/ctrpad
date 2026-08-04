@@ -6,7 +6,7 @@ if(IOS OR APPLE)
     enable_language(OBJC)
 endif()
 
-set(CTR_NATIVE_VERSION "0.1.0-beta.7.1")
+set(CTR_NATIVE_VERSION "0.1.0")
 option(CTR_NATIVE_MACOS_BUNDLE "Build CTR Native as a macOS application bundle" OFF)
 set(CTR_NATIVE_SOURCE_COMMIT "" CACHE STRING
     "Source commit for a renamed corresponding-source tree without .git"
@@ -272,6 +272,7 @@ if(CTR_NATIVE_MACOS_BUNDLE)
         MACOSX_PACKAGE_LOCATION "Resources"
     )
     target_sources(ctr_native PRIVATE
+        platform/apple/native_macos_controls.m
         platform/apple/native_macos_import.m
         "${CTR_NATIVE_MACOS_ICON}"
     )
@@ -285,7 +286,7 @@ if(CTR_NATIVE_MACOS_BUNDLE)
         MACOSX_BUNDLE_GUI_IDENTIFIER "io.github.chrissotraidis.ctrpad"
         MACOSX_BUNDLE_INFO_STRING "Touch-first native Crash Team Racing runtime"
         MACOSX_BUNDLE_LONG_VERSION_STRING "${CTR_NATIVE_VERSION}"
-        MACOSX_BUNDLE_SHORT_VERSION_STRING "0.1.0"
+        MACOSX_BUNDLE_SHORT_VERSION_STRING "${CTR_NATIVE_VERSION}"
         MACOSX_BUNDLE_BUNDLE_VERSION "1"
         MACOSX_BUNDLE_COPYRIGHT "GPL-3.0; retail game data is user-supplied"
         MACOSX_BUNDLE_INFO_PLIST "${CMAKE_SOURCE_DIR}/platform/apple/Info.plist.in"
@@ -307,7 +308,7 @@ if(IOS)
         MACOSX_BUNDLE_GUI_IDENTIFIER "${CTR_NATIVE_IOS_BUNDLE_IDENTIFIER}"
         MACOSX_BUNDLE_INFO_STRING "Touch-first native Crash Team Racing runtime"
         MACOSX_BUNDLE_LONG_VERSION_STRING "${CTR_NATIVE_VERSION}"
-        MACOSX_BUNDLE_SHORT_VERSION_STRING "0.1.0"
+        MACOSX_BUNDLE_SHORT_VERSION_STRING "${CTR_NATIVE_VERSION}"
         MACOSX_BUNDLE_BUNDLE_VERSION "1"
         MACOSX_BUNDLE_COPYRIGHT "GPL-3.0; retail game data is user-supplied"
         MACOSX_BUNDLE_INFO_PLIST "${CMAKE_SOURCE_DIR}/platform/apple/Info-iOS.plist.in"
@@ -404,7 +405,7 @@ if(BUILD_TESTING)
     )
     add_test(NAME ctr_native_input COMMAND $<TARGET_FILE:ctr_native> --self-test-input)
     set_tests_properties(ctr_native_input PROPERTIES PASS_REGULAR_EXPRESSION
-        "^\\[CTR Input\\] self-test passed: metadata-key=4 legacy-enter=40 migration-enter=40 live-start=retail tap-latch=c\\+right until-retail-poll"
+        "^\\[CTR Input\\] self-test passed: metadata-key=4 legacy-enter=40 migration-enter=40 live-start=retail tap-latch=shift\\+right until-retail-poll aliases=17 remap\\+duplicate\\+reset=passed"
     )
     add_test(NAME ctr_native_collision_scratch COMMAND $<TARGET_FILE:ctr_native> --self-test-collision-scratch)
     set_tests_properties(ctr_native_collision_scratch PROPERTIES PASS_REGULAR_EXPRESSION

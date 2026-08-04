@@ -30,24 +30,6 @@
 // MIT-licensed pad implementation while moving host ownership into ctr-native.
 // See THIRD_PARTY_NOTICES.md.
 
-struct NativeInputKeyboardMapping
-{
-	s32 id;
-
-	s32 kc_square, kc_circle, kc_triangle, kc_cross;
-	s32 kc_square_alt, kc_circle_alt, kc_triangle_alt, kc_cross_alt;
-
-	s32 kc_l1, kc_l2, kc_l3;
-	s32 kc_r1, kc_r2, kc_r3;
-	s32 kc_l1_alt, kc_r1_alt;
-
-	s32 kc_start, kc_select;
-	s32 kc_start_alt, kc_select_alt;
-
-	s32 kc_dpad_left, kc_dpad_right, kc_dpad_up, kc_dpad_down;
-	s32 kc_dpad_left_alt, kc_dpad_right_alt, kc_dpad_up_alt, kc_dpad_down_alt;
-};
-
 struct NativeInputControllerMapping
 {
 	s32 id;
@@ -105,7 +87,7 @@ struct NativeInputTouchState
 };
 
 global_variable struct NativeInputControllerMapping s_controllerMapping;
-global_variable struct NativeInputKeyboardMapping s_keyboardMapping;
+global_variable s32 s_keyboardBindings[PLATFORM_INPUT_KEYBOARD_ACTION_COUNT][PLATFORM_INPUT_KEYBOARD_BINDING_COUNT];
 global_variable s32 s_controllerToSlotMapping[NATIVE_INPUT_MAX_CONTROLLERS] = {-1, -1, -1, -1};
 
 global_variable struct NativeInputController s_controllers[NATIVE_INPUT_MAX_CONTROLLERS];
@@ -117,6 +99,7 @@ global_variable s32 s_installedSnapshotsActive;
 global_variable s32 s_keyboardControllerSlot = NATIVE_INPUT_DEFAULT_KEYBOARD_SLOT;
 global_variable s32 s_lastActiveControllerSlot = -1;
 global_variable s32 s_submitNameKey;
+global_variable s32 s_keyboardSuppressed;
 // SDL can deliver key-down and key-up while the VSync callback continues to
 // refresh pad packets faster than slow game logic consumes them. Keep each
 // active-low edge until GAMEPAD_ProcessHold acknowledges its retail poll.
@@ -320,38 +303,35 @@ internal void NativeInput_WriteInstalledSnapshots(void)
 
 internal void NativeInput_DefaultMappings(void)
 {
-	s_keyboardMapping.kc_square = SDL_SCANCODE_X;
-	s_keyboardMapping.kc_circle = SDL_SCANCODE_V;
-	s_keyboardMapping.kc_triangle = SDL_SCANCODE_Z;
-	s_keyboardMapping.kc_cross = SDL_SCANCODE_C;
-	s_keyboardMapping.kc_square_alt = SDL_SCANCODE_J;
-	s_keyboardMapping.kc_circle_alt = SDL_SCANCODE_L;
-	s_keyboardMapping.kc_triangle_alt = SDL_SCANCODE_I;
-	s_keyboardMapping.kc_cross_alt = SDL_SCANCODE_K;
+	memset(s_keyboardBindings, 0, sizeof(s_keyboardBindings));
+	s_keyboardBindings[PLATFORM_INPUT_KEYBOARD_UP][0] = SDL_SCANCODE_W;
+	s_keyboardBindings[PLATFORM_INPUT_KEYBOARD_UP][1] = SDL_SCANCODE_UP;
+	s_keyboardBindings[PLATFORM_INPUT_KEYBOARD_DOWN][0] = SDL_SCANCODE_S;
+	s_keyboardBindings[PLATFORM_INPUT_KEYBOARD_DOWN][1] = SDL_SCANCODE_DOWN;
+	s_keyboardBindings[PLATFORM_INPUT_KEYBOARD_LEFT][0] = SDL_SCANCODE_A;
+	s_keyboardBindings[PLATFORM_INPUT_KEYBOARD_LEFT][1] = SDL_SCANCODE_LEFT;
+	s_keyboardBindings[PLATFORM_INPUT_KEYBOARD_RIGHT][0] = SDL_SCANCODE_D;
+	s_keyboardBindings[PLATFORM_INPUT_KEYBOARD_RIGHT][1] = SDL_SCANCODE_RIGHT;
 
-	s_keyboardMapping.kc_l1 = SDL_SCANCODE_LSHIFT;
-	s_keyboardMapping.kc_l2 = SDL_SCANCODE_LCTRL;
-	s_keyboardMapping.kc_l3 = SDL_SCANCODE_LEFTBRACKET;
-
-	s_keyboardMapping.kc_r1 = SDL_SCANCODE_RSHIFT;
-	s_keyboardMapping.kc_r2 = SDL_SCANCODE_RCTRL;
-	s_keyboardMapping.kc_r3 = SDL_SCANCODE_RIGHTBRACKET;
-	s_keyboardMapping.kc_l1_alt = SDL_SCANCODE_Q;
-	s_keyboardMapping.kc_r1_alt = SDL_SCANCODE_E;
-
-	s_keyboardMapping.kc_dpad_up = SDL_SCANCODE_UP;
-	s_keyboardMapping.kc_dpad_down = SDL_SCANCODE_DOWN;
-	s_keyboardMapping.kc_dpad_left = SDL_SCANCODE_LEFT;
-	s_keyboardMapping.kc_dpad_right = SDL_SCANCODE_RIGHT;
-	s_keyboardMapping.kc_dpad_up_alt = SDL_SCANCODE_W;
-	s_keyboardMapping.kc_dpad_down_alt = SDL_SCANCODE_S;
-	s_keyboardMapping.kc_dpad_left_alt = SDL_SCANCODE_A;
-	s_keyboardMapping.kc_dpad_right_alt = SDL_SCANCODE_D;
-
-	s_keyboardMapping.kc_select = SDL_SCANCODE_SPACE;
-	s_keyboardMapping.kc_start = SDL_SCANCODE_RETURN;
-	s_keyboardMapping.kc_select_alt = SDL_SCANCODE_TAB;
-	s_keyboardMapping.kc_start_alt = SDL_SCANCODE_P;
+	// Racing-first defaults. These are host aliases only; the retail game still
+	// receives the same PlayStation-shaped buttons as touch and controllers.
+	s_keyboardBindings[PLATFORM_INPUT_KEYBOARD_CROSS][0] = SDL_SCANCODE_LSHIFT;
+	s_keyboardBindings[PLATFORM_INPUT_KEYBOARD_CROSS][1] = SDL_SCANCODE_RSHIFT;
+	s_keyboardBindings[PLATFORM_INPUT_KEYBOARD_SQUARE][0] = SDL_SCANCODE_E;
+	s_keyboardBindings[PLATFORM_INPUT_KEYBOARD_SQUARE][1] = SDL_SCANCODE_X;
+	s_keyboardBindings[PLATFORM_INPUT_KEYBOARD_CIRCLE][0] = SDL_SCANCODE_SPACE;
+	s_keyboardBindings[PLATFORM_INPUT_KEYBOARD_CIRCLE][1] = SDL_SCANCODE_V;
+	s_keyboardBindings[PLATFORM_INPUT_KEYBOARD_TRIANGLE][0] = SDL_SCANCODE_ESCAPE;
+	s_keyboardBindings[PLATFORM_INPUT_KEYBOARD_TRIANGLE][1] = SDL_SCANCODE_Z;
+	s_keyboardBindings[PLATFORM_INPUT_KEYBOARD_L1][0] = SDL_SCANCODE_Q;
+	s_keyboardBindings[PLATFORM_INPUT_KEYBOARD_R1][0] = SDL_SCANCODE_R;
+	s_keyboardBindings[PLATFORM_INPUT_KEYBOARD_L2][0] = SDL_SCANCODE_LCTRL;
+	s_keyboardBindings[PLATFORM_INPUT_KEYBOARD_R2][0] = SDL_SCANCODE_RCTRL;
+	s_keyboardBindings[PLATFORM_INPUT_KEYBOARD_L3][0] = SDL_SCANCODE_LEFTBRACKET;
+	s_keyboardBindings[PLATFORM_INPUT_KEYBOARD_R3][0] = SDL_SCANCODE_RIGHTBRACKET;
+	s_keyboardBindings[PLATFORM_INPUT_KEYBOARD_START][0] = SDL_SCANCODE_RETURN;
+	s_keyboardBindings[PLATFORM_INPUT_KEYBOARD_START][1] = SDL_SCANCODE_P;
+	s_keyboardBindings[PLATFORM_INPUT_KEYBOARD_SELECT][0] = SDL_SCANCODE_TAB;
 
 	s_controllerMapping.gc_square = SDL_GAMEPAD_BUTTON_WEST;
 	s_controllerMapping.gc_circle = SDL_GAMEPAD_BUTTON_EAST;
@@ -382,42 +362,32 @@ internal void NativeInput_DefaultMappings(void)
 
 internal u16 NativeInput_KeyboardButtonBit(s32 key)
 {
-	const struct NativeInputKeyboardMapping *mapping = &s_keyboardMapping;
+	static const u16 buttonBits[PLATFORM_INPUT_KEYBOARD_ACTION_COUNT] = {
+	    0x10, 0x40, 0x80, 0x20, 0x4000, 0x8000, 0x2000, 0x1000,
+	    0x400, 0x800, 0x100, 0x200, 0x2, 0x4, 0x8, 0x1,
+	};
+	u16 buttonBit = 0;
+	s32 action;
+	s32 binding;
 
-	if ((key == mapping->kc_square) || (key == mapping->kc_square_alt))
-		return 0x8000;
-	if ((key == mapping->kc_circle) || (key == mapping->kc_circle_alt))
-		return 0x2000;
-	if ((key == mapping->kc_triangle) || (key == mapping->kc_triangle_alt))
-		return 0x1000;
-	if ((key == mapping->kc_cross) || (key == mapping->kc_cross_alt))
-		return 0x4000;
-	if ((key == mapping->kc_l1) || (key == mapping->kc_l1_alt))
-		return 0x400;
-	if (key == mapping->kc_l2)
-		return 0x100;
-	if (key == mapping->kc_l3)
-		return 0x2;
-	if ((key == mapping->kc_r1) || (key == mapping->kc_r1_alt))
-		return 0x800;
-	if (key == mapping->kc_r2)
-		return 0x200;
-	if (key == mapping->kc_r3)
-		return 0x4;
-	if ((key == mapping->kc_dpad_up) || (key == mapping->kc_dpad_up_alt))
-		return 0x10;
-	if ((key == mapping->kc_dpad_down) || (key == mapping->kc_dpad_down_alt))
-		return 0x40;
-	if ((key == mapping->kc_dpad_left) || (key == mapping->kc_dpad_left_alt))
-		return 0x80;
-	if ((key == mapping->kc_dpad_right) || (key == mapping->kc_dpad_right_alt))
-		return 0x20;
-	if ((key == mapping->kc_select) || (key == mapping->kc_select_alt))
-		return 0x1;
-	if ((key == mapping->kc_start) || (key == mapping->kc_start_alt))
-		return 0x8;
+	if ((key <= SDL_SCANCODE_UNKNOWN) || (key >= SDL_SCANCODE_COUNT))
+	{
+		return 0;
+	}
 
-	return 0;
+	for (action = 0; action < PLATFORM_INPUT_KEYBOARD_ACTION_COUNT; action++)
+	{
+		for (binding = 0; binding < PLATFORM_INPUT_KEYBOARD_BINDING_COUNT; binding++)
+		{
+			if (key == s_keyboardBindings[action][binding])
+			{
+				buttonBit |= buttonBits[action];
+				break;
+			}
+		}
+	}
+
+	return buttonBit;
 }
 
 internal void NativeInput_ClearKeyboardLatch(void)
@@ -542,6 +512,43 @@ void Platform_InputKeyboardEvent(int key, int down)
 		}
 		s_keyboardLatchedButtons &= (u16)~buttonBit;
 	}
+}
+
+int Platform_InputGetKeyboardBinding(int action, int binding)
+{
+	if ((action < 0) || (action >= PLATFORM_INPUT_KEYBOARD_ACTION_COUNT) ||
+	    (binding < 0) || (binding >= PLATFORM_INPUT_KEYBOARD_BINDING_COUNT))
+	{
+		return SDL_SCANCODE_UNKNOWN;
+	}
+
+	return s_keyboardBindings[action][binding];
+}
+
+int Platform_InputSetKeyboardBinding(int action, int binding, int key)
+{
+	if ((action < 0) || (action >= PLATFORM_INPUT_KEYBOARD_ACTION_COUNT) ||
+	    (binding < 0) || (binding >= PLATFORM_INPUT_KEYBOARD_BINDING_COUNT) ||
+	    (key < SDL_SCANCODE_UNKNOWN) || (key >= SDL_SCANCODE_COUNT))
+	{
+		return 0;
+	}
+
+	s_keyboardBindings[action][binding] = key;
+	NativeInput_ClearKeyboardLatch();
+	return 1;
+}
+
+void Platform_InputResetKeyboardBindings(void)
+{
+	NativeInput_DefaultMappings();
+	NativeInput_ClearKeyboardLatch();
+}
+
+void Platform_InputSetKeyboardSuppressed(int suppressed)
+{
+	s_keyboardSuppressed = suppressed != 0;
+	NativeInput_ClearKeyboardLatch();
 }
 
 void Platform_InputMouseButtonEvent(int button, int down)
@@ -791,77 +798,30 @@ internal void NativeInput_ApplyController(s32 slot)
 
 internal u16 NativeInput_ReadKeyboard(void)
 {
-	const struct NativeInputKeyboardMapping *mapping = &s_keyboardMapping;
+	static const u16 buttonBits[PLATFORM_INPUT_KEYBOARD_ACTION_COUNT] = {
+	    0x10, 0x40, 0x80, 0x20, 0x4000, 0x8000, 0x2000, 0x1000,
+	    0x400, 0x800, 0x100, 0x200, 0x2, 0x4, 0x8, 0x1,
+	};
 	u16 buttons = s_keyboardLatchedButtons;
+	s32 action;
+	s32 binding;
 
 	if (s_keyboardState == NULL)
 	{
 		return buttons;
 	}
 
-	if (s_keyboardState[mapping->kc_square] || s_keyboardState[mapping->kc_square_alt])
+	for (action = 0; action < PLATFORM_INPUT_KEYBOARD_ACTION_COUNT; action++)
 	{
-		buttons &= ~0x8000;
-	}
-	if (s_keyboardState[mapping->kc_circle] || s_keyboardState[mapping->kc_circle_alt])
-	{
-		buttons &= ~0x2000;
-	}
-	if (s_keyboardState[mapping->kc_triangle] || s_keyboardState[mapping->kc_triangle_alt])
-	{
-		buttons &= ~0x1000;
-	}
-	if (s_keyboardState[mapping->kc_cross] || s_keyboardState[mapping->kc_cross_alt])
-	{
-		buttons &= ~0x4000;
-	}
-	if (s_keyboardState[mapping->kc_l1] || s_keyboardState[mapping->kc_l1_alt])
-	{
-		buttons &= ~0x400;
-	}
-	if (s_keyboardState[mapping->kc_l2])
-	{
-		buttons &= ~0x100;
-	}
-	if (s_keyboardState[mapping->kc_l3])
-	{
-		buttons &= ~0x2;
-	}
-	if (s_keyboardState[mapping->kc_r1] || s_keyboardState[mapping->kc_r1_alt])
-	{
-		buttons &= ~0x800;
-	}
-	if (s_keyboardState[mapping->kc_r2])
-	{
-		buttons &= ~0x200;
-	}
-	if (s_keyboardState[mapping->kc_r3])
-	{
-		buttons &= ~0x4;
-	}
-	if (s_keyboardState[mapping->kc_dpad_up] || s_keyboardState[mapping->kc_dpad_up_alt])
-	{
-		buttons &= ~0x10;
-	}
-	if (s_keyboardState[mapping->kc_dpad_down] || s_keyboardState[mapping->kc_dpad_down_alt])
-	{
-		buttons &= ~0x40;
-	}
-	if (s_keyboardState[mapping->kc_dpad_left] || s_keyboardState[mapping->kc_dpad_left_alt])
-	{
-		buttons &= ~0x80;
-	}
-	if (s_keyboardState[mapping->kc_dpad_right] || s_keyboardState[mapping->kc_dpad_right_alt])
-	{
-		buttons &= ~0x20;
-	}
-	if (s_keyboardState[mapping->kc_select] || s_keyboardState[mapping->kc_select_alt])
-	{
-		buttons &= ~0x1;
-	}
-	if (s_keyboardState[mapping->kc_start] || s_keyboardState[mapping->kc_start_alt])
-	{
-		buttons &= ~0x8;
+		for (binding = 0; binding < PLATFORM_INPUT_KEYBOARD_BINDING_COUNT; binding++)
+		{
+			s32 key = s_keyboardBindings[action][binding];
+			if ((key > SDL_SCANCODE_UNKNOWN) && (key < SDL_SCANCODE_COUNT) && s_keyboardState[key])
+			{
+				buttons &= (u16)~buttonBits[action];
+				break;
+			}
+		}
 	}
 
 	return buttons;
@@ -890,6 +850,11 @@ void Platform_InputAcknowledgeRetailPoll(void)
 
 internal s32 NativeInput_KeyboardSuppressed(void)
 {
+	if (s_keyboardSuppressed != 0)
+	{
+		return 1;
+	}
+
 	if (s_keyboardState == NULL)
 	{
 		return 0;
@@ -1095,6 +1060,7 @@ int Platform_InputInit(void)
 	s_installedSnapshotsActive = 0;
 	s_keyboardState = SDL_GetKeyboardState(NULL);
 	s_submitNameKey = 0;
+	s_keyboardSuppressed = 0;
 	NativeInput_ClearKeyboardLatch();
 	NativeInput_ResetMouseButtons();
 	NativeInput_ResetTouchContacts();
@@ -1131,6 +1097,7 @@ void Platform_InputShutdown(void)
 	s_keyboardControllerSlot = NATIVE_INPUT_DEFAULT_KEYBOARD_SLOT;
 	s_lastActiveControllerSlot = -1;
 	s_submitNameKey = 0;
+	s_keyboardSuppressed = 0;
 	NativeInput_ClearKeyboardLatch();
 	NativeInput_ResetMouseButtons();
 	Platform_InputTouchSetEnabled(0);
@@ -1614,18 +1581,23 @@ int Platform_InputRunSelfTest(void)
 		s32 key;
 		u16 buttonBit;
 	} aliasExpectations[] = {
-		{SDL_SCANCODE_J, 0x8000},
-		{SDL_SCANCODE_L, 0x2000},
-		{SDL_SCANCODE_I, 0x1000},
-		{SDL_SCANCODE_K, 0x4000},
-		{SDL_SCANCODE_Q, 0x400},
-		{SDL_SCANCODE_E, 0x800},
 		{SDL_SCANCODE_W, 0x10},
-		{SDL_SCANCODE_S, 0x40},
-		{SDL_SCANCODE_A, 0x80},
+		{SDL_SCANCODE_UP, 0x10},
 		{SDL_SCANCODE_D, 0x20},
-		{SDL_SCANCODE_TAB, 0x1},
+		{SDL_SCANCODE_RIGHT, 0x20},
+		{SDL_SCANCODE_LSHIFT, 0x4000},
+		{SDL_SCANCODE_RSHIFT, 0x4000},
+		{SDL_SCANCODE_E, 0x8000},
+		{SDL_SCANCODE_X, 0x8000},
+		{SDL_SCANCODE_SPACE, 0x2000},
+		{SDL_SCANCODE_V, 0x2000},
+		{SDL_SCANCODE_ESCAPE, 0x1000},
+		{SDL_SCANCODE_Z, 0x1000},
+		{SDL_SCANCODE_Q, 0x400},
+		{SDL_SCANCODE_R, 0x800},
+		{SDL_SCANCODE_RETURN, 0x8},
 		{SDL_SCANCODE_P, 0x8},
+		{SDL_SCANCODE_TAB, 0x1},
 	};
 	struct PlatformInputPadSnapshot migrationSnapshots[NATIVE_INPUT_MAX_CONTROLLERS];
 	struct PlatformInputPadSnapshot *snapshot;
@@ -1704,9 +1676,9 @@ int Platform_InputRunSelfTest(void)
 		return 1;
 	}
 
-	Platform_InputKeyboardEvent(SDL_SCANCODE_C, 1);
+	Platform_InputKeyboardEvent(SDL_SCANCODE_LSHIFT, 1);
 	Platform_InputKeyboardEvent(SDL_SCANCODE_RIGHT, 1);
-	Platform_InputKeyboardEvent(SDL_SCANCODE_C, 0);
+	Platform_InputKeyboardEvent(SDL_SCANCODE_LSHIFT, 0);
 	Platform_InputKeyboardEvent(SDL_SCANCODE_RIGHT, 0);
 	latchedButtons = NativeInput_ConsumeKeyboard();
 	if (((latchedButtons & 0x4000) != 0) || ((latchedButtons & 0x20) != 0))
@@ -1735,23 +1707,42 @@ int Platform_InputRunSelfTest(void)
 			return 1;
 		}
 	}
+	if (!Platform_InputSetKeyboardBinding(PLATFORM_INPUT_KEYBOARD_CIRCLE, 1, SDL_SCANCODE_F) ||
+	    (Platform_InputGetKeyboardBinding(PLATFORM_INPUT_KEYBOARD_CIRCLE, 1) != SDL_SCANCODE_F) ||
+	    (NativeInput_KeyboardButtonBit(SDL_SCANCODE_F) != 0x2000))
+	{
+		fprintf(stderr, "[CTR Input] self-test failed: configurable keyboard binding\n");
+		return 1;
+	}
+	if (!Platform_InputSetKeyboardBinding(PLATFORM_INPUT_KEYBOARD_CIRCLE, 1, SDL_SCANCODE_LSHIFT) ||
+	    (NativeInput_KeyboardButtonBit(SDL_SCANCODE_LSHIFT) != 0x6000))
+	{
+		fprintf(stderr, "[CTR Input] self-test failed: duplicate keyboard binding composition\n");
+		return 1;
+	}
+	Platform_InputResetKeyboardBindings();
+	if (NativeInput_KeyboardButtonBit(SDL_SCANCODE_F) != 0)
+	{
+		fprintf(stderr, "[CTR Input] self-test failed: keyboard binding reset\n");
+		return 1;
+	}
 
 	memset(keyboardState, 0, sizeof(keyboardState));
-	keyboardState[SDL_SCANCODE_K] = true;
+	keyboardState[SDL_SCANCODE_RSHIFT] = true;
 	keyboardState[SDL_SCANCODE_D] = true;
-	keyboardState[SDL_SCANCODE_E] = true;
+	keyboardState[SDL_SCANCODE_R] = true;
 	s_keyboardState = keyboardState;
 	heldButtons = NativeInput_ReadKeyboard();
 	s_keyboardState = NULL;
 	if (((heldButtons & 0x4000) != 0) || ((heldButtons & 0x20) != 0) || ((heldButtons & 0x800) != 0))
 	{
-		fprintf(stderr, "[CTR Input] self-test failed: held keyboard aliases k+d+e\n");
+		fprintf(stderr, "[CTR Input] self-test failed: held keyboard aliases shift+d+r\n");
 		return 1;
 	}
 
-	Platform_InputKeyboardEvent(SDL_SCANCODE_K, 1);
+	Platform_InputKeyboardEvent(SDL_SCANCODE_RSHIFT, 1);
 	Platform_InputKeyboardEvent(SDL_SCANCODE_D, 1);
-	Platform_InputKeyboardEvent(SDL_SCANCODE_K, 0);
+	Platform_InputKeyboardEvent(SDL_SCANCODE_RSHIFT, 0);
 	Platform_InputKeyboardEvent(SDL_SCANCODE_D, 0);
 	latchedButtons = NativeInput_ConsumeKeyboard();
 	if (((latchedButtons & 0x4000) != 0) || ((latchedButtons & 0x20) != 0))
@@ -1849,7 +1840,7 @@ int Platform_InputRunSelfTest(void)
 		return 1;
 	}
 
-	printf("[CTR Input] self-test passed: metadata-key=%d legacy-enter=%d migration-enter=%d live-start=retail tap-latch=c+right until-retail-poll aliases=12 held=k+d+e alias-tap=k+d mouse=gas+brake+item+l1+r1 primary-share=keyboard+mouse+touch+gamepad virtual-gamepad=buttons+axes+rumble+hotplug\n",
+	printf("[CTR Input] self-test passed: metadata-key=%d legacy-enter=%d migration-enter=%d live-start=retail tap-latch=shift+right until-retail-poll aliases=17 remap+duplicate+reset=passed held=shift+d+r alias-tap=shift+d mouse=gas+brake+item+l1+r1 primary-share=keyboard+mouse+touch+gamepad virtual-gamepad=buttons+axes+rumble+hotplug\n",
 	       SDL_SCANCODE_A, SDL_SCANCODE_RETURN, SDL_SCANCODE_RETURN);
 	return 0;
 }
