@@ -134,6 +134,11 @@ if [ -n "$notary_profile" ]; then
     ditto -c -k --sequesterRsrc --keepParent "$stage_app" "$archive"
 fi
 
-shasum -a 256 "$archive" > "$archive.sha256"
+archive_hash=$(shasum -a 256 "$archive" | cut -d ' ' -f 1)
+printf '%s  %s\n' "$archive_hash" "$(basename "$archive")" > "$archive.sha256"
+(
+    cd "$repo_root/dist"
+    shasum -a 256 -c "$(basename "$archive").sha256" >/dev/null
+)
 echo "macOS package: $archive"
-echo "SHA-256: $(cut -d ' ' -f 1 "$archive.sha256")"
+echo "SHA-256: $archive_hash"
