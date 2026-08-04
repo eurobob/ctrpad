@@ -46,7 +46,8 @@ the project or a build.
 - Files-based disc selection with validation and non-destructive replacement.
 - Touch-anywhere analog steering, editable controls, Gas lock, handedness,
   size, and 10%–100% opacity controls.
-- 1×, 2×, 3×, and 4× internal geometry resolution on iPhone and iPad.
+- 1×, 2×, 3×, and 4× internal geometry resolution across macOS, iPhone, and
+  iPad, with 4× as the Apple Silicon Mac default.
 - Consistent SDL game-controller input across Apple platforms, plus
   racing-first, remappable keyboard controls on macOS.
 - Private memory-card saves, rotating logs, and update installs that preserve
@@ -185,17 +186,20 @@ original PlayStation bindings:
 | Start / pause | Return (alternate: `P`) |
 | Select | Tab |
 
-Click the **•••** button at the top right of the macOS game window to remap
-primary and alternate keys or restore these defaults. Keyboard preferences are
-host-side aliases: changing them does not modify the retail game's controls.
+Click the **•••** button at the top right of the macOS game window to open the
+native **Display**, **Keyboard**, and **Controller** tabs. The Keyboard tab
+remaps primary and alternate keys or restores these defaults. Keyboard
+preferences are host-side aliases: changing them does not modify the retail
+game's controls.
 
 ## Native resolution and Options
 
-Open **Options** during play on iPhone or iPad to select 1×, 2×, 3×, or 4×
+Open **Options** during play on any Apple target to select 1×, 2×, 3×, or 4×
 internal resolution. Higher values render game geometry at a larger internal
 framebuffer size, which improves polygon edges while retaining the original
 PS1 textures and logical VRAM effects. Higher scales use more GPU power; 1× is
-the compatibility baseline.
+the compatibility baseline. Apple Silicon Mac builds default to 4× and apply
+changes immediately. iPhone and iPad keep their existing mobile defaults.
 
 Options also contains:
 
@@ -310,7 +314,7 @@ for these captures are not part of this repository or its packages.
 | Apple targets | Thin ARM64 macOS, iPhone, iPad, and Simulator products build |
 | Rendering | Native macOS OpenGL and shared GLES 3 Apple-mobile presentation |
 | Game setup | macOS file picker and iOS/iPadOS Files import with disc validation |
-| Resolution | 1×–4× internal geometry resolution on iPhone and iPad |
+| Resolution | Persistent 1×–4× internal geometry resolution across macOS, iPhone, and iPad |
 | Touch | Dynamic analog steering, complete controls, layout editing, opacity, handedness, and Gas lock |
 | Controllers | SDL controller mapping, axes, hot-plug, slot ownership, and rumble path |
 | Saves | Private memory cards, atomic replacement, and non-destructive app updates |

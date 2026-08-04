@@ -62,10 +62,19 @@ or `Option-Return` to enter or leave fullscreen.
 | Start / Pause | `P` or Return | — |
 | Select | Tab | — |
 
-Click the **•••** button at the top right of the game window to change either
-binding for every PlayStation input or restore the defaults. Press Backspace
-while capturing a binding to clear it. Remapping changes only CTRPad's host
-keyboard aliases, not any control setting stored by the retail game.
+Click the **•••** button at the top right of the game window to open CTRPad's
+native Mac Options panel:
+
+- **Display** selects 1×, 2×, 3×, or 4× internal geometry resolution. Apple
+  Silicon Macs default to 4×; changes apply immediately and persist.
+- **Keyboard** changes either binding for every PlayStation input or restores
+  the racing-first defaults. Press Backspace while capturing to clear a key.
+- **Controller** shows the shared controller layout and whether macOS currently
+  detects a compatible gamepad.
+
+Keyboard remapping changes only CTRPad's host aliases, not any control setting
+stored by the retail game. Display scaling preserves the original textures,
+logical VRAM effects, aspect ratio, and retail game state.
 
 Standard SDL-compatible Bluetooth and USB controllers are supported alongside
 keyboard and mouse input. macOS, iOS, and iPadOS use the same standard SDL

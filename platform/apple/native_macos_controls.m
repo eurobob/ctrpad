@@ -4,8 +4,11 @@
 
 #include "platform/native_input.h"
 #include "platform/native_macos_controls.h"
+#include "platform/native_renderer.h"
 
 static NSString *const s_keyboardPreferencePrefix = @"CTRPad.Keyboard";
+static NSString *const s_internalResolutionScaleKey = @"CTRPadInternalResolutionScale";
+static const NSInteger s_defaultMacInternalResolutionScale = 4;
 
 @interface CTRPadControlsController : NSObject <NSWindowDelegate>
 @property(nonatomic, weak) NSWindow *gameWindow;
@@ -13,6 +16,9 @@ static NSString *const s_keyboardPreferencePrefix = @"CTRPad.Keyboard";
 @property(nonatomic, strong) NSPanel *panel;
 @property(nonatomic, strong) NSMutableArray<NSButton *> *bindingButtons;
 @property(nonatomic, strong) NSButton *capturingButton;
+@property(nonatomic, strong) NSSegmentedControl *resolutionControl;
+@property(nonatomic, strong) NSTextField *resolutionStatusLabel;
+@property(nonatomic, strong) NSTextField *controllerStatusLabel;
 @property(nonatomic, strong) id eventMonitor;
 @end
 
@@ -29,8 +35,24 @@ static NSString *const s_keyboardPreferencePrefix = @"CTRPad.Keyboard";
 	_gameWindow = gameWindow;
 	_bindingButtons = [NSMutableArray array];
 	[self loadBindings];
+	[self loadDisplayPreferences];
 	[self installOptionsButton];
 	return self;
+}
+
+- (void)loadDisplayPreferences
+{
+	NSUserDefaults *defaults = NSUserDefaults.standardUserDefaults;
+	NSInteger requestedScale = s_defaultMacInternalResolutionScale;
+	if ([defaults objectForKey:s_internalResolutionScaleKey] != nil)
+	{
+		requestedScale = [defaults integerForKey:s_internalResolutionScaleKey] + 1;
+	}
+	NSInteger appliedScale = NativeRenderer_SetInternalResolutionScale((int)requestedScale);
+	if (appliedScale != requestedScale)
+	{
+		[defaults setInteger:appliedScale - 1 forKey:s_internalResolutionScaleKey];
+	}
 }
 
 - (NSString *)preferenceKeyForAction:(NSInteger)action binding:(NSInteger)binding
@@ -66,7 +88,7 @@ static NSString *const s_keyboardPreferencePrefix = @"CTRPad.Keyboard";
 	NSButton *button = [NSButton buttonWithTitle:@"•••" target:self action:@selector(showControls:)];
 	button.bezelStyle = NSBezelStyleTexturedRounded;
 	button.font = [NSFont boldSystemFontOfSize:17.0];
-	button.toolTip = @"Keyboard controls";
+	button.toolTip = @"Display and controls";
 	button.frame = NSMakeRect(NSWidth(contentView.bounds) - 58.0, NSHeight(contentView.bounds) - 44.0, 46.0, 30.0);
 	button.autoresizingMask = NSViewMinXMargin | NSViewMinYMargin;
 	[button setAccessibilityLabel:@"Options"];
@@ -80,6 +102,16 @@ static NSString *const s_keyboardPreferencePrefix = @"CTRPad.Keyboard";
 	label.frame = frame;
 	label.font = bold ? [NSFont boldSystemFontOfSize:13.0] : [NSFont systemFontOfSize:13.0];
 	label.lineBreakMode = NSLineBreakByTruncatingTail;
+	return label;
+}
+
+- (NSTextField *)multilineLabelWithString:(NSString *)text frame:(NSRect)frame
+{
+	NSTextField *label = [NSTextField wrappingLabelWithString:text];
+	label.frame = frame;
+	label.font = [NSFont systemFontOfSize:13.0];
+	label.textColor = NSColor.secondaryLabelColor;
+	label.maximumNumberOfLines = 0;
 	return label;
 }
 
@@ -97,7 +129,56 @@ static NSString *const s_keyboardPreferencePrefix = @"CTRPad.Keyboard";
 	return [NSString stringWithUTF8String:name];
 }
 
-- (void)buildPanel
+- (void)addDisplayTabToTabView:(NSTabView *)tabView
+{
+	NSTabViewItem *item = [[NSTabViewItem alloc] initWithIdentifier:@"display"];
+	item.label = @"Display";
+	NSView *view = [[NSView alloc] initWithFrame:NSMakeRect(0.0, 0.0, 660.0, 515.0)];
+
+	[view addSubview:[self labelWithString:@"Internal resolution" frame:NSMakeRect(24.0, 466.0, 260.0, 24.0) bold:YES]];
+	[view addSubview:[self multilineLabelWithString:@"Render game geometry at a higher internal resolution, then scale it cleanly to the window. This smooths polygon edges while preserving the original texture detail."
+	                                            frame:NSMakeRect(24.0, 416.0, 612.0, 42.0)]];
+
+	NSSegmentedControl *resolution = [NSSegmentedControl segmentedControlWithLabels:@[ @"1×", @"2×", @"3×", @"4×" ]
+	                                                                              trackingMode:NSSegmentSwitchTrackingSelectOne
+	                                                                                    target:self
+	                                                                                    action:@selector(resolutionChanged:)];
+	resolution.frame = NSMakeRect(24.0, 355.0, 420.0, 38.0);
+	resolution.segmentStyle = NSSegmentStyleRounded;
+	[resolution setAccessibilityLabel:@"Internal resolution"];
+	NSInteger requestedScale = s_defaultMacInternalResolutionScale;
+	if ([NSUserDefaults.standardUserDefaults objectForKey:s_internalResolutionScaleKey] != nil)
+	{
+		requestedScale = [NSUserDefaults.standardUserDefaults integerForKey:s_internalResolutionScaleKey] + 1;
+	}
+	NSInteger appliedScale = NativeRenderer_SetInternalResolutionScale((int)requestedScale);
+	resolution.selectedSegment = appliedScale - 1;
+	[view addSubview:resolution];
+	self.resolutionControl = resolution;
+
+	NSTextField *status = [self labelWithString:@"" frame:NSMakeRect(24.0, 321.0, 612.0, 22.0) bold:NO];
+	status.textColor = NSColor.secondaryLabelColor;
+	[view addSubview:status];
+	self.resolutionStatusLabel = status;
+	[self updateResolutionStatus];
+
+	[view addSubview:[self labelWithString:@"Recommended on Apple Silicon" frame:NSMakeRect(24.0, 267.0, 300.0, 24.0) bold:YES]];
+	[view addSubview:[self multilineLabelWithString:@"Start with 4× for the cleanest geometry. Choose a lower setting if you prefer reduced GPU use. Changes apply immediately and are remembered for the next launch."
+	                                            frame:NSMakeRect(24.0, 217.0, 612.0, 42.0)]];
+	[view addSubview:[self labelWithString:@"Window and fullscreen" frame:NSMakeRect(24.0, 164.0, 300.0, 24.0) bold:YES]];
+	[view addSubview:[self multilineLabelWithString:@"Resize the window freely; CTRPad preserves the game's 4:3 presentation. Press F11 to enter or leave fullscreen."
+	                                            frame:NSMakeRect(24.0, 124.0, 612.0, 36.0)]];
+
+	NSButton *reset = [NSButton buttonWithTitle:@"Restore Display Default" target:self action:@selector(resetDisplay:)];
+	reset.bezelStyle = NSBezelStyleRounded;
+	reset.frame = NSMakeRect(24.0, 30.0, 190.0, 32.0);
+	[view addSubview:reset];
+
+	item.view = view;
+	[tabView addTabViewItem:item];
+}
+
+- (void)addKeyboardTabToTabView:(NSTabView *)tabView
 {
 	static NSString *const actionNames[PLATFORM_INPUT_KEYBOARD_ACTION_COUNT] = {
 		@"Steer / menu up", @"Steer / menu down", @"Steer / menu left", @"Steer / menu right",
@@ -105,58 +186,117 @@ static NSString *const s_keyboardPreferencePrefix = @"CTRPad.Keyboard";
 		@"Drift left (L1)", @"Drift right (R1)", @"Left trigger (L2)", @"Right trigger (R2)",
 		@"Left stick click (L3)", @"Right stick click (R3)", @"Start / pause", @"Select",
 	};
-	const CGFloat panelWidth = 640.0;
-	const CGFloat panelHeight = 650.0;
-	NSPanel *panel = [[NSPanel alloc]
-	    initWithContentRect:NSMakeRect(0.0, 0.0, panelWidth, panelHeight)
-	              styleMask:NSWindowStyleMaskTitled | NSWindowStyleMaskClosable | NSWindowStyleMaskUtilityWindow
-	                backing:NSBackingStoreBuffered
-	                  defer:NO];
-	panel.title = @"CTRPad Controls";
-	panel.delegate = self;
-	panel.releasedWhenClosed = NO;
-	panel.floatingPanel = YES;
-	NSView *content = panel.contentView;
+	NSTabViewItem *item = [[NSTabViewItem alloc] initWithIdentifier:@"keyboard"];
+	item.label = @"Keyboard";
+	NSView *view = [[NSView alloc] initWithFrame:NSMakeRect(0.0, 0.0, 660.0, 515.0)];
 
-	[content addSubview:[self labelWithString:@"Keyboard controls" frame:NSMakeRect(24.0, 608.0, 300.0, 24.0) bold:YES]];
-	NSTextField *help = [self labelWithString:@"Click a binding, then press a key. Backspace clears it. Changes are saved automatically."
-	                                         frame:NSMakeRect(24.0, 581.0, 592.0, 20.0) bold:NO];
+	[view addSubview:[self labelWithString:@"Keyboard layout" frame:NSMakeRect(18.0, 481.0, 240.0, 22.0) bold:YES]];
+	NSTextField *help = [self labelWithString:@"Select a binding, then press a key. Backspace clears it. Every change is saved automatically."
+	                                         frame:NSMakeRect(18.0, 456.0, 624.0, 20.0) bold:NO];
 	help.textColor = NSColor.secondaryLabelColor;
-	[content addSubview:help];
-	NSTextField *controller = [self labelWithString:@"Controllers use the same standard SDL gamepad mapping as iPhone and iPad."
-	                                               frame:NSMakeRect(24.0, 558.0, 592.0, 20.0) bold:NO];
-	controller.textColor = NSColor.secondaryLabelColor;
-	[content addSubview:controller];
-	[content addSubview:[self labelWithString:@"Action" frame:NSMakeRect(24.0, 530.0, 220.0, 20.0) bold:YES]];
-	[content addSubview:[self labelWithString:@"Primary" frame:NSMakeRect(250.0, 530.0, 160.0, 20.0) bold:YES]];
-	[content addSubview:[self labelWithString:@"Alternate" frame:NSMakeRect(426.0, 530.0, 160.0, 20.0) bold:YES]];
+	[view addSubview:help];
+	[view addSubview:[self labelWithString:@"Action" frame:NSMakeRect(18.0, 430.0, 220.0, 20.0) bold:YES]];
+	[view addSubview:[self labelWithString:@"Primary" frame:NSMakeRect(244.0, 430.0, 180.0, 20.0) bold:YES]];
+	[view addSubview:[self labelWithString:@"Alternate" frame:NSMakeRect(438.0, 430.0, 180.0, 20.0) bold:YES]];
 
 	for (NSInteger action = 0; action < PLATFORM_INPUT_KEYBOARD_ACTION_COUNT; action++)
 	{
-		CGFloat y = 500.0 - ((CGFloat)action * 29.0);
-		[content addSubview:[self labelWithString:actionNames[action] frame:NSMakeRect(24.0, y + 4.0, 220.0, 20.0) bold:NO]];
+		CGFloat y = 402.0 - ((CGFloat)action * 24.0);
+		[view addSubview:[self labelWithString:actionNames[action] frame:NSMakeRect(18.0, y + 2.0, 220.0, 20.0) bold:NO]];
 		for (NSInteger binding = 0; binding < PLATFORM_INPUT_KEYBOARD_BINDING_COUNT; binding++)
 		{
 			int scancode = Platform_InputGetKeyboardBinding((int)action, (int)binding);
+			NSString *bindingName = binding == 0 ? @"Primary" : @"Alternate";
 			NSButton *button = [NSButton buttonWithTitle:[self displayNameForScancode:scancode]
 			                                      target:self
 			                                      action:@selector(beginCapture:)];
 			button.bezelStyle = NSBezelStyleRounded;
 			button.tag = action * PLATFORM_INPUT_KEYBOARD_BINDING_COUNT + binding;
-			button.frame = NSMakeRect(binding == 0 ? 250.0 : 426.0, y, 164.0, 26.0);
-			[content addSubview:button];
+			button.frame = NSMakeRect(binding == 0 ? 244.0 : 438.0, y, 180.0, 22.0);
+			[button setAccessibilityLabel:[NSString stringWithFormat:@"%@, %@ binding", actionNames[action], bindingName]];
+			[button setAccessibilityValue:button.title];
+			[view addSubview:button];
 			[self.bindingButtons addObject:button];
 		}
 	}
 
-	NSButton *reset = [NSButton buttonWithTitle:@"Restore Defaults" target:self action:@selector(resetBindings:)];
+	NSButton *reset = [NSButton buttonWithTitle:@"Restore Keyboard Defaults" target:self action:@selector(resetBindings:)];
 	reset.bezelStyle = NSBezelStyleRounded;
-	reset.frame = NSMakeRect(24.0, 18.0, 140.0, 30.0);
-	[content addSubview:reset];
+	reset.frame = NSMakeRect(18.0, 10.0, 202.0, 30.0);
+	[view addSubview:reset];
+
+	item.view = view;
+	[tabView addTabViewItem:item];
+}
+
+- (void)addControllerTabToTabView:(NSTabView *)tabView
+{
+	static NSString *const actions[] = {
+		@"Steer and navigate", @"Accelerate / confirm (×)", @"Brake / reverse (□)", @"Use item (○)",
+		@"Camera / back (△)", @"Drift / boost", @"Triggers", @"Stick clicks", @"Start / pause", @"Select",
+	};
+	static NSString *const inputs[] = {
+		@"Left stick or D-pad", @"South / Cross", @"West / Square", @"East / Circle",
+		@"North / Triangle", @"Left and right shoulders", @"Left and right triggers", @"L3 and R3", @"Start / Menu", @"Back / Share",
+	};
+	NSTabViewItem *item = [[NSTabViewItem alloc] initWithIdentifier:@"controller"];
+	item.label = @"Controller";
+	NSView *view = [[NSView alloc] initWithFrame:NSMakeRect(0.0, 0.0, 660.0, 515.0)];
+
+	[view addSubview:[self labelWithString:@"Standard controller layout" frame:NSMakeRect(24.0, 470.0, 300.0, 24.0) bold:YES]];
+	[view addSubview:[self multilineLabelWithString:@"CTRPad uses the same SDL gamepad mapping on Mac, iPhone, and iPad. Connect a controller before or during play; hot-plugging is supported."
+	                                            frame:NSMakeRect(24.0, 426.0, 612.0, 38.0)]];
+	NSTextField *status = [self labelWithString:@"" frame:NSMakeRect(24.0, 392.0, 612.0, 22.0) bold:YES];
+	[view addSubview:status];
+	self.controllerStatusLabel = status;
+	[self updateControllerStatus];
+
+	[view addSubview:[self labelWithString:@"Game action" frame:NSMakeRect(24.0, 352.0, 280.0, 20.0) bold:YES]];
+	[view addSubview:[self labelWithString:@"Controller input" frame:NSMakeRect(330.0, 352.0, 280.0, 20.0) bold:YES]];
+	for (NSInteger row = 0; row < 10; row++)
+	{
+		CGFloat y = 322.0 - ((CGFloat)row * 29.0);
+		[view addSubview:[self labelWithString:actions[row] frame:NSMakeRect(24.0, y, 280.0, 20.0) bold:NO]];
+		[view addSubview:[self labelWithString:inputs[row] frame:NSMakeRect(330.0, y, 280.0, 20.0) bold:NO]];
+	}
+
+	item.view = view;
+	[tabView addTabViewItem:item];
+}
+
+- (void)buildPanel
+{
+	const CGFloat panelWidth = 720.0;
+	const CGFloat panelHeight = 720.0;
+	NSPanel *panel = [[NSPanel alloc]
+	    initWithContentRect:NSMakeRect(0.0, 0.0, panelWidth, panelHeight)
+	              styleMask:NSWindowStyleMaskTitled | NSWindowStyleMaskClosable | NSWindowStyleMaskUtilityWindow
+	                backing:NSBackingStoreBuffered
+	                  defer:NO];
+	panel.title = @"CTRPad Options";
+	panel.delegate = self;
+	panel.releasedWhenClosed = NO;
+	panel.floatingPanel = YES;
+	NSView *content = panel.contentView;
+
+	NSTextField *title = [self labelWithString:@"Options" frame:NSMakeRect(24.0, 669.0, 300.0, 30.0) bold:YES];
+	title.font = [NSFont boldSystemFontOfSize:24.0];
+	[content addSubview:title];
+	NSTextField *subtitle = [self labelWithString:@"Tune the Mac presentation and choose how you play."
+	                                          frame:NSMakeRect(24.0, 642.0, 672.0, 22.0) bold:NO];
+	subtitle.textColor = NSColor.secondaryLabelColor;
+	[content addSubview:subtitle];
+
+	NSTabView *tabs = [[NSTabView alloc] initWithFrame:NSMakeRect(20.0, 68.0, 680.0, 558.0)];
+	[self addDisplayTabToTabView:tabs];
+	[self addKeyboardTabToTabView:tabs];
+	[self addControllerTabToTabView:tabs];
+	[content addSubview:tabs];
+
 	NSButton *done = [NSButton buttonWithTitle:@"Done" target:self action:@selector(closeControls:)];
 	done.bezelStyle = NSBezelStyleRounded;
 	done.keyEquivalent = @"\r";
-	done.frame = NSMakeRect(516.0, 18.0, 100.0, 30.0);
+	done.frame = NSMakeRect(596.0, 20.0, 100.0, 32.0);
 	[content addSubview:done];
 
 	self.panel = panel;
@@ -169,10 +309,66 @@ static NSString *const s_keyboardPreferencePrefix = @"CTRPad.Keyboard";
 	{
 		[self buildPanel];
 	}
+	[self updateControllerStatus];
 	Platform_InputSetKeyboardSuppressed(1);
 	[self.gameWindow addChildWindow:self.panel ordered:NSWindowAbove];
 	[self.panel center];
 	[self.panel makeKeyAndOrderFront:nil];
+}
+
+- (void)updateResolutionStatus
+{
+	NSInteger scale = self.resolutionControl.selectedSegment + 1;
+	self.resolutionStatusLabel.stringValue = [NSString stringWithFormat:@"Currently rendering game geometry at %ld× internal resolution.", (long)scale];
+	[self.resolutionStatusLabel setAccessibilityLabel:@"Internal resolution status"];
+	[self.resolutionStatusLabel setAccessibilityValue:self.resolutionStatusLabel.stringValue];
+}
+
+- (void)resolutionChanged:(NSSegmentedControl *)sender
+{
+	NSInteger requestedScale = sender.selectedSegment + 1;
+	NSInteger appliedScale = NativeRenderer_SetInternalResolutionScale((int)requestedScale);
+	sender.selectedSegment = appliedScale - 1;
+	[NSUserDefaults.standardUserDefaults setInteger:appliedScale - 1 forKey:s_internalResolutionScaleKey];
+	[self updateResolutionStatus];
+}
+
+- (void)resetDisplay:(id)sender
+{
+	(void)sender;
+	[NSUserDefaults.standardUserDefaults removeObjectForKey:s_internalResolutionScaleKey];
+	NSInteger appliedScale = NativeRenderer_SetInternalResolutionScale((int)s_defaultMacInternalResolutionScale);
+	self.resolutionControl.selectedSegment = appliedScale - 1;
+	[self updateResolutionStatus];
+}
+
+- (void)updateControllerStatus
+{
+	if (self.controllerStatusLabel == nil)
+	{
+		return;
+	}
+	int count = 0;
+	SDL_JoystickID *gamepads = SDL_GetGamepads(&count);
+	if ((gamepads == NULL) || (count <= 0))
+	{
+		self.controllerStatusLabel.stringValue = @"No controller detected — keyboard play remains available.";
+		self.controllerStatusLabel.textColor = NSColor.secondaryLabelColor;
+	}
+	else
+	{
+		NSMutableArray<NSString *> *names = [NSMutableArray arrayWithCapacity:(NSUInteger)count];
+		for (int index = 0; index < count; index++)
+		{
+			const char *name = SDL_GetGamepadNameForID(gamepads[index]);
+			[names addObject:(name != NULL) ? [NSString stringWithUTF8String:name] : @"Controller"];
+		}
+		self.controllerStatusLabel.stringValue = [NSString stringWithFormat:@"Connected: %@", [names componentsJoinedByString:@", "]];
+		self.controllerStatusLabel.textColor = NSColor.labelColor;
+	}
+	SDL_free(gamepads);
+	[self.controllerStatusLabel setAccessibilityLabel:@"Controller connection status"];
+	[self.controllerStatusLabel setAccessibilityValue:self.controllerStatusLabel.stringValue];
 }
 
 - (void)closeControls:(id)sender
@@ -203,6 +399,7 @@ static NSString *const s_keyboardPreferencePrefix = @"CTRPad.Keyboard";
 		NSInteger action = button.tag / PLATFORM_INPUT_KEYBOARD_BINDING_COUNT;
 		NSInteger binding = button.tag % PLATFORM_INPUT_KEYBOARD_BINDING_COUNT;
 		button.title = [self displayNameForScancode:Platform_InputGetKeyboardBinding((int)action, (int)binding)];
+		[button setAccessibilityValue:button.title];
 	}
 }
 
