@@ -3211,8 +3211,7 @@ static int Ovr226_800aa790_TerminalPreamble(struct PushBuffer *pb, const u8 *cur
 		CTC2(DrawLevelOvr1P_ReadWord(&pb->matrix_ViewProj, controlWordIndex * 4), 8 + controlWordIndex);
 	}
 
-	CTC2((u32)(s32)pb->rect.w << 15, 24);
-	CTC2((u32)(s32)pb->rect.h << 15, 25);
+	PushBuffer_SetPsyqGeomOffset(pb);
 	CTC2((u32)pb->distanceToScreen_PREV, 26);
 
 	// NOTE(aalhendi): Retail 0x800aa7f8 mirrors the clip threshold into the
@@ -9712,8 +9711,7 @@ static void Ovr226_800a0d34_SetEntryGteAndCameraScratch(struct PushBuffer *pb)
 		data6[centerIndex] = (s16)((u16)(u8)pb->data6[centerIndex * 2] | ((u16)(u8)pb->data6[centerIndex * 2 + 1] << 8));
 	}
 
-	CTC2((u32)(s32)pb->rect.w << 15, 24);
-	CTC2((u32)(s32)pb->rect.h << 15, 25);
+	PushBuffer_SetPsyqGeomOffset(pb);
 	CTC2((u32)pb->distanceToScreen_PREV, 26);
 
 	// NOTE(aalhendi): Retail stores `(distanceToScreen_PREV >> 1) + 1` at scratch 0x5c for 4x1 depth clip flags.

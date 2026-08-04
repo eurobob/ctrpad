@@ -234,12 +234,12 @@ private struct CTRLauncherView: View {
                 Text("Internal resolution")
                     .font(.footnote.weight(.semibold))
                 Picker("Internal resolution", selection: $resolutionScale) {
-                    ForEach(1...4, id: \.self) { scale in
-                        Text("\(scale)×").tag(scale)
+                    ForEach(1...8, id: \.self) { scale in
+                        Text("\(scale)× · \(512 * scale)×\(216 * scale)").tag(scale)
                     }
                 }
-                .pickerStyle(.segmented)
-                .frame(maxWidth: 320)
+                .pickerStyle(.menu)
+                .frame(maxWidth: 240)
             }
 
             HStack(spacing: 12) {

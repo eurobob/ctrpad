@@ -2128,7 +2128,12 @@ static struct RenderBucketEntry *RenderBucket_QueueDraw(struct Instance *inst, s
 	}
 #endif
 
-	RenderBucket_AdvanceInstanceAnimWord(inst, gameMode1, playerIndex, lastFrameAdvance, &queuedFlags);
+#if defined(CTR_NATIVE)
+	if (NativeVision_ShouldAdvanceRenderState())
+#endif
+	{
+		RenderBucket_AdvanceInstanceAnimWord(inst, gameMode1, playerIndex, lastFrameAdvance, &queuedFlags);
+	}
 	idpp->ptrCurrFrame = frame;
 	idpp->ptrNextFrame = nextFrame;
 	RenderBucket_StoreMatrixWords(&idpp->m3x3, matrixState.m0, matrixState.m1, matrixState.m2, matrixState.m3, matrixState.m4);

@@ -173,8 +173,7 @@ void RenderWeather(struct PushBuffer *pb, struct PrimMem *primMem, struct RainBu
 	screenBounds = RenderWeather_ReadWord(pb, 0x20);
 	ot = &pb->ptrOT[rainBuffer->offsetOT];
 
-	CTC2((u32)(s32)pb->rect.w << 15, 24);
-	CTC2((u32)(s32)pb->rect.h << 15, 25);
+	PushBuffer_SetPsyqGeomOffset(pb);
 	CTC2((u32)pb->distanceToScreen_PREV, 26);
 
 	currentParticles = rainBuffer->numParticles_curr;

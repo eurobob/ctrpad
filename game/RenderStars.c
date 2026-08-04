@@ -84,9 +84,8 @@ void RenderStars(struct PushBuffer *pb, struct PrimMem *primMem, struct Stars *s
 		CTC2(CTR_ReadU32LE((char *)&pb->matrix_ViewProj + 0x0c), 3);
 		CTC2(CTR_ReadU32LE((char *)&pb->matrix_ViewProj + 0x10), 4);
 
-		CTC2((u32)(s32)pb->rect.w << 15, 24);
-		CTC2((u32)(s32)pb->rect.h << 15, 25);
-		CTC2((u32)pb->distanceToScreen_PREV, 26);
+			PushBuffer_SetPsyqGeomOffset(pb);
+			CTC2((u32)pb->distanceToScreen_PREV, 26);
 		CTC2(0, 5);
 		CTC2(0, 6);
 		CTC2(0, 7);

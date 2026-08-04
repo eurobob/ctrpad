@@ -67,6 +67,7 @@ void NativeVision_EndStereoFrame(struct GameTracker *gGT);
 void NativeVision_AddLayerMarker(struct GameTracker *gGT, int layer);
 void NativeVision_AdjustGeomOffset(const struct PushBuffer *pb, int *x, int *y);
 int NativeVision_IsCockpitPass(void);
+int NativeVision_ShouldAdvanceRenderState(void);
 
 int NativeVision_RunStereoMathSelfTest(void);
 int NativeVision_RunMainStepWithAutoreleasePool(void);

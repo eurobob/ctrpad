@@ -27,6 +27,7 @@ int g_windowWidth = 0;
 }
 
 #define CTR_VISION_OUTPUT_RING 3
+#define CTR_VISION_MAX_RESOLUTION_SCALE 8
 #define CTR_VISION_VRAM_TEXTURE 1u
 #define CTR_VISION_WHITE_TEXTURE 2u
 
@@ -234,7 +235,7 @@ static void CTRVision_EndEncoder(void)
 	}
 }
 
-static void CTRVision_EnsureOutputs(void)
+static BOOL CTRVision_EnsureOutputs(void)
 {
 	int width = MAX(1, s_outputWidth * s_resolutionScale);
 	int height = MAX(1, s_outputHeight * s_resolutionScale);
@@ -242,12 +243,14 @@ static void CTRVision_EnsureOutputs(void)
 	if ((s_sceneTextures[0] != nil) && ((int)s_sceneTextures[0].width == width) && ((int)s_sceneTextures[0].height == height))
 	{
 		[s_frameLock unlock];
-		return;
+		return YES;
 	}
 
 	CTRVision_EndEncoder();
-	s_publishedSerial = 0;
-	s_publishedHasHud = NO;
+	id<MTLTexture> sceneTextures[CTR_VISION_OUTPUT_RING] = {nil};
+	id<MTLTexture> hudTextures[CTR_VISION_OUTPUT_RING] = {nil};
+	id<MTLTexture> stencilTextures[CTR_VISION_OUTPUT_RING][NATIVE_VISION_LAYER_COUNT] = {{nil}};
+	BOOL allocated = YES;
 	for (int i = 0; i < CTR_VISION_OUTPUT_RING; i++)
 	{
 		MTLTextureDescriptor *scene = [MTLTextureDescriptor texture2DDescriptorWithPixelFormat:MTLPixelFormatBGRA8Unorm_sRGB
@@ -256,15 +259,15 @@ static void CTRVision_EnsureOutputs(void)
 		scene.arrayLength = 2;
 		scene.usage = MTLTextureUsageRenderTarget | MTLTextureUsageShaderRead;
 		scene.storageMode = MTLStorageModePrivate;
-		s_sceneTextures[i] = [s_device newTextureWithDescriptor:scene];
-		s_sceneTextures[i].label = @"CTR stereo scene";
+		sceneTextures[i] = [s_device newTextureWithDescriptor:scene];
+		sceneTextures[i].label = @"CTR stereo scene";
 
 		MTLTextureDescriptor *hud = [MTLTextureDescriptor texture2DDescriptorWithPixelFormat:MTLPixelFormatBGRA8Unorm_sRGB
 		                                                                               width:width height:height mipmapped:NO];
 		hud.usage = MTLTextureUsageRenderTarget | MTLTextureUsageShaderRead;
 		hud.storageMode = MTLStorageModePrivate;
-		s_hudTextures[i] = [s_device newTextureWithDescriptor:hud];
-		s_hudTextures[i].label = @"CTR HUD";
+		hudTextures[i] = [s_device newTextureWithDescriptor:hud];
+		hudTextures[i].label = @"CTR HUD";
 
 		for (int layer = 0; layer < NATIVE_VISION_LAYER_COUNT; layer++)
 		{
@@ -272,11 +275,32 @@ static void CTRVision_EnsureOutputs(void)
 			                                                                                         width:width height:height mipmapped:NO];
 			stencil.usage = MTLTextureUsageRenderTarget;
 			stencil.storageMode = MTLStorageModePrivate;
-			s_stencilTextures[i][layer] = [s_device newTextureWithDescriptor:stencil];
+			stencilTextures[i][layer] = [s_device newTextureWithDescriptor:stencil];
+			allocated = allocated && (stencilTextures[i][layer] != nil);
+		}
+		allocated = allocated && (sceneTextures[i] != nil) && (hudTextures[i] != nil);
+	}
+	if (!allocated)
+	{
+		[s_frameLock unlock];
+		Platform_LogError("[CTR Vision] could not allocate %dx%d stereo output textures\n", width, height);
+		return NO;
+	}
+
+	s_publishedSerial = 0;
+	s_publishedHasHud = NO;
+	for (int i = 0; i < CTR_VISION_OUTPUT_RING; i++)
+	{
+		s_sceneTextures[i] = sceneTextures[i];
+		s_hudTextures[i] = hudTextures[i];
+		for (int layer = 0; layer < NATIVE_VISION_LAYER_COUNT; layer++)
+		{
+			s_stencilTextures[i][layer] = stencilTextures[i][layer];
 		}
 	}
 	[s_frameLock unlock];
 	s_scissor = (MTLScissorRect){0, 0, (NSUInteger)width, (NSUInteger)height};
+	return YES;
 }
 
 static id<MTLRenderPipelineState> CTRVision_Pipeline(TexFormat format, BlendMode blend)
@@ -357,7 +381,10 @@ static id<MTLRenderCommandEncoder> CTRVision_Encoder(void)
 	{
 		return s_encoder;
 	}
-	CTRVision_EnsureOutputs();
+	if (!CTRVision_EnsureOutputs())
+	{
+		return nil;
+	}
 
 	MTLRenderPassDescriptor *pass = [MTLRenderPassDescriptor renderPassDescriptor];
 	if (s_currentLayer == NATIVE_VISION_LAYER_HUD)
@@ -447,7 +474,10 @@ int NativeRenderer_InitialisePSX(void)
 	s_vramTexture = [s_device newTextureWithDescriptor:desc];
 	s_vramTexture.label = @"CTR PS1 VRAM";
 	s_vramDirty = YES;
-	CTRVision_EnsureOutputs();
+	if (!CTRVision_EnsureOutputs())
+	{
+		return 0;
+	}
 	Platform_Log("[CTR Vision] internal resolution initialized at %dx (%dx%d)\n", s_resolutionScale,
 	             s_outputWidth * s_resolutionScale, s_outputHeight * s_resolutionScale);
 	return s_vramTexture != nil;
@@ -464,6 +494,10 @@ void NativeRenderer_Shutdown(void)
 	{
 		s_sceneTextures[i] = nil;
 		s_hudTextures[i] = nil;
+		for (int layer = 0; layer < NATIVE_VISION_LAYER_COUNT; layer++)
+		{
+			s_stencilTextures[i][layer] = nil;
+		}
 	}
 	s_publishedSerial = 0;
 	s_publishedHasHud = NO;
@@ -476,7 +510,7 @@ void NativeRenderer_ResetDevice(void) {}
 void NativeRenderer_UpdateSwapIntervalState(int swapInterval) { (void)swapInterval; }
 int NativeRenderer_SetInternalResolutionScale(int scale)
 {
-	int requestedScale = MAX(1, MIN(scale, 4));
+	int requestedScale = MAX(1, MIN(scale, CTR_VISION_MAX_RESOLUTION_SCALE));
 	[s_frameLock lock];
 	s_requestedResolutionScale = requestedScale;
 	[s_frameLock unlock];
@@ -491,10 +525,21 @@ void NativeRenderer_BeginScene(void)
 	[s_frameLock unlock];
 	if (s_resolutionScale != requestedResolutionScale)
 	{
+		int previousResolutionScale = s_resolutionScale;
 		s_resolutionScale = requestedResolutionScale;
-		CTRVision_EnsureOutputs();
-		Platform_Log("[CTR Vision] internal resolution changed to %dx (%dx%d)\n", s_resolutionScale,
-		             s_outputWidth * s_resolutionScale, s_outputHeight * s_resolutionScale);
+		if (CTRVision_EnsureOutputs())
+		{
+			Platform_Log("[CTR Vision] internal resolution changed to %dx (%dx%d)\n", s_resolutionScale,
+			             s_outputWidth * s_resolutionScale, s_outputHeight * s_resolutionScale);
+		}
+		else
+		{
+			s_resolutionScale = previousResolutionScale;
+			[s_frameLock lock];
+			s_requestedResolutionScale = previousResolutionScale;
+			[s_frameLock unlock];
+			Platform_LogError("[CTR Vision] keeping previous internal resolution at %dx\n", previousResolutionScale);
+		}
 	}
 	s_writeIndex = s_nextWriteIndex;
 	s_nextWriteIndex = (s_nextWriteIndex + 1) % CTR_VISION_OUTPUT_RING;
@@ -750,7 +795,10 @@ void NativeRenderer_PresentVRAMRect(int x, int y, int w, int h)
 	}
 
 	CTRVision_EndEncoder();
-	CTRVision_EnsureOutputs();
+	if (!CTRVision_EnsureOutputs())
+	{
+		return;
+	}
 	const int outputWidth = s_outputWidth * s_resolutionScale;
 	const int outputHeight = s_outputHeight * s_resolutionScale;
 	u32 *pixels = (u32 *)malloc((size_t)outputWidth * outputHeight * sizeof(*pixels));

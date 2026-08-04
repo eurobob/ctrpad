@@ -180,8 +180,7 @@ void DrawConfetti(struct PushBuffer *pb, struct PrimMem *primMem, struct GameTra
 	centerX = (cameraTrig.sin >> 2) + 0x400;
 	centerZ = (cameraTrig.cos >> 2) + 0x400;
 
-	CTC2((u32)(s32)pb->rect.w << 15, 24);
-	CTC2((u32)(s32)pb->rect.h << 15, 25);
+	PushBuffer_SetPsyqGeomOffset(pb);
 	CTC2((u32)pb->distanceToScreen_PREV, 26);
 
 	currentParticles = confetti->numParticles_currWord;

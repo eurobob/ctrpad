@@ -493,6 +493,12 @@ int NativeVision_IsCockpitPass(void)
 	       (s_nativeVision.frameMode == NATIVE_VISION_MODE_COCKPIT);
 }
 
+int NativeVision_ShouldAdvanceRenderState(void)
+{
+	/* Both eyes must consume identical state; advance once after the right-eye pass. */
+	return !s_nativeVision.frameActive || (s_nativeVision.currentEye != NATIVE_VISION_LAYER_LEFT);
+}
+
 int NativeVision_RunStereoMathSelfTest(void)
 {
 	if (NativeGpu_RunVisionLayerFlushSelfTest() != 0)
@@ -516,14 +522,21 @@ int NativeVision_RunStereoMathSelfTest(void)
 	s_nativeVision.frameTracking = frame;
 	s_nativeVision.frameActive = 1;
 	s_nativeVision.currentEye = 0;
+	int advancesOnLeft = NativeVision_ShouldAdvanceRenderState();
 	int left = 256;
 	int y = 108;
 	NativeVision_AdjustGeomOffset(&pb, &left, &y);
 	s_nativeVision.currentEye = 1;
+	int advancesOnRight = NativeVision_ShouldAdvanceRenderState();
 	int right = 256;
 	NativeVision_AdjustGeomOffset(&pb, &right, &y);
 	s_nativeVision.frameActive = 0;
 	s_nativeVision.currentEye = -1;
+	int advancesOutsideStereo = NativeVision_ShouldAdvanceRenderState();
+	if (advancesOnLeft || !advancesOnRight || !advancesOutsideStereo)
+	{
+		return 1;
+	}
 
 	if (!((left < 256) && (right > 256) && ((256 - left) == (right - 256))))
 	{

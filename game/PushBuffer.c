@@ -150,8 +150,8 @@ void PushBuffer_Init(struct PushBuffer *pb, int id, int total)
 }
 
 
-// NOTE(aalhendi): ASM-verified NTSC-U 926 0x80042910-0x80042974.
-void PushBuffer_SetPsyqGeom(struct PushBuffer *pb)
+/* Shared projection-centre load; native adds the active eye's off-axis shift. */
+void PushBuffer_SetPsyqGeomOffset(struct PushBuffer *pb)
 {
 	int geomX = pb->rect.w / 2;
 	int geomY = pb->rect.h / 2;
@@ -159,6 +159,13 @@ void PushBuffer_SetPsyqGeom(struct PushBuffer *pb)
 	NativeVision_AdjustGeomOffset(pb, &geomX, &geomY);
 #endif
 	gte_SetGeomOffset(geomX, geomY);
+}
+
+
+// NOTE(aalhendi): ASM-verified NTSC-U 926 0x80042910-0x80042974.
+void PushBuffer_SetPsyqGeom(struct PushBuffer *pb)
+{
+	PushBuffer_SetPsyqGeomOffset(pb);
 	gte_SetGeomScreen(pb->distanceToScreen_PREV);
 	return;
 }

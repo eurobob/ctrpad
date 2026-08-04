@@ -700,6 +700,7 @@ void PushBuffer_UpdateFrustum(struct PushBuffer *pb);
 s32 PushBuffer_GetFrustumSavedCameraZ(void);
 #endif
 void PushBuffer_SetPsyqGeom(struct PushBuffer *pb);
+void PushBuffer_SetPsyqGeomOffset(struct PushBuffer *pb);
 void PushBuffer_SetMatrixVP(struct PushBuffer *pb);
 
 void PushBuffer_SetDrawEnv_DecalMP(void *ot, struct DB *backBuffer, RECT *viewport, s16 offsetX, s16 offsetY, u8 dtd, u8 dfe, u8 isbg, u8 tpageUpper,

@@ -315,8 +315,7 @@ static void DrawTiresSolid_SetupProjectionState(struct PushBuffer *pb)
 	CTC2(0, 6);
 	CTC2(0, 7);
 
-	CTC2(pb->rect.w << 0xf, 24);
-	CTC2(pb->rect.h << 0xf, 25);
+	PushBuffer_SetPsyqGeomOffset(pb);
 	CTC2(pb->distanceToScreen_PREV, 26);
 }
 
@@ -912,8 +911,7 @@ static void DrawTiresReflection_SetupProjectionState(struct PushBuffer *pb)
 	CTC2(0, 6);
 	CTC2(0, 7);
 
-	CTC2(pb->rect.w << 0xf, 24);
-	CTC2(pb->rect.h << 0xf, 25);
+	PushBuffer_SetPsyqGeomOffset(pb);
 	CTC2(pb->distanceToScreen_PREV, 26);
 }
 

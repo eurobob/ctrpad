@@ -419,9 +419,8 @@ void VehGroundShadow_Main(void)
 		u32 *otBase = pb->ptrOT;
 		int isLargeGeomScreen;
 
-		CTC2((u32)(s32)pb->rect.w << VEH_GROUND_SHADOW_GTE_SCREEN_SHIFT, 24);
-		CTC2((u32)(s32)pb->rect.h << VEH_GROUND_SHADOW_GTE_SCREEN_SHIFT, 25);
-		CTC2((u32)pb->distanceToScreen_PREV, 26);
+			PushBuffer_SetPsyqGeomOffset(pb);
+			CTC2((u32)pb->distanceToScreen_PREV, 26);
 		VehGroundShadow_LoadGteRotMatrix(&pb->matrix_ViewProj);
 		isLargeGeomScreen = pb->distanceToScreen_PREV > VEH_GROUND_SHADOW_LARGE_GEOM_SCREEN_THRESHOLD;
 

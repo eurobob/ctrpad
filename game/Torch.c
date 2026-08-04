@@ -534,9 +534,8 @@ void Torch_Main(void *particleList_heatWarp, struct PushBuffer *pb, struct PrimM
 
 			Torch_LoadViewAsLightMatrix(pb);
 
-			CTC2((u32)(s32)pb->rect.w << 15, 24);
-			CTC2((u32)(s32)pb->rect.h << 15, 25);
-			CTC2((u32)pb->distanceToScreen_PREV, 26);
+				PushBuffer_SetPsyqGeomOffset(pb);
+				CTC2((u32)pb->distanceToScreen_PREV, 26);
 
 			scratch->screenWFP = (u32)(s32)pb->rect.w << 15;
 			scratch->screenHFP = (u32)(s32)pb->rect.h << 15;
@@ -578,8 +577,7 @@ void Torch_Main(void *particleList_heatWarp, struct PushBuffer *pb, struct PrimM
 				MTC2((u32)viewZ, 3);
 				MTC2((u32)viewZ, 5);
 				CTC2(0x1000, 2);
-				CTC2(scratch->screenWFP, 24);
-				CTC2(scratch->screenHFP, 25);
+					PushBuffer_SetPsyqGeomOffset(pb);
 				MTC2(Torch_PackXY((u16)MFC2(25), MFC2(26)), 0);
 
 				gte_rtps_b();
