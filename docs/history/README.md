@@ -2,14 +2,16 @@
 
 ## Purpose
 
-This is the canonical map of the CTRPad Apple-port campaign from goal creation
-on 2026-07-29 through the 2026-08-02 three-day-and-eleven-hour checkpoint. It
-answers four questions without requiring the original Codex conversation:
+This is the canonical map of the initial CTRPad Apple-port campaign from goal
+creation on 2026-07-29 through the 2026-08-02 three-day-and-eleven-hour
+checkpoint. [`FINAL-RELEASE.md`](FINAL-RELEASE.md) continues the record through
+physical-device acceptance and the v0.1.0 release. Together they answer four
+questions without requiring the original Codex conversation:
 
 1. what was attempted and in what order;
 2. what succeeded, failed, or was explicitly rejected;
 3. what evidence makes each accepted result reproducible; and
-4. what remains before the requested signed physical-iPad release is complete.
+4. what remained at each checkpoint and what ultimately shipped.
 
 This index summarizes the whole process. It does not replace the append-only
 records linked below; those retain commands, timestamps, hashes, debugger
@@ -38,11 +40,12 @@ experiments. It is not uninterrupted CPU time or a person-hour estimate.
 | Record | Role |
 | --- | --- |
 | [`THREE-DAY-TIMELINE.md`](THREE-DAY-TIMELINE.md) | Timestamped executive chronology plus every durable campaign commit through the current implementation checkpoint. Start here for “what happened when?” |
+| [`FINAL-RELEASE.md`](FINAL-RELEASE.md) | Concise continuation from PR #29 through PR #32, physical iPhone/iPad acceptance, final macOS controls/display work, and v0.1.0 publication. |
 | [`ENGINEERING-JOURNAL.md`](ENGINEERING-JOURNAL.md) | The command-level reconstruction: root causes, debugger evidence, hashes, temporary artifacts, mistakes, corrections and rejected claims. Start here to reproduce how a result was obtained. |
 | [`PROGRESS-LOG.md`](PROGRESS-LOG.md) | Shorter append-only outcome/time/open-boundary ledger used for status and pause/resume handoff. |
 | [`THREE-DAY-CHECKPOINT.md`](THREE-DAY-CHECKPOINT.md) | Readable snapshot of the first 2 days, 23 hours and 53 minutes, when the initial Apple port merged. It is a historical boundary, not the current final status. |
 | [`RELEASE-REBASELINE.md`](RELEASE-REBASELINE.md) | Release contract after the initial main merge: what Simulator evidence can prove and what must be proven on the physical iPad. |
-| [`../ROADMAP.md`](../ROADMAP.md) | Dependency-ordered milestones, current acceptance evidence, risks and remaining work. |
+| [`../ROADMAP.md`](../ROADMAP.md) | Dependency-ordered historical milestones plus a current release-status summary. |
 | [`../DECISIONS.md`](../DECISIONS.md) | Durable architecture and evidence decisions, including approaches deliberately rejected. |
 | [`../parity/README.md`](../parity/README.md) | Index of focused validation reports, golden traces, UI checks, packaging, signing and handoff evidence. |
 
@@ -305,7 +308,7 @@ The exact commit-by-commit ledger—214 campaign commits through PR #28 merge
 summary, is the authoritative answer to which changes were durable at each
 timestamp.
 
-## Accepted product state at the 3-day/11-hour boundary
+## Accepted product state at the 3-day/11-hour boundary (historical)
 
 Accepted locally:
 
@@ -332,5 +335,7 @@ Still required for the actual goal:
 5. cold-relaunch and update-install save/import persistence on that device,
    followed by the final paired signed IPA/source publication.
 
-Until all five have exact evidence, “working bounded Apple port, not signed
-physical release complete” is the honest status.
+Until all five had exact evidence, “working bounded Apple port, not signed
+physical release complete” was the honest status at this checkpoint. The later
+physical acceptance, platform polish, and retail-free v0.1.0 publication are
+recorded in [`FINAL-RELEASE.md`](FINAL-RELEASE.md).

@@ -5,24 +5,23 @@ iOS, and iPadOS that a user can sideload, supply with their own NTSC-U retail
 disc image, and play with controller or touch input at retail physics and
 timing.
 
-**Roadmap status:** active
+**Roadmap status:** v0.1.0 released; the milestone record below is retained as
+historical evidence.
 
-**Current milestone:** M8-M11 physical-device and release acceptance; exact
-retail-consumer input, bounded two-track Simulator graphics/lifecycle, coherent
-framebuffer fetch and same-state batching are accepted, while three later
-pixel-exact Simulator optimizations are profile-rejected. Simulator correctness
-and diagnostics remain gates, but Apple Software Renderer cadence is no longer
-used as a proxy for physical-iPad performance. User-owned signing, physical
-touch ergonomics, device cadence/lifecycle/persistence and final paired
-IPA/source publication remain open. Exact 40-character IPA/source binding is
-now locally accepted; the remaining publication gate is the real signed
-physical artifact and its human/device results.
+**Current status:** native Apple Silicon macOS, iPhone, and iPad builds are
+supported. Physical iPhone/iPad acceptance, macOS keyboard/controller options,
+shared controller mappings, 1x-4x internal resolution selection, retail-free
+Apple packages, matching source, and portable checksums were completed in the
+final release phase. See
+[`history/FINAL-RELEASE.md`](history/FINAL-RELEASE.md) for the continuation
+after the original three-day campaign checkpoint.
 
-**Last updated:** 2026-08-01
+**Last updated:** 2026-08-04
 
-This is the working source of truth for the port. Milestone status changes only
-after its acceptance evidence has been recorded. A successful compile is
-evidence, not completion.
+This was the working source of truth during the port. Milestone status changed
+only after its acceptance evidence was recorded. A successful compile was
+evidence, not completion. Dated open items below describe the state at that
+checkpoint unless a later note explicitly supersedes them.
 
 The human-readable running status and elapsed-time ledger is
 `docs/history/PROGRESS-LOG.md`. The complete chronological implementation
@@ -1793,7 +1792,7 @@ process remained, and no push occurred in that turn. That event and the fact
 that the live proof was a dirty development identity are retained rather than
 silently upgraded to clean runtime evidence.
 
-The final dependency order remains:
+At the 2026-08-02 checkpoint, the final dependency order was:
 
 1. publish the committed Start-control correction and focused evidence;
 2. provide a valid Apple development identity and matching profile;
@@ -1813,4 +1812,6 @@ controls and the app icon, so those concurrent shared-checkout changes are not
 part of this checkpoint. The remaining order begins with Apple signing and a
 connected physical iPad, followed by the exact on-device acceptance items in
 steps 3-5 above. No further Simulator or renderer work should substitute for
-that physical evidence.
+that physical evidence. These checkpoint-era open items are superseded by the
+accepted final-release state in
+[`history/FINAL-RELEASE.md`](history/FINAL-RELEASE.md).
