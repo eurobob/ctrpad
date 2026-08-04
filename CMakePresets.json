@@ -206,7 +206,8 @@
       "inherits": "visionos-arm64-common",
       "binaryDir": "${sourceDir}/build-visionos-simulator-arm64",
       "cacheVariables": {
-        "CMAKE_OSX_SYSROOT": "xrsimulator"
+        "CMAKE_OSX_SYSROOT": "xrsimulator",
+        "CMAKE_Swift_FLAGS": "-target arm64-apple-xros2.0-simulator"
       }
     },
     {
@@ -216,7 +217,8 @@
       "inherits": "visionos-arm64-common",
       "binaryDir": "${sourceDir}/build-visionos-device-arm64",
       "cacheVariables": {
-        "CMAKE_OSX_SYSROOT": "xros"
+        "CMAKE_OSX_SYSROOT": "xros",
+        "CMAKE_Swift_FLAGS": "-target arm64-apple-xros2.0"
       }
     }
   ],
