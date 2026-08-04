@@ -33,6 +33,14 @@ cmake_command="$(find_tool cmake)"
 ninja_command="$(find_tool ninja)"
 native_app="$SRCROOT/build-visionos-device-arm64/CTRPad.app"
 xcode_app="$TARGET_BUILD_DIR/$WRAPPER_NAME"
+profile_copy=""
+
+cleanup() {
+    if [ -n "$profile_copy" ]; then
+        /bin/rm -f "$profile_copy"
+    fi
+}
+trap cleanup EXIT
 
 "$cmake_command" --preset visionos-device-arm64 \
     -DCMAKE_MAKE_PROGRAM="$ninja_command"
@@ -43,5 +51,17 @@ if [ ! -d "$native_app" ]; then
     exit 1
 fi
 
+# Xcode embeds the development profile before user build phases. Preserve it
+# while replacing the bootstrap bundle; Xcode's later CodeSign operation then
+# signs the native executable with the matching generated entitlements.
+if [ -f "$xcode_app/embedded.mobileprovision" ]; then
+    profile_copy="$(/usr/bin/mktemp -t ctrpad-mobileprovision)"
+    /bin/cp "$xcode_app/embedded.mobileprovision" "$profile_copy"
+fi
+
 /bin/rm -rf "$xcode_app"
 /usr/bin/ditto "$native_app" "$xcode_app"
+
+if [ -n "$profile_copy" ]; then
+    /bin/cp "$profile_copy" "$xcode_app/embedded.mobileprovision"
+fi
