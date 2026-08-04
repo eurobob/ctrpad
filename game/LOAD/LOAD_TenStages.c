@@ -35,6 +35,11 @@ int LOAD_TenStages(struct GameTracker *gGT, int loadingStage, struct BigHeader *
 	int ovrRegion1;
 	int ovrRegion3;
 
+#if defined(SDL_PLATFORM_VISIONOS)
+	Platform_Log("[CTR Load] stage=%d level=%d firstBoot=%d\n", loadingStage, gGT->levelID,
+	             sdata->boolFirstBoot);
+#endif
+
 	// if game is loading
 	if (sdata->load_inProgress != 0)
 	{

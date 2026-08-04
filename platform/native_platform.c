@@ -635,6 +635,18 @@ int Platform_IsHostActive(void)
 	return s_lifecycleStatus.phase == NATIVE_LIFECYCLE_ACTIVE;
 }
 
+void Platform_IdleWhileInactive(void)
+{
+	// CTR_Main owns a detached worker thread on visionOS. Returning immediately
+	// from an inactive frame would otherwise turn the outer loop into a watchdog-
+	// visible 100% CPU spin while the SwiftUI scene is backgrounded.
+#if defined(SDL_PLATFORM_VISIONOS)
+	SDL_Delay(16);
+#else
+	SDL_Delay(1);
+#endif
+}
+
 int Platform_ShouldQuit(void)
 {
 	return s_lifecycleStatus.quitRequested;

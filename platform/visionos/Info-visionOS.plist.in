@@ -35,6 +35,20 @@
   <string>${MACOSX_BUNDLE_COPYRIGHT}</string>
   <key>NSWorldSensingUsageDescription</key>
   <string>CTRPad uses head tracking to render the game world correctly for each eye.</string>
+  <key>GCSupportsControllerUserInteraction</key>
+  <true/>
+  <key>GCSupportedGameControllers</key>
+  <array>
+    <dict>
+      <key>ProfileName</key>
+      <string>ExtendedGamepad</string>
+    </dict>
+  </array>
+  <key>GCRequiresControllerUserInteraction</key>
+  <dict>
+    <key>visionOS</key>
+    <true/>
+  </dict>
   <key>UIApplicationSupportsIndirectInputEvents</key>
   <true/>
   <key>UIApplicationPreferredDefaultSceneSessionRole</key>

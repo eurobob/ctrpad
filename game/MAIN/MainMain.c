@@ -94,6 +94,7 @@ u32 main(void)
 		if (!Platform_IsHostActive())
 		{
 			Platform_PollHostEvents();
+			Platform_IdleWhileInactive();
 			return 1;
 		}
 #endif

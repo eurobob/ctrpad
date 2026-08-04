@@ -1,10 +1,17 @@
 #if os(visionOS)
 
 import Foundation
+import GameController
+import os
 import SwiftUI
 import UniformTypeIdentifiers
 import _CompositorServices_SwiftUI
 import Darwin
+
+private let ctrVisionLog = Logger(
+    subsystem: Bundle.main.bundleIdentifier ?? "io.github.chrissotraidis.ctrpad.vision",
+    category: "CTRPad"
+)
 
 private struct CTRDiscValidationError: LocalizedError {
     let message: String
@@ -39,6 +46,7 @@ struct CTRVisionApp: App {
             CompositorLayer(configuration: CTRCompositorConfiguration()) { layerRenderer in
                 CTRCompositorRenderer.startRenderLoop(layerRenderer, mode: .portal)
             }
+            .handlesGameControllerEvents(matching: .gamepad)
         }
         .immersionStyle(selection: .constant(.mixed), in: .mixed)
 
@@ -46,6 +54,7 @@ struct CTRVisionApp: App {
             CompositorLayer(configuration: CTRCompositorConfiguration()) { layerRenderer in
                 CTRCompositorRenderer.startRenderLoop(layerRenderer, mode: .cockpit)
             }
+            .handlesGameControllerEvents(matching: .gamepad)
         }
         .immersionStyle(selection: .constant(.full), in: .full)
     }
@@ -66,7 +75,7 @@ final class CTRVisionRuntime: ObservableObject {
                 try? FileManager.default.removeItem(at: importedDiscURL)
             } else {
                 discName = "Imported CTR disc"
-                launch(discURL: importedDiscURL)
+                status = "Disc ready. Starting CTR…"
             }
         }
     }
@@ -75,6 +84,11 @@ final class CTRVisionRuntime: ObservableObject {
         let base = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
         return base.appendingPathComponent("CTRPad", isDirectory: true)
             .appendingPathComponent("ctr-disc.bin", isDirectory: false)
+    }
+
+    func startImportedDiscIfReady() {
+        guard discName != nil, !didLaunch else { return }
+        launch(discURL: importedDiscURL)
     }
 
     func importDisc(from selectedURL: URL) async {
@@ -129,6 +143,7 @@ final class CTRVisionRuntime: ObservableObject {
         didLaunch = true
         status = "Starting CTR…"
         let path = discURL.path
+        ctrVisionLog.notice("[CTR Swift] runtime launch requested")
 
         Thread.detachNewThread { [weak self] in
             autoreleasepool {
@@ -146,6 +161,7 @@ final class CTRVisionRuntime: ObservableObject {
                 let result = storage.withUnsafeMutableBufferPointer { buffer in
                     CTRNativeMain(Int32(arguments.count), buffer.baseAddress!)
                 }
+                ctrVisionLog.notice("[CTR Swift] native runtime returned result=\(result)")
                 Task { @MainActor [weak self] in
                     self?.isRunning = false
                     self?.didLaunch = false
@@ -162,6 +178,7 @@ final class CTRVisionRuntime: ObservableObject {
 private struct CTRLauncherView: View {
     @Environment(\.openImmersiveSpace) private var openImmersiveSpace
     @Environment(\.dismissImmersiveSpace) private var dismissImmersiveSpace
+    @Environment(\.scenePhase) private var scenePhase
     @ObservedObject var runtime: CTRVisionRuntime
 
     @State private var isImporting = false
@@ -188,6 +205,17 @@ private struct CTRLauncherView: View {
                 .font(.footnote)
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
+
+            TimelineView(.periodic(from: .now, by: 1.0)) { _ in
+                let controller = GCController.current ?? GCController.controllers().first
+                Label(
+                    controller.map { "Controller: " + ($0.vendorName ?? "Game Controller") }
+                        ?? "No game controller visible to CTRPad",
+                    systemImage: controller == nil ? "gamecontroller.slash" : "gamecontroller.fill"
+                )
+                .font(.footnote.weight(.semibold))
+                .foregroundStyle(controller == nil ? .orange : .green)
+            }
 
             HStack(spacing: 12) {
                 Button("Choose Disc…", systemImage: "opticaldisc") {
@@ -219,6 +247,16 @@ private struct CTRLauncherView: View {
             .buttonStyle(.borderedProminent)
         }
         .padding(28)
+        .handlesGameControllerEvents(matching: .gamepad)
+        .task {
+            // Let SwiftUI establish the controller-event routing surface before
+            // the detached native loop begins polling GameController.
+            await Task.yield()
+            runtime.startImportedDiscIfReady()
+        }
+        .onChange(of: scenePhase) { phase in
+            ctrVisionLog.notice("[CTR Swift] window scene phase=\(String(describing: phase), privacy: .public)")
+        }
         .fileImporter(
             isPresented: $isImporting,
             allowedContentTypes: [.data],

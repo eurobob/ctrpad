@@ -27,13 +27,20 @@ int NativeVisionGamepad_Read(struct NativeVisionGamepadState *state)
 	memset(state, 0, sizeof(*state));
 	@autoreleasepool
 	{
-		GCController *selectedController = nil;
-		for (GCController *controller in GCController.controllers)
+		// For a single-player title, Apple's current controller is the one that
+		// most recently received input. Fall back to enumeration before the first
+		// button press, matching the proven Phosphor visionOS path.
+		GCController *selectedController = GCController.current;
+		if (selectedController.extendedGamepad == nil)
 		{
-			if (controller.extendedGamepad != nil)
+			selectedController = nil;
+			for (GCController *controller in GCController.controllers)
 			{
-				selectedController = controller;
-				break;
+				if (controller.extendedGamepad != nil)
+				{
+					selectedController = controller;
+					break;
+				}
 			}
 		}
 		if (selectedController == nil)
