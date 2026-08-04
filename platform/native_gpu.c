@@ -295,8 +295,9 @@ int NativeGpu_GetLastRendererDrawCount(void)
 	return s_gpu.lastRendererDrawCount;
 }
 
-void ClearSplits(void)
+static void NativeGpu_ClearSplitBatch(void)
 {
+	int visionLayer = s_gpu.currentVisionLayer;
 	s_gpu.currentSplitDebugText = NULL;
 	s_gpu.vertexIndex = 0;
 	s_gpu.splitIndex = 0;
@@ -304,9 +305,31 @@ void ClearSplits(void)
 	s_gpu.splits[0].psxTexturedSemiTrans = false;
 	s_gpu.splits[0].psxTextureOutputSTP = false;
 	s_gpu.splits[0].psxDrawMaskSet = false;
-	s_gpu.splits[0].visionLayer = 0;
+	s_gpu.splits[0].visionLayer = visionLayer;
 	s_gpu.framebufferFeedbackRunActive = false;
+	s_gpu.currentVisionLayer = visionLayer;
+}
+
+void ClearSplits(void)
+{
 	s_gpu.currentVisionLayer = 0;
+	NativeGpu_ClearSplitBatch();
+}
+
+int NativeGpu_RunVisionLayerFlushSelfTest(void)
+{
+	ClearSplits();
+	s_gpu.currentVisionLayer = NATIVE_VISION_LAYER_RIGHT;
+	NativeGpu_ClearSplitBatch();
+	if ((s_gpu.currentVisionLayer != NATIVE_VISION_LAYER_RIGHT) ||
+	    (s_gpu.splits[0].visionLayer != NATIVE_VISION_LAYER_RIGHT))
+	{
+		ClearSplits();
+		return 1;
+	}
+
+	ClearSplits();
+	return (s_gpu.currentVisionLayer == NATIVE_VISION_LAYER_LEFT) ? 0 : 1;
 }
 
 int NativeGpu_GetStateSize(void)
@@ -1203,7 +1226,9 @@ void DrawAllSplits()
 		i = lastSplit;
 	}
 
-	ClearSplits();
+	/* A framebuffer-feedback/fill flush is still part of the same OT walk.
+	 * Preserve the vision layer selected by the most recent in-band marker. */
+	NativeGpu_ClearSplitBatch();
 	NativePerf_EndScope(NATIVE_PERF_BUCKET_DRAW_ALL_SPLITS);
 }
 

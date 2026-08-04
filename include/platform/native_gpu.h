@@ -17,6 +17,7 @@ extern int g_GPUDisabledState;
 
 int NativeGpu_HasPendingSplits(void);
 int NativeGpu_GetLastRendererDrawCount(void);
+int NativeGpu_RunVisionLayerFlushSelfTest(void);
 void ClearSplits(void);
 void DrawAllSplits(void);
 void ParsePrimitivesLinkedList(u32 *p, int singlePrimitive);

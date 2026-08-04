@@ -495,6 +495,11 @@ int NativeVision_IsCockpitPass(void)
 
 int NativeVision_RunStereoMathSelfTest(void)
 {
+	if (NativeGpu_RunVisionLayerFlushSelfTest() != 0)
+	{
+		return 1;
+	}
+
 	struct NativeVisionTrackingFrame frame = NativeVision_DefaultTracking();
 	if ((frame.eyePositionMetres[0][0] >= 0.0f) || (frame.eyePositionMetres[1][0] <= 0.0f))
 	{
