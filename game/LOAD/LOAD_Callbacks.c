@@ -104,6 +104,16 @@ void LOAD_Callback_DriverModels(struct LoadQueueSlot *lqs)
 {
 	sdata->load_inProgress = 0;
 	sdata->ptrMPK = lqs->ptrDestination;
+
+#if defined(SDL_PLATFORM_VISIONOS)
+	u32 firstReference = 0;
+	if ((lqs->ptrDestination != NULL) && (lqs->size_UNUSED >= (sizeof(u32) * 2u)))
+	{
+		firstReference = ((const struct CtrAssetRef32 *)lqs->ptrDestination)[0].bits;
+	}
+	Platform_Log("[CTR Load] driver MPK ready base=%p fileBytes=%u iconRef=0x%08x\n",
+	             lqs->ptrDestination, lqs->size_UNUSED, firstReference);
+#endif
 }
 
 // NOTE(aalhendi): ASM-verified NTSC-U 926 0x80031b14-0x80031b50.

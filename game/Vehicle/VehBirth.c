@@ -557,7 +557,7 @@ struct Model *VehBirth_GetModelByName(char *searchName)
 	    (modelReferences != NULL) && (modelReferences[0].bits != 0))
 	{
 		// loop until all strings are checked (until current is not nullptr)
-		for (int i = 0; modelReferences[i].bits != 0; i++)
+		for (int i = 0; (i < NUM_MDM) && (modelReferences[i].bits != 0); i++)
 		{
 			struct Model *m = NULL;
 			if (!CtrAssetRef_ResolveOptional(modelReferences[i], sizeof(*m), _Alignof(struct Model), (void **)&m,

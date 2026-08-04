@@ -102,6 +102,15 @@ void CTR_CycleTex_AllModels(u32 numModels, struct CtrAssetRef32 *pModelArray, in
 		return;
 	}
 
+#if defined(CTR_NATIVE)
+	// MPK callers use UINT32_MAX to mean a null-terminated model list. Keep a
+	// malformed list from turning this per-frame walk into an unbounded scan.
+	if (numModels == UINT32_MAX)
+	{
+		numModels = NUM_MDM;
+	}
+#endif
+
 	while (true)
 	{
 		struct AnimTex *animTex;

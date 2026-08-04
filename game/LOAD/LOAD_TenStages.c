@@ -336,17 +336,32 @@ int LOAD_TenStages(struct GameTracker *gGT, int loadingStage, struct BigHeader *
 	}
 	case 5:
 	{
+#if defined(SDL_PLATFORM_VISIONOS)
+		Platform_Log("[CTR Load] stage5 model clear begin ptrMPK=%p\n", (void *)sdata->ptrMPK);
+#endif
+
 		// clear and reset
 		LibraryOfModels_Clear(gGT);
+#if defined(SDL_PLATFORM_VISIONOS)
+		Platform_Log("[CTR Load] stage5 model clear complete\n");
+#endif
 
-		sdata->PLYROBJECTLIST = (struct CtrAssetRef32 *)(sdata->ptrMPK + sizeof(u32));
-		if (sdata->ptrMPK == 0)
-		{
-			sdata->PLYROBJECTLIST = 0;
-		}
+		sdata->PLYROBJECTLIST = sdata->ptrMPK != NULL
+		                              ? (struct CtrAssetRef32 *)(sdata->ptrMPK + sizeof(u32))
+		                              : NULL;
+#if defined(SDL_PLATFORM_VISIONOS)
+		Platform_Log("[CTR Load] stage5 model refs=%p first=0x%08x\n", (void *)sdata->PLYROBJECTLIST,
+		             sdata->PLYROBJECTLIST != NULL ? sdata->PLYROBJECTLIST[0].bits : 0u);
+#endif
 
 		LOAD_GlobalModelPtrs_MPK();
+#if defined(SDL_PLATFORM_VISIONOS)
+		Platform_Log("[CTR Load] stage5 global models complete\n");
+#endif
 		DecalGlobal_Clear(gGT);
+#if defined(SDL_PLATFORM_VISIONOS)
+		Platform_Log("[CTR Load] stage5 decal clear complete\n");
+#endif
 
 		gGT->mpkIcons = 0;
 		if (sdata->ptrMPK != 0)
@@ -357,10 +372,18 @@ int LOAD_TenStages(struct GameTracker *gGT, int loadingStage, struct BigHeader *
 			                            _Alignof(struct LevTexLookup),
 			                            (void **)&gGT->mpkIcons,
 			                            "LOAD_TenStages MPK icon lookup");
+#if defined(SDL_PLATFORM_VISIONOS)
+			Platform_Log("[CTR Load] stage5 icon lookup ref=0x%08x result=%p\n", mpkIconReference.bits,
+			             (void *)gGT->mpkIcons);
+#endif
 
 			if (gGT->mpkIcons != 0)
 			{
 				DecalGlobal_Store(gGT, gGT->mpkIcons);
+#if defined(SDL_PLATFORM_VISIONOS)
+				Platform_Log("[CTR Load] stage5 decal store complete icons=%d groups=%d\n",
+				             gGT->mpkIcons->numIcon, gGT->mpkIcons->numIconGroup);
+#endif
 			}
 		}
 
@@ -371,6 +394,10 @@ int LOAD_TenStages(struct GameTracker *gGT, int loadingStage, struct BigHeader *
 			CseqMusic_StopAll();
 			Music_LoadBanks();
 		}
+
+#if defined(SDL_PLATFORM_VISIONOS)
+		Platform_Log("[CTR Load] stage5 complete\n");
+#endif
 
 		break;
 	}
