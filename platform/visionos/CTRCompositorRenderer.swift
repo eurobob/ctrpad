@@ -327,33 +327,6 @@ private final class CTRLayerRenderer: @unchecked Sendable {
               CTRVisionFrameHub.currentSceneTexture() != nil,
               CTRVisionFrameHub.currentHudTexture() != nil else { return }
 
-        let firstTextureIndex = views[0].textureMap.textureIndex
-        guard firstTextureIndex < drawable.colorTextures.count else { return }
-        let firstColorTexture = drawable.colorTextures[firstTextureIndex]
-        let layered = firstColorTexture.textureType == .type2DArray
-
-        if layered {
-            let viewIndices = Array(0..<min(2, views.count))
-            let depthTexture = firstTextureIndex < drawable.depthTextures.count
-                ? drawable.depthTextures[firstTextureIndex]
-                : nil
-            let rateMap = firstTextureIndex < drawable.rasterizationRateMaps.count
-                ? drawable.rasterizationRateMaps[firstTextureIndex]
-                : drawable.rasterizationRateMaps.first
-            encodePass(
-                drawable: drawable,
-                anchor: anchor,
-                eyeBaseIndex: eyeBaseIndex,
-                viewIndices: viewIndices,
-                colorTexture: firstColorTexture,
-                depthTexture: depthTexture,
-                rasterizationRateMap: rateMap,
-                amplified: viewIndices.count > 1,
-                commandBuffer: commandBuffer
-            )
-            return
-        }
-
         for viewIndex in views.indices {
             let textureIndex = views[viewIndex].textureMap.textureIndex
             guard textureIndex < drawable.colorTextures.count else { continue }
@@ -366,12 +339,11 @@ private final class CTRLayerRenderer: @unchecked Sendable {
             encodePass(
                 drawable: drawable,
                 anchor: anchor,
-                eyeBaseIndex: eyeBaseIndex,
-                viewIndices: [viewIndex],
+                viewIndex: viewIndex,
+                sourceEyeIndex: min(1, eyeBaseIndex + viewIndex),
                 colorTexture: drawable.colorTextures[textureIndex],
                 depthTexture: depthTexture,
                 rasterizationRateMap: rateMap,
-                amplified: false,
                 commandBuffer: commandBuffer
             )
         }
@@ -380,16 +352,14 @@ private final class CTRLayerRenderer: @unchecked Sendable {
     private func encodePass(
         drawable: LayerRenderer.Drawable,
         anchor: DeviceAnchor?,
-        eyeBaseIndex: Int,
-        viewIndices: [Int],
+        viewIndex: Int,
+        sourceEyeIndex: Int,
         colorTexture: MTLTexture,
         depthTexture: MTLTexture?,
         rasterizationRateMap: MTLRasterizationRateMap?,
-        amplified: Bool,
         commandBuffer: MTLCommandBuffer
     ) {
-        guard !viewIndices.isEmpty,
-              preparePipeline(
+        guard preparePipeline(
                   colorFormat: colorTexture.pixelFormat,
                   depthFormat: depthTexture?.pixelFormat ?? .invalid
               ),
@@ -407,60 +377,46 @@ private final class CTRLayerRenderer: @unchecked Sendable {
         pass.colorAttachments[0].clearColor = mode == .portal
             ? MTLClearColorMake(0, 0, 0, 0)
             : MTLClearColorMake(0, 0, 0, 1)
-        if amplified {
-            pass.renderTargetArrayLength = viewIndices.count
+        let textureMap = drawable.views[viewIndex].textureMap
+        if colorTexture.textureType == .type2DArray {
+            pass.colorAttachments[0].slice = textureMap.sliceIndex
         }
         if let depthTexture {
             pass.depthAttachment.texture = depthTexture
             pass.depthAttachment.loadAction = .clear
             pass.depthAttachment.storeAction = .store
             pass.depthAttachment.clearDepth = 0.0
+            if depthTexture.textureType == .type2DArray {
+                pass.depthAttachment.slice = textureMap.sliceIndex
+            }
         }
         pass.rasterizationRateMap = rasterizationRateMap
 
-        guard let encoder = commandBuffer.makeRenderCommandEncoder(descriptor: pass),
-              !viewIndices.isEmpty else {
+        guard let encoder = commandBuffer.makeRenderCommandEncoder(descriptor: pass) else {
             return
         }
         encoder.label = mode == .portal ? "CTR portal" : "CTR cockpit"
         encoder.setRenderPipelineState(pipeline)
         encoder.setDepthStencilState(depthState)
 
-        var uniforms = [EyeUniform]()
-        for viewIndex in viewIndices {
-            let mvp: simd_float4x4
-            if mode == .portal, let anchor, let portalTransform {
-                let eyeWorld = anchor.originFromAnchorTransform * drawable.views[viewIndex].transform
-                mvp = drawable.computeProjection(convention: .rightUpBack, viewIndex: viewIndex)
-                    * simd_inverse(eyeWorld)
-                    * portalTransform
-            } else {
-                mvp = matrix_identity_float4x4
-            }
-            uniforms.append(EyeUniform(
-                modelViewProjection: mvp,
-                halfSize: mode == .portal ? SIMD2<Float>(0.36, 0.27) : SIMD2<Float>(1, 1),
-                mode: UInt32(mode.rawValue),
-                eye: UInt32(min(1, eyeBaseIndex + viewIndex))
-            ))
+        let mvp: simd_float4x4
+        if mode == .portal, let anchor, let portalTransform {
+            let eyeWorld = anchor.originFromAnchorTransform * drawable.views[viewIndex].transform
+            mvp = drawable.computeProjection(convention: .rightUpBack, viewIndex: viewIndex)
+                * simd_inverse(eyeWorld)
+                * portalTransform
+        } else {
+            mvp = matrix_identity_float4x4
         }
+        var uniform = EyeUniform(
+            modelViewProjection: mvp,
+            halfSize: mode == .portal ? SIMD2<Float>(0.36, 0.27) : SIMD2<Float>(1, 1),
+            mode: UInt32(mode.rawValue),
+            eye: UInt32(sourceEyeIndex)
+        )
 
-        if amplified {
-            let viewports = viewIndices.map { drawable.views[$0].textureMap.viewport }
-            encoder.setVertexAmplificationCount(viewIndices.count, viewMappings: nil)
-            encoder.setViewports(viewports)
-        } else if let viewIndex = viewIndices.first {
-            encoder.setViewport(drawable.views[viewIndex].textureMap.viewport)
-        }
-        uniforms.withUnsafeBufferPointer { buffer in
-            if let baseAddress = buffer.baseAddress {
-                encoder.setVertexBytes(
-                    baseAddress,
-                    length: buffer.count * MemoryLayout<EyeUniform>.stride,
-                    index: 0
-                )
-            }
-        }
+        encoder.setViewport(textureMap.viewport)
+        encoder.setVertexBytes(&uniform, length: MemoryLayout<EyeUniform>.stride, index: 0)
         encoder.setFragmentTexture(sceneTexture, index: 0)
         encoder.setFragmentTexture(hudTexture, index: 1)
         encoder.setFragmentSamplerState(sampler, index: 0)
@@ -483,7 +439,6 @@ private final class CTRLayerRenderer: @unchecked Sendable {
             descriptor.fragmentFunction = library.makeFunction(name: "ctrCompositeFragment")
             descriptor.colorAttachments[0].pixelFormat = colorFormat
             descriptor.depthAttachmentPixelFormat = depthFormat
-            descriptor.maxVertexAmplificationCount = 2
             pipeline = try layerRenderer.device.makeRenderPipelineState(descriptor: descriptor)
 
             let depthDescriptor = MTLDepthStencilDescriptor()
@@ -551,13 +506,11 @@ private final class CTRLayerRenderer: @unchecked Sendable {
         float4 position [[position]];
         float2 uv;
         uint eye [[flat]];
-        uint renderTargetArrayIndex [[render_target_array_index]];
     };
 
     vertex CompositeVertexOut ctrCompositeVertex(
         uint vertexID [[vertex_id]],
-        ushort amplificationID [[amplification_id]],
-        constant EyeUniform *uniforms [[buffer(0)]]) {
+        constant EyeUniform &uniform [[buffer(0)]]) {
         constexpr float2 positions[4] = {
             float2(-1.0, -1.0), float2(1.0, -1.0),
             float2(-1.0,  1.0), float2(1.0,  1.0)
@@ -566,7 +519,6 @@ private final class CTRLayerRenderer: @unchecked Sendable {
             float2(0.0, 1.0), float2(1.0, 1.0),
             float2(0.0, 0.0), float2(1.0, 0.0)
         };
-        EyeUniform uniform = uniforms[amplificationID];
         CompositeVertexOut out;
         float2 localPosition = positions[vertexID] * uniform.halfSize;
         out.position = uniform.mode == 2
@@ -574,7 +526,6 @@ private final class CTRLayerRenderer: @unchecked Sendable {
             : uniform.modelViewProjection * float4(localPosition, 0.0, 1.0);
         out.uv = uvs[vertexID];
         out.eye = uniform.eye;
-        out.renderTargetArrayIndex = amplificationID;
         return out;
     }
 
