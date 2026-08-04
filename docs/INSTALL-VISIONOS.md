@@ -79,12 +79,12 @@ teams and signing through Xcode, repeat the Xcode-generator command above with
 Capabilities settings. Do not commit profiles, certificates, private keys, a
 signed bundle, or retail game data.
 
-The repository also includes a small XcodeGen adapter for remote build and
-device services such as Mesa. On a Mac with XcodeGen installed, run
-`xcodegen generate`, then build or run the `CTRPad` scheme. The generated Xcode
-target delegates the native build to the same `visionos-device-arm64` CMake
+The repository also includes a small root `CTRPad.xcodeproj` adapter for remote
+build and device services such as Mesa. Build or run its `CTRPad` scheme. The
+adapter delegates the native build to the same `visionos-device-arm64` CMake
 preset and lets Xcode perform development signing and installation; it does not
-replace the CMake build or compile a second game implementation.
+replace the CMake build or compile a second game implementation. Its XcodeGen
+source remains in `project.yml` for maintainers who need to regenerate it.
 
 On first launch:
 

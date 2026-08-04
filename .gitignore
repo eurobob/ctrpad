@@ -61,6 +61,8 @@ debug/
 *.map
 compile_commands.json
 *.xcodeproj/
+!CTRPad.xcodeproj/
+!CTRPad.xcodeproj/project.pbxproj
 .venv/
 .cache/
 .vs/
