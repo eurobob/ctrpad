@@ -190,7 +190,9 @@ private struct CTRLauncherView: View {
     @State private var activeSpaceID: String?
     @State private var isOpeningImmersiveSpace = false
     @AppStorage("CTRPadInternalResolutionScale") private var resolutionScale = 3
-    @AppStorage("CTRPadStereoDepthScale") private var stereoDepthScale = 10.0
+    // V2 intentionally resets the earlier experimental 10x preference now that
+    // the compositor sends a distinct image to each eye.
+    @AppStorage("CTRPadStereoDepthScaleV2") private var stereoDepthScale = 1.0
 
     var body: some View {
         VStack(spacing: 22) {
@@ -243,11 +245,11 @@ private struct CTRLauncherView: View {
             HStack(spacing: 12) {
                 Text("Stereo depth")
                     .font(.footnote.weight(.semibold))
-                Slider(value: $stereoDepthScale, in: 1...12, step: 1)
+                Slider(value: $stereoDepthScale, in: 0...2, step: 0.25)
                     .frame(maxWidth: 250)
-                Text("\(Int(stereoDepthScale))×")
+                Text("\(stereoDepthScale, specifier: \"%.2g\")×")
                     .font(.footnote.monospacedDigit().weight(.semibold))
-                    .frame(width: 32, alignment: .trailing)
+                    .frame(width: 44, alignment: .trailing)
             }
 
             HStack(spacing: 12) {
@@ -304,7 +306,9 @@ private struct CTRLauncherView: View {
             if applied != scale {
                 stereoDepthScale = applied
             }
-            runtime.setPresentationStatus("Stereo depth set to \(Int(applied))× physical eye separation.")
+            runtime.setPresentationStatus(
+                String(format: "Stereo depth set to %.2g× physical eye separation.", applied)
+            )
             ctrVisionLog.notice("[CTR Swift] requested stereo depth scale=\(applied)")
         }
         .onChange(of: scenePhase) { phase in

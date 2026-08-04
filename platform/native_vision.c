@@ -12,8 +12,8 @@
 #define NATIVE_VISION_DEFAULT_IPD_METRES         0.064f
 #define NATIVE_VISION_DEFAULT_CONVERGENCE_METRES 4.0f
 #define NATIVE_VISION_DEFAULT_UNITS_PER_METRE    256.0f
-#define NATIVE_VISION_DEFAULT_STEREO_DEPTH_SCALE 10.0f
-#define NATIVE_VISION_MAX_STEREO_DEPTH_SCALE     12.0f
+#define NATIVE_VISION_DEFAULT_STEREO_DEPTH_SCALE 1.0f
+#define NATIVE_VISION_MAX_STEREO_DEPTH_SCALE     2.0f
 #define NATIVE_VISION_TARGET_PROJECTION_SHIFT    0.02f
 #define NATIVE_VISION_RADIANS_TO_ANGLE           (4096.0f / 6.28318530717958647692f)
 
@@ -162,7 +162,7 @@ float NativeVision_SetStereoDepthScale(float scale)
 	{
 		scale = NATIVE_VISION_DEFAULT_STEREO_DEPTH_SCALE;
 	}
-	scale = fmaxf(1.0f, fminf(scale, NATIVE_VISION_MAX_STEREO_DEPTH_SCALE));
+	scale = fmaxf(0.0f, fminf(scale, NATIVE_VISION_MAX_STEREO_DEPTH_SCALE));
 	atomic_store_explicit(&s_nativeVision.stereoDepthScale, scale, memory_order_release);
 	return scale;
 }
