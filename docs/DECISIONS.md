@@ -892,3 +892,35 @@ the slot-zero tuple is unchanged. This proves telemetry behavior, not signed
 installation, physical cadence, thermal behavior, touch ergonomics or race
 completion. Exact evidence is in
 `docs/parity/2026-08-02-ios-device-observability.md`.
+
+## 2026-08-04 — Keep platform controls native while sharing game input
+
+**Decision:** keep one standard controller mapping across macOS, iOS, and
+iPadOS, while exposing platform-appropriate configuration: customizable touch
+controls on iPhone/iPad and a native clickable controls panel with remappable
+keyboard bindings on macOS. Do not change the retail game's own control menu.
+
+**Why:** connected controllers should behave consistently everywhere, but
+touch and desktop keyboard input need different presentation and editing
+workflows. Translating both at the native boundary preserves game behavior.
+
+## 2026-08-04 — Offer the same internal resolution range on every Apple target
+
+**Decision:** expose persistent 1x, 2x, 3x, and 4x internal geometry resolution
+on macOS, iOS, and iPadOS, with 4x as the Apple Silicon Mac default.
+
+**Why:** the most capable target should not lose display options available on
+mobile, while a selectable range lets each device balance image quality and
+load without changing retail timing or physics.
+
+## 2026-08-04 — Publish retail-free, source-matched Apple packages
+
+**Decision:** publish one unsigned iPhone/iPad IPA and the ad-hoc-signed Apple
+Silicon Mac archive alongside corresponding source and portable
+SHA-256 sidecars. Users provide their own compatible NTSC-U raw MODE2/2352 BIN;
+signing credentials and retail data remain outside the repository and release.
+
+**Why:** this provides reproducible GPL source binding and usable Apple
+packages without distributing copyrighted game data or maintainer signing
+material. Portable sidecars contain only the artifact filename so verification
+does not depend on the build machine's absolute path.

@@ -29,7 +29,7 @@ open build-macos-arm64-app/CTRPad.app
 4. Choose your own compatible retail BIN when prompted.
 
 A Developer ID-signed and notarized release opens normally. An ad-hoc-signed
-developer preview is not notarized; on first launch, Control-click the app,
+package is not notarized; on first launch, Control-click the app,
 choose **Open**, and confirm macOS's prompt. Do not disable Gatekeeper
 system-wide.
 

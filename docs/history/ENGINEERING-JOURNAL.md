@@ -24,6 +24,12 @@ This file is a required project artifact.
 - Temporary paths document where evidence existed during the session. Durable
   acceptance evidence must also be summarized under `docs/`.
 
+**2026-08-04 clarification:** the earlier blanket reference to screenshots as
+ignored local material applies to raw evidence captures. Five deliberately
+selected README screenshots are tracked under `docs/readme/` as documentation
+captures, consistent with `RIGHTS_AND_LICENSES.md`; no retail game data is
+bundled with the application or release packages.
+
 The task-level source of truth remains [ROADMAP.md](../ROADMAP.md). Detailed
 technical decisions live in [DECISIONS.md](../DECISIONS.md) and
 `docs/architecture/`; detailed parity evidence lives in `docs/parity/`.

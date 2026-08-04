@@ -173,7 +173,7 @@ Unpack the signed IPA and install its app bundle with Xcode's device tool:
 
 ```sh
 mkdir -p /private/tmp/ctrpad-install
-ditto -x -k dist/CTRPad-0.1.0-1-signed.ipa /private/tmp/ctrpad-install
+ditto -x -k dist/CTRPad-0.1.0-1-SOURCEPREFIX-signed.ipa /private/tmp/ctrpad-install
 xcrun devicectl list devices
 xcrun devicectl device install app \
   --device YOUR_DEVICE_ID \
