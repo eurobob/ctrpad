@@ -20,6 +20,58 @@ struct NativeRenderBucketEntryStorage
 static struct NativeRenderBucketEntryStorage
     s_nativeRenderBucketStorage[NATIVE_RENDER_BUCKET_MAX_ENTRIES];
 
+#if defined(SDL_PLATFORM_VISIONOS)
+enum
+{
+	NATIVE_VISION_PRIM_BASE_MAX_BYTES = 0x25800,
+	NATIVE_VISION_PRIM_MAX_BYTES = NATIVE_VISION_PRIM_BASE_MAX_BYTES * NATIVE_VISION_LAYER_COUNT,
+	NATIVE_VISION_OT_BASE_MAX_BYTES = 0x8000,
+	NATIVE_VISION_OT_MAX_BYTES = NATIVE_VISION_OT_BASE_MAX_BYTES * NATIVE_VISION_LAYER_COUNT,
+	NATIVE_VISION_SWAPCHAIN_MAX_BYTES = (4 << 12) | 0x18,
+};
+
+union NativeVisionScratchStorage
+{
+	u64 alignment;
+	u8 prim[NATIVE_VISION_PRIM_MAX_BYTES];
+};
+
+union NativeVisionOTStorage
+{
+	u64 alignment;
+	u8 ot[NATIVE_VISION_OT_MAX_BYTES];
+};
+
+union NativeVisionSwapchainStorage
+{
+	u64 alignment;
+	u8 ot[NATIVE_VISION_SWAPCHAIN_MAX_BYTES];
+};
+
+static union NativeVisionScratchStorage s_nativeVisionPrimStorage[2];
+static union NativeVisionOTStorage s_nativeVisionOTStorage[2];
+static union NativeVisionSwapchainStorage s_nativeVisionSwapchainStorage[2];
+
+static void MainInit_BindNativeVisionPrimMem(struct PrimMem *primMem, void *storage, u32 size)
+{
+	primMem->capacityBytes = size;
+	primMem->allocationStart = storage;
+	primMem->start = storage;
+	primMem->cursor = storage;
+	primMem->end = (u8 *)storage + ((size >> 2) << 2);
+	primMem->guardEnd = (u8 *)primMem->end - 0x100;
+}
+
+static void MainInit_BindNativeVisionOTMem(struct OTMem *otMem, void *storage, u32 size)
+{
+	otMem->capacityBytes = size;
+	otMem->start = storage;
+	otMem->cursor = storage;
+	otMem->end = (uint32_t *)((u8 *)storage + ((size >> 2) << 2));
+	otMem->uiOT = NULL;
+}
+#endif
+
 #if UINTPTR_MAX > UINT32_MAX
 // The retail stack-pool strides only accommodate retail-width objects. Keep
 // the retail item counts, but widen each LP64 slot for the largest object that
@@ -142,6 +194,25 @@ void MainInit_RebindNativeRuntimeStorage(struct GameTracker *gGT)
 	if (gGT != NULL)
 	{
 		gGT->ptrRenderBucketInstance = s_nativeRenderBucketStorage;
+
+#if defined(SDL_PLATFORM_VISIONOS)
+		for (int i = 0; i < 2; i++)
+		{
+			if ((gGT->db[i].primMem.capacityBytes != 0) &&
+			    (gGT->db[i].primMem.capacityBytes <= NATIVE_VISION_PRIM_MAX_BYTES))
+			{
+				MainInit_BindNativeVisionPrimMem(&gGT->db[i].primMem, s_nativeVisionPrimStorage[i].prim,
+				                                 gGT->db[i].primMem.capacityBytes);
+			}
+			if ((gGT->db[i].otMem.capacityBytes != 0) &&
+			    (gGT->db[i].otMem.capacityBytes <= NATIVE_VISION_OT_MAX_BYTES))
+			{
+				MainInit_BindNativeVisionOTMem(&gGT->db[i].otMem, s_nativeVisionOTStorage[i].ot,
+				                               gGT->db[i].otMem.capacityBytes);
+			}
+			gGT->otSwapchainDB[i] = s_nativeVisionSwapchainStorage[i].ot;
+		}
+#endif
 	}
 #else
 	(void)gGT;
@@ -359,11 +430,31 @@ void MainInit_PrimMem(struct GameTracker *gGT)
 		return;
 	}
 
+#if defined(SDL_PLATFORM_VISIONOS)
+	const u32 nativeSize = (u32)size * (u32)NativeVision_GetPrimitiveMemoryScale();
+	if (nativeSize > NATIVE_VISION_PRIM_MAX_BYTES)
+	{
+		Platform_LogError("[CTR Vision] primitive scratch exceeds native capacity: requested=%u maximum=%u\n",
+		                  nativeSize, NATIVE_VISION_PRIM_MAX_BYTES);
+		CTR_ErrorScreen(0xff, 0, 0);
+		return;
+	}
+
+	// Consume the original PS1 allocation for exact mempack pressure, while the
+	// extra stereo passes live in native scratch memory outside emulated RAM.
+	for (int i = 0; i < 2; i++)
+	{
+		MEMPACK_AllocMem(size);
+		MainInit_BindNativeVisionPrimMem(&gGT->db[i].primMem, s_nativeVisionPrimStorage[i].prim, nativeSize);
+	}
+	Platform_Log("[CTR Vision] primitive scratch bound native=%u retailPressure=%d perBuffer\n", nativeSize, size);
+#else
 #if defined(CTR_NATIVE)
 	size *= NativeVision_GetPrimitiveMemoryScale();
 #endif
 	MainDB_PrimMem(&gGT->db[0].primMem, size);
 	MainDB_PrimMem(&gGT->db[1].primMem, size);
+#endif
 }
 
 // NOTE(aalhendi): ASM-verified NTSC-U 926 0x8003b2d4-0x8003b334.
@@ -415,12 +506,28 @@ void MainInit_OTMem(struct GameTracker *gGT)
 
 EndFunc:
 
+#if defined(SDL_PLATFORM_VISIONOS)
+	const u32 nativeOTSize = (u32)size * (u32)NativeVision_GetPrimitiveMemoryScale();
+	if (nativeOTSize > NATIVE_VISION_OT_MAX_BYTES)
+	{
+		Platform_LogError("[CTR Vision] ordering-table scratch exceeds native capacity: requested=%u maximum=%u\n",
+		                  nativeOTSize, NATIVE_VISION_OT_MAX_BYTES);
+		CTR_ErrorScreen(0xff, 0, 0);
+		return;
+	}
+	for (int i = 0; i < 2; i++)
+	{
+		MEMPACK_AllocMem(size);
+		MainInit_BindNativeVisionOTMem(&gGT->db[i].otMem, s_nativeVisionOTStorage[i].ot, nativeOTSize);
+	}
+#else
 #if defined(CTR_NATIVE)
 	size *= NativeVision_GetPrimitiveMemoryScale();
 #endif
 
 	MainDB_OTMem(&gGT->db[0].otMem, size);
 	MainDB_OTMem(&gGT->db[1].otMem, size);
+#endif
 
 	// 0x1000 per player, plus 0x18 for linking
 	int swapchainViewCount = gGT->numPlyrCurrGame;
@@ -431,8 +538,26 @@ EndFunc:
 	}
 #endif
 	size = (swapchainViewCount << 0xC) | 0x18;
+#if defined(SDL_PLATFORM_VISIONOS)
+	const int retailSwapchainSize = (gGT->numPlyrCurrGame << 0xC) | 0x18;
+	if ((u32)size > NATIVE_VISION_SWAPCHAIN_MAX_BYTES)
+	{
+		Platform_LogError("[CTR Vision] swapchain OT exceeds native capacity: requested=%d maximum=%u\n",
+		                  size, NATIVE_VISION_SWAPCHAIN_MAX_BYTES);
+		CTR_ErrorScreen(0xff, 0, 0);
+		return;
+	}
+	for (int i = 0; i < 2; i++)
+	{
+		MEMPACK_AllocMem(retailSwapchainSize);
+		gGT->otSwapchainDB[i] = s_nativeVisionSwapchainStorage[i].ot;
+	}
+	Platform_Log("[CTR Vision] OT scratch bound native=%u swapchain=%d retailPressure=%d\n",
+	             nativeOTSize, size, retailSwapchainSize);
+#else
 	gGT->otSwapchainDB[0] = MEMPACK_AllocMem(size); // "ot1"
 	gGT->otSwapchainDB[1] = MEMPACK_AllocMem(size); // "ot2"
+#endif
 }
 
 void MainInit_JitPoolsNew(struct GameTracker *gGT)
