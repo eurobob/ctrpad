@@ -49,6 +49,7 @@ void NativeVision_PublishEyeTracking(uint64_t timestampNanoseconds,
 	float rightX, float rightY, float rightZ, float rightPitch, float rightYaw, float rightRoll,
 	float convergenceMetres, float unitsPerMetre);
 void NativeVision_ResetTracking(void);
+float NativeVision_SetStereoDepthScale(float scale);
 
 /* Returns 1 for the supported raw NTSC-U image, otherwise 0 with a message. */
 int NativeVision_ValidateDiscImage(const char *path, char *message, size_t messageSize);

@@ -190,6 +190,7 @@ private struct CTRLauncherView: View {
     @State private var activeSpaceID: String?
     @State private var isOpeningImmersiveSpace = false
     @AppStorage("CTRPadInternalResolutionScale") private var resolutionScale = 3
+    @AppStorage("CTRPadStereoDepthScale") private var stereoDepthScale = 10.0
 
     var body: some View {
         VStack(spacing: 22) {
@@ -240,6 +241,16 @@ private struct CTRLauncherView: View {
             }
 
             HStack(spacing: 12) {
+                Text("Stereo depth")
+                    .font(.footnote.weight(.semibold))
+                Slider(value: $stereoDepthScale, in: 1...12, step: 1)
+                    .frame(maxWidth: 250)
+                Text("\(Int(stereoDepthScale))×")
+                    .font(.footnote.monospacedDigit().weight(.semibold))
+                    .frame(width: 32, alignment: .trailing)
+            }
+
+            HStack(spacing: 12) {
                 Button("Choose Disc…", systemImage: "opticaldisc") {
                     isImporting = true
                 }
@@ -274,6 +285,7 @@ private struct CTRLauncherView: View {
             // Let SwiftUI establish the controller-event routing surface before
             // the detached native loop begins polling GameController.
             resolutionScale = Int(NativeRenderer_SetInternalResolutionScale(Int32(resolutionScale)))
+            stereoDepthScale = Double(NativeVision_SetStereoDepthScale(Float(stereoDepthScale)))
             await Task.yield()
             runtime.startImportedDiscIfReady()
         }
@@ -286,6 +298,14 @@ private struct CTRLauncherView: View {
                 "Running at \(applied)× internal resolution (\(512 * applied)×\(216 * applied))."
             )
             ctrVisionLog.notice("[CTR Swift] requested internal resolution scale=\(applied)")
+        }
+        .onChange(of: stereoDepthScale) { scale in
+            let applied = Double(NativeVision_SetStereoDepthScale(Float(scale)))
+            if applied != scale {
+                stereoDepthScale = applied
+            }
+            runtime.setPresentationStatus("Stereo depth set to \(Int(applied))× physical eye separation.")
+            ctrVisionLog.notice("[CTR Swift] requested stereo depth scale=\(applied)")
         }
         .onChange(of: scenePhase) { phase in
             ctrVisionLog.notice("[CTR Swift] window scene phase=\(String(describing: phase), privacy: .public)")

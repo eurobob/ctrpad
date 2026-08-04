@@ -12,6 +12,9 @@
 #define NATIVE_VISION_DEFAULT_IPD_METRES         0.064f
 #define NATIVE_VISION_DEFAULT_CONVERGENCE_METRES 4.0f
 #define NATIVE_VISION_DEFAULT_UNITS_PER_METRE    256.0f
+#define NATIVE_VISION_DEFAULT_STEREO_DEPTH_SCALE 10.0f
+#define NATIVE_VISION_MAX_STEREO_DEPTH_SCALE     12.0f
+#define NATIVE_VISION_TARGET_PROJECTION_SHIFT    0.02f
 #define NATIVE_VISION_RADIANS_TO_ANGLE           (4096.0f / 6.28318530717958647692f)
 
 struct NativeVisionLayerPacket
@@ -30,6 +33,7 @@ struct NativeVisionRuntime
 {
 	atomic_flag trackingLock;
 	_Atomic int mode;
+	_Atomic float stereoDepthScale;
 	struct NativeVisionTrackingFrame tracking;
 	struct NativeVisionTrackingFrame frameTracking;
 	struct PushBuffer savedPushBuffer;
@@ -49,6 +53,7 @@ struct NativeVisionRuntime
 static struct NativeVisionRuntime s_nativeVision = {
 	.trackingLock = ATOMIC_FLAG_INIT,
 	.mode = NATIVE_VISION_MODE_WINDOW,
+	.stereoDepthScale = NATIVE_VISION_DEFAULT_STEREO_DEPTH_SCALE,
 	.savedCameraMode = -1,
 	.currentEye = -1,
 	.currentLayer = NATIVE_VISION_LAYER_HUD,
@@ -149,6 +154,17 @@ void NativeVision_ResetTracking(void)
 {
 	struct NativeVisionTrackingFrame frame = NativeVision_DefaultTracking();
 	NativeVision_PublishTrackingFrame(&frame);
+}
+
+float NativeVision_SetStereoDepthScale(float scale)
+{
+	if (!isfinite(scale))
+	{
+		scale = NATIVE_VISION_DEFAULT_STEREO_DEPTH_SCALE;
+	}
+	scale = fmaxf(1.0f, fminf(scale, NATIVE_VISION_MAX_STEREO_DEPTH_SCALE));
+	atomic_store_explicit(&s_nativeVision.stereoDepthScale, scale, memory_order_release);
+	return scale;
 }
 
 int NativeVision_ValidateDiscImage(const char *path, char *message, size_t messageSize)
@@ -275,6 +291,27 @@ static s16 NativeVision_ClampS16(float value)
 	return (s16)lrintf(value);
 }
 
+static float NativeVision_EffectiveEyePosition(const struct NativeVisionTrackingFrame *tracking, int eyeIndex, int axis)
+{
+	float eye = tracking->eyePositionMetres[eyeIndex][axis];
+	if (axis != 0)
+	{
+		return eye;
+	}
+
+	float centre = (tracking->eyePositionMetres[0][axis] + tracking->eyePositionMetres[1][axis]) * 0.5f;
+	float scale = atomic_load_explicit(&s_nativeVision.stereoDepthScale, memory_order_acquire);
+	return centre + (eye - centre) * scale;
+}
+
+static float NativeVision_EffectiveConvergence(const struct NativeVisionTrackingFrame *tracking)
+{
+	float physicalIpd = fabsf(tracking->eyePositionMetres[1][0] - tracking->eyePositionMetres[0][0]);
+	float scale = atomic_load_explicit(&s_nativeVision.stereoDepthScale, memory_order_acquire);
+	float convergence = (0.5f * physicalIpd * scale) / NATIVE_VISION_TARGET_PROJECTION_SHIFT;
+	return fmaxf(convergence, 1.0f);
+}
+
 static void NativeVision_ApplyEyePose(struct PushBuffer *pb, int eyeIndex)
 {
 	const struct NativeVisionTrackingFrame *tracking = &s_nativeVision.frameTracking;
@@ -284,9 +321,9 @@ static void NativeVision_ApplyEyePose(struct PushBuffer *pb, int eyeIndex)
 	ConvertRotToMatrix(&cameraToWorld, &baseRotation);
 
 	float local[3] = {
-	    tracking->eyePositionMetres[eyeIndex][0] * units,
-	    tracking->eyePositionMetres[eyeIndex][1] * units,
-	    tracking->eyePositionMetres[eyeIndex][2] * units,
+	    NativeVision_EffectiveEyePosition(tracking, eyeIndex, 0) * units,
+	    NativeVision_EffectiveEyePosition(tracking, eyeIndex, 1) * units,
+	    NativeVision_EffectiveEyePosition(tracking, eyeIndex, 2) * units,
 	};
 	float world[3];
 	for (int row = 0; row < 3; row++)
@@ -437,8 +474,8 @@ void NativeVision_AdjustGeomOffset(const struct PushBuffer *pb, int *x, int *y)
 		return;
 	}
 
-	float convergence = s_nativeVision.frameTracking.convergenceMetres;
-	float eyeX = s_nativeVision.frameTracking.eyePositionMetres[s_nativeVision.currentEye][0];
+	float convergence = NativeVision_EffectiveConvergence(&s_nativeVision.frameTracking);
+	float eyeX = NativeVision_EffectiveEyePosition(&s_nativeVision.frameTracking, s_nativeVision.currentEye, 0);
 	if (isfinite(convergence) && (convergence >= 0.05f) && isfinite(eyeX))
 	{
 		*x += (int)lrintf(((float)pb->distanceToScreen_PREV * eyeX) / convergence);
